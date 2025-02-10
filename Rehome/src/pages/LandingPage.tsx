@@ -1,14 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import Footer from "@/components/landing/Footer";
-import { HeroHighlightDemo } from "@/components/landing/HeroHighlight";
-import { LogoScroll } from "@/components/landing/LogoScroll";
-import { ScreenScroll } from "@/components/landing/Screen";
-import { TwitterCard } from "@/components/landing/TwitterCard";
-import { LampDemo } from "@/components/ui/lamp";
+import Footer from "../components/landing/Footer";
+import { HeroHighlightDemo } from "../components/landing/HeroHighlight";
+import { LogoScroll } from "../components/landing/LogoScroll";
+import { ScreenScroll } from "../components/landing/Screen";
+import { TwitterCard } from "../components/landing/TwitterCard";
+import { LampDemo } from "../components/ui/lamp";
 import { FaLocationArrow } from "react-icons/fa6";
-import MagicButton from "@/components/MagicButton";
-import { Spotlight } from "@/components/ui/Spotlight";
-import { TextGenerateEffect } from "@/components/ui/TextGenerateEffect";
+import MagicButton from "../components/MagicButton";
+import { Spotlight } from "../components/ui/Spotlight";
+import { TextGenerateEffect } from "../components/ui/TextGenerateEffect";
 
 const Hero = () => {
   const navigate = useNavigate();

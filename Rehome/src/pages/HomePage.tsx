@@ -1,5 +1,5 @@
-import ChatInterface from "@/components/ChatInterface";
-// import useUserStore from "@/services/state/useUserSessionStore";
+import ChatInterface from "../components/ChatInterface";
+// import useUserStore from "../services/state/useUserSessionStore";
 // import { useEffect, useState } from "react";
 // import RolePage from "./RolePage";
 

@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "../components/ui/card";
 import {
   Form,
   FormControl,
@@ -12,19 +12,19 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
-// import { Icons } from "@/components/ui/icons";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from "../components/ui/form";
+// import { Icons } from "../components/ui/icons";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { Loader } from "lucide-react";
 import axios from "axios";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import ThirdPartyAuth from "@/hooks/ThirdPartyAuth";
+import ThirdPartyAuth from "../hooks/ThirdPartyAuth";
 
 const formSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email"),

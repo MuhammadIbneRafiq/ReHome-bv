@@ -1,4 +1,3 @@
-import { Avatar, AvatarImage } from "./ui/avatar";
 import { useEffect, useRef } from "react";
 import { useState } from "react";
 import axios from "axios";
@@ -7,10 +6,7 @@ import { Loader } from "lucide-react";
 import { Logo } from "./Logo";
 import { ScrollShadow } from "@nextui-org/react";
 import { motion } from "framer-motion";
-import { useChat } from "@/hooks/useChat";
 import { useLocation } from "react-router-dom";
-import { useProject } from "@/hooks/useProject";
-import ReactMarkdown from "react-markdown";
 import user1 from "../assets/francesco from Konnecte.png";
 // import user2 from "../assets/user3.jpg";
 import user3 from "../assets/JAMIL.jpg";
@@ -18,15 +14,7 @@ import user4 from "../assets/user6.jpg";
 import user5 from "../assets/user5.jpg";
 import user6 from "../assets/user1.jpg";
 import user7 from "../assets/alshahabRezvi.jpg";
-import ShareButton from "./ShareButton";
-import { useAuth } from "@/hooks/useAuth";
-import Project from "./Project"; // Import the refactored Project component
-
 // import { useSearch } from "@/hooks/useSearch";
-
-// display cards
-import TwitterSearch from "./TwitterSearch";
-import { getTweetResultProjects } from "@/constants/test";
 
 interface ChatProps {
   loading: boolean;
@@ -47,15 +35,6 @@ interface Project {
   profile: string; // This might be different in your actual type
 }
 
-// This function converts Project[] to ResultItemProps[]
-const convertProjectsToResultItems = (projects: Project[]) => {
-  return projects.map((project) => ({
-    id: typeof project.id === "string" ? parseInt(project.id, 10) : project.id,
-    name: project.name ?? "",
-    tweet: project.tweet ?? "",
-    profile: project.profile ?? "",
-  }));
-};
 
 // let tweetResultProjects: any = [];
 interface Project {
@@ -73,25 +52,13 @@ interface ResultItemProps {
   url: string;
 }
 
-export default function Chat({ loading, searchResults }: ChatProps) {
+export default function Chat({ loading }: ChatProps) {
   const path = useLocation();
-  const chat = useChat({ id: path?.pathname.split("/")[2] });
-  // const search = useSearch();
 
   const [tweetResultProjects, setTweetResultProjects] = useState<Project[]>([]);
 
-  const { project } = useProject({ id: path?.pathname.split("/")[2] });
-  const { isAuthenticated } = useAuth();
 
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Assuming getTweetResultProjects fetches an array of Project[]
-    getTweetResultProjects().then((projects) => {
-      const resultItems = convertProjectsToResultItems(projects ?? []);
-      setTweetResultProjects(resultItems);
-    });
-  }, []);
 
   useEffect(() => {
     if (tweetResultProjects.length > 3) {
@@ -108,18 +75,6 @@ export default function Chat({ loading, searchResults }: ChatProps) {
       setTweetResultProjects(arr);
     }
   }, [tweetResultProjects]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      if (path?.pathname.includes("/project")) {
-        // Scroll to the top
-        scrollRef.current.scrollTop = 0;
-      } else if (path?.pathname.includes("/chat")) {
-        // Scroll to the bottom
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
-    }
-  }, [chat.chatHistory, path?.pathname]); // Trigger whenever chat history or path changes
 
   const truncateDescription = (description: string) => {
     const words = description.split(" ");
@@ -192,121 +147,6 @@ export default function Chat({ loading, searchResults }: ChatProps) {
     "Talented photographer and videographer",
   ];
 
-  function MarkdownRenderer({ content }: { content: string }) {
-    return (
-      <div className="markdown-content">
-        <ReactMarkdown
-          components={{
-            h1: ({ node, ...props }) => (
-              <h1
-                style={{
-                  fontSize: "2em",
-                  marginBottom: "0.5em",
-                  marginTop: "1em",
-                }}
-                {...props}
-              />
-            ),
-            h2: ({ node, ...props }) => (
-              <h2
-                style={{
-                  fontSize: "1.5em",
-                  marginBottom: "0.5em",
-                  marginTop: "1em",
-                }}
-                {...props}
-              />
-            ),
-            h3: ({ node, ...props }) => (
-              <h3
-                style={{
-                  fontSize: "1.17em",
-                  marginBottom: "0.5em",
-                  marginTop: "1em",
-                }}
-                {...props}
-              />
-            ),
-            ul: ({ node, ...props }) => (
-              <ul
-                style={{
-                  listStyleType: "disc",
-                  marginBottom: "1em",
-                  paddingLeft: "2em",
-                }}
-                {...props}
-              />
-            ),
-            ol: ({ node, ...props }) => (
-              <ol
-                style={{
-                  listStyleType: "decimal",
-                  marginBottom: "1em",
-                  paddingLeft: "2em",
-                }}
-                {...props}
-              />
-            ),
-            li: ({ node, ...props }) => (
-              <li style={{ marginBottom: "0.5em" }} {...props} />
-            ),
-            strong: ({ node, ...props }) => (
-              <strong style={{ fontWeight: "bold" }} {...props} />
-            ),
-            em: ({ node, ...props }) => (
-              <em style={{ fontStyle: "italic" }} {...props} />
-            ),
-            p: ({ node, ...props }) => (
-              <p
-                style={{ marginBottom: "1em", lineHeight: "1.5" }}
-                {...props}
-              />
-            ),
-            blockquote: ({ node, ...props }) => (
-              <blockquote
-                style={{
-                  borderLeft: "4px solid #ccc",
-                  paddingLeft: "1em",
-                  marginLeft: "0",
-                  marginRight: "0",
-                }}
-                {...props}
-              />
-            ),
-            code: ({ node, ...props }) => (
-              <code
-                style={{
-                  backgroundColor: "#f0f0f0",
-                  padding: "0.2em 0.4em",
-                  borderRadius: "3px",
-                }}
-                {...props}
-              />
-            ),
-            pre: ({ node, ...props }) => (
-              <pre
-                style={{
-                  backgroundColor: "#f0f0f0",
-                  padding: "1em",
-                  overflowX: "auto",
-                  borderRadius: "4px",
-                }}
-                {...props}
-              />
-            ),
-            a: ({ node, ...props }) => (
-              <a
-                style={{ fontWeight: "bold", textDecoration: "underline" }}
-                {...props}
-              />
-            ),
-          }}
-        >
-          {content}
-        </ReactMarkdown>
-      </div>
-    );
-  }
 
   const [isLoading, setIsLoading] = useState(false);
   const fetchCheckoutUrl = async () => {
@@ -354,14 +194,9 @@ export default function Chat({ loading, searchResults }: ChatProps) {
 
   return (
     <div className="flex flex-col h-full w-full gap-2 py-4">
-      {isAuthenticated && (
-        <ShareButton
-          shareUrl={window.location.href}
-          title={
-            "🚀 Streamline Your Workflow with AI! Click here to join the conversation and explore my latest project on Autolanding:"
-          }
-        />
-      )}
+      <button onClick={fetchCheckoutUrl} className="btn">
+        Go to Checkout
+      </button>
       <ScrollShadow orientation="vertical" className="h-full" ref={scrollRef}>
         <div className="justify-center items-center px-4 pt-8 pb-8">
           {path.pathname === "/chatHome" ? (
@@ -412,61 +247,13 @@ export default function Chat({ loading, searchResults }: ChatProps) {
                 )}
               </div>
             </motion.div>
-          ) : path.pathname.split("/")[1] === "project" && project ? (
-              <Project project={project} fetchCheckoutUrl={fetchCheckoutUrl} />  // Use the Project component here
           ) : (
             <motion.div
               className="flex flex-col gap-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: "easeOut" }}
-            >
-              {!chat.isError &&
-                chat?.chatHistory?.map((message) => (
-                  <div key={message.message_id}>
-                    <div className={`flex gap-1`}>
-                      {message.sender === "user" ? (
-                        <Avatar className="h-[32px] w-[32px]">
-                          <AvatarImage
-                            src="https://github.com/shadcn.png" // get from User_data from google or this
-                            alt="@shadcn"
-                          />
-                        </Avatar>
-                      ) : (
-                        <Logo height="32" width="32" />
-                      )}
-                      <div className="flex flex-col items-center justify-center ml-2">
-                        <span className="font-semibold">
-                          {message.sender === "user" ? "You" : "Autolanding AI"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="mt-2">
-                      <MarkdownRenderer content={message.content} />
-                    </div>
-                  </div>
-                ))}
-
-
-              
-                {chat?.chatHistory?.slice(-2)[0].content.includes("freelancer") && // if the message from user contains the word freelancer then the search results from the backend will be displayed
-                chat?.chatHistory?.slice(-2)[0].sender == "user" && (
-                  <TwitterSearch tweetResult={searchResults} />
-                )}
-
-                {chat?.chatHistory?.slice(-2)[0]?.content?.includes("project") && // if the message from user contains the word project then all the projects will be displayed
-                  chat?.chatHistory?.slice(-2)[0]?.sender === "user" && (
-                    <TwitterSearch
-                      tweetResult={tweetResultProjects.map((project) => ({
-                        id: typeof project.id === "string" ? parseInt(project.id, 10) : project.id,
-                        name: project.name,
-                        tweet: project.tweet, // Assuming 'tweet' is a property in Project
-                        profile: project.profile, // Assuming 'profile' is a property in Project
-                      }))}
-                    />
-                )}
-
-                
+            >                
             </motion.div> // add a toast to tell them to put up a paywall to have them direct client access or some prompting technique or joining the discord server here base on user's (-2)[0] message
           )}
         </div>

@@ -1,9 +1,9 @@
-import { supabase } from "@/hooks/supaBase";
+import { supabase } from "../hooks/supaBase";
 import { useForm } from "react-hook-form";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "../components/ui/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import GoogleSignInButton from "@/components/GoogleSignInButton";
+import GoogleSignInButton from "../components/GoogleSignInButton";
 import React from "react";
 
 const formSchema = z.object({

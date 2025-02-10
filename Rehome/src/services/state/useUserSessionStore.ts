@@ -1,4 +1,4 @@
-import { UserData } from "@/types/UserData";
+import { UserData } from "../../types/UserData";
 import { create } from "zustand";
 
 type UserSessionStore = {
