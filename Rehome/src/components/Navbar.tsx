@@ -62,9 +62,6 @@ export default function Navbar() {
                     {/* New Navigation Items */}
                     <div className="hidden md:flex flex-col items-center"> {/* Use flex-col to stack items */}
                         <div className="flex space-x-4"> {/* Put the links in a row */}
-                            <Link to="/home" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
-                                Home
-                            </Link>
                             <Link to="/marketplace" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
                                 Marketplace
                             </Link>
@@ -106,9 +103,6 @@ export default function Navbar() {
                             <div className="absolute border-solid border-2 border-black-200 right-0 top-10 bg-transperant text-gray-400 shadow-lg rounded-lg w-40">
                                 <nav className="grid gap-2 p-4 text-sm font-medium">
                                     {/* New Navigation Items (Mobile) */}
-                                    <Link to="/home" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Home
-                                    </Link>
                                     <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Marketplace
                                     </Link>

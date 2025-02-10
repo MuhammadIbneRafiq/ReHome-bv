@@ -1,5 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import Navbar from "./components/Navbar"; // Import the Navbar component
 
@@ -8,7 +8,6 @@ import LandingPage from "./lib/pages/LandingPage";
 import LoginPage from "./lib/pages/LoginPage";
 import SignupPage from "./lib/pages/SignupPage";
 import Pricing from "./lib/pages/Pricing";
-import HomePage from "./lib/pages/HomePage";
 import MarketplacePage from "./lib/pages/MarketplacePage";
 import JunkRemovalPage from "./lib/pages/JunkRemovalPage";
 import HouseMovingPage from "./lib/pages/HouseMovingPage";
@@ -17,13 +16,6 @@ import WhyChooseUsPage from "./lib/pages/WhyChooseUsPage";
 import ContactUsPage from "./lib/pages/ContactUsPage";
 import AboutUsPage from "./lib/pages/AboutUsPage";
 
-
-// Define a type for the user registration payload
-type UserPayload = {
-  name: string;
-  email: string;
-  password: string;
-};
 
 
 const usePostData = <T,>(endpoint: string) => {
@@ -49,7 +41,6 @@ const App = () => {
           <main className="min-h-screen bg-orange-50">
             <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/home" element={<HomePage />} />
               <Route path="/marketplace" element={<MarketplacePage />} />
               <Route path="/junk-removal" element={<JunkRemovalPage />} />
               <Route path="/house-moving" element={<HouseMovingPage />} />
