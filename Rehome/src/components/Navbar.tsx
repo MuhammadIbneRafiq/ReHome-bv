@@ -49,11 +49,11 @@ export default function Navbar() {
 
     return (
         <header
-            className={`fixed top-0 left-0 right-0 z-[102] w-full text-nav-label bg-base/80 backdrop-blur-sm transition-transform ease-curve-d duration-600 ${isSticky ? 'translate-y-0' : '-translate-y-full'
+            className={`fixed top-0 left-0 right-0 z-[102] w-full text-nav-label bg-gradient-to-r from-orange-500 to-red-600 shadow-md transition-transform ease-curve-d duration-600 ${isSticky ? 'translate-y-0' : '-translate-y-full'
                 }`}
         >
             <ToastContainer />
-            <nav aria-label="Main navigation" className="h-full max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6">
+            <nav aria-label="Main navigation" className="h-16 max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6"> {/* Reduced height to h-16 */}
                  <div className="flex items-center">
                     <NamedLogoWithLink />
                 </div>
@@ -62,23 +62,23 @@ export default function Navbar() {
                     {/* New Navigation Items */}
                     <div className="hidden md:flex flex-col items-center"> {/* Use flex-col to stack items */}
                         <div className="flex space-x-4"> {/* Put the links in a row */}
-                            <Link to="/home" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                            <Link to="/home" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
                                 Home
                             </Link>
-                            <Link to="/marketplace" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                            <Link to="/marketplace" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
                                 Marketplace
                             </Link>
-                            <Link to="/junk-removal" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                            <Link to="/junk-removal" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
                                 Junk Removal
                             </Link>
-                            <Link to="/house-moving" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                            <Link to="/house-moving" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
                                 House Moving
                             </Link>
-                            <Link to="/item-donation" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                            <Link to="/item-donation" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
                                 Item Donation
                             </Link>
 
-                            <Link to="/pricing" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                            <Link to="/pricing" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
                                 Pricing
                             </Link>
 
@@ -87,10 +87,10 @@ export default function Navbar() {
                     <ModeToggle />
                     {!isAuthenticated && (
                         <>
-                            <Link to="/register" className="hidden md:block text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                            <Link to="/register" className="text-white hidden md:block text-sm transition-colors duration-fast hover:text-orange-200">
                                 Sign up
                             </Link>
-                            <Link to="/login" className="hidden md:block text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                            <Link to="/login" className="text-white hidden md:block text-sm transition-colors duration-fast hover:text-orange-200">
                                 Log in
                             </Link>
                         </>
