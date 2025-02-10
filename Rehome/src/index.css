@@ -103,6 +103,12 @@ button:hover {
   font-weight: bold;
 }
 
+/* Example:  General button styling */
+.btn {
+    @apply bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 rounded;
+    /* You can add more styles as needed */
+  }
+
 .markdown-content em {
   font-style: italic;
 }

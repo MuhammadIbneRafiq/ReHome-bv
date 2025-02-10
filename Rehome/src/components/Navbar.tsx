@@ -54,13 +54,36 @@ export default function Navbar() {
         >
             <ToastContainer />
             <nav aria-label="Main navigation" className="h-full max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6">
-                <div className="flex items-center">
+                 <div className="flex items-center">
                     <NamedLogoWithLink />
                 </div>
+
                 <div className="flex items-center justify-center gap-4 md:gap-6">
-                    <Link to="/pricing" className="hidden md:block text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
-                        Pricing
-                    </Link>
+                    {/* New Navigation Items */}
+                    <div className="hidden md:flex flex-col items-center"> {/* Use flex-col to stack items */}
+                        <div className="flex space-x-4"> {/* Put the links in a row */}
+                            <Link to="/home" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                                Home
+                            </Link>
+                            <Link to="/marketplace" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                                Marketplace
+                            </Link>
+                            <Link to="/junk-removal" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                                Junk Removal
+                            </Link>
+                            <Link to="/house-moving" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                                House Moving
+                            </Link>
+                            <Link to="/item-donation" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                                Item Donation
+                            </Link>
+
+                            <Link to="/pricing" className="text-small transition-colors duration-fast hover:text-nav-label dark:text-white text-black">
+                                Pricing
+                            </Link>
+
+                        </div>
+                    </div>
                     <ModeToggle />
                     {!isAuthenticated && (
                         <>
@@ -82,6 +105,22 @@ export default function Navbar() {
                         {isPopupOpen && (
                             <div className="absolute border-solid border-2 border-black-200 right-0 top-10 bg-transperant text-gray-400 shadow-lg rounded-lg w-40">
                                 <nav className="grid gap-2 p-4 text-sm font-medium">
+                                    {/* New Navigation Items (Mobile) */}
+                                    <Link to="/home" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Home
+                                    </Link>
+                                    <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Marketplace
+                                    </Link>
+                                    <Link to="/junk-removal" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Junk Removal
+                                    </Link>
+                                    <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        House Moving
+                                    </Link>
+                                    <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Item Donation
+                                    </Link>
                                     <Link to="/pricing" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Pricing
                                     </Link>
