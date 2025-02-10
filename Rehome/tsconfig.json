@@ -1,7 +1,41 @@
 {
-  "files": [],
+  "compilerOptions": {
+      "target": "ES2020",
+      "useDefineForClassFields": true,
+      "lib": [
+          "ES2020",
+          "DOM",
+          "DOM.Iterable"
+      ],
+      "module": "ESNext",
+      "skipLibCheck": true,
+      "baseUrl": ".",
+      "paths": {
+          "@/*": [
+              "./src/*"
+          ]
+      },
+      /* Bundler mode */
+      "moduleResolution": "bundler",
+      "allowImportingTsExtensions": true,
+      "resolveJsonModule": true,
+      "isolatedModules": true,
+      "noEmit": true,
+      "jsx": "react-jsx",
+      "allowJs": true, // Allow JavaScript files
+      "checkJs": false, // Disable type-checking for JavaScript files
+      /* Linting */
+      "strict": true,
+      "noUnusedLocals": true,
+      "noUnusedParameters": true,
+      "noFallthroughCasesInSwitch": true
+  },
+  "include": [
+      "src/**/*" // Include all files in the src directory, including .js and .jsx
+  ],
   "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
+      {
+          "path": "./tsconfig.node.json"
+      }
   ]
 }

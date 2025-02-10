@@ -1,1 +1,276 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 0 0% 0%; /* Changed this to black */
+        --foreground: 210 40% 98%;
+
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+
+        --primary: 222.2 47.4% 11.2%;
+        --primary-foreground: 210 40% 98%;
+
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+
+        --accent: 210 40% 96.1%;
+        --accent-foreground: 222.2 47.4% 11.2%;
+
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 214.3 31.8% 91.4%;
+        --input: 214.3 31.8% 91.4%;
+        --ring: 222.2 84% 4.9%;
+
+        --radius: 0.5rem;
+    }
+
+    .dark {
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+
+        --card: 222.2 84% 4.9%;
+        --card-foreground: 210 40% 98%;
+
+        --popover: 222.2 84% 4.9%;
+        --popover-foreground: 210 40% 98%;
+
+        --primary: 210 40% 98%;
+        --primary-foreground: 222.2 47.4% 11.2%;
+
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 210 40% 98%;
+
+        --border: 217.2 32.6% 17.5%;
+        --input: 217.2 32.6% 17.5%;
+        --ring: 212.7 26.8% 83.9%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+html {
+    height: 100%;
+    background-color: rgba(2, 8, 23, 0.977) !important;
+    color: rgb(20, 3, 49); /* Ensure text is readable */
+}
+
+body {
+    width: 100%;
+    height: 100%;
+}
+
+#root {
+    height: calc(100% - 4rem);
+}
+
+::-webkit-scrollbar {
+    width: 4px;
+    height: 0px;
+    border-radius: 100px;
+}
+
+::-webkit-scrollbar-track {
+    background: auto;
+    border-radius: 100px;
+}
+
+.freelancer_profiles {
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+}
+
+.my_text h1 {
+    font-weight: 700;
+    position: absolute;
+    letter-spacing: 0.6px;
+    top: 72px;
+    font-size: 43px;
+    line-height: 50px;
+    left: 50%;
+}
+
+@media screen and (max-width: 439px) {
+    .my_text h1 {
+        font-size: 40px;
+        line-height: 40px;
+    }
+}
+
+.freelancer_profiles .freelancer_list {
+    overflow-x: auto;
+    white-space: nowrap;
+    width: 100%;
+    padding: 10px;
+}
+
+.freelancer_profiles ul {
+    display: flex;
+    gap: 20px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+@keyframes moveRightToLeft {
+    0% {
+        transform: translateX(100%);
+    }
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+.freelancer_profiles ul li {
+    flex-shrink: 0;
+    animation: moveRightToLeft 50s linear infinite;
+}
+
+.freelancer_profiles .freelancer_list ul li:last-child {
+    margin-right: 0;
+}
+
+.freelancer_profiles .card {
+    background-color: var(--card-foreground);
+    max-width: 220px;
+    border: 1px solid rgb(49, 47, 47);
+    height: 97.5%;
+    cursor: pointer;
+}
+
+.freelancer_profiles .card .image {
+    max-width: 220px;
+    height: 120px;
+}
+
+.freelancer_profiles .card .image img {
+    width: 100%;
+    height: 120px;
+}
+
+.freelancer_profiles ul li .card h3 {
+    color: rgb(179, 173, 173);
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.freelancer_profiles ul li .card p {
+    color: rgb(131, 125, 125);
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 3em;
+    line-height: 1.5;
+}
+
+@keyframes moveLeftToRight {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.keywords {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+}
+
+.keywords ul {
+    animation: moveLeftToRight 50s linear infinite;
+}
+
+.keywords ul li button {
+    color: rgb(131, 125, 125);
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid rgb(49, 47, 47);
+}
+
+.bg-primary {
+    background-color: #3490dc;
+}
+
+.bg-primary-dark {
+    background-color: #2779bd;
+}
+
+button:hover {
+    cursor: pointer;
+}
+
+.transform {
+    transform: scale(1);
+}
+
+.transition-transform {
+    transition: transform 0.3s ease-in-out;
+}
+
+.duration-300 {
+    transition-duration: 1ms;
+}
+
+.ease-in-out {
+    transition-timing-function: ease-in-out;
+}
+
+.hover\:scale-105:hover {
+    transform: scale(1.05);
+}
+
+.markdown-content h1 {
+  font-size: 2em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content h2 {
+  font-size: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.markdown-content ul, .markdown-content ol {
+  margin-left: 1.5em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.5em;
+}
+
+.markdown-content strong {
+  font-weight: bold;
+}
+
+.markdown-content em {
+  font-style: italic;
+}
