@@ -1,13 +1,29 @@
+import React from "react";
 import Footer from "../../components/Footer";
 // Import Images - Assuming you have these files in assets
 import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
 import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
 import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
-import { motion } from "framer-motion"; // Import Framer Motion
+import { motion, Variants } from "framer-motion"; // Import Framer Motion
 import { FaTruck, FaBoxOpen, FaHandshake, FaStar } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
+import { MdCheckCircle, MdSupportAgent } from "react-icons/md";
 
 const LandingPage = () => {
+  // Framer Motion Variants
+  const wordVariants: Variants = {
+    hidden: { opacity: 0, x: -20 }, // Start slightly offscreen to the left
+    visible: {
+      opacity: 1,
+      x: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        duration: 0.5,
+      },
+    },
+  };
 
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col">
@@ -60,7 +76,7 @@ const LandingPage = () => {
       </div>
 
       {/* Features Section */}
-      <div className="py-12 bg-orange-100">  {/* Light Orange for Features */}
+      <div className="py-12 bg-orange-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-semibold text-gray-800 text-center mb-12">
             Why Choose ReHome?
@@ -104,7 +120,7 @@ const LandingPage = () => {
       </div>
 
       {/* Reviews Section */}
-      <div className="py-12 bg-orange-50">  {/* Light Orange for Reviews */}
+      <div className="py-12 bg-orange-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-semibold text-gray-800 text-center mb-6">
             What Our Customers Say
@@ -122,7 +138,7 @@ const LandingPage = () => {
         </div>
       </div>
       {/* Featured Items Section */}
-      <div className="py-12 bg-orange-100"> {/* Light Orange for Items */}
+      <div className="py-12 bg-orange-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <h2 className="text-3xl font-semibold text-gray-800 text-center mb-6">Featured Items</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -142,13 +158,68 @@ const LandingPage = () => {
           </div>
       </div>
 
+      {/* About Us, Contact Us, Why Choose Us Section */}
+      <div className="py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* About Us */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">About Us</h3>
+              <p className="text-gray-700">
+                ReHome B.v. is dedicated to providing high-quality, pre-loved furniture and appliances. We are committed to sustainability and helping our customers create beautiful homes.
+              </p>
+            </div>
+
+            {/* Contact Us */}
+            <div className="bg-orange-100 rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Contact Us</h3>
+              <p className="text-gray-700">
+                Have questions or need assistance? Contact us at{" "}
+                <a href="mailto:info@rehome.com" className="text-orange-500">info@rehome.com</a>{" "}
+                or call us at{" "}
+                <a href="tel:+15551234567" className="text-orange-500">+1 (555) 123-4567</a>.
+              </p>
+            </div>
+
+            {/* Why Choose Us */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">Why Choose Us</h3>
+              <ul className="space-y-3">
+                <motion.li
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center text-gray-700"
+                >
+                  <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Wide selection of quality pre-loved furniture.
+                </motion.li>
+                <motion.li
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center text-gray-700"
+                >
+                  <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Sustainable and eco-friendly choices.
+                </motion.li>
+                <motion.li
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center text-gray-700"
+                >
+                  <MdSupportAgent className="text-orange-500 mr-2 h-5 w-5" /> Excellent customer service and support.
+                </motion.li>
+                <motion.li
+                  whileHover={{ scale: 1.05 }}
+                  className="flex items-center text-gray-700"
+                >
+                  <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Competitive pricing.
+                </motion.li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
       <Footer /> {/* Use the Footer component here */}
     </div>
   );
 };
 
 export default LandingPage;
-
 // Dummy Furniture Data with Images (You can keep this or fetch from API)
 const dummyData = [
   {

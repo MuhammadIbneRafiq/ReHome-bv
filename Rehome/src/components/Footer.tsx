@@ -20,7 +20,7 @@ const socialMedia = [
 
 const Footer = () => {
   return (
-    <footer className="w-full  pt-20 pb-10 bg-gray-100">
+    <footer className="w-full pt-20 pb-10 bg-gray-100">
       {/* background grid */}
       <div className="flex flex-col items-center mb-8">
         <Link
