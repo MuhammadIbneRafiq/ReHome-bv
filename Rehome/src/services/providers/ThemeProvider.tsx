@@ -1,3 +1,4 @@
+// src/services/providers/ThemeProvider.tsx
 import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "dark" | "light" | "system";
@@ -11,11 +12,13 @@ type ThemeProviderProps = {
 type ThemeProviderState = {
     theme: Theme;
     setTheme: (theme: Theme) => void;
+    toggleTheme: () => void; // Add toggleTheme function
 };
 
 const initialState: ThemeProviderState = {
     theme: "system",
     setTheme: () => null,
+    toggleTheme: () => null, // Initialize toggleTheme
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
@@ -49,12 +52,18 @@ export function ThemeProvider({
         root.classList.add(theme);
     }, [theme]);
 
-    const value = {
+    const toggleTheme = () => {
+        setTheme(prevTheme => {
+            if (prevTheme === "light") return "dark";
+            if (prevTheme === "dark") return "light";
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? "light" : "dark"; // System
+        });
+    };
+
+    const value: ThemeProviderState = {
         theme,
-        setTheme: (theme: Theme) => {
-            localStorage.setItem(storageKey, theme);
-            setTheme(theme);
-        },
+        setTheme,
+        toggleTheme, // Include toggleTheme in the value
     };
 
     return (

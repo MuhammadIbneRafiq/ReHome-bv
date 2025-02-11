@@ -107,10 +107,6 @@ export default function Navbar() {
                             <Link to="/item-donation" className="rehome-nav-link">
                                 Item Donation
                             </Link>
-                            <Link to="/pricing" className="rehome-nav-link">
-                                Pricing
-                            </Link>
-
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" onClick={toggleTheme} className="rehome-nav-icon-button"> {/* Style the icon button  */}
@@ -148,9 +144,6 @@ export default function Navbar() {
                                     </Link>
                                     <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Item Donation
-                                    </Link>
-                                    <Link to="/pricing" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Pricing
                                     </Link>
                                     {!isAuthenticated && (
                                         <>
