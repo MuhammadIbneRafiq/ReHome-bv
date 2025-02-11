@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle } from "react-icons/fa"; // Import Icons
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaArrowUp, FaArrowDown } from "react-icons/fa"; // Import Icons
 
 // Define a type for the item list
 type ItemList = {
@@ -90,6 +90,7 @@ const ItemMovingPage = () => {
 
         const totalPrice = basePrice + itemPoints * 3 + carryingCost + disassemblyCost + distanceCost;
         setEstimatedPrice(totalPrice);
+        return totalPrice;
     };
 
     useEffect(() => {
@@ -107,6 +108,10 @@ const ItemMovingPage = () => {
             setStep(step - 1);
         }
     };
+
+    // Determine color based on price
+    const priceColor = estimatedPrice > 500 ? 'text-red-600' : estimatedPrice > 200 ? 'text-yellow-500' : 'text-green-500';
+    const arrowIcon = estimatedPrice > 500 ? <FaArrowUp className="text-red-600" /> : <FaArrowDown className="text-green-600" />;
 
     return (
         <div className="min-h-screen bg-gradient-to-r from-yellow-400 to-red-500 py-20 px-4 sm:px-6 lg:px-8">
@@ -410,7 +415,18 @@ const ItemMovingPage = () => {
                                     {estimatedPrice !== null ? (
                                         <div>
                                             <h3 className="text-xl font-semibold text-gray-800 mb-4">Estimated Price:</h3>
-                                            <p className="text-2xl font-bold text-green-600">${estimatedPrice.toFixed(2)}</p> {/* Format to two decimal places */}
+                                            <motion.div
+                                                className={`flex items-center justify-between p-4 border-l-4 ${priceColor} border-opacity-50`}
+                                                initial={{ opacity: 0, y: -20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.5 }}
+                                            >
+                                                <div className="flex items-center">
+                                                    {arrowIcon}
+                                                    <span className={`ml-2 text-xl font-semibold ${priceColor}`}>${estimatedPrice.toFixed(2)}</span>
+                                                </div>
+                                                <p className={`text-sm ${priceColor}`}>Estimated Price</p>
+                                            </motion.div>
                                             <button
                                                 type="submit"
                                                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-300 mt-6"
