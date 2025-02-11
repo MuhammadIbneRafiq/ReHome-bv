@@ -38,6 +38,9 @@ body {
     border-radius: 100px;
 }
 
+.rehome-button {
+    @apply bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 rounded shadow-md hover:opacity-90 transition duration-300;
+  }
 
 .my_text h1 {
     font-weight: 700;

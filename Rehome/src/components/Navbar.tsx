@@ -69,7 +69,7 @@ export default function Navbar() {
                                 Junk Removal
                             </Link>
                             <Link to="/house-moving" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
-                                House Moving
+                                Item Moving
                             </Link>
                             <Link to="/item-donation" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
                                 Item Donation
@@ -110,7 +110,7 @@ export default function Navbar() {
                                         Junk Removal
                                     </Link>
                                     <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        House Moving
+                                        Item Moving
                                     </Link>
                                     <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Item Donation
