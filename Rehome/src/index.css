@@ -38,6 +38,12 @@ body {
     border-radius: 100px;
 }
 
+.rehome-icon-button {
+      @apply text-white hover:text-orange-200; /* Base styles - White text */
+      /* Add more styles for hover effects */
+      /* Example:  Highlight on hover */
+  }
+
 .rehome-button {
     @apply bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 rounded shadow-md hover:opacity-90 transition duration-300;
   }

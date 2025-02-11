@@ -2,19 +2,20 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
-import { Menu } from "lucide-react";
-import { ModeToggle } from "./ui/ModeToggle";
-import { NamedLogoWithLink } from "./Logo";
+import { Menu, Sun, Moon } from "lucide-react"; // Import Sun and Moon
 import UserAvatar from "./UserAvatar";
 import { useAuth } from "../hooks/useAuth";
 import '../index.css';
 import { useState, useEffect } from 'react';
+import { useTheme } from "../services/providers/ThemeProvider";
+import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
 
 export default function Navbar() {
     const { isAuthenticated } = useAuth();
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
     const [isPopupOpen, setIsPopupOpen] = useState(false);
+    const { theme, toggleTheme } = useTheme(); // Assuming you have a theme context
 
     const handleScroll = () => {
         if (window.scrollY > lastScrollY && window.scrollY > 60) {
@@ -47,15 +48,47 @@ export default function Navbar() {
         setIsPopupOpen(!isPopupOpen);
     };
 
+    // Dummy Language Options (Replace with your actual language selection logic)
+    const [selectedLanguage, setSelectedLanguage] = useState("en");
+    const languageOptions = [
+        { code: "en", label: "English" },
+        { code: "es", label: "Español" }, // Example
+        // Add more language options as needed
+    ];
+
+    const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedLanguage(event.target.value);
+        // Add your logic to change the language (e.g., update context, etc.)
+    };
+
     return (
         <header
             className={`fixed top-0 left-0 right-0 z-[102] w-full text-nav-label bg-gradient-to-r from-orange-500 to-red-600 shadow-md transition-transform ease-curve-d duration-600 ${isSticky ? 'translate-y-0' : '-translate-y-full'
                 }`}
         >
             <ToastContainer />
-            <nav aria-label="Main navigation" className="h-16 max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6"> {/* Reduced height to h-16 */}
+            <nav aria-label="Main navigation" className="h-16 max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6">
                  <div className="flex items-center">
-                    <NamedLogoWithLink />
+                    <Link to="/" className="text-2xl font-bold text-white"> {/* ReHome Text Logo */}
+                        ReHome B.v.
+                    </Link>
+                    {/* Language Selector */}
+                    <div className="ml-6 relative">
+                        <select
+                            value={selectedLanguage}
+                            onChange={handleLanguageChange}
+                            className="bg-white text-sm text-gray-700 py-2 px-3 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none pr-8"
+                        >
+                            {languageOptions.map((option) => (
+                                <option key={option.code} value={option.code}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                            <ChevronDownIcon className="h-5 w-5" aria-hidden="true" /> {/*  Using a Radix UI icon */}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex items-center justify-center gap-4 md:gap-6">
@@ -75,13 +108,11 @@ export default function Navbar() {
                                 Item Donation
                             </Link>
 
-                            <Link to="/pricing" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
-                                Pricing
-                            </Link>
-
                         </div>
                     </div>
-                    <ModeToggle />
+                    <Button variant="ghost" size="icon" onClick={toggleTheme} className="rehome-icon-button"> {/* Style the icon button  */}
+                        {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+                    </Button>
                     {!isAuthenticated && (
                         <>
                             <Link to="/register" className="text-white hidden md:block text-sm transition-colors duration-fast hover:text-orange-200">
@@ -114,9 +145,6 @@ export default function Navbar() {
                                     </Link>
                                     <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Item Donation
-                                    </Link>
-                                    <Link to="/pricing" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Pricing
                                     </Link>
                                     {!isAuthenticated && (
                                         <>

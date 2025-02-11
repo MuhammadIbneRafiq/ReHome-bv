@@ -1,4 +1,3 @@
-import React from "react";
 import Footer from "../../components/Footer"; // Import the Footer component
 // Import Images - Assuming you have these files in assets
 import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
