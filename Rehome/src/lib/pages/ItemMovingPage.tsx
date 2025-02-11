@@ -40,24 +40,24 @@ const ItemMovingPage = () => {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        // Handle form submission
-        console.log({
-            firstLocation,
-            secondLocation,
-            itemList,
-            floorPickup,
-            floorDropoff,
-            disassembly,
-            photos,
-            pickupDay,
-            deliveryDay,
-            contactInfo,
-            estimatedPrice,
-        });
-        alert('Moving request submitted (mock)');
-    };
+    // const handleSubmit = (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     // Handle form submission
+    //     console.log({
+    //         firstLocation,
+    //         secondLocation,
+    //         itemList,
+    //         floorPickup,
+    //         floorDropoff,
+    //         disassembly,
+    //         photos,
+    //         pickupDay,
+    //         deliveryDay,
+    //         contactInfo,
+    //         estimatedPrice,
+    //     });
+    //     alert('Moving request submitted (mock)');
+    // };
 
     // Placeholder price estimation logic (replace with your calculations)
     const calculatePrice = () => {
@@ -110,8 +110,13 @@ const ItemMovingPage = () => {
     };
 
     // Determine color based on price
-    const priceColor = estimatedPrice > 500 ? 'text-red-600' : estimatedPrice > 200 ? 'text-yellow-500' : 'text-green-500';
-    const arrowIcon = estimatedPrice > 500 ? <FaArrowUp className="text-red-600" /> : <FaArrowDown className="text-green-600" />;
+    const priceColor = estimatedPrice !== null 
+        ? (estimatedPrice > 500 ? 'text-red-600' : estimatedPrice > 200 ? 'text-yellow-500' : 'text-green-500') 
+        : 'text-gray-500'; // Default color when estimatedPrice is null
+
+    const arrowIcon = estimatedPrice !== null 
+        ? (estimatedPrice > 500 ? <FaArrowUp className="text-red-600" /> : <FaArrowDown className="text-green-600" />) 
+        : null; // No icon when estimatedPrice is null
 
     return (
         <div className="min-h-screen bg-gradient-to-r from-yellow-400 to-red-500 py-20 px-4 sm:px-6 lg:px-8">

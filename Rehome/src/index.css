@@ -39,23 +39,26 @@ body {
 }
 
 .rehome-button {
-@apply bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 rounded shadow-md hover:opacity-90 transition duration-300;
+  @apply bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 rounded shadow-md hover:opacity-90 transition duration-300;
 }
 .rehome-icon-button {
     @apply text-white hover:text-orange-200; /* Base styles - White text */
     /* Add more styles for hover effects */
 }
 .rehome-nav-button {
-    @apply text-sm py-2 px-6 rounded-full bg-white  text-orange-500 border border-orange-500 hover:bg-orange-100 hover:text-orange-700 transition duration-200; /* Oval white buttons */
+  @apply text-sm py-2 px-4 rounded-full bg-white  text-orange-500 border border-orange-500 hover:bg-orange-100 hover:text-orange-700 transition duration-200; /* Oval white buttons */
 }
 
 .rehome-nav-icon-button {
     @apply text-white hover:text-orange-200; /* Base styles - White text */
 }
-.rehome-nav-button {
-@apply text-sm py-2 px-6 rounded-full bg-white  text-orange-500 border border-orange-500 hover:bg-orange-100 hover:text-orange-700 transition duration-200; /* Oval white buttons */
+.rehome-nav-link {
+    @apply text-white text-lg font-semibold transition-colors duration-200 hover:text-orange-200; /* Bigger and bolder text */
 }
 
+.rehome-dashboard-button {
+  @apply bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300;
+}
 
 .my_text h1 {
     font-weight: 700;

@@ -120,8 +120,8 @@ export default function Navbar() {
                             <Link to="/login" className="rehome-nav-button">
                                 Log in
                             </Link>
-                            <Link to="/sell-dash" className="rehome-nav-button">
-                                Dashboard
+                            <Link to="/sell-dash" className="rehome-dashboard-button">
+                            Dashboard
                             </Link>
                         </>
                     )}
@@ -142,7 +142,7 @@ export default function Navbar() {
                                     <Link to="/junk-removal" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Junk Removal
                                     </Link>
-                                    <Link to="/item-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                    <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Item Moving
                                     </Link>
                                     <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
