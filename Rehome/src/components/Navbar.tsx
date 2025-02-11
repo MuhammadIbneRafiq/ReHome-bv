@@ -70,7 +70,7 @@ export default function Navbar() {
             <nav aria-label="Main navigation" className="h-16 max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6">
                  <div className="flex items-center">
                     <Link to="/" className="text-2xl font-bold text-white"> {/* ReHome Text Logo */}
-                        ReHome B.v.
+                        Rehome B.v.
                     </Link>
                     {/* Language Selector */}
                     <div className="ml-6 relative">
