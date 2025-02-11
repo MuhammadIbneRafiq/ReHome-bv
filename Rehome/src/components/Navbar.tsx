@@ -101,7 +101,7 @@ export default function Navbar() {
                             <Link to="/junk-removal" className="rehome-nav-link">
                                 Junk Removal
                             </Link>
-                            <Link to="/house-moving" className="rehome-nav-link">
+                            <Link to="/item-moving" className="rehome-nav-link">
                                 Item Moving
                             </Link>
                             <Link to="/item-donation" className="rehome-nav-link">
@@ -139,7 +139,7 @@ export default function Navbar() {
                                     <Link to="/junk-removal" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Junk Removal
                                     </Link>
-                                    <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                    <Link to="/item-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Item Moving
                                     </Link>
                                     <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
