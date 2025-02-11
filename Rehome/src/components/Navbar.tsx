@@ -120,6 +120,9 @@ export default function Navbar() {
                             <Link to="/login" className="rehome-nav-button">
                                 Log in
                             </Link>
+                            <Link to="/sell-dash" className="rehome-nav-button">
+                                Dashboard
+                            </Link>
                         </>
                     )}
                     {isAuthenticated && <UserAvatar />}
@@ -144,6 +147,9 @@ export default function Navbar() {
                                     </Link>
                                     <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Item Donation
+                                    </Link>
+                                    <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Dashboard
                                     </Link>
                                     {!isAuthenticated && (
                                         <>

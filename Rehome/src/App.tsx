@@ -15,7 +15,7 @@ import ItemDonationPage from "./lib/pages/ItemDonationPage";
 import WhyChooseUsPage from "./lib/pages/WhyChooseUsPage";
 import ContactUsPage from "./lib/pages/ContactUsPage";
 import AboutUsPage from "./lib/pages/AboutUsPage";
-import SellPage from "./lib/pages/SellPage"; // Import the SellPage
+import SellerDashboard from "./lib/pages/SellerDashboard";
 
 
 const usePostData = <T,>(endpoint: string) => {
@@ -43,13 +43,13 @@ const App = () => {
               <Route path="/junk-removal" element={<JunkRemovalPage />} />
               <Route path="/item-moving" element={<ItemMovingPage />} />
               <Route path="/item-donation" element={<ItemDonationPage />} />
+              <Route path="/sell-dash" element={<SellerDashboard />} />
               <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
               <Route path="/contact-us" element={<ContactUsPage />} />
               <Route path="/about-us" element={<AboutUsPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<SignupPage />} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/sell" element={<SellPage />} />  {/* Add the route for SellPage */}
             </Routes>
           </main>
         </div>

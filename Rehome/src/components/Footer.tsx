@@ -24,7 +24,7 @@ const Footer = () => {
       {/* background grid */}
       <div className="flex flex-col items-center mb-8">
         <Link
-          to="/sell"
+          to="/sell-dash"
           className="rehome-button"
         >
           Looking to Sell?
