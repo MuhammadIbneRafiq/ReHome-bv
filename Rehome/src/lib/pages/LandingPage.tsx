@@ -1,4 +1,3 @@
-import React from "react";
 import Footer from "../../components/Footer";
 // Import Images - Assuming you have these files in assets
 import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
@@ -9,17 +8,15 @@ import { FaTruck, FaBoxOpen, FaHandshake, FaStar } from "react-icons/fa"; // Imp
 import { Link } from "react-router-dom";
 
 const LandingPage = () => {
+
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col">
       {/* Hero Section */}
-      <div className="bg-white py-20 pt-32"> {/* ADDED pt-28 HERE */}
+      <div className="bg-white py-20 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div>
               <motion.h1
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7 }}
                 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900"
               >
                 <motion.span className="text-orange-600">Re</motion.span>start and{" "}
@@ -63,7 +60,7 @@ const LandingPage = () => {
       </div>
 
       {/* Features Section */}
-      <div className="py-12 bg-gray-50">
+      <div className="py-12 bg-orange-100">  {/* Light Orange for Features */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-semibold text-gray-800 text-center mb-12">
             Why Choose ReHome?
@@ -107,7 +104,7 @@ const LandingPage = () => {
       </div>
 
       {/* Reviews Section */}
-      <div className="py-12">
+      <div className="py-12 bg-orange-50">  {/* Light Orange for Reviews */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-semibold text-gray-800 text-center mb-6">
             What Our Customers Say
@@ -124,8 +121,8 @@ const LandingPage = () => {
           </div>
         </div>
       </div>
-       {/* Featured Items Section */}
-       <div className="py-12">
+      {/* Featured Items Section */}
+      <div className="py-12 bg-orange-100"> {/* Light Orange for Items */}
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <h2 className="text-3xl font-semibold text-gray-800 text-center mb-6">Featured Items</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

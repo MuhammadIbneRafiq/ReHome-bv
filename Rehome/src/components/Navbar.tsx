@@ -95,30 +95,33 @@ export default function Navbar() {
                     {/* New Navigation Items */}
                     <div className="hidden md:flex flex-col items-center"> {/* Use flex-col to stack items */}
                         <div className="flex space-x-4"> {/* Put the links in a row */}
-                            <Link to="/marketplace" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
+                            <Link to="/marketplace" className="rehome-nav-link">
                                 Marketplace
                             </Link>
-                            <Link to="/junk-removal" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
+                            <Link to="/junk-removal" className="rehome-nav-link">
                                 Junk Removal
                             </Link>
-                            <Link to="/house-moving" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
+                            <Link to="/house-moving" className="rehome-nav-link">
                                 Item Moving
                             </Link>
-                            <Link to="/item-donation" className="text-white text-sm transition-colors duration-fast hover:text-orange-200">
+                            <Link to="/item-donation" className="rehome-nav-link">
                                 Item Donation
+                            </Link>
+                            <Link to="/pricing" className="rehome-nav-link">
+                                Pricing
                             </Link>
 
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={toggleTheme} className="rehome-icon-button"> {/* Style the icon button  */}
+                    <Button variant="ghost" size="icon" onClick={toggleTheme} className="rehome-nav-icon-button"> {/* Style the icon button  */}
                         {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
                     </Button>
                     {!isAuthenticated && (
                         <>
-                            <Link to="/register" className="text-white hidden md:block text-sm transition-colors duration-fast hover:text-orange-200">
+                            <Link to="/register" className="rehome-nav-button">
                                 Sign up
                             </Link>
-                            <Link to="/login" className="text-white hidden md:block text-sm transition-colors duration-fast hover:text-orange-200">
+                            <Link to="/login" className="rehome-nav-button">
                                 Log in
                             </Link>
                         </>
@@ -145,6 +148,9 @@ export default function Navbar() {
                                     </Link>
                                     <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Item Donation
+                                    </Link>
+                                    <Link to="/pricing" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Pricing
                                     </Link>
                                     {!isAuthenticated && (
                                         <>
