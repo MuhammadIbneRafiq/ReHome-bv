@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import MarketplaceSearch from '../../components/MarketplaceSearch';
-import { motion } from "framer-motion"; // Import motion from framer-motion
-
+import { motion, AnimatePresence } from "framer-motion";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaShoppingCart } from "react-icons/fa"; // Import cart icon
 // Import images
 import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
 import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
@@ -15,6 +15,7 @@ import image6 from "../../assets/IMG-20250208-WA0011.jpg"; // New image
 import image7 from "../../assets/IMG-20250208-WA0012.jpg"; // New image
 import image8 from "../../assets/IMG-20250208-WA0013.jpg"; // New image
 import image9 from "../../assets/IMG-20250208-WA0014.jpg"; // New image
+import { Link } from "react-router-dom";
 
 const MarketplacePage = () => {
     const [featuredListings, setFeaturedListings] = useState([
@@ -32,6 +33,26 @@ const MarketplacePage = () => {
         { id: 12, name: "Bookshelf", image: image9, description: 'Wooden bookshelf', price: 199, location: 'Chicago' }, // New listing
         // Add more listings as needed
     ]);
+    const [cart, setCart] = useState<number[]>([]); // Simple cart (array of item IDs)
+    const [isAddingToCart, setIsAddingToCart] = useState(false);
+    const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+    const addToCart = (itemId: number) => {
+        setIsAddingToCart(true);
+        setTimeout(() => {
+            setCart([...cart, itemId]);
+            setIsAddingToCart(false);
+        }, 500); // Simulate a short delay for the animation
+    };
+
+    const handleCheckout = () => {
+        setCheckoutLoading(true);
+        setTimeout(() => {
+            setCheckoutLoading(false);
+            // Redirect to Pricing page (replace with your actual routing)
+            window.location.href = '/pricing'; // or use navigate if you have it
+        }, 1000); // Simulate checkout loading
+    };
 
     return (
         <div className="min-h-screen bg-orange-50 pt-16">
@@ -69,6 +90,40 @@ const MarketplacePage = () => {
                                         <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
                                         <p className="text-gray-600 text-xs">{item.description}</p>
                                         <p className="text-red-500 font-bold text-xs">${item.price}</p>
+
+                                        {/* Add to Cart Button */}
+                                        <motion.button
+                                            onClick={() => addToCart(item.id)}
+                                            disabled={isAddingToCart}
+                                            whileTap={{ scale: 0.95 }}
+                                            className={`mt-2 w-full flex items-center justify-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium  transition duration-200 ${
+                                                isAddingToCart ? 'bg-gray-300 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-700 text-white'
+                                            }`}
+                                        >
+                                            <AnimatePresence>
+                                                {isAddingToCart ? (
+                                                    <motion.span
+                                                        key="loading"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        className="flex items-center"
+                                                    >
+                                                        Adding...
+                                                    </motion.span>
+                                                ) : (
+                                                    <motion.span
+                                                        key="add"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        exit={{ opacity: 0 }}
+                                                        className="flex items-center"
+                                                    >
+                                                        <FaShoppingCart className="mr-1" /> Add to Cart
+                                                    </motion.span>
+                                                )}
+                                            </AnimatePresence>
+                                        </motion.button>
                                     </motion.div>
                                 ))}
                             </div>
@@ -76,6 +131,41 @@ const MarketplacePage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Checkout Button (Displayed conditionally) */}
+            {cart.length > 0 && (
+                <div className="fixed bottom-4 right-4">
+                    <button
+                        onClick={handleCheckout}
+                        disabled={checkoutLoading}
+                        className={`flex items-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-md shadow-md transition duration-300 ${
+                            checkoutLoading ? 'opacity-75 cursor-not-allowed' : ''
+                        }`}
+                    >
+                        <AnimatePresence>
+                            {checkoutLoading ? (
+                                <motion.span
+                                    key="loading"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                >
+                                    Loading...
+                                </motion.span>
+                            ) : (
+                                <motion.span
+                                    key="checkout"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                >
+                                    Checkout
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

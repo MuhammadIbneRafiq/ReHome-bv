@@ -18,14 +18,14 @@ import AboutUsPage from "./lib/pages/AboutUsPage";
 import SellerDashboard from "./lib/pages/SellerDashboard";
 
 
-const usePostData = <T,>(endpoint: string) => {
-  return useMutation<T, Error, T>(
-    async (payload: T) => {
-      const { data } = await axios.post<T>(`${import.meta.env.VITE_API_URL}/${endpoint}`, payload);
-      return data;
-    }
-  );
-};
+// const usePostData = <T,>(endpoint: string) => {
+//   return useMutation<T, Error, T>(
+//     async (payload: T) => {
+//       const { data } = await axios.post<T>(`${import.meta.env.VITE_API_URL}/${endpoint}`, payload);
+//       return data;
+//     }
+//   );
+// };
 
 // ✅ Main App Component
 const App = () => {
