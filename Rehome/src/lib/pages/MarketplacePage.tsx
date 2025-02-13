@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import MarketplaceSearch from '../../components/MarketplaceSearch';
 import { motion, AnimatePresence } from "framer-motion";
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaShoppingCart } from "react-icons/fa"; // Import cart icon
+import { FaShoppingCart } from "react-icons/fa"; // Import cart icon
 // Import images
 import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
 import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
@@ -15,22 +15,21 @@ import image6 from "../../assets/IMG-20250208-WA0011.jpg"; // New image
 import image7 from "../../assets/IMG-20250208-WA0012.jpg"; // New image
 import image8 from "../../assets/IMG-20250208-WA0013.jpg"; // New image
 import image9 from "../../assets/IMG-20250208-WA0014.jpg"; // New image
-import { Link } from "react-router-dom";
 
 const MarketplacePage = () => {
     const [featuredListings, setFeaturedListings] = useState([
-        { id: 1, name: "Cozy Sofa", image: sofaImage, description: 'A comfortable sofa', price: 299, location: 'New York' },
-        { id: 2, name: "Wooden Dining Table", image: tableImage, description: 'Seats 6', price: 399, location: 'Los Angeles' },
-        { id: 3, name: "Modern Office Chair", image: chairImage, description: 'Ergonomic chair', price: 199, location: 'Chicago' },
-        { id: 4, name: "Cozy Sofa", image: image1, description: 'A comfortable sofa', price: 299, location: 'New York' },
-        { id: 5, name: "Wooden Dining Table", image: image2, description: 'Seats 6', price: 399, location: 'Los Angeles' },
-        { id: 6, name: "Modern Office Chair", image: image3, description: 'Ergonomic chair', price: 199, location: 'Chicago' },
-        { id: 7, name: "Modern Office Chair", image: image4, description: 'Ergonomic chair', price: 199, location: 'Chicago' },
-        { id: 8, name: "Modern Office Chair", image: image5, description: 'Ergonomic chair', price: 199, location: 'Chicago' },
-        { id: 9, name: "Stylish Lamp", image: image6, description: 'A modern lamp for your living room', price: 89, location: 'New York' }, // New listing
-        { id: 10, name: "Dining Set", image: image7, description: 'Elegant dining set for 4', price: 499, location: 'Los Angeles' }, // New listing
-        { id: 11, name: "Office Desk", image: image8, description: 'Spacious office desk', price: 299, location: 'Chicago' }, // New listing
-        { id: 12, name: "Bookshelf", image: image9, description: 'Wooden bookshelf', price: 199, location: 'Chicago' }, // New listing
+        { id: 1, name: "Cozy Sofa", image: sofaImage, description: 'A comfortable sofa', price: 299 },
+        { id: 2, name: "Wooden Dining Table", image: tableImage, description: 'Seats 6', price: 399 },
+        { id: 3, name: "Modern Office Chair", image: chairImage, description: 'Ergonomic chair', price: 199 },
+        { id: 4, name: "Cozy Sofa", image: image1, description: 'A comfortable sofa', price: 299 },
+        { id: 5, name: "Wooden Dining Table", image: image2, description: 'Seats 6', price: 399 },
+        { id: 6, name: "Modern Office Chair", image: image3, description: 'Ergonomic chair', price: 199},
+        { id: 7, name: "Modern Office Chair", image: image4, description: 'Ergonomic chair', price: 199},
+        { id: 8, name: "Modern Office Chair", image: image5, description: 'Ergonomic chair', price: 199},
+        { id: 9, name: "Stylish Lamp", image: image6, description: 'A modern lamp for your living room', price: 89 }, // New listing
+        { id: 10, name: "Dining Set", image: image7, description: 'Elegant dining set for 4', price: 499 }, // New listing
+        { id: 11, name: "Office Desk", image: image8, description: 'Spacious office desk', price: 299 }, // New listing
+        { id: 12, name: "Bookshelf", image: image9, description: 'Wooden bookshelf', price: 199 }, // New listing
         // Add more listings as needed
     ]);
     const [cart, setCart] = useState<number[]>([]); // Simple cart (array of item IDs)

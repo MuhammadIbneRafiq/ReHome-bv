@@ -11,6 +11,7 @@ const useFetchData = (endpoint: string, queryKey: string) => {
         return Array.isArray(data) ? data : []; // Ensure it's always an array
       } catch (error) {
         console.error("Error fetching data:", error);
+        console.log('yep error again!')
         return dummyData; // Fallback to dummyData on error
       }
     },
