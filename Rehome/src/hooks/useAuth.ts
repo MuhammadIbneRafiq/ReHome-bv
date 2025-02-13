@@ -43,8 +43,8 @@ export const useAuth = () => {
       }
 
       const response = await axios.post(
-        // "http://localhost:3000/user/role",
-        "https://backend-autolanding-ai.vercel.app/user/role",
+        "http://localhost:3000/user/role",
+        // "https://backend-autolanding-ai.vercel.app/user/role",
         {},
         {
           headers: {

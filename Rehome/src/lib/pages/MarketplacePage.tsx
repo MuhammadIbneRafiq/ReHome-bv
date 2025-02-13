@@ -1,40 +1,40 @@
-import { useState } from 'react';
+// src/pages/MarketplacePage.tsx
+import { useState, useEffect } from 'react';
 import MarketplaceSearch from '../../components/MarketplaceSearch';
 import { motion, AnimatePresence } from "framer-motion";
 import { FaShoppingCart } from "react-icons/fa"; // Import cart icon
-// Import images
-import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
-import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
-import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
-import image1 from "../../assets/IMG-20250208-WA0005.jpg";
-import image2 from "../../assets/IMG-20250208-WA0006.jpg";
-import image3 from "../../assets/IMG-20250208-WA0007.jpg";
-import image4 from "../../assets/IMG-20250208-WA0008.jpg";
-import image5 from "../../assets/IMG-20250208-WA0009.jpg";
-import image6 from "../../assets/IMG-20250208-WA0011.jpg"; // New image
-import image7 from "../../assets/IMG-20250208-WA0012.jpg"; // New image
-import image8 from "../../assets/IMG-20250208-WA0013.jpg"; // New image
-import image9 from "../../assets/IMG-20250208-WA0014.jpg"; // New image
 
 const MarketplacePage = () => {
-    const [featuredListings, setFeaturedListings] = useState([
-        { id: 1, name: "Cozy Sofa", image: sofaImage, description: 'A comfortable sofa', price: 299 },
-        { id: 2, name: "Wooden Dining Table", image: tableImage, description: 'Seats 6', price: 399 },
-        { id: 3, name: "Modern Office Chair", image: chairImage, description: 'Ergonomic chair', price: 199 },
-        { id: 4, name: "Cozy Sofa", image: image1, description: 'A comfortable sofa', price: 299 },
-        { id: 5, name: "Wooden Dining Table", image: image2, description: 'Seats 6', price: 399 },
-        { id: 6, name: "Modern Office Chair", image: image3, description: 'Ergonomic chair', price: 199},
-        { id: 7, name: "Modern Office Chair", image: image4, description: 'Ergonomic chair', price: 199},
-        { id: 8, name: "Modern Office Chair", image: image5, description: 'Ergonomic chair', price: 199},
-        { id: 9, name: "Stylish Lamp", image: image6, description: 'A modern lamp for your living room', price: 89 }, // New listing
-        { id: 10, name: "Dining Set", image: image7, description: 'Elegant dining set for 4', price: 499 }, // New listing
-        { id: 11, name: "Office Desk", image: image8, description: 'Spacious office desk', price: 299 }, // New listing
-        { id: 12, name: "Bookshelf", image: image9, description: 'Wooden bookshelf', price: 199 }, // New listing
-        // Add more listings as needed
-    ]);
+    const [furnitureItems, setFurnitureItems] = useState<any[]>([]); // Use any[] or create a type for your furniture data
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [cart, setCart] = useState<number[]>([]); // Simple cart (array of item IDs)
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchFurniture = async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                const response = await fetch('http://localhost:3000/api/furniture'); // Adjust the URL if your backend port is different
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('Furniture data:', data); // Debug: Check the fetched data
+                setFurnitureItems(data);
+            } catch (err: any) {
+                console.error('Error fetching furniture:', err);
+                setError(err.message || 'Failed to fetch furniture items.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchFurniture();
+    }, []);
 
     const addToCart = (itemId: number) => {
         setIsAddingToCart(true);
@@ -53,6 +53,22 @@ const MarketplacePage = () => {
         }, 1000); // Simulate checkout loading
     };
 
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-orange-50 pt-16 flex items-center justify-center">
+                <p>Loading furniture...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-orange-50 pt-16 flex items-center justify-center">
+                <p>Error: {error}</p>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-orange-50 pt-16">
             {/* Top Section */}
@@ -67,24 +83,24 @@ const MarketplacePage = () => {
                     {/* Search and Filter */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {/* Search on Left */}
-                        <div className="md:col-span-1"> {/* Adjusted to occupy less space */}
+                        <div className="md:col-span-1">
                             <MarketplaceSearch />
                         </div>
 
                         {/* Featured Listings on Right */}
-                        <div className="md:col-span-2 bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4"> {/* Increased width */}
+                        <div className="md:col-span-2 bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4">
                             <h2 className="text-xl font-semibold text-white mb-2">Featured Listings</h2>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">  {/* 4 items in a row on larger screens */}
-                                {featuredListings.map((item) => (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {furnitureItems.map((item) => (
                                     <motion.div
                                         key={item.id}
                                         className="bg-white shadow-lg rounded-lg p-2 hover:scale-105 transition-transform"
                                         whileHover={{ scale: 1.05 }}
                                     >
                                         <img
-                                            src={item.image}
+                                            src={item.image_url} // Use the image_url field
                                             alt={item.name}
-                                            className="w-full h-32 object-cover rounded-md mb-1" // Reduced height
+                                            className="w-full h-32 object-cover rounded-md mb-1"
                                         />
                                         <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
                                         <p className="text-gray-600 text-xs">{item.description}</p>
