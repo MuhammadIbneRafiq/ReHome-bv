@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// src/pages/SellerDashboard.tsx
+import { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle } from "react-icons/fa";
 import SellPage from "./SellPage";
 import { Link } from "react-router-dom";
@@ -26,19 +27,20 @@ const mockAnalytics = {
     activeListings: 8,
 };
 
-// Dummy Data for Listings
-const mockListings = [
-    { id: 1, name: 'Cozy Sofa', status: 'Active', imageUrl: sofaImage }, // Use image imports
-    { id: 2, name: 'Wooden Dining Table', status: 'Inactive', imageUrl: tableImage },
-    { id: 3, name: 'Modern Office Chair', status: 'Active', imageUrl: chairImage },
-    { id: 4, name: 'Cozy Sofa', status: 'Active', imageUrl: image1 }, // Use image imports
-    { id: 5, name: 'Wooden Dining Table', status: 'Inactive', imageUrl: image2 },
-    { id: 6, name: 'Modern Office Chair', status: 'Active', imageUrl: image3 },
-];
+interface FurnitureItem {
+    id: number;
+    name: string;
+    description: string;
+    image_url: string;
+    price: number;
+    created_at: string;
+}
 
 const SellerDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [listings, setListings] = useState(mockListings);
+    const [listings, setListings] = useState<FurnitureItem[]>([]); // Use the new type
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const openModal = () => {
         setIsModalOpen(true);
@@ -48,10 +50,58 @@ const SellerDashboard = () => {
         setIsModalOpen(false);
     };
 
-    const handleNewListing = (newListing: any) => {
-        setListings([...listings, newListing]);
-        closeModal();
-    };
+    // No longer needed, as the new listing is handled via a post request to the backend.
+    // const handleNewListing = (newListing: any) => {
+    //     setListings([...listings, newListing]);
+    //     closeModal();
+    // };
+
+    useEffect(() => {
+        const fetchListings = async () => {
+            setLoading(true);
+            setError(null);
+
+            try {
+                const response = await fetch('http://localhost:3000/api/furniture', { // Use your backend endpoint
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` // Get the token from localStorage
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Fetched listings:', data);
+                setListings(data); // Update the state with the fetched listings
+            } catch (err: any) {
+                console.error('Error fetching listings:', err);
+                setError(err.message || 'Failed to fetch listings.');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchListings();
+    }, []); // Empty dependency array ensures this runs only once on mount
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
+                <p>Loading listings...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
+                <p>Error: {error}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-orange-50 flex flex-col pt-24">
@@ -77,7 +127,7 @@ const SellerDashboard = () => {
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <div className="flex items-center justify-between">
                             <FaBoxOpen className="text-orange-500 text-2xl" />
-                            <span className="text-2xl font-semibold">{mockAnalytics.activeListings}</span>
+                            <span className="text-2xl font-semibold">{listings.length}</span> {/* Display the number of listings */}
                         </div>
                         <p className="text-gray-500 mt-2">Active Listings</p>
                     </div>
@@ -117,31 +167,16 @@ const SellerDashboard = () => {
                     {/* Active Listings */}
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">Active Listings</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                        {listings.filter(listing => listing.status === 'Active').map((listing) => (
+                        {listings.filter(listing => listing.description).map((listing) => (
                             <motion.div
                                 key={listing.id}
                                 className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform"
                                 whileHover={{ scale: 1.05 }}
                             >
-                                <img src={listing.imageUrl} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
+                                <img src={listing.image_url} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
                                 <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
-                                <p className="text-gray-600 text-sm">Status: {listing.status}</p>
-                            </motion.div>
-                        ))}
-                    </div>
-
-                    {/* Inactive Listings */}
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Inactive Listings</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {listings.filter(listing => listing.status === 'Inactive').map((listing) => (
-                            <motion.div
-                                key={listing.id}
-                                className="bg-white rounded-lg shadow-md p-4 hover:scale-105 transition-transform"
-                                whileHover={{ scale: 1.05 }}
-                            >
-                                <img src={listing.imageUrl} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
-                                <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
-                                <p className="text-gray-600 text-sm">Status: {listing.status}</p>
+                                <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
+                                <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
                             </motion.div>
                         ))}
                     </div>

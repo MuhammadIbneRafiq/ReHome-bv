@@ -49,7 +49,7 @@ const MarketplacePage = () => {
         setTimeout(() => {
             setCheckoutLoading(false);
             // Redirect to Pricing page (replace with your actual routing)
-            window.location.href = '/pricing'; // or use navigate if you have it
+            window.location.href = '/pricing'; // or use navigate if you have it PUT MOLLIEE BACKEND API TO IT!
         }, 1000); // Simulate checkout loading
     };
 
