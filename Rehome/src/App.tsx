@@ -1,6 +1,5 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider, useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Navbar from "./components/Navbar";
 
 // Import Pages
@@ -9,7 +8,6 @@ import LoginPage from "./lib/pages/LoginPage";
 import SignupPage from "./lib/pages/SignupPage";
 import Pricing from "./lib/pages/Pricing";
 import MarketplacePage from "./lib/pages/MarketplacePage";
-import JunkRemovalPage from "./lib/pages/JunkRemovalPage";
 import ItemMovingPage from "./lib/pages/ItemMovingPage";
 import ItemDonationPage from "./lib/pages/ItemDonationPage";
 import WhyChooseUsPage from "./lib/pages/WhyChooseUsPage";
@@ -40,7 +38,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/marketplace" element={<MarketplacePage />} />
-              <Route path="/junk-removal" element={<JunkRemovalPage />} />
+              <Route path="/house-moving" element={<ItemMovingPage />} />
               <Route path="/item-moving" element={<ItemMovingPage />} />
               <Route path="/item-donation" element={<ItemDonationPage />} />
               <Route path="/sell-dash" element={<SellerDashboard />} />

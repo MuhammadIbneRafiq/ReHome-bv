@@ -1,4 +1,3 @@
-// src/pages/MarketplacePage.tsx
 import { useState, useEffect } from 'react';
 import MarketplaceSearch from '../../components/MarketplaceSearch';
 import { motion, AnimatePresence } from "framer-motion";

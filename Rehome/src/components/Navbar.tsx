@@ -98,14 +98,11 @@ export default function Navbar() {
                             <Link to="/marketplace" className="rehome-nav-link">
                                 Marketplace
                             </Link>
-                            <Link to="/junk-removal" className="rehome-nav-link">
-                                Junk Removal
-                            </Link>
                             <Link to="/item-moving" className="rehome-nav-link">
-                                Item Moving
+                                Item Moving/Transport
                             </Link>
-                            <Link to="/item-donation" className="rehome-nav-link">
-                                Item Donation
+                            <Link to="/house-moving" className="rehome-nav-link">
+                                House Moving
                             </Link>
                         </div>
                     </div>
@@ -139,14 +136,11 @@ export default function Navbar() {
                                     <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Marketplace
                                     </Link>
-                                    <Link to="/junk-removal" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Junk Removal
+                                    <Link to="/item-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Item Moving/Transport
                                     </Link>
                                     <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Item Moving
-                                    </Link>
-                                    <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Item Donation
+                                        House Moving
                                     </Link>
                                     <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Dashboard
