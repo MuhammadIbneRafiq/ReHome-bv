@@ -1,14 +1,18 @@
+import React from 'react';
 import { FaDollarSign, FaTree, FaTruck, FaHandshake, FaStore, FaUsers } from 'react-icons/fa';
-import logo from "../../assets/logorehome.jpg";
+import { MdCheckCircle } from "react-icons/md"; // Import more icons
+import { Link } from "react-router-dom";
+import logo from "../../assets/logorehome.jpg"
 
 const WhyChooseUsPage = () => {
     return (
-        <div className="max-w-4xl mx-auto p-6 pt-24">
+        <div className="max-w-4xl mx-auto p-6 pt-24 bg-orange-0">  {/* Added pt-24 */}
             <img src={logo} alt="Rehome Logo" className="mx-auto mb-6 max-w-xs" /> {/* Logo added here */}
+
             <h1 className="text-3xl font-bold mb-6">Why Choose Us?</h1>
             <div className="space-y-4">
                 <div className="bg-gray-100 p-4 rounded-lg shadow-md">
-                    <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <h2 className="text-xl font-semibold flex items-center gap-2"> {/* Added flex and gap */}
                         <FaDollarSign className="text-orange-500" /> 1. Affordable & Transparent Pricing
                     </h2>
                     <p>No hidden fees—just fair, upfront pricing for moving services and second-hand furniture. Whether you need a full house move or a single item transported, we provide cost-effective solutions.</p>
