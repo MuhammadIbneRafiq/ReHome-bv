@@ -1,10 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaArrowUp, FaArrowDown } from "react-icons/fa"; // Import Icons
+import { Switch } from "@headlessui/react";
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Define a type for the item list
 type ItemList = {
     [key: string]: boolean;
+};
+
+// Define furniture items
+const furnitureItems = [
+    { id: 'sofa', name: 'Sofa', points: 12 },
+    { id: 'table', name: 'Table', points: 6 },
+    { id: 'bed', name: 'Bed', points: 10 },
+    { id: 'tv', name: 'TV', points: 3 },
+    { id: 'fridge', name: 'Fridge', points: 8 },
+];
+
+// City Day Data
+const cityDayData: { [key: string]: string[] } = {
+  Amsterdam: ["Monday", "Wednesday", "Friday"],
+  Rotterdam: ["Tuesday", "Thursday"],
+  TheHague: ["Saturday", "Sunday"],
+  Utrecht: ["Monday"],
+  Almere: ["Tuesday"],
+  Haarlem: ["Wednesday"],
+  Zaanstad: ["Thursday"],
+  Amersfoort: ["Friday"],
+  "s-Hertogenbosch": ["Saturday"],
+  Hoofddorp: ["Sunday"],
+  Breda: ["Monday", "Wednesday"],
+  Leiden: ["Tuesday", "Thursday"],
+  Dordrecht: ["Friday", "Sunday"],
+  Zoetermeer: ["Saturday"],
+  Delft: ["Monday", "Wednesday"],
+  Eindhoven: ["Tuesday", "Thursday"],
+  Maastricht: ["Friday", "Sunday"],
+  Tilburg: ["Saturday"],
+  Groningen: ["Monday", "Wednesday"],
+  Nijmegen: ["Tuesday", "Thursday"],
+  Enschede: ["Friday", "Sunday"],
+  Arnhem: ["Saturday"],
+  Apeldoorn: ["Monday", "Wednesday"],
+  Deventer: ["Tuesday", "Thursday"],
+  Zwolle: ["Friday", "Sunday"],
 };
 
 const ItemMovingPage = () => {
@@ -20,15 +61,11 @@ const ItemMovingPage = () => {
     const [deliveryDay, setDeliveryDay] = useState('');
     const [contactInfo, setContactInfo] = useState('');
     const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
-
-    // Define furniture items
-    const furnitureItems = [
-        { id: 'sofa', name: 'Sofa' },
-        { id: 'table', name: 'Table' },
-        { id: 'bed', name: 'Bed' },
-        { id: 'tv', name: 'TV' },
-        { id: 'fridge', name: 'Fridge' },
-    ];
+    const [selectedDate, setSelectedDate] = useState('');
+    const [elevatorPickup, setElevatorPickup] = useState(false);
+    const [elevatorDropoff, setElevatorDropoff] = useState(false);
+    const [itemQuantities, setItemQuantities] = useState<{[key: string]: number}>({});
+    const [cityDays, setCityDays] = useState<{[key: string]: string[]}>({}); // Load from API/static data
 
     const handleCheckboxChange = (itemId: string) => {
         setItemList({ ...itemList, [itemId]: !itemList[itemId] });
@@ -40,50 +77,82 @@ const ItemMovingPage = () => {
         }
     };
 
-    // const handleSubmit = (e: React.FormEvent) => {
-    //     e.preventDefault();
-    //     // Handle form submission
-    //     console.log({
-    //         firstLocation,
-    //         secondLocation,
-    //         itemList,
-    //         floorPickup,
-    //         floorDropoff,
-    //         disassembly,
-    //         photos,
-    //         pickupDay,
-    //         deliveryDay,
-    //         contactInfo,
-    //         estimatedPrice,
-    //     });
-    //     alert('Moving request submitted (mock)');
-    // };
+    // Function to check if it's a city day
+    const checkCityDay = (location: string, date: string): boolean => {
+        if (!location || !date) return false;
 
-    // Placeholder price estimation logic (replace with your calculations)
+        const city = getCityFromPostalCode(location);
+
+        if (!city) return false; // If city not found, return false
+
+        const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+        return cityDayData[city]?.includes(dayOfWeek);
+    };
+
+    // Helper function to get item points
+    const getItemPoints = (itemId: string): number => {
+        const item = furnitureItems.find(item => item.id === itemId);
+        return item ? item.points : 0;
+    };
+        const getCityFromPostalCode = (postalCode: string): string | null => {
+        // Clean and format the postal code
+        const cleanedCode = postalCode.trim().toUpperCase();
+        const codePrefix = cleanedCode.substring(0, 2);
+
+        // Postal code to city mapping
+        switch (true) {
+            case /^10/.test(cleanedCode): return "Amsterdam";
+            case /^35/.test(cleanedCode): return "Utrecht";
+            case /^13/.test(cleanedCode): return "Almere";
+            case /^20/.test(cleanedCode): return "Haarlem";
+            case /^15/.test(cleanedCode): return "Zaanstad";
+            case /^38/.test(cleanedCode): return "Amersfoort";
+            case /^52/.test(cleanedCode): return "s-Hertogenbosch";
+            case /^21/.test(cleanedCode): return "Hoofddorp";
+            case /^30/.test(cleanedCode): return "Rotterdam";
+            case /^25/.test(cleanedCode): return "The Hague";
+            case /^48/.test(cleanedCode): return "Breda";
+            case /^23/.test(cleanedCode): return "Leiden";
+            case /^33/.test(cleanedCode): return "Dordrecht";
+            case /^27/.test(cleanedCode): return "Zoetermeer";
+            case /^26/.test(cleanedCode): return "Delft";
+            case /^56/.test(cleanedCode): return "Eindhoven";
+            case /^62/.test(cleanedCode): return "Maastricht";
+            case /^50/.test(cleanedCode): return "Tilburg";
+            case /^97/.test(cleanedCode): return "Groningen";
+            case /^65/.test(cleanedCode): return "Nijmegen";
+            case /^75/.test(cleanedCode): return "Enschede";
+            case /^68/.test(cleanedCode): return "Arnhem";
+            case /^73/.test(cleanedCode): return "Apeldoorn";
+            case /^74/.test(cleanedCode): return "Deventer";
+            case /^80/.test(cleanedCode): return "Zwolle";
+            default: return null;  // Or handle unknown postal codes
+        }
+    };
+
+
+    // Modified calculatePrice function
     const calculatePrice = () => {
-        let basePrice = 50; // Example base price
-        let itemPoints = 0;
-
-        for (const itemId in itemList) {
-            if (itemList[itemId]) {
-                switch (itemId) {
-                    case 'sofa': itemPoints += 12; break;
-                    case 'table': itemPoints += 6; break;
-                    case 'bed': itemPoints += 10; break;
-                    case 'tv': itemPoints += 3; break;
-                    case 'fridge': itemPoints += 8; break;
-                }
-            }
+        let basePrice = 50;
+        const isCityDay = checkCityDay(firstLocation, selectedDate); // Implement city/day check
+        
+        if (isCityDay) {
+            basePrice = 40; // Reduced price for city days
         }
 
-        let carryingCost = 0;
-        if (floorPickup && parseInt(floorPickup, 10) > 1) {
-            carryingCost += (parseInt(floorPickup, 10) - 1) * 10; // Example: €10 per floor
-        }
-        if (floorDropoff && parseInt(floorDropoff, 10) > 1) {
-            carryingCost += (parseInt(floorDropoff, 10) - 1) * 10; // Example: €10 per floor
-        }
-        const disassemblyCost = disassembly ? 20 : 0; // Example fixed cost
+        let itemPoints = Object.entries(itemQuantities).reduce((acc, [itemId, quantity]) => {
+            const points = getItemPoints(itemId); // Helper function
+            return acc + (points * quantity);
+        }, 0);
+
+        // Adjusted floor calculation with elevator
+        const pickupFloor = elevatorPickup ? 1 : Math.max(1, parseInt(floorPickup, 10));
+        const dropoffFloor = elevatorDropoff ? 1 : Math.max(1, parseInt(floorDropoff, 10));
+        
+        let carryingCost = (Math.max(0, pickupFloor - 1) + Math.max(0, dropoffFloor - 1)) * 10;
+        
+        // Rest of calculation remains similar
+        let disassemblyCost = disassembly ? 20 : 0; // Example fixed cost
         // Mock distance calculation (replace with actual distance calculation)
         const distance = firstLocation && secondLocation ? 50 : 0; // Example:  50km if both locations are entered
         const distanceCost = distance * 0.5; // Example: €0.5 per km
@@ -95,7 +164,7 @@ const ItemMovingPage = () => {
 
     useEffect(() => {
         calculatePrice();
-    }, [itemList, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate]);
 
     const nextStep = () => {
         if (step < 7) {
@@ -118,9 +187,56 @@ const ItemMovingPage = () => {
         ? (estimatedPrice > 500 ? <FaArrowUp className="text-red-600" /> : <FaArrowDown className="text-green-600" />) 
         : null; // No icon when estimatedPrice is null
 
+    // New elevator toggle component
+    const ElevatorToggle = ({ label, checked, onChange }: { 
+        label: string,
+        checked: boolean,
+        onChange: (checked: boolean) => void 
+    }) => (
+        <div className="flex items-center mt-2">
+            <Switch
+                checked={checked}
+                onChange={onChange}
+                className={`${checked ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+            >
+                <span className={`${checked ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+            </Switch>
+            <span className="ml-2 text-sm text-gray-700">{label}</span>
+        </div>
+    );
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        // Handle form submission
+        console.log({
+            firstLocation,
+            secondLocation,
+            itemQuantities,
+            floorPickup,
+            floorDropoff,
+            disassembly,
+            photos,
+            pickupDay,
+            deliveryDay,
+            contactInfo,
+            estimatedPrice,
+            elevatorPickup,
+            elevatorDropoff,
+        });
+        toast.success('Moving request submitted (mock)', {
+                position: "top-right",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+            });
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-r from-yellow-400 to-red-500 py-20 px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden">
+                <form onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2">
                     <div className="px-6 py-8">
                         <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6 animate-pulse">
@@ -211,21 +327,18 @@ const ItemMovingPage = () => {
                                         </label>
                                         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                             {furnitureItems.map((item) => (
-                                                <div key={item.id} className="relative flex items-start">
-                                                    <div className="flex items-center h-5">
-                                                        <input
-                                                            id={item.id}
-                                                            type="checkbox"
-                                                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                                                            checked={itemList[item.id] || false}
-                                                            onChange={() => handleCheckboxChange(item.id)}
-                                                        />
-                                                    </div>
-                                                    <div className="ml-3 text-sm">
-                                                        <label htmlFor={item.id} className="font-medium text-gray-700">
-                                                            {item.name}
-                                                        </label>
-                                                    </div>
+                                                <div key={item.id} className="flex items-center gap-4">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={itemQuantities[item.id] || 0}
+                                                        onChange={(e) => setItemQuantities({
+                                                            ...itemQuantities,
+                                                            [item.id]: parseInt(e.target.value) || 0
+                                                        })}
+                                                        className="w-20 px-2 py-1 border rounded-md"
+                                                    />
+                                                    <span className="text-sm">{item.name}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -247,31 +360,39 @@ const ItemMovingPage = () => {
                                 >
                                     {/* Step 3: Floor and Additional Services */}
                                     {/* Floor Preference */}
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-4">
                                         <div>
                                             <label htmlFor="floorPickup" className="block text-sm font-medium text-gray-700">
-                                                Floor (Pickup)
+                                                Pickup Floor
                                             </label>
                                             <input
                                                 type="number"
                                                 id="floorPickup"
                                                 value={floorPickup}
                                                 onChange={(e) => setFloorPickup(e.target.value)}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                placeholder="e.g., 2 (2nd Floor)"
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                            />
+                                            <ElevatorToggle
+                                                label="Elevator available at pickup"
+                                                checked={elevatorPickup}
+                                                onChange={setElevatorPickup}
                                             />
                                         </div>
                                         <div>
                                             <label htmlFor="floorDropoff" className="block text-sm font-medium text-gray-700">
-                                                Floor (Drop-off)
+                                                Drop-off Floor
                                             </label>
                                             <input
                                                 type="number"
                                                 id="floorDropoff"
                                                 value={floorDropoff}
                                                 onChange={(e) => setFloorDropoff(e.target.value)}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                                placeholder="e.g., 1 (Ground Floor)"
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                            />
+                                            <ElevatorToggle
+                                                label="Elevator available at drop-off"
+                                                checked={elevatorDropoff}
+                                                onChange={setElevatorDropoff}
                                             />
                                         </div>
                                     </div>
@@ -476,8 +597,8 @@ const ItemMovingPage = () => {
                                 <p className="text-gray-700 mb-2">
                                     Base Price: ${50}
                                 </p>
-                                {Object.entries(itemList).map(([key, value]) => {
-                                    if (value) {
+                                {Object.entries(itemQuantities).map(([key, value]) => {
+                                    if (value > 0) {
                                         let itemName = "";
                                         let itemPoints = 0;
                                         furnitureItems.forEach(item => {
@@ -494,7 +615,7 @@ const ItemMovingPage = () => {
                                         });
                                           return (
                                               <p key={key} className="text-gray-700 mb-2">
-                                                  {itemName}: {itemPoints * 3}
+                                                  {itemName} x {value}: {itemPoints * value * 3}
                                               </p>
                                           )
                                     }
@@ -531,6 +652,7 @@ const ItemMovingPage = () => {
                         )}
                     </div>
                 </div>
+                </form>
             </div>
         </div>
     );

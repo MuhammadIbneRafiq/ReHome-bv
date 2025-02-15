@@ -23,12 +23,20 @@ const Footer = () => {
     <footer className="w-full pt-20 pb-10 bg-gray-100">
       {/* background grid */}
       <div className="flex flex-col items-center mb-8">
-        <Link
-          to="/sell-dash"
-          className="rehome-button"
-        >
-          Looking to Sell?
-        </Link>
+        <div className="flex space-x-4"> {/* Flex container for side-by-side buttons */}
+          <Link
+            to="/sell-dash"
+            className="rehome-button"
+          >
+            Looking to Sell?
+          </Link>
+          <Link
+            to="/item-donation" // Link to the item donation page
+            className="rehome-button" // Same styling as the sell button
+          >
+            Want to Donate Items?
+          </Link>
+        </div>
       </div>
       <div className="flex mt-16 md:flex-row flex-col justify-around items-center">
         <p className="md:text-base text-sm md:font-normal font-light text-black dark:text-white">
@@ -39,7 +47,6 @@ const Footer = () => {
           {socialMedia.map((info: any) => (
             <a key={info.id} href={info.link}>
               <div
-                key={info.id}
                 className="w-10 h-10 cursor-pointer flex justify-center items-center backdrop-filter backdrop-blur-lg saturate-180 bg-opacity-75 bg-black-200 rounded-lg border border-black-300"
               >
                 <img src={info.img} alt="icons" width={20} height={20} />
