@@ -11,11 +11,16 @@ import { useTheme } from "../services/providers/ThemeProvider";
 import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
 
 export default function Navbar() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, loading, userEmail, handleLogout } = useAuth();
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const { theme, toggleTheme } = useTheme(); // Assuming you have a theme context
+
+    const toggleDropdown = () => {
+        setIsDropdownOpen(!isDropdownOpen);
+    };
 
     const handleScroll = () => {
         if (window.scrollY > lastScrollY && window.scrollY > 60) {
@@ -94,19 +99,27 @@ export default function Navbar() {
                 <div className="flex items-center justify-center gap-4 md:gap-6">
                     {/* New Navigation Items */}
                     <div className="hidden md:flex flex-col items-center"> {/* Use flex-col to stack items */}
-                        <div className="flex space-x-4"> {/* Put the links in a row */}
+                        <div className="flex space-x-4 relative"> {/* Added relative class */}
+                            <button onClick={toggleDropdown} className="rehome-nav-link">
+                                Transportation
+                            </button>
                             <Link to="/marketplace" className="rehome-nav-link">
                                 Marketplace
-                            </Link>
-                            <Link to="/item-moving" className="rehome-nav-link">
-                                Item Moving/Transport
-                            </Link>
-                            <Link to="/house-moving" className="rehome-nav-link">
-                                House Moving
                             </Link>
                             <Link to="/special-request" className="rehome-nav-link">
                                 Special Request
                             </Link>
+
+                            {isDropdownOpen && (
+                                <div className="absolute top-12 bg-white shadow-lg rounded-md  min-w-[150px] z-50"> {/* Added absolute positioning */}
+                                    <Link to="/item-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
+                                        Item Moving
+                                    </Link>
+                                    <Link to="/house-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
+                                        House Moving
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" onClick={toggleTheme} className="rehome-nav-icon-button"> {/* Style the icon button  */}
@@ -120,12 +133,20 @@ export default function Navbar() {
                             <Link to="/login" className="rehome-nav-button">
                                 Log in
                             </Link>
-                            <Link to="/sell-dash" className="rehome-dashboard-button">
-                            Dashboard
-                            </Link>
                         </>
                     )}
-                    {isAuthenticated && <UserAvatar />}
+                    {isAuthenticated && (
+                        <>
+                            <Link to="/sell-dash" className="rehome-dashboard-button">
+                                Dashboard
+                            </Link>
+                            <div className="flex items-center space-x-2">
+                                <UserAvatar />
+                                <span className="text-white">{userEmail}</span> {/* Display the email */}
+                                <Button variant="link" onClick={handleLogout}>Logout</Button>
+                            </div>
+                        </>
+                    )}
                     <div className="relative md:hidden">
                         {!isAuthenticated &&
                             <Button variant="ghost" size="icon" className="md:hidden three-dot dark:text-white text-black" onClick={togglePopup}>
@@ -136,21 +157,26 @@ export default function Navbar() {
                             <div className="absolute border-solid border-2 border-black-200 right-0 top-10 bg-transperant text-gray-400 shadow-lg rounded-lg w-40">
                                 <nav className="grid gap-2 p-4 text-sm font-medium">
                                     {/* New Navigation Items (Mobile) */}
-                                    <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                    <button onClick={toggleDropdown} className="rehome-nav-link">
+                                        Transportation
+                                    </button>
+                                    <Link to="/marketplace" className="rehome-nav-link">
                                         Marketplace
                                     </Link>
-                                    <Link to="/item-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Item Moving/Transport
-                                    </Link>
-                                    <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        House Moving
-                                    </Link>
-                                    <Link to="/special-request" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                    <Link to="/special-request" className="rehome-nav-link">
                                         Special Request
                                     </Link>
-                                    <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Dashboard
-                                    </Link>
+
+                                    {isDropdownOpen && (
+                                        <div className="absolute top-12 bg-white shadow-lg rounded-md  min-w-[150px] z-50"> {/* Added absolute positioning */}
+                                            <Link to="/item-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
+                                                Item Moving
+                                            </Link>
+                                            <Link to="/house-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
+                                                House Moving
+                                            </Link>
+                                        </div>
+                                    )}
                                     {!isAuthenticated && (
                                         <>
                                             <Link to="/register" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
@@ -161,7 +187,17 @@ export default function Navbar() {
                                             </Link>
                                         </>
                                     )}
-                                    {isAuthenticated && <UserAvatar />}
+                                    {isAuthenticated && (
+                                        <>
+                                            <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                                Dashboard
+                                            </Link>
+                                            <Link to="/profile" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                                {userEmail}
+                                            </Link>
+                                        </>
+                                    )}
+
                                 </nav>
                             </div>
                         )}

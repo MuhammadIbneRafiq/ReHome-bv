@@ -11,68 +11,44 @@ export const useAuth = () => {
   // return true or false if user is authenticated
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail] = useState<string | null>(null); // New state for user's email
 
   const location = useLocation();
 
   const handleLogout = () => {
     localStorage.clear();
     setIsAuthenticated(false);
+    setUserEmail(null); // Clear the email on logout
     setUser(undefined);
   };
 
   useEffect(() => {
-    async function fetchUser() {
+    const checkAuthentication = () => {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
 
-      if (!accessToken) {
-        handleLogout();
-        setLoading(false);
-        return;
-      }
-
-      setLoading(false);
-
-      const decoded = jwtDecode(accessToken || "");
-
-      if (!decoded.exp || decoded.exp * 1000 < Date.now()) {
-        console.log("Access Token has expired");
-        handleLogout();
-        setLoading(false);
-        return;
-      }
-
-      const response = await axios.post(
-        "http://localhost:3000/user/role",
-        // "https://backend-autolanding-ai.vercel.app/user/role",
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem(
-              "accessToken"
-            )}`,
-          },
+      if (accessToken) {
+        try {
+          const decoded = jwtDecode(accessToken);
+          // Assuming your token has an 'email' claim.  Adjust if needed.
+          setUserEmail((decoded as any).email || null);
+          setIsAuthenticated(true);
+        } catch (error) {
+          // Token is invalid (expired, etc.)
+          handleLogout(); // Clear invalid token
+          setIsAuthenticated(false);
+          setUserEmail(null);
         }
-      );
-      setRole(response.data as string);
-
-      setUser((decoded as any).user_metadata as UserData);
-      setIsAuthenticated(true);
+      } else {
+        handleLogout(); // Clear everything
+        setIsAuthenticated(false);
+        setUserEmail(null);
+      }
       setLoading(false);
-    }
+    };
 
-    fetchUser();
-
-    // TODO: Fix this later
-    // // Set up an interval to fetch data every minute
-    // const intervalId = setInterval(fetchUser, 60000); // 60000 ms = 1 minute
-
-    // // Cleanup function to clear the interval when the component unmounts
-    // // or when the pathname changes
-    // return () => {
-    //     clearInterval(intervalId);
-    // };
+    checkAuthentication();
   }, [location.pathname]);
 
-  return { isAuthenticated, loading };
+  return { isAuthenticated, loading, userEmail, handleLogout }; // Return the email and logout function
 };

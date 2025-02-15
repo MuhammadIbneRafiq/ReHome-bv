@@ -5,10 +5,10 @@ import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Define a type for the item list
-type ItemList = {
-    [key: string]: boolean;
-};
+// // Define a type for the item list
+// type ItemList = {
+//     [key: string]: boolean;
+// };
 
 // Define furniture items
 const furnitureItems = [
@@ -206,21 +206,21 @@ const ItemMovingPage = () => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // Handle form submission
-        console.log({
-            firstLocation,
-            secondLocation,
-            itemQuantities,
-            floorPickup,
-            floorDropoff,
-            disassembly,
-            photos,
-            pickupDay,
-            deliveryDay,
-            contactInfo,
-            estimatedPrice,
-            elevatorPickup,
-            elevatorDropoff,
-        });
+        // console.log({
+        //     firstLocation,
+        //     secondLocation,
+        //     itemQuantities,
+        //     floorPickup,
+        //     floorDropoff,
+        //     disassembly,
+        //     photos,
+        //     pickupDay,
+        //     deliveryDay,
+        //     contactInfo,
+        //     estimatedPrice,
+        //     elevatorPickup,
+        //     elevatorDropoff,
+        // });
         toast.success('Moving request submitted (mock)', {
                 position: "top-right",
                 autoClose: 3000,

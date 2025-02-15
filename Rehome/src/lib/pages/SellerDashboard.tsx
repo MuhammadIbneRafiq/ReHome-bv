@@ -3,14 +3,6 @@ import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle } from "react-icons/fa";
 import SellPage from "./SellPage";
-import { Link } from "react-router-dom";
-// Import Images - Assuming you have these files in assets
-import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
-import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
-import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
-import image1 from "../../assets/IMG-20250208-WA0005.jpg";
-import image2 from "../../assets/IMG-20250208-WA0006.jpg";
-import image3 from "../../assets/IMG-20250208-WA0007.jpg";
 
 // Mock User Data (replace with your actual user data fetching)
 const mockUser = {
@@ -221,11 +213,6 @@ const SellerDashboard = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Example usage of Link */}
-            <Link to="/some-route" className="text-blue-500 hover:underline">
-                Go to Some Page
-            </Link>
         </div>
     );
 };

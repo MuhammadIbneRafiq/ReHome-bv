@@ -8,6 +8,8 @@ import { motion, Variants } from "framer-motion"; // Import Framer Motion
 import { FaTruck, FaBoxOpen, FaHandshake, FaStar } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
 import { MdCheckCircle, MdSupportAgent } from "react-icons/md";
+import {FurnitureItem} from "../types/furniture";
+import WhyChooseUsPage from "./WhyChooseUsPage"; // Import the component
 
 const LandingPage = () => {
   // Framer Motion Variants
@@ -24,6 +26,31 @@ const LandingPage = () => {
       },
     },
   };
+
+    // Dummy Furniture Data with Images (You can keep this or fetch from API)
+    const dummyData: FurnitureItem[] = [
+        {
+            id: 1,
+            name: "Cozy Sofa",
+            image_url: sofaImage,
+            description: "A comfortable and stylish sofa for your living room.",
+            price: 299,
+        },
+        {
+            id: 2,
+            name: "Wooden Dining Table",
+            image_url: tableImage,
+            description: "A sturdy wooden dining table that seats 6 people.",
+            price: 399,
+        },
+        {
+            id: 3,
+            name: "Modern Office Chair",
+            image_url: chairImage,
+            description: "An ergonomic office chair for maximum comfort.",
+            price: 199,
+        },
+    ];
 
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col">
@@ -54,7 +81,7 @@ const LandingPage = () => {
               >
                 <Link
                   to="/marketplace"
-                  className="inline-block bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold py-3 px-6 rounded-md shadow-md hover:opacity-90 transition duration-300"
+                  className="inline-block rehome-button"
                 >
                   Explore the Marketplace
                 </Link>
@@ -81,6 +108,7 @@ const LandingPage = () => {
           <h2 className="text-3xl font-semibold text-gray-800 text-center mb-12">
             Why Choose ReHome?
           </h2>
+          <Link to="/why-choose-us">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Feature 1 */}
             <motion.div
@@ -116,6 +144,7 @@ const LandingPage = () => {
               </p>
             </motion.div>
           </div>
+          </Link>
         </div>
       </div>
 
@@ -148,7 +177,7 @@ const LandingPage = () => {
                           className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform"
                           whileHover={{ scale: 1.05 }} // Add hover animation
                       >
-                          <img src={item.image} alt={item.name} className="w-full h-48 object-cover rounded-md" />
+                          <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover rounded-md" />
                           <h3 className="text-xl font-semibold mt-2">{item.name}</h3>
                           <p className="text-gray-600">{item.description}</p>
                           <p className="text-red-500 font-bold mt-2">{item.price}</p>
@@ -182,34 +211,36 @@ const LandingPage = () => {
             </div>
 
             {/* Why Choose Us */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Why Choose Us</h3>
-              <ul className="space-y-3">
-                <motion.li
-                  whileHover={{ scale: 1.05 }}
-                  className="flex items-center text-gray-700"
-                >
-                  <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Wide selection of quality pre-loved furniture.
-                </motion.li>
-                <motion.li
-                  whileHover={{ scale: 1.05 }}
-                  className="flex items-center text-gray-700"
-                >
-                  <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Sustainable and eco-friendly choices.
-                </motion.li>
-                <motion.li
-                  whileHover={{ scale: 1.05 }}
-                  className="flex items-center text-gray-700"
-                >
-                  <MdSupportAgent className="text-orange-500 mr-2 h-5 w-5" /> Excellent customer service and support.
-                </motion.li>
-                <motion.li
-                  whileHover={{ scale: 1.05 }}
-                  className="flex items-center text-gray-700"
-                >
-                  <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Competitive pricing.
-                </motion.li>
-              </ul>
+             <div className="bg-white rounded-lg shadow-md p-6">
+                <Link to="/why-choose-us">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-4">Why Choose Us</h3>
+                      <ul className="space-y-3">
+                        <motion.li
+                          whileHover={{ scale: 1.05 }}
+                          className="flex items-center text-gray-700"
+                        >
+                          <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Wide selection of quality pre-loved furniture.
+                        </motion.li>
+                        <motion.li
+                          whileHover={{ scale: 1.05 }}
+                          className="flex items-center text-gray-700"
+                        >
+                          <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Sustainable and eco-friendly choices.
+                        </motion.li>
+                        <motion.li
+                          whileHover={{ scale: 1.05 }}
+                          className="flex items-center text-gray-700"
+                        >
+                          <MdSupportAgent className="text-orange-500 mr-2 h-5 w-5" /> Excellent customer service and support.
+                        </motion.li>
+                        <motion.li
+                          whileHover={{ scale: 1.05 }}
+                          className="flex items-center text-gray-700"
+                        >
+                          <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Competitive pricing.
+                        </motion.li>
+                      </ul>
+                 </Link>
             </div>
           </div>
         </div>
@@ -220,27 +251,3 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
-// Dummy Furniture Data with Images (You can keep this or fetch from API)
-const dummyData = [
-  {
-    id: 1,
-    name: "Cozy Sofa",
-    image: sofaImage,
-    description: "A comfortable and stylish sofa for your living room.",
-    price: "$299",
-  },
-  {
-    id: 2,
-    name: "Wooden Dining Table",
-    image: tableImage,
-    description: "A sturdy wooden dining table that seats 6 people.",
-    price: "$399",
-  },
-  {
-    id: 3,
-    name: "Modern Office Chair",
-    image: chairImage,
-    description: "An ergonomic office chair for maximum comfort.",
-    price: "$199",
-  },
-];
