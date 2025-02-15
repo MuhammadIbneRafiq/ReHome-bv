@@ -45,7 +45,6 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
-    console.log('this is submit', values)
     try {
       const response = await axios.post(
         "http://localhost:3000/auth/login",
@@ -54,7 +53,6 @@ export default function LoginPage() {
           password: values.password,
         }
       );
-      console.log('this is resp', response)
 
       const token = response.data.accessToken;
       localStorage.setItem("accessToken", token);
