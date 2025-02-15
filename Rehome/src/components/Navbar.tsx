@@ -104,6 +104,9 @@ export default function Navbar() {
                             <Link to="/house-moving" className="rehome-nav-link">
                                 House Moving
                             </Link>
+                            <Link to="/special-request" className="rehome-nav-link">
+                                Special Request
+                            </Link>
                         </div>
                     </div>
                     <Button variant="ghost" size="icon" onClick={toggleTheme} className="rehome-nav-icon-button"> {/* Style the icon button  */}
@@ -141,6 +144,9 @@ export default function Navbar() {
                                     </Link>
                                     <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         House Moving
+                                    </Link>
+                                    <Link to="/special-request" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Special Request
                                     </Link>
                                     <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Dashboard

@@ -52,7 +52,7 @@ const ItemMovingPage = () => {
     const [step, setStep] = useState(1); // Current step
     const [firstLocation, setFirstLocation] = useState('');
     const [secondLocation, setSecondLocation] = useState('');
-    const [itemList, setItemList] = useState<ItemList>({});
+    // const [itemList, setItemList] = useState<ItemList>({});
     const [floorPickup, setFloorPickup] = useState('');
     const [floorDropoff, setFloorDropoff] = useState('');
     const [disassembly, setDisassembly] = useState(false);
@@ -61,15 +61,15 @@ const ItemMovingPage = () => {
     const [deliveryDay, setDeliveryDay] = useState('');
     const [contactInfo, setContactInfo] = useState('');
     const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
-    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedDate] = useState('');
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<{[key: string]: number}>({});
-    const [cityDays, setCityDays] = useState<{[key: string]: string[]}>({}); // Load from API/static data
+    // const [cityDays, setCityDays] = useState<{[key: string]: string[]}>({}); // Load from API/static data
 
-    const handleCheckboxChange = (itemId: string) => {
-        setItemList({ ...itemList, [itemId]: !itemList[itemId] });
-    };
+    // const handleCheckboxChange = (itemId: string) => {
+    //     setItemList({ ...itemList, [itemId]: !itemList[itemId] });
+    // };
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -97,7 +97,6 @@ const ItemMovingPage = () => {
         const getCityFromPostalCode = (postalCode: string): string | null => {
         // Clean and format the postal code
         const cleanedCode = postalCode.trim().toUpperCase();
-        const codePrefix = cleanedCode.substring(0, 2);
 
         // Postal code to city mapping
         switch (true) {

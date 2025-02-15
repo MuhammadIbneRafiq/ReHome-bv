@@ -51,6 +51,8 @@ app.get("/", (req, res) => {
 app.post("/auth/signup", async (req, res) => {
     const { email, password } = req.body;
 
+    console.log(email, password)
+
     if (!email || !password) {
         return res.status(400).json({ error: "Invalid request" });
     }
@@ -78,6 +80,9 @@ app.post("/auth/signup", async (req, res) => {
 
 app.post("/auth/login", async (req, res) => {
     const { email, password } = req.body;
+    console.log('here')
+    console.log(email, password)
+
 
     if (!email || !password) {
         return res.status(400).json({ error: "Invalid request" });
@@ -298,6 +303,29 @@ app.post('/api/furniture/new', authenticateUser, async (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
+
+// 7. Special Request Endpoint
+app.post('/api/special-request', async (req, res) => {
+  const { selectedServices, message, contactInfo } = req.body;
+
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .insert([{ selected_services: selectedServices, message, contact_info: contactInfo }])
+      .select();
+
+    if (error) {
+      console.error('Error creating special request:', error);
+      return res.status(500).json({ error: 'Failed to save special request.' });
+    }
+
+    res.status(201).json({ message: 'Special request saved successfully.' });
+  } catch (err) {
+    console.error('Error in special request endpoint:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 
 // Start the server
 app.listen(port, () => {

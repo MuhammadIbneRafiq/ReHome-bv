@@ -14,7 +14,7 @@ function AuthCallback() {
                 if (data.session?.access_token) {
                     localStorage.setItem('accessToken', data.session.access_token);
                     // After storing the token, navigate to the chatHome page
-                    navigate('/chatHome');
+                    navigate('/marketplace');
                 }
             } catch (error) {
                 console.error('Error during authentication callback:', error);

@@ -51,15 +51,6 @@ export default function SignupPage() {
     },
   });
 
-  // useEffect(() => {
-  //   const script = document.createElement("script");
-  //   script.src = "https://assets.calendly.com/assets/external/widget.js";
-  //   script.async = true;
-  //   document.body.appendChild(script);
-  //   return () => {
-  //     document.body.removeChild(script);
-  //   };
-  // }, []);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -67,8 +58,8 @@ export default function SignupPage() {
       // setCurrentUser(values);
       // console.log(values);
       await axios.post(
-        "https://backend-autolanding-ai.vercel.app/auth/signup",
-        // "http://localhost:3000/auth/signup",
+        // "https://backend-autolanding-ai.vercel.app/auth/signup",
+        "http://localhost:3000/auth/signup",
         {
           email: values.email,
           password: values.password,
@@ -101,7 +92,7 @@ export default function SignupPage() {
 
   return (
     <div className="w-full h-screen flex justify-center items-center space-x-24 dark:bg-black bg-white pt-24 p-4">
-      <Card className="max-h-[650px] h-full max-w-[600px] w-full">
+      <Card className="max-h-[450px] h-full max-w-[600px] w-full">
         <CardHeader className="space-y-3">
           <CardTitle className="text-3xl text-center">
             Create an account
@@ -144,50 +135,6 @@ export default function SignupPage() {
                     )}
                   />
                 </div>
-                <div className="grid gap-2">
-                  <FormField
-                    control={form.control}
-                    name="role"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Role</FormLabel>
-                        <FormControl>
-                          <div className="flex space-x-4">
-                            <Button
-                              type="button"
-                              variant={
-                                field.value === "buyer" ? "default" : "outline"
-                              }
-                              onClick={() => field.onChange("buyer")}
-                              className={
-                                field.value === "buyer"
-                                  ? "bg-blue-500 text-white"
-                                  : ""
-                              }
-                            >
-                              Buyer
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={
-                                field.value === "seller" ? "default" : "outline"
-                              }
-                              onClick={() => field.onChange("seller")}
-                              className={
-                                field.value === "seller"
-                                  ? "bg-blue-500 text-white "
-                                  : ""
-                              }
-                            >
-                              Seller
-                            </Button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
                 {form.formState.errors.root && (
                   <FormMessage>
                     {form.formState.errors.root.message}
@@ -203,30 +150,9 @@ export default function SignupPage() {
               </div>
             </form>
             <ThirdPartyAuth googleMessage={"Sign up"}/>
-            <div className="text-center mt-2">
-              <h1>
-                Interested in speaking with the CEO?
-                <br /> Schedule a meeting now!
-              </h1>
-              <Button className="w-full h-12 rounded-xl my-4 bg-green-500 text-black">
-                <a
-                  target="_blank"
-                  href="https://calendly.com/muhammadibnerafiq/30min"
-                >
-                  Book appoinment
-                </a>
-              </Button>
-            </div>
           </Form>
         </CardContent>
       </Card>
-      {/* <div className="h-fit max-w-[400px] w-full">
-        <div
-          className="calendly-inline-widget"
-          data-url="https://calendly.com/muhammadibnerafiq/30min"
-          style={{ minWidth: "620px", height: "600px" }}
-        ></div>
-      </div> */}
     </div>
   );
 }

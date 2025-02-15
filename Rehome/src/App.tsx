@@ -14,6 +14,7 @@ import WhyChooseUsPage from "./lib/pages/WhyChooseUsPage";
 import ContactUsPage from "./lib/pages/ContactUsPage";
 import AboutUsPage from "./lib/pages/AboutUsPage";
 import SellerDashboard from "./lib/pages/SellerDashboard";
+import SpecialRequestPage from "./lib/pages/SpecialRequestPage";
 
 
 // const usePostData = <T,>(endpoint: string) => {
@@ -41,6 +42,7 @@ const App = () => {
               <Route path="/house-moving" element={<ItemMovingPage />} />
               <Route path="/item-moving" element={<ItemMovingPage />} />
               <Route path="/item-donation" element={<ItemDonationPage />} />
+              <Route path="/special-request" element={<SpecialRequestPage />} />
               <Route path="/sell-dash" element={<SellerDashboard />} />
               <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
               <Route path="/contact-us" element={<ContactUsPage />} />

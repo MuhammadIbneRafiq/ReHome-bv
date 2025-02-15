@@ -17,7 +17,6 @@ import { useState } from "react";
 import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Carousel } from 'react-responsive-carousel';
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
 import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
 
@@ -48,17 +47,17 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const response = await axios.post(
-        "https://backend-autolanding-ai.vercel.app/auth/login",
+        "https://localhost:3000/auth/login",
         {
           email: values.email,
           password: values.password,
         }
       );
-
+      
       const token = response.data.accessToken;
       localStorage.setItem("accessToken", token);
 
-      navigate("/chatHome");
+      navigate("/marketplace");
     } catch (error: any) {
       form.setError("root", {
         message: error.response.data.error,
@@ -76,37 +75,6 @@ export default function LoginPage() {
   return (
     <div className="w-full h-screen pt-24 flex justify-center items-center">
       <div className="flex w-full max-w-7xl h-full justify-center">
-        <div className="flex flex-col justify-center items-center bg-dark-blue-100 p-8 max-w-[50%]">
-          <Carousel autoPlay infiniteLoop showThumbs={false} className="w-full">
-            <div>
-              <img
-                src="https://pbs.twimg.com/media/EAC2iswX4AUZXav.jpg"
-                alt="Slide 1"
-              />
-            </div>
-            <div>
-              <img
-                src="https://res.cloudinary.com/upwork-cloud/image/upload/c_scale,w_1000/v1707927008/catalog/1486193250725023744/lji9hy0cptoe849n5xdl.webp"
-                alt="Slide 2"
-              />
-            </div>
-            <div>
-              <img
-                src="https://images.ctfassets.net/m9n8o4ceoyuw/7L9z8LIlai8hBJrl1xWhX/9d740ec59d0712021ec1bd397b5a868a/Discord_-_Server.jpg"
-                alt="Slide 3"
-              />
-            </div>
-          </Carousel>
-          <Button className="mt-4 bg-green-500">
-            <a href="https://discord.gg/xeX2Zhut82" target="_blank">
-              Join the Discord
-            </a>
-          </Button>
-          <h1 className="mt-4 text-center text-black dark:text-white font-bold">
-            {" "}
-            Join 100s of agencies/communities and exchange client on referral
-          </h1>
-        </div>
         <div className="flex w-[50%] px-4 h-full justify-center items-center">
           <Card className="h-fit max-w-[700px] w-full">
             <CardHeader className="space-y-1">
