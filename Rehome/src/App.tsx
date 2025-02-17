@@ -9,6 +9,7 @@ import SignupPage from "./lib/pages/SignupPage";
 import Pricing from "./lib/pages/Pricing";
 import MarketplacePage from "./lib/pages/MarketplacePage";
 import ItemMovingPage from "./lib/pages/ItemMovingPage";
+import HouseMovingPage from "./lib/pages/HouseMovingPage";
 import ItemDonationPage from "./lib/pages/ItemDonationPage";
 import WhyChooseUsPage from "./lib/pages/WhyChooseUsPage";
 import ContactUsPage from "./lib/pages/ContactUsPage";
@@ -39,7 +40,7 @@ const App = () => {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/marketplace" element={<MarketplacePage />} />
-              <Route path="/house-moving" element={<ItemMovingPage />} />
+              <Route path="/house-moving" element={<HouseMovingPage />} />
               <Route path="/item-moving" element={<ItemMovingPage />} />
               <Route path="/item-donation" element={<ItemDonationPage />} />
               <Route path="/special-request" element={<SpecialRequestPage />} />

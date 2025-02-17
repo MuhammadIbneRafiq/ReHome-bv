@@ -6,17 +6,20 @@ import { Menu, Sun, Moon } from "lucide-react"; // Import Sun and Moon
 import UserAvatar from "./UserAvatar";
 import { useAuth } from "../hooks/useAuth";
 import '../index.css';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react'; // Import useRef
 import { useTheme } from "../services/providers/ThemeProvider";
 import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
 
 export default function Navbar() {
-    const { isAuthenticated, userEmail, handleLogout } = useAuth();
+    const { isAuthenticated, loading, userEmail, handleLogout } = useAuth();
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const { theme, toggleTheme } = useTheme(); // Assuming you have a theme context
+
+    const dropdownRef = useRef<HTMLDivElement>(null); // Ref to the dropdown container
+    const transportationButtonRef = useRef<HTMLButtonElement>(null);
 
     const toggleDropdown = () => {
         setIsDropdownOpen(!isDropdownOpen);
@@ -32,8 +35,14 @@ export default function Navbar() {
     };
     useEffect(() => {
         const handleOutsideClick = (e: any) => {
-            if (isPopupOpen && !e.target.closest(".three-dot")) {
-                setIsPopupOpen(false);
+            if (
+                isDropdownOpen &&
+                dropdownRef.current &&
+                !dropdownRef.current.contains(e.target) &&
+                transportationButtonRef.current &&
+                !transportationButtonRef.current.contains(e.target)
+            ) {
+                setIsDropdownOpen(false);
             }
         };
 
@@ -42,7 +51,7 @@ export default function Navbar() {
         return () => {
             document.removeEventListener("click", handleOutsideClick);
         };
-    }, [isPopupOpen]);
+    }, [isDropdownOpen]);
 
     useEffect(() => {
         window.addEventListener('scroll', handleScroll);
@@ -100,7 +109,11 @@ export default function Navbar() {
                     {/* New Navigation Items */}
                     <div className="hidden md:flex flex-col items-center"> {/* Use flex-col to stack items */}
                         <div className="flex space-x-4 relative"> {/* Added relative class */}
-                            <button onClick={toggleDropdown} className="rehome-nav-link">
+                            <button
+                                ref={transportationButtonRef}
+                                onClick={toggleDropdown}
+                                className="rehome-nav-link"
+                            >
                                 Transportation
                             </button>
                             <Link to="/marketplace" className="rehome-nav-link">
@@ -111,7 +124,7 @@ export default function Navbar() {
                             </Link>
 
                             {isDropdownOpen && (
-                                <div className="absolute top-12 bg-white shadow-lg rounded-md  min-w-[150px] z-50"> {/* Added absolute positioning */}
+                                <div ref={dropdownRef} className="absolute top-12 bg-white shadow-lg rounded-md  min-w-[150px] z-50"> {/* Added absolute positioning */}
                                     <Link to="/item-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
                                         Item Moving
                                     </Link>
@@ -157,26 +170,18 @@ export default function Navbar() {
                             <div className="absolute border-solid border-2 border-black-200 right-0 top-10 bg-transperant text-gray-400 shadow-lg rounded-lg w-40">
                                 <nav className="grid gap-2 p-4 text-sm font-medium">
                                     {/* New Navigation Items (Mobile) */}
-                                    <button onClick={toggleDropdown} className="rehome-nav-link">
-                                        Transportation
-                                    </button>
-                                    <Link to="/marketplace" className="rehome-nav-link">
+                                    <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Marketplace
                                     </Link>
-                                    <Link to="/special-request" className="rehome-nav-link">
+                                    <Link to="/item-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        Item Moving/Transport
+                                    </Link>
+                                    <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        House Moving
+                                    </Link>
+                                    <Link to="/special-request" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         Special Request
                                     </Link>
-
-                                    {isDropdownOpen && (
-                                        <div className="absolute top-12 bg-white shadow-lg rounded-md  min-w-[150px] z-50"> {/* Added absolute positioning */}
-                                            <Link to="/item-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
-                                                Item Moving
-                                            </Link>
-                                            <Link to="/house-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
-                                                House Moving
-                                            </Link>
-                                        </div>
-                                    )}
                                     {!isAuthenticated && (
                                         <>
                                             <Link to="/register" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
