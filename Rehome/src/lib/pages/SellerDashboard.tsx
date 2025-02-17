@@ -26,7 +26,7 @@ interface FurnitureItem {
     id: number;
     name: string;
     description: string;
-    image_url: string;
+    image_url: string[]; // Change to image_urls (plural)
     price: number;
     created_at: string;
     city_name: string;
@@ -39,7 +39,6 @@ interface ItemDetailsModalProps {
     onClose: () => void;
     item: FurnitureItem | null;
 }
-
 
 
 const SellerDashboard = () => {
@@ -200,7 +199,7 @@ const SellerDashboard = () => {
                             Your Listings
                         </h2>
                         <button
-                            onClick={openSellModal}
+                            onClick={() => setIsSellModalOpen(true)}
                             className="flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
                         >
                             <FaPlus className="mr-2" /> Upload New Listing
@@ -216,7 +215,7 @@ const SellerDashboard = () => {
                                 whileHover={{ scale: 1.05 }}
                                 onClick={() => openModal(listing)} // Open modal on click
                             >
-                                <img src={listing.image_url} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
+                                <img src={listing.image_url[0]} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
                                 <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
                                 <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
                                 <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
@@ -237,7 +236,7 @@ const SellerDashboard = () => {
                                 whileHover={{ scale: 1.05 }}
                                 onClick={() => openModal(listing)} // Open modal on click
                             >
-                                <img src={listing.image_url} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
+                                <img src={listing.image_url[0]} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
                                 <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
                                 <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
                                 <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
