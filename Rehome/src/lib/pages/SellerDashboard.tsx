@@ -258,7 +258,7 @@ const SellerDashboard = () => {
                                 exit="exit"
                                 transition={{ duration: 0.3 }}
                             >
-                                <SellPage/>
+                                <SellPage onClose={() => setIsSellModalOpen(false)} />
                             </motion.div>
                         </motion.div>
                     )}
