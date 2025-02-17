@@ -1,30 +1,54 @@
-// Dummy Furniture Data with Images
-import sofaImage from "../assets/IMG-20250208-WA0001.jpg";
-import tableImage from "../assets/IMG-20250208-WA0002.jpg";
-import chairImage from "../assets/IMG-20250208-WA0003.jpg";
-
-
-// Dummy Furniture Data with Images
-export const dummyData = [
-  {
-    id: 1,
-    name: "Cozy Sofa",
-    image: sofaImage, // Use the imported image
-    description: "A comfortable and stylish sofa for your living room.",
-    price: "$299",
-  },
-  {
-    id: 2,
-    name: "Wooden Dining Table",
-    image: tableImage, // Use the imported image
-    description: "A sturdy wooden dining table that seats 6 people.",
-    price: "$399",
-  },
-  {
-    id: 3,
-    name: "Modern Office Chair",
-    image: chairImage, // Use the imported image
-    description: "An ergonomic office chair for maximum comfort.",
-    price: "$199",
-  },
+// Define furniture items
+export const furnitureItems = [
+  { id: 'sofa-2p', name: '2 Person Sofa', points: 10 },
+  { id: 'sofa-3p', name: '3 Person Sofa', points: 12 },
+  { id: 'armchair', name: 'Armchair', points: 5 },
+  { id: 'chair', name: 'Chair', points: 3 },
+  { id: 'coffee-table', name: 'Coffee Table', points: 6 },
+  { id: 'desk', name: 'Desk', points: 8 },
+  { id: 'dressoir', name: 'Dressoir', points: 7 },
+  { id: 'paintings', name: 'Paintings', points: 2 },
+  { id: 'secretaire', name: 'Secretaire', points: 9 },
+  { id: 'small-furniture', name: 'Small Furniture', points: 4 },
+  { id: 'boxes', name: 'Boxes', points: 1 },
+  { id: 'carpet', name: 'Carpet', points: 3 },
+  { id: 'closet', name: 'Closet', points: 10 },
+  { id: 'cupboard', name: 'Cupboard', points: 8 },
+  { id: 'dining-table', name: 'Dining Table', points: 12 },
+  { id: 'large-chair', name: 'Large Chair', points: 5 },
+  { id: 'plants', name: 'Plants', points: 3 },
+  { id: 'side-table', name: 'Side Table', points: 4 },
+  { id: 'tv', name: 'TV', points: 3 },
+  { id: 'fridge', name: 'Fridge', points: 8 },
+  { id: 'bed', name: 'Bed', points: 10 },
+  { id: 'table', name: 'Table', points: 6 },
 ];
+
+// City Day Data
+export const cityDayData: { [key: string]: string[] } = {
+Amsterdam: ["Monday", "Wednesday", "Friday"],
+Rotterdam: ["Tuesday", "Thursday"],
+TheHague: ["Saturday", "Sunday"],
+Utrecht: ["Monday"],
+Almere: ["Tuesday"],
+Haarlem: ["Wednesday"],
+Zaanstad: ["Thursday"],
+Amersfoort: ["Friday"],
+"s-Hertogenbosch": ["Saturday"],
+Hoofddorp: ["Sunday"],
+Breda: ["Monday", "Wednesday"],
+Leiden: ["Tuesday", "Thursday"],
+Dordrecht: ["Friday", "Sunday"],
+Zoetermeer: ["Saturday"],
+Delft: ["Monday", "Wednesday"],
+Eindhoven: ["Tuesday", "Thursday"],
+Maastricht: ["Friday", "Sunday"],
+Tilburg: ["Saturday"],
+Groningen: ["Monday", "Wednesday"],
+Nijmegen: ["Tuesday", "Thursday"],
+Enschede: ["Friday", "Sunday"],
+Arnhem: ["Saturday"],
+Apeldoorn: ["Monday", "Wednesday"],
+Deventer: ["Tuesday", "Thursday"],
+Zwolle: ["Friday", "Sunday"],
+};

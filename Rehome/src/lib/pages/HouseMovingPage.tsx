@@ -1,75 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaArrowUp, FaArrowDown } from "react-icons/fa"; // Import Icons
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaArrowUp, FaArrowDown, FaCalendarAlt, FaPeopleCarry, FaTruck, FaMinus, FaPlus } from "react-icons/fa"; // Import Icons
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
-// // Define a type for the item list
-// type ItemList = {
-//     [key: string]: boolean;
-// };
-
-// Define furniture items
-const furnitureItems = [
-    { id: 'sofa', name: 'Sofa', points: 12 },
-    { id: 'table', name: 'Table', points: 6 },
-    { id: 'bed', name: 'Bed', points: 10 },
-    { id: 'tv', name: 'TV', points: 3 },
-    { id: 'fridge', name: 'Fridge', points: 8 },
-];
-
-// City Day Data
-const cityDayData: { [key: string]: string[] } = {
-  Amsterdam: ["Monday", "Wednesday", "Friday"],
-  Rotterdam: ["Tuesday", "Thursday"],
-  TheHague: ["Saturday", "Sunday"],
-  Utrecht: ["Monday"],
-  Almere: ["Tuesday"],
-  Haarlem: ["Wednesday"],
-  Zaanstad: ["Thursday"],
-  Amersfoort: ["Friday"],
-  "s-Hertogenbosch": ["Saturday"],
-  Hoofddorp: ["Sunday"],
-  Breda: ["Monday", "Wednesday"],
-  Leiden: ["Tuesday", "Thursday"],
-  Dordrecht: ["Friday", "Sunday"],
-  Zoetermeer: ["Saturday"],
-  Delft: ["Monday", "Wednesday"],
-  Eindhoven: ["Tuesday", "Thursday"],
-  Maastricht: ["Friday", "Sunday"],
-  Tilburg: ["Saturday"],
-  Groningen: ["Monday", "Wednesday"],
-  Nijmegen: ["Tuesday", "Thursday"],
-  Enschede: ["Friday", "Sunday"],
-  Arnhem: ["Saturday"],
-  Apeldoorn: ["Monday", "Wednesday"],
-  Deventer: ["Tuesday", "Thursday"],
-  Zwolle: ["Friday", "Sunday"],
-};
+import { ItemList } from '../../types/ItemList'; // Import the ItemList type
+import { cityDayData, furnitureItems } from '../../lib/constants.ts'; // Import the constants
 
 const HouseMovingPage = () => {
     const [step, setStep] = useState(1); // Current step
     const [firstLocation, setFirstLocation] = useState('');
     const [secondLocation, setSecondLocation] = useState('');
-    // const [itemList, setItemList] = useState<ItemList>({});
+    const [itemList, setItemList] = useState<{[key: string]: number}>({}); // Use number for quantities.
     const [floorPickup, setFloorPickup] = useState('');
     const [floorDropoff, setFloorDropoff] = useState('');
     const [disassembly, setDisassembly] = useState(false);
     const [photos, setPhotos] = useState<File[]>([]);
-    const [pickupDay, setPickupDay] = useState('');
-    const [deliveryDay, setDeliveryDay] = useState('');
-    const [contactInfo, setContactInfo] = useState('');
+    const [contactInfo, setContactInfo] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+    });
     const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
-    const [selectedDate] = useState('');
+    const [selectedDate, setSelectedDate] = useState(''); // Date state
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
-    const [itemQuantities, setItemQuantities] = useState<{[key: string]: number}>({});
-    // const [cityDays, setCityDays] = useState<{[key: string]: string[]}>({}); // Load from API/static data
+    const [extraHelper, setExtraHelper] = useState(false);
+    const [cityDays, setCityDays] = useState<{[key: string]: string[]}>({}); // Load from API/static data
+    const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
 
-    // const handleCheckboxChange = (itemId: string) => {
-    //     setItemList({ ...itemList, [itemId]: !itemList[itemId] });
-    // };
+    const handleCheckboxChange = (itemId: string) => {
+       // setItemList({ ...itemList, [itemId]: !itemList[itemId] });
+    };
 
     const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -77,7 +40,6 @@ const HouseMovingPage = () => {
         }
     };
 
-    // Function to check if it's a city day
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
 
@@ -94,7 +56,7 @@ const HouseMovingPage = () => {
         const item = furnitureItems.find(item => item.id === itemId);
         return item ? item.points : 0;
     };
-        const getCityFromPostalCode = (postalCode: string): string | null => {
+    const getCityFromPostalCode = (postalCode: string): string | null => {
         // Clean and format the postal code
         const cleanedCode = postalCode.trim().toUpperCase();
 
@@ -129,41 +91,41 @@ const HouseMovingPage = () => {
         }
     };
 
-
-    // Modified calculatePrice function
     const calculatePrice = () => {
         let basePrice = 50;
         const isCityDay = checkCityDay(firstLocation, selectedDate); // Implement city/day check
-        
+
         if (isCityDay) {
             basePrice = 40; // Reduced price for city days
         }
 
-        let itemPoints = Object.entries(itemQuantities).reduce((acc, [itemId, quantity]) => {
-            const points = getItemPoints(itemId); // Helper function
-            return acc + (points * quantity);
-        }, 0);
+        let itemPoints = 0;
+
+         for (const itemId in itemQuantities) {
+             if (itemQuantities[itemId] > 0) {
+                 const points = getItemPoints(itemId);
+                 itemPoints += points * itemQuantities[itemId];
+             }
+         }
 
         // Adjusted floor calculation with elevator
         const pickupFloor = elevatorPickup ? 1 : Math.max(1, parseInt(floorPickup, 10));
         const dropoffFloor = elevatorDropoff ? 1 : Math.max(1, parseInt(floorDropoff, 10));
-        
+
         let carryingCost = (Math.max(0, pickupFloor - 1) + Math.max(0, dropoffFloor - 1)) * 10;
-        
-        // Rest of calculation remains similar
+
         let disassemblyCost = disassembly ? 20 : 0; // Example fixed cost
-        // Mock distance calculation (replace with actual distance calculation)
+
         const distance = firstLocation && secondLocation ? 50 : 0; // Example:  50km if both locations are entered
         const distanceCost = distance * 0.5; // Example: €0.5 per km
 
-        const totalPrice = basePrice + itemPoints * 3 + carryingCost + disassemblyCost + distanceCost;
+        const totalPrice = basePrice + itemPoints * 3 + carryingCost + disassemblyCost + distanceCost + (extraHelper ? 15 : 0);
         setEstimatedPrice(totalPrice);
-        return totalPrice;
     };
 
     useEffect(() => {
         calculatePrice();
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper]);
 
     const nextStep = () => {
         if (step < 7) {
@@ -177,20 +139,38 @@ const HouseMovingPage = () => {
         }
     };
 
+    const incrementItem = (itemId: string) => {
+        setItemQuantities(prevQuantities => ({
+            ...prevQuantities,
+            [itemId]: (prevQuantities[itemId] || 0) + 1,
+        }));
+    };
+
+    const decrementItem = (itemId: string) => {
+        setItemQuantities(prevQuantities => {
+            const newQuantity = (prevQuantities[itemId] || 0) - 1;
+            if (newQuantity <= 0) {
+                const { [itemId]: _, ...rest } = prevQuantities;
+                return rest;
+            }
+            return { ...prevQuantities, [itemId]: newQuantity };
+        });
+    };
+
     // Determine color based on price
-    const priceColor = estimatedPrice !== null 
-        ? (estimatedPrice > 500 ? 'text-red-600' : estimatedPrice > 200 ? 'text-yellow-500' : 'text-green-500') 
+    const priceColor = estimatedPrice !== null
+        ? (estimatedPrice > 500 ? 'text-red-600' : estimatedPrice > 200 ? 'text-yellow-500' : 'text-green-500')
         : 'text-gray-500'; // Default color when estimatedPrice is null
 
-    const arrowIcon = estimatedPrice !== null 
-        ? (estimatedPrice > 500 ? <FaArrowUp className="text-red-600" /> : <FaArrowDown className="text-green-600" />) 
+    const arrowIcon = estimatedPrice !== null
+        ? (estimatedPrice > 500 ? <FaArrowUp className="text-red-600" /> : <FaArrowDown className="text-green-600" />)
         : null; // No icon when estimatedPrice is null
 
     // New elevator toggle component
-    const ElevatorToggle = ({ label, checked, onChange }: { 
+    const ElevatorToggle = ({ label, checked, onChange }: {
         label: string,
         checked: boolean,
-        onChange: (checked: boolean) => void 
+        onChange: (checked: boolean) => void
     }) => (
         <div className="flex items-center mt-2">
             <Switch
@@ -203,6 +183,11 @@ const HouseMovingPage = () => {
             <span className="ml-2 text-sm text-gray-700">{label}</span>
         </div>
     );
+
+    const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
+    };
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // Handle form submission
@@ -236,10 +221,9 @@ const HouseMovingPage = () => {
         <div className="min-h-screen bg-gradient-to-r from-yellow-400 to-red-500 py-20 px-4 sm:px-6 lg:px-8">
             <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden">
                 <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2">
                     <div className="px-6 py-8">
                         <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6 animate-pulse">
-                            Item Moving Request
+                            House Moving Request
                         </h1>
                         {/* Progress Bar (You can customize this visually) */}
                         <div className="flex justify-center space-x-2 mb-8">
@@ -258,8 +242,6 @@ const HouseMovingPage = () => {
                                 </div>
                             ))}
                         </div>
-
-                        {/* Step Content */}
                         <AnimatePresence initial={false} mode="wait">
                             {step === 1 && (
                                 <motion.div
@@ -319,28 +301,18 @@ const HouseMovingPage = () => {
                                     exit="exit"
                                     transition={{ duration: 0.3 }}
                                 >
-                                    {/* Step 2: Item List */}
+                                    {/* Step 2: Preferred Date */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Item List (Check the items to be moved)
+                                        <label htmlFor="selectedDate" className="block text-sm font-medium text-gray-700">
+                                            Preferred Date
                                         </label>
-                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                            {furnitureItems.map((item) => (
-                                                <div key={item.id} className="flex items-center gap-4">
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        value={itemQuantities[item.id] || 0}
-                                                        onChange={(e) => setItemQuantities({
-                                                            ...itemQuantities,
-                                                            [item.id]: parseInt(e.target.value) || 0
-                                                        })}
-                                                        className="w-20 px-2 py-1 border rounded-md"
-                                                    />
-                                                    <span className="text-sm">{item.name}</span>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <input
+                                            type="date"
+                                            id="selectedDate"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                        />
                                     </div>
                                 </motion.div>
                             )}
@@ -357,12 +329,56 @@ const HouseMovingPage = () => {
                                     exit="exit"
                                     transition={{ duration: 0.3 }}
                                 >
-                                    {/* Step 3: Floor and Additional Services */}
+                                    {/* Step 3: Item List */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Item List (Check the items to be moved)
+                                        </label>
+                                        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                            {furnitureItems.map((item) => (
+                                                <div key={item.id} className="flex items-center gap-4">
+                                                     <button
+                                                        type="button"
+                                                        onClick={() => decrementItem(item.id)}
+                                                        disabled={!itemQuantities[item.id]}
+                                                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-2 rounded-full focus:outline-none focus:shadow-outline"
+                                                    >
+                                                        <FaMinus className="h-4 w-4" />
+                                                    </button>
+                                                    <span className="mx-2">{itemQuantities[item.id] || 0}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => incrementItem(item.id)}
+                                                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-2 rounded-full focus:outline-none focus:shadow-outline"
+                                                    >
+                                                        <FaPlus className="h-4 w-4" />
+                                                    </button>
+                                                    <span className="ml-2 text-sm">{item.name}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                            {step === 4 && (
+                                <motion.div
+                                    key="step4"
+                                    variants={{
+                                        hidden: { opacity: 0, x: -100 },
+                                        visible: { opacity: 1, x: 0 },
+                                        exit: { opacity: 0, x: 100 },
+                                    }}
+                                    initial="hidden"
+                                    animate="visible"
+                                    exit="exit"
+                                    transition={{ duration: 0.3 }}
+                                >
+                                    {/* Step 4: Carrying Upstairs & (Dis)assembly */}
                                     {/* Floor Preference */}
-                                    <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label htmlFor="floorPickup" className="block text-sm font-medium text-gray-700">
-                                                Pickup Floor
+                                                Floor (Pickup)
                                             </label>
                                             <input
                                                 type="number"
@@ -370,16 +386,12 @@ const HouseMovingPage = () => {
                                                 value={floorPickup}
                                                 onChange={(e) => setFloorPickup(e.target.value)}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                            />
-                                            <ElevatorToggle
-                                                label="Elevator available at pickup"
-                                                checked={elevatorPickup}
-                                                onChange={setElevatorPickup}
+                                                placeholder="e.g., 2 (2nd Floor)"
                                             />
                                         </div>
                                         <div>
                                             <label htmlFor="floorDropoff" className="block text-sm font-medium text-gray-700">
-                                                Drop-off Floor
+                                                Floor (Drop-off)
                                             </label>
                                             <input
                                                 type="number"
@@ -387,11 +399,7 @@ const HouseMovingPage = () => {
                                                 value={floorDropoff}
                                                 onChange={(e) => setFloorDropoff(e.target.value)}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                            />
-                                            <ElevatorToggle
-                                                label="Elevator available at drop-off"
-                                                checked={elevatorDropoff}
-                                                onChange={setElevatorDropoff}
+                                                placeholder="e.g., 1 (Ground Floor)"
                                             />
                                         </div>
                                     </div>
@@ -415,82 +423,35 @@ const HouseMovingPage = () => {
                                     </div>
                                 </motion.div>
                             )}
-                            {step === 4 && (
-                                <motion.div
-                                    key="step4"
-                                    variants={{
-                                        hidden: { opacity: 0, x: -100 },
-                                        visible: { opacity: 1, x: 0 },
-                                        exit: { opacity: 0, x: 100 },
-                                    }}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    {/* Step 4: Date and Time Selection */}
-
-                                    {/* Preferred Pickup Day */}
-                                    <div>
-                                        <label htmlFor="pickupDay" className="block text-sm font-medium text-gray-700">
-                                            Preferred Pickup Day
-                                        </label>
-                                        <input
-                                            type="date"
-                                            id="pickupDay"
-                                            value={pickupDay}
-                                            onChange={(e) => setPickupDay(e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                        />
-                                    </div>
-
-                                    {/* Preferred Delivery Day */}
-                                    <div className="mt-4">
-                                        <label htmlFor="deliveryDay" className="block text-sm font-medium text-gray-700">
-                                            Preferred Delivery Day
-                                        </label>
-                                        <input
-                                            type="date"
-                                            id="deliveryDay"
-                                            value={deliveryDay}
-                                            onChange={(e) => setDeliveryDay(e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                        />
-                                    </div>
-                                </motion.div>
-                            )}
-                            {step === 5 && (
-                                <motion.div
-                                    key="step5"
-                                    variants={{
-                                        hidden: { opacity: 0, x: -100 },
-                                        visible: { opacity: 1, x: 0 },
-                                        exit: { opacity: 0, x: 100 },
-                                    }}
-                                    initial="hidden"
-                                    animate="visible"
-                                    exit="exit"
-                                    transition={{ duration: 0.3 }}
-                                >
-                                    {/* Step 5: Photo Upload */}
-                                    <div>
-                                        <label htmlFor="photos" className="block text-sm font-medium text-gray-700">
-                                            Photos (Packed/Unpacked Items)
-                                        </label>
-                                        <input
-                                            type="file"
-                                            id="photos"
-                                            multiple
-                                            onChange={handlePhotoChange}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-yellow-50 file:text-yellow-700 hover:file:bg-yellow-100"
-                                        />
-                                        {photos.length > 0 && (
-                                            <div className="mt-2">
-                                                {photos.map((photo, index) => (
-                                                    <img key={index} src={URL.createObjectURL(photo)} alt={`Preview ${index}`} className="inline-block h-16 w-16 rounded-md mr-2" />
-                                                ))}
-                                            </div>
-                                        )}
+                             {step === 5 && (
+                                 <motion.div
+                                     key="step5"
+                                     variants={{
+                                         hidden: { opacity: 0, x: -100 },
+                                         visible: { opacity: 1, x: 0 },
+                                         exit: { opacity: 0, x: 100 },
+                                     }}
+                                     initial="hidden"
+                                     animate="visible"
+                                     exit="exit"
+                                     transition={{ duration: 0.3 }}
+                                 >
+                                    {/* Step 5: Extra Helper */}
+                                    <div className="mt-4 relative flex items-start">
+                                        <div className="flex items-center h-5">
+                                            <input
+                                                id="extraHelper"
+                                                type="checkbox"
+                                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                                checked={extraHelper}
+                                                onChange={(e) => setExtraHelper(e.target.checked)}
+                                            />
+                                        </div>
+                                        <div className="ml-3 text-sm">
+                                            <label htmlFor="extraHelper" className="font-medium text-gray-700">
+                                                Require extra helper? (Extra charge may apply)
+                                            </label>
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
@@ -509,17 +470,59 @@ const HouseMovingPage = () => {
                                 >
                                     {/* Step 6: Contact Info */}
                                     <div>
-                                        <label htmlFor="contactInfo" className="block text-sm font-medium text-gray-700">
-                                            Contact Info
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Contact Information
                                         </label>
-                                        <textarea
-                                            id="contactInfo"
-                                            value={contactInfo}
-                                            onChange={(e) => setContactInfo(e.target.value)}
-                                            rows={2}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                            placeholder="Your contact details (e.g., phone, email)"
-                                        />
+                                        <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            <div>
+                                                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                                                    First Name
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    id="firstName"
+                                                    value={contactInfo.firstName}
+                                                    onChange={handleContactInfoChange}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                                                    Last Name
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    id="lastName"
+                                                    value={contactInfo.lastName}
+                                                    onChange={handleContactInfoChange}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                                    Email
+                                                </label>
+                                                <input
+                                                    type="email"
+                                                    id="email"
+                                                    value={contactInfo.email}
+                                                    onChange={handleContactInfoChange}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                                                    Phone Number
+                                                </label>
+                                                <input
+                                                    type="tel"
+                                                    id="phone"
+                                                    value={contactInfo.phone}
+                                                    onChange={handleContactInfoChange}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                                />
+                                            </div>
+                                        </div>
                                     </div>
                                 </motion.div>
                             )}
@@ -540,18 +543,12 @@ const HouseMovingPage = () => {
                                     {estimatedPrice !== null ? (
                                         <div>
                                             <h3 className="text-xl font-semibold text-gray-800 mb-4">Estimated Price:</h3>
-                                            <motion.div
-                                                className={`flex items-center justify-between p-4 border-l-4 ${priceColor} border-opacity-50`}
-                                                initial={{ opacity: 0, y: -20 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.5 }}
-                                            >
-                                                <div className="flex items-center">
-                                                    {arrowIcon}
-                                                    <span className={`ml-2 text-xl font-semibold ${priceColor}`}>${estimatedPrice.toFixed(2)}</span>
-                                                </div>
-                                                <p className={`text-sm ${priceColor}`}>Estimated Price</p>
-                                            </motion.div>
+                                            <div className="bg-green-100 p-4 rounded-lg shadow-md">
+                                                <p className="text-2xl font-bold text-green-700">
+                                                    ${estimatedPrice.toLocaleString()}  {/* Format to two decimal places */}
+                                                </p>
+                                                <p className="text-sm text-gray-700">ReHome B.v. may decrease charges as its just an estimation.</p>
+                                            </div>
                                             <button
                                                 type="submit"
                                                 className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-300 mt-6"
@@ -565,7 +562,6 @@ const HouseMovingPage = () => {
                                 </motion.div>
                             )}
                         </AnimatePresence>
-
                         {/* Navigation Buttons */}
                         <div className="flex justify-between mt-8">
                             {step > 1 && (
@@ -579,78 +575,13 @@ const HouseMovingPage = () => {
                             {step < 7 && (
                                 <button
                                     onClick={nextStep}
-                                    className="flex items-center px-4 py-2 bg-orange-500 text-white rounded-md hover:opacity-90 transition duration-300"
+                                    className="flex items-center px-4 py-2 bg-orange-500 text-white rounded-md hover:opacity-90 transition-duration-300"
                                 >
                                     Next <FaArrowRight className="ml-2" />
                                 </button>
                             )}
                         </div>
                     </div>
-                    {/* Price Summary on the Right */}
-                    <div className="px-6 py-8 border-l border-gray-200  hidden md:block bg-orange-50">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                            Your Estimate
-                        </h3>
-                        {estimatedPrice !== null ? (
-                            <div>
-                                <p className="text-gray-700 mb-2">
-                                    Base Price: ${50}
-                                </p>
-                                {Object.entries(itemQuantities).map(([key, value]) => {
-                                    if (value > 0) {
-                                        let itemName = "";
-                                        let itemPoints = 0;
-                                        furnitureItems.forEach(item => {
-                                          if (item.id === key) {
-                                            itemName = item.name
-                                            switch (key) {
-                                              case 'sofa': itemPoints = 12; break;
-                                              case 'table': itemPoints = 6; break;
-                                              case 'bed': itemPoints = 10; break;
-                                              case 'tv': itemPoints = 3; break;
-                                              case 'fridge': itemPoints = 8; break;
-                                            }
-                                          }
-                                        });
-                                          return (
-                                              <p key={key} className="text-gray-700 mb-2">
-                                                  {itemName} x {value}: {itemPoints * value * 3}
-                                              </p>
-                                          )
-                                    }
-                                    return null;
-                                })}
-
-                                {floorPickup && parseInt(floorPickup, 10) > 1 && (
-                                    <p className="text-gray-700 mb-2">
-                                        Pickup Floor:  ${(parseInt(floorPickup, 10) - 1) * 10}
-                                    </p>
-                                )}
-                                {floorDropoff && parseInt(floorDropoff, 10) > 1 && (
-                                    <p className="text-gray-700 mb-2">
-                                        Drop-off Floor: ${ (parseInt(floorDropoff, 10) - 1) * 10}
-                                    </p>
-                                )}
-                                {disassembly && (
-                                    <p className="text-gray-700 mb-2">
-                                        Disassembly: $20
-                                    </p>
-                                )}
-                                {firstLocation && secondLocation && (
-                                    <p className="text-gray-700 mb-2">
-                                        Distance: ${ (50 * 0.5).toFixed(2) }
-                                    </p>
-                                )}
-
-                                <p className="text-xl font-bold mt-4">
-                                    Total: ${estimatedPrice.toFixed(2)}
-                                </p>
-                            </div>
-                        ) : (
-                            <p className="text-gray-700">Select options to see the estimated price.</p>
-                        )}
-                    </div>
-                </div>
                 </form>
             </div>
         </div>
