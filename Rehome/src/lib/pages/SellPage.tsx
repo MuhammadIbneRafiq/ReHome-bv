@@ -1,4 +1,3 @@
-// src/lib/pages/SellPage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
@@ -7,7 +6,7 @@ const SellPage = () => {
     const [price, setPrice] = useState('');
     const [description, setDescription] = useState('');
     const [name, setName] = useState(''); // Added name field
-    const [imageUrl, setImageUrl] = useState<string | null>(null); // State for the image URL
+    const [imageUrls, setImageUrl] = useState<string[]>([]); // State for the image URLS, array.
     const [uploading, setUploading] = useState(false); // Loading state for upload
     const [submitting, setSubmitting] = useState(false); // Loading state for submit
     const [uploadError, setUploadError] = useState<string | null>(null); // Error state for upload
@@ -17,34 +16,8 @@ const SellPage = () => {
 
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         setUploadError(null); // Clear any previous upload errors
-        if (e.target.files && e.target.files.length > 0) {
-            setPhotos(Array.from(e.target.files));
-
-            // Immediately upload the first image for preview
-            setUploading(true);
-            const formData = new FormData();
-            formData.append('photos', e.target.files[0]); // Upload only the first selected image
-            try {
-                const response = await fetch('http://localhost:3000/api/upload', { // Replace with your actual backend URL
-                    method: 'POST',
-                    body: formData,
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const data = await response.json();
-                console.log('Upload response:', data); // Debug: Check the response
-                setImageUrl(data.imageUrls[0]); // Set the image URL from the response
-            } catch (err: any) {
-                console.error('Error uploading image:', err);
-                setUploadError(err.message || 'Failed to upload image.');
-            } finally {
-                setUploading(false);
-            }
-        } else {
-            setImageUrl(null); // Clear the image URL if no file is selected
+        if (e.target.files) {
+          setPhotos(Array.from(e.target.files));
         }
     };
 
@@ -54,6 +27,28 @@ const SellPage = () => {
         setSubmitting(true);
 
         try {
+            // 1. Upload all the images
+            const uploadedImageUrls: string[] = [];
+            if (photos.length > 0) {
+                setUploading(true);
+                for (const photo of photos) {
+                    const formData = new FormData();
+                    formData.append('photos', photo);
+                    const uploadResponse = await fetch('http://localhost:3000/api/upload', {
+                        method: 'POST',
+                        body: formData,
+                    });
+
+                    if (!uploadResponse.ok) {
+                        throw new Error(`HTTP upload error! status: ${uploadResponse.status}`);
+                    }
+                    const uploadData = await uploadResponse.json();
+                    uploadedImageUrls.push(...uploadData.imageUrls);
+                }
+                setUploading(false);
+            }
+
+            // 2.  Send the listing data
             const response = await fetch('http://localhost:3000/api/furniture/new', { // Replace with your actual backend URL
                 method: 'POST',
                 headers: {
@@ -63,7 +58,7 @@ const SellPage = () => {
                 body: JSON.stringify({
                     name,
                     description,
-                    imageUrl: imageUrl, // Use the image URL from state
+                    imageUrl: uploadedImageUrls, // Use the image URLs array
                     price: parseFloat(price), // Convert price to a number
                     cityName, // Include city name
                 }),
@@ -121,8 +116,12 @@ const SellPage = () => {
                             />
                             {uploading && <p>Uploading image...</p>}
                             {uploadError && <p className="text-red-500">{uploadError}</p>}
-                            {imageUrl && ( // Display image preview if imageUrl is available
-                                <img src={imageUrl} alt="Preview" className="mt-2 max-h-40 rounded-md" />
+                            {imageUrls.length > 0 && ( // Display image preview if imageUrl is available
+                                <div className="mt-2">
+                                    {imageUrls.map((url, index) => (
+                                        <img key={index} src={url} alt={`Preview ${index}`} className="inline-block h-16 w-16 rounded-md mr-2" />
+                                    ))}
+                                </div>
                             )}
                         </div>
 

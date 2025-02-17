@@ -34,6 +34,13 @@ interface FurnitureItem {
     seller_email: string; // Add seller_email to the interface
 }
 
+interface ItemDetailsModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    item: FurnitureItem | null;
+}
+
+
 
 const SellerDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,7 +106,7 @@ const SellerDashboard = () => {
         };
 
         fetchListings();
-    }, []); // Empty dependency array ensures this runs only once on mount
+    }, [mockUser.email]); // Empty dependency array ensures this runs only once on mount
     // const handleMarkAsSold = async (itemId: number) => {
     //     try {
     //         const response = await fetch(`http://localhost:3000/api/furniture/sold/${itemId}`, {
@@ -239,46 +246,46 @@ const SellerDashboard = () => {
                         ))}
                     </div>
                 </div>
-            </div>
 
-            {/* Modal for New Listing (using the SellPage component) */}
-            <AnimatePresence>
-                {isSellModalOpen && (
-                    <motion.div
-                        className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-                        variants={{
-                            hidden: { opacity: 0 },
-                            visible: { opacity: 1 },
-                            exit: { opacity: 0 },
-                        }}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        transition={{ duration: 0.3 }}
-                    >
+                {/* Modal for New Listing (using the SellPage component) */}
+                <AnimatePresence>
+                    {isSellModalOpen && (
                         <motion.div
-                            className="bg-white rounded-lg shadow-lg p-6 max-w-4xl w-full"
+                            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
                             variants={{
-                                hidden: { opacity: 0, scale: 0.8 },
-                                visible: { opacity: 1, scale: 1 },
-                                exit: { opacity: 0, scale: 0.8 },
+                                hidden: { opacity: 0 },
+                                visible: { opacity: 1 },
+                                exit: { opacity: 0 },
                             }}
                             initial="hidden"
                             animate="visible"
                             exit="exit"
                             transition={{ duration: 0.3 }}
                         >
-                            <SellPage onClose={closeSellModal}/>
-                            <button
-                                onClick={closeSellModal}
-                                className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200 absolute top-4 right-4"
+                            <motion.div
+                                className="bg-white rounded-lg shadow-lg p-6 max-w-4xl w-full"
+                                variants={{
+                                    hidden: { opacity: 0, scale: 0.8 },
+                                    visible: { opacity: 1, scale: 1 },
+                                    exit: { opacity: 0, scale: 0.8 },
+                                }}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                transition={{ duration: 0.3 }}
                             >
-                                Close
-                            </button>
+                                <SellPage onClose={closeSellModal}/>
+                                <button
+                                    onClick={closeSellModal}
+                                    className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200 absolute top-4 right-4"
+                                >
+                                    Close
+                                </button>
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 };
