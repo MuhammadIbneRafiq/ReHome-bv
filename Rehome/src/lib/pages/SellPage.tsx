@@ -12,6 +12,7 @@ const SellPage = () => {
     const [submitting, setSubmitting] = useState(false); // Loading state for submit
     const [uploadError, setUploadError] = useState<string | null>(null); // Error state for upload
     const [submitError, setSubmitError] = useState<string | null>(null); // Error state for submit
+    const [cityName, setCityName] = useState(''); // Added city name.
     const navigate = useNavigate(); // Initialize navigate
 
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,16 +54,18 @@ const SellPage = () => {
         setSubmitting(true);
 
         try {
-            const response = await fetch('http://localhost:3000/api/furniture', { // Replace with your actual backend URL
+            const response = await fetch('http://localhost:3000/api/furniture/new', { // Replace with your actual backend URL
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`, // Include the token
                 },
                 body: JSON.stringify({
                     name,
                     description,
                     imageUrl: imageUrl, // Use the image URL from state
                     price: parseFloat(price), // Convert price to a number
+                    cityName, // Include city name
                 }),
             });
 
@@ -72,8 +75,8 @@ const SellPage = () => {
 
             const data = await response.json();
             console.log('Listing created:', data); // Debug: Check the response
-            // Redirect to the dashboard after successful submission
-            navigate('/dashboard'); // Use navigate to redirect
+            // Redirect to the dashboard after successful submission which is the sell-dash route
+            navigate('/sell-dash'); // Use navigate to redirect
         } catch (err: any) {
             console.error('Error submitting listing:', err);
             setSubmitError(err.message || 'Failed to submit listing.');
@@ -83,7 +86,7 @@ const SellPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-r from-purple-400 to-pink-300 py-20 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gradient-to-r from-purple-400 to-pink-300 py-20 px-4 sm:px-6 lg:px-8 pt-24"> {/* Added pt-24 */}
             <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden transition-transform transform hover:scale-105">
                 <div className="px-6 py-8">
                     <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6 animate-pulse">
@@ -148,6 +151,20 @@ const SellPage = () => {
                                 rows={4}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                                 placeholder="Describe your furniture..."
+                            />
+                        </div>
+                        {/* City Input */}
+                        <div>
+                            <label htmlFor="cityName" className="block text-sm font-medium text-gray-700">
+                                City Name (or Postcode)
+                            </label>
+                            <input
+                                type="text"
+                                id="cityName"
+                                value={cityName}
+                                onChange={(e) => setCityName(e.target.value)}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                placeholder="e.g., Amsterdam, 1012 AB"
                             />
                         </div>
 

@@ -2,12 +2,15 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle } from "react-icons/fa";
+import { useNavigate } from 'react-router-dom';
 import SellPage from "./SellPage";
+import {supabaseClient} from "../../db/params";
 
 // Mock User Data (replace with your actual user data fetching)
 const mockUser = {
     firstName: 'John',
     lastName: 'Doe',
+    email: 'muhammadibnerafiq@gmail.com',
 };
 
 // Mock Analytics Data (replace with your API calls)
@@ -26,27 +29,87 @@ interface FurnitureItem {
     image_url: string;
     price: number;
     created_at: string;
+    city_name: string;
+    sold: boolean;
+    seller_email: string; // Add seller_email to the interface
 }
+
+interface ItemDetailsModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    item: FurnitureItem | null;
+}
+
+// ItemDetailsModal Component (Separate Component - Create a file: src/components/ItemDetailsModal.tsx)
+const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ isOpen, onClose, item }) => {
+    if (!isOpen || !item) {
+        return null;
+    }
+
+    const { name, description, image_url, price, city_name } = item;
+
+    return (
+        <motion.div
+            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+        >
+            <motion.div
+                className="bg-white rounded-lg shadow-lg p-6 max-w-4xl w-full overflow-y-auto" // Added overflow-y-auto
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.3 }}
+            >
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold">{name}</h2>
+                    <button onClick={onClose} className="text-gray-600 hover:text-gray-800">
+                        × {/* Close Icon (X) */}
+                    </button>
+                </div>
+
+                {/* Image Slider (Basic Implementation) - You'll want a proper carousel component */}
+                {image_url && (
+                    <div className="mb-4">
+                        <img src={image_url} alt={name} className="w-full rounded-md" />
+                    </div>
+                )}
+
+                <p className="text-gray-700 mb-2">{description}</p>
+                <p className="text-gray-700 mb-2">Price: ${price}</p>
+                <p className="text-gray-700 mb-2">City: {city_name}</p>
+
+                <button
+                    onClick={onClose}
+                    className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200"
+                >
+                    Close
+                </button>
+            </motion.div>
+        </motion.div>
+    );
+};
 
 const SellerDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [listings, setListings] = useState<FurnitureItem[]>([]); // Use the new type
+    const [soldListings, setSoldListings] = useState<FurnitureItem[]>([]); // Separate sold listings
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
+    const navigate = useNavigate();
 
-    const openModal = () => {
+    const openModal = (item: FurnitureItem) => {
+        setSelectedItem(item);
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
+        setSelectedItem(null);
     };
-
-    // No longer needed, as the new listing is handled via a post request to the backend.
-    // const handleNewListing = (newListing: any) => {
-    //     setListings([...listings, newListing]);
-    //     closeModal();
-    // };
 
     useEffect(() => {
         const fetchListings = async () => {
@@ -57,7 +120,7 @@ const SellerDashboard = () => {
                 const response = await fetch('http://localhost:3000/api/furniture', { // Use your backend endpoint
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('supabase.auth.token')}` // Get the token from localStorage
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}` // Get the token from localStorage
                     }
                 });
 
@@ -65,9 +128,16 @@ const SellerDashboard = () => {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
-                const data = await response.json();
+                const data: FurnitureItem[] = await response.json();
                 console.log('Fetched listings:', data);
-                setListings(data); // Update the state with the fetched listings
+
+                // Separate active and sold listings
+                const active = data.filter(item => item.seller_email === mockUser.email && !item.sold);
+                const sold = data.filter(item => item.seller_email === mockUser.email && item.sold);
+
+                setListings(active); // Update the state with the fetched listings
+                setSoldListings(sold);
+
             } catch (err: any) {
                 console.error('Error fetching listings:', err);
                 setError(err.message || 'Failed to fetch listings.');
@@ -77,7 +147,27 @@ const SellerDashboard = () => {
         };
 
         fetchListings();
-    }, []); // Empty dependency array ensures this runs only once on mount
+    }, [mockUser.email]); // Empty dependency array ensures this runs only once on mount
+    const handleMarkAsSold = async (itemId: number) => {
+        try {
+            const response = await fetch(`http://localhost:3000/api/furniture/sold/${itemId}`, {
+                method: 'POST', // Use POST to mark as sold
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            // After successfully marking as sold, update the listings
+            // Fetch listings again to refresh the data
+            fetchListings();
+        } catch (error: any) {
+            console.error('Error marking item as sold:', error);
+            setError(error.message || 'Failed to mark item as sold.');
+        }
+      };
 
     if (loading) {
         return (
@@ -97,6 +187,7 @@ const SellerDashboard = () => {
 
     return (
         <div className="min-h-screen bg-orange-50 flex flex-col pt-24">
+            <ItemDetailsModal isOpen={isModalOpen} onClose={closeModal} item={selectedItem} />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Welcome Message */}
                 <motion.h1
@@ -137,7 +228,7 @@ const SellerDashboard = () => {
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <div className="flex items-center justify-between">
                             <FaCheckCircle className="text-blue-500 text-2xl" />
-                            <span className="text-2xl font-semibold">{mockAnalytics.soldListings}</span>
+                            <span className="text-2xl font-semibold">{soldListings.length}</span>
                         </div>
                         <p className="text-gray-500 mt-2">Sold Listings</p>
                     </div>
@@ -150,7 +241,7 @@ const SellerDashboard = () => {
                             Your Listings
                         </h2>
                         <button
-                            onClick={openModal}
+                            onClick={() => setIsModalOpen(true)}
                             className="flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
                         >
                             <FaPlus className="mr-2" /> Upload New Listing
@@ -159,15 +250,38 @@ const SellerDashboard = () => {
                     {/* Active Listings */}
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">Active Listings</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                        {listings.filter(listing => listing.description).map((listing) => (
+                        {listings.map((listing) => (
                             <motion.div
                                 key={listing.id}
-                                className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform"
+                                className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
                                 whileHover={{ scale: 1.05 }}
+                                onClick={() => openModal(listing)} // Open modal on click
                             >
                                 <img src={listing.image_url} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
                                 <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
                                 <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
+                                <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
+                                <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
+                                <button onClick={() => handleMarkAsSold(listing.id)}>
+                                  Mark as Sold
+                                </button>
+                            </motion.div>
+                        ))}
+                    </div>
+                      {/* Sold Listings */}
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Sold Listings</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                        {soldListings.map((listing) => (
+                            <motion.div
+                                key={listing.id}
+                                className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
+                                whileHover={{ scale: 1.05 }}
+                                onClick={() => openModal(listing)} // Open modal on click
+                            >
+                                <img src={listing.image_url} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
+                                <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
+                                <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
+                                <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
                                 <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
                             </motion.div>
                         ))}
@@ -205,7 +319,7 @@ const SellerDashboard = () => {
                             <SellPage />
                             <button
                                 onClick={closeModal}
-                                className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200"
+                                className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200 absolute top-4 right-4"
                             >
                                 Close
                             </button>

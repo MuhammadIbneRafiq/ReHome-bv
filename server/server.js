@@ -29,29 +29,34 @@ const authenticateUser = async (req, res, next) => {
     }
 
     try {
-
         const { data: user, error } = await supabaseClient.auth.getUser(token);
 
         if (error) {
             throw error;
         }
 
+        if (!user || !user.user) { // Double check user exists
+            return res.status(403).json({ error: "Invalid token or user not found" });
+        }
+
         req.user = user.user;
         next();
     } catch (error) {
+        console.error("Authentication Error:", error); // Log the error
         return res.status(403).json({ error: "Invalid token or user not found" });
     }
 };
+
+// --------------------  Application Routes --------------------
 
 app.get("/", (req, res) => {
     res.send("ReHome B.V. running successfully... 🚀");
 });
 
+// --------------------  Authentication Routes --------------------
 // Auth
 app.post("/auth/signup", async (req, res) => {
     const { email, password } = req.body;
-
-    console.log(email, password)
 
     if (!email || !password) {
         return res.status(400).json({ error: "Invalid request" });
@@ -80,9 +85,6 @@ app.post("/auth/signup", async (req, res) => {
 
 app.post("/auth/login", async (req, res) => {
     const { email, password } = req.body;
-    console.log('here')
-    console.log(email, password)
-
 
     if (!email || !password) {
         return res.status(400).json({ error: "Invalid request" });
@@ -98,7 +100,12 @@ app.post("/auth/login", async (req, res) => {
             throw error;
         }
 
-        res.json({ accessToken: data.session.access_token });
+        if(data.session && data.session.access_token){
+            res.json({ accessToken: data.session.access_token });
+        } else {
+            res.status(500).json({error: "Login failed: no access token"}); // or a more specific message
+        }
+
     } catch (error) {
         if (error.message) {
             return res.status(500).json({ error: error.message });
@@ -124,6 +131,7 @@ app.post("/auth/logout", authenticateUser, async (req, res) => {
     }
 });
 
+// --------------------  Supabase Instance and Helper Functions --------------------
 const supabase = supabaseClient
 
 // Helper function to handle Supabase errors
@@ -279,17 +287,17 @@ app.post('/api/upload', upload.array('photos', 10), async (req, res) => {
 
 // 6. New Furniture Listing Endpoint
 app.post('/api/furniture/new', authenticateUser, async (req, res) => {
-    const { name, description, imageUrl, price } = req.body; // Changed image_url to imageUrl
+    const { name, description, imageUrl, price, cityName } = req.body; // Changed image_url to imageUrl
     const sellerEmail = req.user.email; // Get seller's email from the authenticated user
 
-    if (!name || !price || !imageUrl) { // Modified check
-        return res.status(400).json({ error: 'Name, price, and image URL are required.' });
+    if (!name || !price || !imageUrl || !cityName) { // Modified check
+        return res.status(400).json({ error: 'Name, price, city and image URL are required.' });
     }
 
     try {
         const { data, error } = await supabase
             .from('furniture')
-            .insert([{ name, description, image_url: imageUrl, price, seller_email: sellerEmail }])
+            .insert([{ name, description, image_url: imageUrl, price, seller_email: sellerEmail, city_name: cityName, sold: false}])
             .select();
         console.log('this is NEW FUNR', data)
         if (error) {
@@ -324,6 +332,58 @@ app.post('/api/special-request', async (req, res) => {
     console.error('Error in special request endpoint:', err);
     res.status(500).json({ error: 'Internal Server Error' });
   }
+});
+
+// 8. Mark Furniture as Sold and Move to Sold Items
+app.post('/api/furniture/sold/:id', authenticateUser, async (req, res) => {
+    const furnitureId = req.params.id;
+
+    if (!furnitureId) {
+        return res.status(400).json({ error: 'Furniture ID is required.' });
+    }
+    try {
+        // 1. Fetch the furniture item to get all its data
+        const { data: furnitureData, error: fetchError } = await supabase
+            .from('furniture')
+            .select('*')
+            .eq('id', furnitureId)
+            .single(); // Expect only one result (or null)
+
+        if (fetchError) {
+            console.error('Error fetching furniture item:', fetchError);
+            return res.status(500).json({ error: 'Failed to fetch furniture item.' });
+        }
+
+        if (!furnitureData) {
+            return res.status(404).json({ error: 'Furniture item not found.' });
+        }
+
+        // 2. Insert into sold_furniture table
+        const { error: insertError } = await supabase
+            .from('sold_furniture')
+            .insert([furnitureData]);
+
+        if (insertError) {
+            console.error('Error inserting into sold_furniture:', insertError);
+            return res.status(500).json({ error: 'Failed to move furniture item to sold.' });
+        }
+        // 3. Delete from furniture table
+        const { error: deleteError } = await supabase
+            .from('furniture')
+            .delete()
+            .eq('id', furnitureId);
+
+        if (deleteError) {
+            console.error('Error deleting from furniture:', deleteError);
+            return res.status(500).json({ error: 'Failed to remove furniture item from active listings.' });
+        }
+
+        res.status(200).json({ message: 'Furniture marked as sold and moved to sold items.' });
+
+    } catch (err) {
+        console.error('Error marking furniture as sold:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 });
 
 
