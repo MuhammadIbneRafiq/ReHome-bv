@@ -1,3 +1,4 @@
+// src/lib/pages/SellPage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
@@ -6,7 +7,7 @@ const SellPage = () => {
     const [price, setPrice] = useState('');
     const [description, setDescription] = useState('');
     const [name, setName] = useState(''); // Added name field
-    const [imageUrls] = useState<string[]>([]); // State for the image URLS, array.
+    const [imageUrls, setImageUrl] = useState<string[]>([]); // State for the image URLS, array.
     const [uploading, setUploading] = useState(false); // Loading state for upload
     const [submitting, setSubmitting] = useState(false); // Loading state for submit
     const [uploadError, setUploadError] = useState<string | null>(null); // Error state for upload
@@ -81,9 +82,9 @@ const SellPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-r from-purple-400 to-pink-300 py-20 px-4 sm:px-6 lg:px-8 pt-24"> {/* Added pt-24 */}
-            <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden transition-transform transform hover:scale-105">
-                <div className="px-6 py-8">
+        <div className="min-h-2xl bg-gradient-to-r from-purple-400 to-pink-300 py-20 px-4 sm:px-6 lg:px-8 pt-24"> {/* Added pt-24 */}
+            <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden transition-transform transform hover:scale-105 h-[80vh]">
+                <div className="px-6 py-8 overflow-y-auto h-full">  {/* Add overflow-y-auto and h-full */}
                     <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6 animate-pulse">
                         Sell Your Furniture
                     </h1>

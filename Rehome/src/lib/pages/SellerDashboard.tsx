@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle } from "react-icons/fa";
-import { useNavigate } from 'react-router-dom';
 import SellPage from "./SellPage";
 import ItemDetailsModal from '../../components/ItemDetailModal'
 
@@ -34,12 +33,6 @@ interface FurnitureItem {
     seller_email: string; // Add seller_email to the interface
 }
 
-interface ItemDetailsModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    item: FurnitureItem | null;
-}
-
 
 const SellerDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,7 +42,6 @@ const SellerDashboard = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
     const [isSellModalOpen, setIsSellModalOpen] = useState(false);
-    const navigate = useNavigate();
 
     const openModal = (item: FurnitureItem) => {
         setSelectedItem(item);
@@ -59,13 +51,6 @@ const SellerDashboard = () => {
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedItem(null);
-    };
-    const openSellModal = () => {
-        setIsSellModalOpen(true);
-    };
-
-    const closeSellModal = () => {
-        setIsSellModalOpen(false);
     };
 
 
@@ -200,7 +185,7 @@ const SellerDashboard = () => {
                         </h2>
                         <button
                             onClick={() => setIsSellModalOpen(true)}
-                            className="flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
+                            className="flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-20 rounded-md transition duration-300"
                         >
                             <FaPlus className="mr-2" /> Upload New Listing
                         </button>
@@ -273,13 +258,7 @@ const SellerDashboard = () => {
                                 exit="exit"
                                 transition={{ duration: 0.3 }}
                             >
-                                <SellPage onClose={closeSellModal}/>
-                                <button
-                                    onClick={closeSellModal}
-                                    className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200 absolute top-4 right-4"
-                                >
-                                    Close
-                                </button>
+                                <SellPage/>
                             </motion.div>
                         </motion.div>
                     )}
