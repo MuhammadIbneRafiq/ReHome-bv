@@ -11,7 +11,7 @@ import { useTheme } from "../services/providers/ThemeProvider";
 import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
 
 export default function Navbar() {
-    const { isAuthenticated, loading, userEmail, handleLogout } = useAuth();
+    const { isAuthenticated, userEmail, handleLogout } = useAuth();
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown

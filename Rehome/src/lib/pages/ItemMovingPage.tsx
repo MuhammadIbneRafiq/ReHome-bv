@@ -221,7 +221,7 @@ const ItemMovingPage = () => {
         //     elevatorPickup,
         //     elevatorDropoff,
         // });
-        toast.success('Moving request submitted (mock)', {
+        toast.success('Moving request Next!', {
                 position: "top-right",
                 autoClose: 3000,
                 hideProgressBar: false,

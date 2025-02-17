@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
-import { toast } from 'react-toastify'; // Import toast
 
 const SellPage = (props: any) => {
     const { onClose } = props;
@@ -8,7 +7,7 @@ const SellPage = (props: any) => {
     const [price, setPrice] = useState('');
     const [description, setDescription] = useState('');
     const [name, setName] = useState(''); // Added name field
-    const [imageUrls, setImageUrl] = useState<string[]>([]); // State for the image URLS, array.
+    const [imageUrls] = useState<string[]>([]); // State for the image URLS, array.
     const [uploading, setUploading] = useState(false); // Loading state for upload
     const [submitting, setSubmitting] = useState(false); // Loading state for submit
     const [uploadError, setUploadError] = useState<string | null>(null); // Error state for upload
