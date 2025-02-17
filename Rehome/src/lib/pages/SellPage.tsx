@@ -75,7 +75,7 @@ const SellPage = () => {
 
             const data = await response.json();
             console.log('Listing created:', data); // Debug: Check the response
-            // Redirect to the dashboard after successful submission which is the sell-dash route
+            // Redirect to the dashboard after successful submission
             navigate('/sell-dash'); // Use navigate to redirect
         } catch (err: any) {
             console.error('Error submitting listing:', err);

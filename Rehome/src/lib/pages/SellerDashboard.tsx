@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 import SellPage from "./SellPage";
-import {supabaseClient} from "../../db/params";
+import ItemDetailsModal from '../../components/ItemDetailModal'
 
 // Mock User Data (replace with your actual user data fetching)
 const mockUser = {
@@ -34,63 +34,6 @@ interface FurnitureItem {
     seller_email: string; // Add seller_email to the interface
 }
 
-interface ItemDetailsModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    item: FurnitureItem | null;
-}
-
-// ItemDetailsModal Component (Separate Component - Create a file: src/components/ItemDetailsModal.tsx)
-const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ isOpen, onClose, item }) => {
-    if (!isOpen || !item) {
-        return null;
-    }
-
-    const { name, description, image_url, price, city_name } = item;
-
-    return (
-        <motion.div
-            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-        >
-            <motion.div
-                className="bg-white rounded-lg shadow-lg p-6 max-w-4xl w-full overflow-y-auto" // Added overflow-y-auto
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.3 }}
-            >
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">{name}</h2>
-                    <button onClick={onClose} className="text-gray-600 hover:text-gray-800">
-                        × {/* Close Icon (X) */}
-                    </button>
-                </div>
-
-                {/* Image Slider (Basic Implementation) - You'll want a proper carousel component */}
-                {image_url && (
-                    <div className="mb-4">
-                        <img src={image_url} alt={name} className="w-full rounded-md" />
-                    </div>
-                )}
-
-                <p className="text-gray-700 mb-2">{description}</p>
-                <p className="text-gray-700 mb-2">Price: ${price}</p>
-                <p className="text-gray-700 mb-2">City: {city_name}</p>
-
-                <button
-                    onClick={onClose}
-                    className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200"
-                >
-                    Close
-                </button>
-            </motion.div>
-        </motion.div>
-    );
-};
 
 const SellerDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,6 +42,7 @@ const SellerDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
+    const [isSellModalOpen, setIsSellModalOpen] = useState(false);
     const navigate = useNavigate();
 
     const openModal = (item: FurnitureItem) => {
@@ -110,6 +54,14 @@ const SellerDashboard = () => {
         setIsModalOpen(false);
         setSelectedItem(null);
     };
+    const openSellModal = () => {
+        setIsSellModalOpen(true);
+    };
+
+    const closeSellModal = () => {
+        setIsSellModalOpen(false);
+    };
+
 
     useEffect(() => {
         const fetchListings = async () => {
@@ -147,27 +99,27 @@ const SellerDashboard = () => {
         };
 
         fetchListings();
-    }, [mockUser.email]); // Empty dependency array ensures this runs only once on mount
-    const handleMarkAsSold = async (itemId: number) => {
-        try {
-            const response = await fetch(`http://localhost:3000/api/furniture/sold/${itemId}`, {
-                method: 'POST', // Use POST to mark as sold
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                    'Content-Type': 'application/json',
-                },
-            });
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            // After successfully marking as sold, update the listings
-            // Fetch listings again to refresh the data
-            fetchListings();
-        } catch (error: any) {
-            console.error('Error marking item as sold:', error);
-            setError(error.message || 'Failed to mark item as sold.');
-        }
-      };
+    }, []); // Empty dependency array ensures this runs only once on mount
+    // const handleMarkAsSold = async (itemId: number) => {
+    //     try {
+    //         const response = await fetch(`http://localhost:3000/api/furniture/sold/${itemId}`, {
+    //             method: 'POST', // Use POST to mark as sold
+    //             headers: {
+    //                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+    //                 'Content-Type': 'application/json',
+    //             },
+    //         });
+    //         if (!response.ok) {
+    //             throw new Error(`HTTP error! status: ${response.status}`);
+    //         }
+    //         // After successfully marking as sold, update the listings
+    //         // Fetch listings again to refresh the data
+    //         fetchListings();
+    //     } catch (error: any) {
+    //         console.error('Error marking item as sold:', error);
+    //         setError(error.message || 'Failed to mark item as sold.');
+    //     }
+    //   };
 
     if (loading) {
         return (
@@ -241,7 +193,7 @@ const SellerDashboard = () => {
                             Your Listings
                         </h2>
                         <button
-                            onClick={() => setIsModalOpen(true)}
+                            onClick={openSellModal}
                             className="flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
                         >
                             <FaPlus className="mr-2" /> Upload New Listing
@@ -262,9 +214,9 @@ const SellerDashboard = () => {
                                 <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
                                 <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
                                 <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
-                                <button onClick={() => handleMarkAsSold(listing.id)}>
+                                {/* <button onClick={() => handleMarkAsSold(listing.id)}>
                                   Mark as Sold
-                                </button>
+                                </button> */}
                             </motion.div>
                         ))}
                     </div>
@@ -291,7 +243,7 @@ const SellerDashboard = () => {
 
             {/* Modal for New Listing (using the SellPage component) */}
             <AnimatePresence>
-                {isModalOpen && (
+                {isSellModalOpen && (
                     <motion.div
                         className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
                         variants={{
@@ -316,9 +268,9 @@ const SellerDashboard = () => {
                             exit="exit"
                             transition={{ duration: 0.3 }}
                         >
-                            <SellPage />
+                            <SellPage onClose={closeSellModal}/>
                             <button
-                                onClick={closeModal}
+                                onClick={closeSellModal}
                                 className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-md transition duration-200 absolute top-4 right-4"
                             >
                                 Close
