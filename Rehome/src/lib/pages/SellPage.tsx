@@ -72,7 +72,7 @@ const SellPage = (props: any) => {
             const data = await response.json();
             console.log('Listing created:', data); // Debug: Check the response
             // Redirect to the dashboard after successful submission
-            navigate('/dashboard'); // Use navigate to redirect
+            navigate('/sell-dash'); // Use navigate to redirect
         } catch (err: any) {
             console.error('Error submitting listing:', err);
             setSubmitError(err.message || 'Failed to submit listing.');
