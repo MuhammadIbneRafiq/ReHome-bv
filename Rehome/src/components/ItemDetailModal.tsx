@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart } from "react-icons/fa";
 import logo from "../../src/assets/logorehome.jpg";
 
 interface ItemDetailsModalProps {
@@ -17,12 +17,20 @@ interface ItemDetailsModalProps {
     sold: boolean;
     seller_email: string;
   } | null;
+  onAddToCart?: (itemId: number) => void;
+  onMarkAsSold?: (itemId: number) => void;
 }
 
-const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ isOpen, onClose, item }) => {
+const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  item, 
+  onAddToCart, 
+  onMarkAsSold 
+}) => {
   if (!isOpen || !item) return null;
 
-  const { name, description, image_url, price, city_name, sold } = item;
+  const { id, name, description, image_url, price, city_name, sold } = item;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const goToNextImage = () => {
@@ -130,14 +138,31 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ isOpen, onClose, it
                 <h3 className="text-lg font-semibold mb-2">Product Details</h3>
                 <p className="whitespace-pre-line">{description}</p>
               </div>
-            </div>
 
-            <button
-              className="mt-6 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors"
-              onClick={onClose}
-            >
-              Close Details
-            </button>
+              {/* Action Buttons */}
+              <div className="flex gap-12 mt-8">
+                {onAddToCart && (
+                  <button
+                    onClick={() => onAddToCart(id)}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <FaShoppingCart /> Add to Cart
+                  </button>
+                )}
+                {onMarkAsSold && (
+                  <button
+                    onClick={() => onMarkAsSold(id)}
+                    className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                      sold ? 'bg-gray-200 text-gray-600 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white'
+                    }`}
+                    disabled={sold}
+                  >
+                    {sold ? <FaCheckCircle /> : 'Mark as Sold'}
+                    {sold ? 'Marked Sold' : 'Mark as Sold'}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>

@@ -2,14 +2,19 @@ import { useState, useEffect } from 'react';
 import MarketplaceSearch from '../../components/MarketplaceSearch';
 import { motion, AnimatePresence } from "framer-motion";
 import { FaShoppingCart } from "react-icons/fa"; // Import cart icon
+import { Link } from 'react-router-dom';
+import {FurnitureItem} from '../../types/furniture'; // Import the type
+import ItemDetailsModal from '@/components/ItemDetailModal'; // Import the modal
 
 const MarketplacePage = () => {
-    const [furnitureItems, setFurnitureItems] = useState<any[]>([]); // Use any[] or create a type for your furniture data
+    const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]); // Use any[] or create a type for your furniture data
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [cart, setCart] = useState<number[]>([]); // Simple cart (array of item IDs)
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
 
     useEffect(() => {
         const fetchFurniture = async () => {
@@ -21,7 +26,7 @@ const MarketplacePage = () => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const data = await response.json();
+                const data: FurnitureItem[] = await response.json();
                 console.log('Furniture data:', data); // Debug: Check the fetched data
                 setFurnitureItems(data);
             } catch (err: any) {
@@ -52,6 +57,16 @@ const MarketplacePage = () => {
         }, 1000); // Simulate checkout loading
     };
 
+    const openModal = (item: FurnitureItem) => {
+        setSelectedItem(item);
+        setIsModalOpen(true);
+    };
+
+    const closeModal = () => {
+        setIsModalOpen(false);
+        setSelectedItem(null);
+    };
+
     if (loading) {
         return (
             <div className="min-h-screen bg-orange-50 pt-16 flex items-center justify-center">
@@ -70,6 +85,12 @@ const MarketplacePage = () => {
 
     return (
         <div className="min-h-screen bg-orange-50 pt-16">
+             <ItemDetailsModal
+                    isOpen={isModalOpen}
+                    onClose={closeModal}
+                    item={selectedItem}
+                    onAddToCart={addToCart}
+                />
             {/* Top Section */}
             <div className="bg-white py-12">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -93,51 +114,19 @@ const MarketplacePage = () => {
                                 {furnitureItems.map((item) => (
                                     <motion.div
                                         key={item.id}
-                                        className="bg-white shadow-lg rounded-lg p-2 hover:scale-105 transition-transform"
+                                        className="bg-white shadow-lg rounded-lg p-2 hover:scale-105 transition-transform cursor-pointer"
                                         whileHover={{ scale: 1.05 }}
+                                        onClick={() => openModal(item)}
                                     >
                                         <img
-                                            src={item.image_url} // Use the image_url field
+                                            src={item.image_url && item.image_url.length > 0 ? item.image_url[0] : ''} // Use the first image URL
                                             alt={item.name}
                                             className="w-full h-32 object-cover rounded-md mb-1"
                                         />
                                         <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
                                         <p className="text-gray-600 text-xs">{item.description}</p>
                                         <p className="text-red-500 font-bold text-xs">${item.price}</p>
-
-                                        {/* Add to Cart Button */}
-                                        <motion.button
-                                            onClick={() => addToCart(item.id)}
-                                            disabled={isAddingToCart}
-                                            whileTap={{ scale: 0.95 }}
-                                            className={`mt-2 w-full flex items-center justify-center px-3 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium  transition duration-200 ${
-                                                isAddingToCart ? 'bg-gray-300 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-700 text-white'
-                                            }`}
-                                        >
-                                            <AnimatePresence>
-                                                {isAddingToCart ? (
-                                                    <motion.span
-                                                        key="loading"
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        exit={{ opacity: 0 }}
-                                                        className="flex items-center"
-                                                    >
-                                                        Adding...
-                                                    </motion.span>
-                                                ) : (
-                                                    <motion.span
-                                                        key="add"
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        exit={{ opacity: 0 }}
-                                                        className="flex items-center"
-                                                    >
-                                                        <FaShoppingCart className="mr-1" /> Add to Cart
-                                                    </motion.span>
-                                                )}
-                                            </AnimatePresence>
-                                        </motion.button>
+                                        {/* The add to cart button will be added inside ItemDetailsModal component */}
                                     </motion.div>
                                 ))}
                             </div>

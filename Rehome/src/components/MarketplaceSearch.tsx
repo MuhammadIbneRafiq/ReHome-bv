@@ -4,15 +4,17 @@ import { AnimatePresence, motion } from 'framer-motion'; // Import framer-motion
 
 const MarketplaceSearch = () => {
     const [searchTerm, setSearchTerm] = useState('');
-    const [location, setLocation] = useState('');
+    const [location] = useState('');
     const [category, setCategory] = useState(''); // e.g., sofa, table, chair
     const [priceRange, setPriceRange] = useState({ min: '', max: '' }); //  min, max
-    const [sortBy, setSortBy] = useState('');
+    const [sortBy] = useState('');
     const [isFilterOpen, setIsFilterOpen] = useState(false); // State for filter visibility
+    const [isSold, setIsSold] = useState<boolean | null>(null); //  Filter by sold/unsold status
+    const [sellerType, setSellerType] = useState<'Rehome' | 'Customer' | ''>(''); // Filter by seller type
 
     const handleSearch = () => {
         // Simulate a search result (replace with your data fetching)
-        console.log('Searching:', { searchTerm, location, category, priceRange, sortBy });
+        console.log('Searching:', { searchTerm, location, category, priceRange, sortBy, isSold, sellerType });
     };
     const toggleFilter = () => {
         setIsFilterOpen(!isFilterOpen);
@@ -55,7 +57,8 @@ const MarketplaceSearch = () => {
                         transition={{ duration: 0.3 }}
                         className="mt-4 space-y-4"
                     >
-                        {/* Category Filter */}
+
+                        {/* Location Filter */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
                                 Category
@@ -65,12 +68,12 @@ const MarketplaceSearch = () => {
                                 onChange={(e) => setCategory(e.target.value)}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             >
-                                <option value="">All Categories</option>
-                                <option value="sofa">Sofa</option>
-                                <option value="table">Table</option>
-                                <option value="chair">Chair</option>
-                                <option value="bed">Bed</option>
-                                <option value="other">Other</option>
+                                <option value="">All Cities</option>
+                                <option value="sofa">Amsterdam</option>
+                                <option value="table">Eindhoven</option>
+                                <option value="chair">Den Haag</option>
+                                <option value="bed">Den Bosch</option>
+                                <option value="other">Zwolle</option>
                             </select>
                         </div>
 
@@ -97,19 +100,51 @@ const MarketplaceSearch = () => {
                             </div>
                         </div>
 
-                        {/* Sort By Filter */}
+                        {/* Sold/Unsold Filter */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700">
-                                Sort By
+                                Status
                             </label>
                             <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
+                                value={isSold === null ? '' : isSold ? 'sold' : 'unsold'}
+                                onChange={(e) => {
+                                    switch (e.target.value) {
+                                        case 'sold':
+                                            setIsSold(true);
+                                            break;
+                                        case 'unsold':
+                                            setIsSold(false);
+                                            break;
+                                        default:
+                                            setIsSold(null);
+                                    }
+                                }}
                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             >
-                                <option value="">Relevance</option>
-                                <option value="lowToHigh">Price: Low to High</option>
-                                <option value="highToLow">Price: High to Low</option>
+                                <option value="">All</option>
+                                <option value="sold">Sold</option>
+                                <option value="unsold">Unsold</option>
+                            </select>
+                        </div>
+
+                         {/* Seller Type Filter */}
+                         <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                                Seller
+                            </label>
+                            <select
+                                value={sellerType}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === "" || value === "Rehome" || value === "Customer") {
+                                        setSellerType(value);
+                                    }
+                                }}
+                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            >
+                                <option value="">All</option>
+                                <option value="Rehome">Rehome</option>
+                                <option value="Customer">Customer</option>
                             </select>
                         </div>
 
