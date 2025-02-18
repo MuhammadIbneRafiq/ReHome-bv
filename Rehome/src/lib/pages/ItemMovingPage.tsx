@@ -1,22 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus } from "react-icons/fa";
-
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { cityDayData, furnitureItems } from '../../lib/constants.ts'; // Uncomment when you have constants file!
 
 // // Dummy data for demonstration
-// const cityDayData = {
-//     "Amsterdam": ["Monday", "Tuesday", "Wednesday"],
-//     "Rotterdam": ["Thursday", "Friday"]
-// };
-// const furnitureItems = [
-//     { id: "sofa", name: "Sofa", points: 5 },
-//     { id: "bed", name: "Bed", points: 8 },
-//     { id: "table", name: "Table", points: 3 }
-// ];
+const cityDayData = {
+    "Amsterdam": ["Monday", "Tuesday", "Wednesday"],
+    "Rotterdam": ["Thursday", "Friday"]
+};
+const furnitureItems = [
+    { id: "sofa", name: "Sofa", points: 5 },
+    { id: "bed", name: "Bed", points: 8 },
+    { id: "table", name: "Table", points: 3 }
+];
 
 const ItemMovingPage = () => {
     const [step, setStep] = useState(1);
@@ -37,6 +35,8 @@ const ItemMovingPage = () => {
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
+    const [pickupType, setPickupType] = useState<'private' | 'store' | null>(null);
+    const [privateSource, setPrivateSource] = useState<'family' | 'marketplace' | null>(null); // For pickup from private
 
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
@@ -88,9 +88,26 @@ const ItemMovingPage = () => {
         calculatePrice();
     }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper, elevatorPickup, elevatorDropoff]);
 
-    const nextStep = () => {
-        if (step < 7) setStep(step + 1);
+    const goToNextStep = () => {
+        // Private Home flow
+        if (isPrivateType()) {
+            if (step === 1 && privateSource === 'marketplace') {
+                alert("We are only here for the transportation. Payment for the item must be handled by yourself.");
+            }
+        }
+         if (step < getTotalStep()) setStep(step + 1);
     };
+
+    const getTotalStep = () => {
+        if (isPrivateType()) {
+            return 7; // Private home flow has 7 steps
+        } else if (isStoreType()) {
+            return 5; // Store flow has 5 steps
+        } else {
+            return 1; // Initial state
+        }
+    };
+    const hasSelectedSource = () => privateSource !== null;
 
     const prevStep = () => {
         if (step > 1) setStep(step - 1);
@@ -157,6 +174,19 @@ const ItemMovingPage = () => {
         exit: { opacity: 0, x: 50, transition: { duration: 0.3 } },
     };
 
+    const handlePickupType = (type: 'private' | 'store') => {
+        setPickupType(type);
+        setStep(2); // Automatically go to Step 2 after selection
+    };
+
+    // Determine maximum steps based on pickup type
+    const maxSteps = () => {
+        return pickupType === 'store' ? 5 : 7;
+    };
+
+    const isPrivateType = () => pickupType === 'private'
+    const isStoreType = () => pickupType === 'store'
+
     return (
         <div className="min-h-screen bg-gradient-to-r from-yellow-300 to-red-400 py-12 px-4 sm:px-6 lg:px-8">
             <motion.div
@@ -172,7 +202,7 @@ const ItemMovingPage = () => {
 
                     {/* Progress Bar */}
                     <div className="flex justify-center space-x-3 mb-8">
-                        {[1, 2, 3, 4, 5, 6, 7].map((s) => (
+                         {Array.from({ length: (isPrivateType() ? 7 : 5) }, (_, i) => i + 1).map((s) => (
                             <div
                                 key={s}
                                 className={`w-6 h-6 rounded-full flex items-center justify-center ${
@@ -190,280 +220,82 @@ const ItemMovingPage = () => {
 
                     <AnimatePresence initial={false} mode="wait">
 
-                    {step === 1 && (
-                        <motion.div
-                            key="step1"
-                            className="space-y-4"
-                            variants={stepVariants}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                        >
-                            {/* Step 1: Pickup Selection */}
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4">Where do we pick it up?</h2>
-                            <div className="grid grid-cols-1 gap-4">
-                                {/* From a private home */}
-                                <button className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                                    <FaHome className="h-6 w-6 text-blue-500 mt-1 mr-3" /> {/* Icon sizing and alignment */}
-                                    <div className="flex flex-col">
-                                        <h3 className="text-base font-medium text-gray-700 text-left">From a private home</h3>
-                                        <p className="text-sm text-gray-500 text-left mt-1">From someone you know or via an online marketplace</p>
-                                    </div>
-                                </button>
-
-                                {/* From a store */}
-                                <button className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300">
-                                    <FaStore className="h-6 w-6 text-blue-500 mt-1 mr-3" /> {/* Icon sizing and alignment */}
-                                    <div className="flex flex-col">
-                                        <h3 className="text-base font-medium text-gray-700 text-left">From a store</h3>
-                                        <p className="text-sm text-gray-500 mt-1">For example from a furniture store</p>
-                                    </div>
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                        {step === 2 && (
+                         {step === 1 && (
                             <motion.div
-                                key="step2"
+                                key="step1"
                                 className="space-y-4"
                                 variants={stepVariants}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 2: Address Information */}
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                    {/* Start Address A */}
-                                    <div>
-                                        <h3 className="text-lg font-medium text-gray-700 mb-2">Start address A</h3>
-                                        {/* Country */}
-                                        <div>
-                                            <label
-                                                htmlFor="countryA"
-                                                className="block text-xs font-medium text-gray-500 mb-1"
-                                            >
-                                                Country
-                                            </label>
-                                            <select
-                                                id="countryA"
-                                                className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                value="The Netherlands" // Replace with dynamic state if needed
-                                                // onChange={}   Add logic here
-                                            >
-                                                <option>The Netherlands</option>
-                                            </select>
+                                {/* Step 1: Pickup Selection */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Where do we pick it up?</h2>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {/* From a private home */}
+                                    <button
+                                        onClick={() => handlePickupType('private')}
+                                        className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
+                                    >
+                                        <FaHome className="h-6 w-6 text-blue-500 mt-1 mr-3" /> {/* Icon sizing and alignment */}
+                                        <div className="flex flex-col">
+                                            <h3 className="text-base font-medium text-gray-700 text-left">From a private home</h3>
+                                            <p className="text-sm text-gray-500 text-left mt-1">From someone you know or via an online marketplace</p>
                                         </div>
+                                    </button>
 
-                                        {/* Postal Code, House Number, Addition */}
-                                        <div className="grid grid-cols-3 gap-2 mt-2">
-                                            <div>
-                                                <label
-                                                    htmlFor="postalA"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    Postal
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="postalA"
-                                                    value={firstLocation} // Assuming `firstLocation` is postal code
-                                                    onChange={(e) => setFirstLocation(e.target.value)}
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label
-                                                    htmlFor="houseNumberA"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    House number
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    id="houseNumberA"
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label
-                                                    htmlFor="additionA"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    Addition
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="additionA"
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
+                                    {/* From a store */}
+                                    <button
+                                        onClick={() => handlePickupType('store')}
+                                        className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
+                                    >
+                                        <FaStore className="h-6 w-6 text-blue-500 mt-1 mr-3" /> {/* Icon sizing and alignment */}
+                                        <div className="flex flex-col">
+                                            <h3 className="text-base font-medium text-gray-700 text-left">From a store</h3>
+                                            <p className="text-sm text-gray-500 mt-1">For example from a furniture store</p>
                                         </div>
-
-                                        {/* City and Street */}
-                                        <div className="grid grid-cols-2 gap-2 mt-2">
-                                            <div>
-                                                <label
-                                                    htmlFor="cityA"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    City
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="cityA"
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label
-                                                    htmlFor="streetA"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    Street
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="streetA"
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Moving info - Floor */}
-                                        <div className="mt-2">
-                                            <label
-                                                htmlFor="floorA"
-                                                className="block text-xs font-medium text-gray-500 mb-1"
-                                            >
-                                                Moving Info - Floor
-                                            </label>
-                                            <select
-                                                id="floorA"
-                                                className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                            >
-                                                <option>Ground floor</option>
-                                                {/* Add other options as needed */}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    {/* End Address B */}
-                                    <div>
-                                        <h3 className="text-lg font-medium text-gray-700 mb-2">End address B</h3>
-                                        {/* Country */}
-                                        <div>
-                                            <label
-                                                htmlFor="countryB"
-                                                className="block text-xs font-medium text-gray-500 mb-1"
-                                            >
-                                                Country
-                                            </label>
-                                            <select
-                                                id="countryB"
-                                                className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                value="The Netherlands" // Replace with dynamic state if needed
-                                                // onChange={}
-                                            >
-                                                <option>The Netherlands</option>
-                                            </select>
-                                        </div>
-
-                                        {/* Postal Code, House Number, Addition */}
-                                        <div className="grid grid-cols-3 gap-2 mt-2">
-                                            <div>
-                                                <label
-                                                    htmlFor="postalB"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    Postal
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="postalB"
-                                                    value={secondLocation}  // Assuming `secondLocation` is postal code
-                                                    onChange={(e) => setSecondLocation(e.target.value)}
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label
-                                                    htmlFor="houseNumberB"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    House number
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    id="houseNumberB"
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label
-                                                    htmlFor="additionB"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    Addition
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="additionB"
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* City and Street */}
-                                        <div className="grid grid-cols-2 gap-2 mt-2">
-                                            <div>
-                                                <label
-                                                    htmlFor="cityB"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    City
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="cityB"
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label
-                                                    htmlFor="streetB"
-                                                    className="block text-xs font-medium text-gray-500 mb-1"
-                                                >
-                                                    Street
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    id="streetB"
-                                                    className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Moving info - Floor */}
-                                        <div className="mt-2">
-                                            <label
-                                                htmlFor="floorB"
-                                                className="block text-xs font-medium text-gray-500 mb-1"
-                                            >
-                                                Moving Info - Floor
-                                            </label>
-                                            <select
-                                                id="floorB"
-                                                className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                            >
-                                                <option>Ground floor</option>
-                                                {/* Add other options as needed */}
-                                            </select>
-                                        </div>
-                                    </div>
+                                    </button>
                                 </div>
                             </motion.div>
                         )}
-                        {step === 3 && (
+                         {step === 2 && pickupType === 'private' && (
+                            <motion.div
+                                key="Step2Private"
+                                className="space-y-4"
+                                variants={stepVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                            >
+                                {/* Step 2: Source Selection for Private Home */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Item Source</h2>
+                                <button
+                                    onClick={() => {
+                                        setPrivateSource('family');
+                                        goToNextStep();
+                                    }}
+                                    className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
+                                >
+                                    <div>
+                                        <h3 className="text-base font-medium text-gray-700 text-left">From Family/Friends</h3>
+                                        <p className="text-sm text-gray-500 text-left mt-1">Item is from someone you know.</p>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setPrivateSource('marketplace');
+                                        goToNextStep();
+                                    }}
+                                    className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
+                                >
+                                    <div>
+                                        <h3 className="text-base font-medium text-gray-700 text-left">From Marketplace</h3>
+                                        <p className="text-sm text-gray-500 text-left mt-1">Item was bought or sold on an online marketplace.</p>
+                                    </div>
+                                </button>
+                            </motion.div>
+                        )}
+                        {step === 3 && pickupType === 'private' && hasSelectedSource() && (
                             <motion.div
                                 key="step3"
                                 className="space-y-4"
@@ -472,7 +304,8 @@ const ItemMovingPage = () => {
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 3: Item List */}
+                                {/* Step 3: Item Selection and Add-ons (for Private Home) */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Item Selection & Add-ons</h2>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Item List (Select Items)</label>
                                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4"> {/* Force 2 columns */}
@@ -503,8 +336,7 @@ const ItemMovingPage = () => {
                                 </div>
                             </motion.div>
                         )}
-
-                        {step === 4 && (
+                        {step === 4 && pickupType === 'private' && hasSelectedSource() &&(
                             <motion.div
                                 key="step4"
                                 className="space-y-4"
@@ -566,7 +398,7 @@ const ItemMovingPage = () => {
                             </motion.div>
                         )}
 
-                        {step === 5 && (
+                        {step === 5 && pickupType === 'private' && hasSelectedSource() &&(
                             <motion.div
                                 key="step5"
                                 className="space-y-4"
@@ -575,25 +407,25 @@ const ItemMovingPage = () => {
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 5: Extra Helper */}
-                                <div className="mt-4 relative flex items-start">
-                                    <div className="flex items-center h-5">
-                                        <input
-                                            id="extraHelper"
-                                            type="checkbox"
-                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            checked={extraHelper}
-                                            onChange={(e) => setExtraHelper(e.target.checked)}
-                                        />
-                                    </div>
-                                    <div className="ml-3 text-sm">
-                                        <label htmlFor="extraHelper" className="font-medium text-gray-700">Require extra helper?</label>
-                                    </div>
+                                {/* Step 5: Date and Time Selection */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Date and Time</h2>
+                                <div>
+                                    <label htmlFor="selectedDate" className="block text-sm font-medium text-gray-700">
+                                        Preferred Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        id="selectedDate"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                    />
                                 </div>
+                                {/* Flexble dates yes or no */}
                             </motion.div>
                         )}
 
-                        {step === 6 && (
+                        {step === 6 && pickupType === 'private' && hasSelectedSource() &&(
                             <motion.div
                                 key="step6"
                                 className="space-y-4"
@@ -651,7 +483,79 @@ const ItemMovingPage = () => {
                             </motion.div>
                         )}
 
-                        {step === 7 && (
+                         {step === 2 && pickupType === 'store' && (
+                            <motion.div
+                                key="step3Store"
+                                className="space-y-4"
+                                variants={stepVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                            >
+                                {/* Step 3: Select Store */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Select Store</h2>
+                                <div>
+                                    <label htmlFor="storeName" className="block text-sm font-medium text-gray-700">Store Name</label>
+                                    <input
+                                        type="text"
+                                        id="storeName"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                        placeholder="Enter Store Name"
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {step === 3 && pickupType === 'store'  && (
+                            <motion.div
+                                key="step4Store"
+                                className="space-y-4"
+                                variants={stepVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                            >
+                                {/* Step 4 - Date and Time Selection */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Select Time</h2>
+                                    <label htmlFor="selectedDate" className="block text-sm font-medium text-gray-700">
+                                        Preferred Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        id="selectedDate"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                    />
+                               
+                            </motion.div>
+                        )}
+
+                        {step === 4 && pickupType === 'store' && (
+                            <motion.div
+                                key="step4Store"
+                                className="space-y-4"
+                                variants={stepVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                            >
+                                {/* Step 4 - Contact Info */}
+                                <div>
+                                    <label htmlFor="contactInfo" className="block text-sm font-medium text-gray-700">
+                                        Contact Info
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="contactInfo"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                        placeholder="Enter Contact Information"
+                                    />
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {step === 7 && isPrivateType() &&(
                             <motion.div
                                 key="step7"
                                 className="space-y-4"
@@ -676,6 +580,33 @@ const ItemMovingPage = () => {
                                 )}
                             </motion.div>
                         )}
+
+                      {step === 5 && isStoreType() && (
+                            <motion.div
+                                key="step5"
+                                className="space-y-4"
+                                variants={stepVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                            >
+                                {/* Step 7: Price Estimation and Confirmation */}
+                                {estimatedPrice !== null ? (
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-gray-800 mb-4">Estimated Price:</h3>
+                                        <div className="bg-green-100 p-4 rounded-lg shadow-md">
+                                            <p className="text-2xl font-bold text-green-700">
+                                                ${estimatedPrice.toLocaleString()}
+                                            </p>
+                                            <p className="text-sm text-gray-700">ReHome B.v. may decrease charges as its just an estimation.</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p>Calculating price...</p>
+                                )}
+                            </motion.div>
+                        )}
+
                     </AnimatePresence>
 
                     {/* Navigation Buttons */}
@@ -690,17 +621,17 @@ const ItemMovingPage = () => {
                                 <FaArrowLeft className="inline-block mr-2" /> Previous
                             </motion.button>
                         )}
-                        {step < 7 && (
+                       {step < (isPrivateType() ? 7 : 5) && (
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 transition={{ duration: 0.2 }}
-                                onClick={nextStep}
+                                onClick={goToNextStep}
                                 className="bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600"
                             >
                                 Next <FaArrowRight className="inline-block ml-2" />
                             </motion.button>
                         )}
-                        {step === 7 && estimatedPrice !== null && (
+                        {step === 7 && isPrivateType() ||(step === 5 && isStoreType() &&  estimatedPrice !== null )  &&(
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 transition={{ duration: 0.2 }}
