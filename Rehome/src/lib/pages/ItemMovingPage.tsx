@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaTruck, FaCube, FaToolbox, FaInfoCircle } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -473,11 +473,10 @@ const ItemMovingPage = () => {
                                 </div>
                             </motion.div>
                         )}
-
                         {step === 6 && (
                             <motion.div
-                                key="step7"
-                                className="space-y-4"
+                                key="overview"
+                                className="space-y-6"
                                 variants={stepVariants}
                                 initial="hidden"
                                 animate="visible"
@@ -485,46 +484,141 @@ const ItemMovingPage = () => {
                             >
                                 {/* Step 7: Overview and Confirm */}
                                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Overview and Confirm</h2>
-                                <div className="bg-gray-100 p-4 rounded-md">
-                                    <h3 className="text-lg font-medium text-gray-700">Pickup Type:</h3>
-                                    <p className="opacity-70">Type of Pickup: <span className="font-semibold text-gray-800 opacity-100">{pickupType}</span></p>
-
-                                    <h3 className="text-lg font-medium text-gray-700">Item Details:</h3>
-                                    <p className="opacity-70">Custom Item: <span className="font-semibold text-gray-800 opacity-100">{customItem}</span></p>
-                                    {Object.entries(itemQuantities)
-                                        .filter(([, quantity]) => quantity > 0)
-                                        .map(([itemId, quantity]) => (
-                                            <p className="opacity-70" key={itemId}>
-                                                {furnitureItems.find(item => item.id === itemId)?.name}: <span className="font-semibold text-gray-800 opacity-100">{quantity}</span>
-                                            </p>
+                                <div className="bg-gray-100 p-4 rounded-md shadow-md">
+                                    {/* Ham List Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">
+                                            <FaCube className="mr-2 text-gray-600" /> Item List
+                                        </h3>
+                                        {Object.entries(itemQuantities).map(([id, qty]) => (
+                                            <motion.div
+                                                key={id}
+                                                className="flex justify-between py-1 text-gray-700 opacity-80"
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <span>{furnitureItems.find(i => i.id === id)?.name || 'Unknown Item'}</span>
+                                                <span>x{qty}</span>
+                                            </motion.div>
                                         ))}
-
-                                    <h3 className="text-lg font-medium text-gray-700">Service Details:</h3>
-                                    <p className="opacity-70">Floor Pickup: <span className="font-semibold text-gray-800 opacity-100">{floorPickup}</span></p>
-                                    <p className="opacity-70">Floor Dropoff: <span className="font-semibold text-gray-800 opacity-100">{floorDropoff}</span></p>
-                                    <p className="opacity-70">Selected Date: <span className="font-semibold text-gray-800 opacity-100">{selectedDate}</span></p>
-
-                                    <h3 className="text-lg font-medium text-gray-700">Contact Details:</h3>
-                                    <p className="opacity-70">Name: <span className="font-semibold text-gray-800 opacity-100">{contactInfo.firstName} {contactInfo.lastName}</span></p>
-                                    <p className="opacity-70">Email: <span className="font-semibold text-gray-800 opacity-100">{contactInfo.email}</span></p>
-                                    <p className="opacity-70">Phone: <span className="font-semibold text-gray-800 opacity-100">{contactInfo.phone}</span></p>
-                                
-
-                                    <h3 className="text-xl font-semibold text-gray-800 mb-4 mt-6">Estimated Price:</h3>
-                                    <div className="bg-green-100 p-4 rounded-lg shadow-md">
-
-                                        <p className="text-2xl font-bold text-green-700">
-                                            ${estimatedPrice.toLocaleString()}
-                                        </p>
-
-                                        <p className="text-sm text-gray-700">ReHome B.v. may decrease charges as its just an estimation.</p>
-
+                                        {customItem && (
+                                            <motion.div
+                                                className="flex justify-between py-1 text-gray-700 opacity-80"
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <span>Custom Item:</span>
+                                                <span>{customItem}</span>
+                                            </motion.div>
+                                        )}
                                     </div>
 
-                                    {/* Add a confirmation button */}
+                                    {/* All-ons Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">
+                                            <FaToolbox className="mr-2 text-gray-600" /> Add-ons
+                                        </h3>
+                                        <motion.div
+                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <div>
+                                                <p>Disassembly: {disassembly ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
+                                                <p>Extra Helper: {extraHelper ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
+                                            </div>
+                                            <div>
+                                                <p>Pickup Elevator: {elevatorPickup ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
+                                                <p>Dropoff Elevator: {elevatorDropoff ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
+                                            </div>
+                                        </motion.div>
+                                    </div>
 
+                                    {/* Carried Display Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">
+                                            <FaTruck className="mr-2 text-gray-600" /> Carried Details
+                                        </h3>
+                                        <motion.div
+                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <div>
+                                                <p>Pickup Floor: {floorPickup}</p>
+                                                <p>Dropoff Floor: {floorDropoff}</p>
+                                            </div>
+                                            <div>
+                                                <p>Distance: {firstLocation && secondLocation ? "50km" : "N/A"}</p>
+                                            </div>
+                                        </motion.div>
+                                    </div>
+
+                                    {/* Contact Details Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">Contact Details</h3>
+                                        <motion.div
+                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <div className="flex flex-col items-start p-4 border border-gray-200 rounded-xl shadow-md transition-shadow duration-300">
+
+                                                {/* Contact Details */}
+                                            
+                                                <div className="space-y-2">
+
+                                                    {Object.keys(contactInfo).length > 0 && (
+                                                        <div>
+                                                            <h3 className="text-lg font-medium text-gray-700">Contact Details:</h3>
+                                                            <p>Name: {contactInfo.firstName} {contactInfo.lastName}</p>
+                                                            <p>Email: {contactInfo.email}</p>
+                                                            <p>Phone: {contactInfo.phone}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Total price estimation */}
+                                                
+                                            </div>
+                                            
+                                        
+                                        
+                                        </motion.div>
+                                    </div>
+
+                                    {/* Pricing Breakdown */}
+                                    <div className="bg-gray-100 p-4 rounded-lg">
+                                        <h3 className="text-lg font-bold mb-4">Payment Overview</h3>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between">
+                                                <span>Base Price:</span>
+                                                <span>€50</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Items Points:</span>
+                                                <span>€{/* Calculate item points */}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Carrying Cost:</span>
+                                                <span>€{/* Calculate carrying cost */}</span>
+                                            </div>
+                                            <div className="flex justify-between font-bold text-lg pt-2">
+                                                <span>Total Estimated:</span>
+                                                <span>€{estimatedPrice?.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-2">
+                                            <FaInfoCircle className="inline mr-1" />
+                                            Final price may vary based on actual conditions
+                                        </p>
+                                    </div>
                                 </div>
-
                             </motion.div>
                         )}
 
