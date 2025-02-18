@@ -45,6 +45,8 @@ const ItemMovingPage = () => {
     const [disassemblyCost, setDisassemblyCost] = useState<number>(0); // Initialize disassemblyCost in state
     const [distanceCost, setDistanceCost] = useState<number>(0); // Initialize distanceCost in state
     const [extraHelperCost, setExtraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
+    const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
+    const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
 
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
@@ -54,6 +56,11 @@ const ItemMovingPage = () => {
         return cityDayData[city]?.includes(dayOfWeek);
     };
 
+
+    const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setStudentId(file || null);
+    };
     const getItemPoints = (itemId: string): number => {
         const item = furnitureItems.find(item => item.id === itemId);
         return item ? item.points : 0;
@@ -482,6 +489,32 @@ const ItemMovingPage = () => {
                                             />
                                         </div>
                                     </div>
+                                    {/* Student ID Upload */}
+                                    <ElevatorToggle
+                                        label="Are you a student? (Upload Student ID)"
+                                        checked={isStudent}
+                                        onChange={setIsStudent}
+                                    />
+                                    {isStudent && (
+                                        <div className="col-span-2 mt-4">
+                                            <label htmlFor="studentId" className="block text-sm font-medium text-gray-700">
+                                                Upload Student ID
+                                            </label>
+                                            <input
+                                                type="file"
+                                                id="studentId"
+                                                accept="image/*"
+                                                onChange={handleStudentIdUpload}
+                                                className="mt-1 block w-full text-sm text-slate-500
+                                                file:mr-4 file:py-2 file:px-4
+                                                file:rounded-md
+                                                file:border-0
+                                                file:text-sm file:font-semibold
+                                                file:bg-orange-500 file:text-white
+                                                hover:file:bg-orange-700"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         )}
@@ -595,8 +628,13 @@ const ItemMovingPage = () => {
                                                     )}
                                                 </div>
 
-                                                {/* Total price estimation */}
-                                                
+                                                {/* Student ID Information */}
+                                                {isStudent && studentId && (
+                                                    <div className="flex justify-between py-1 text-gray-700 opacity-80">
+                                                        <span>Student ID Uploaded:</span>
+                                                        <span>{studentId.name}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                             
                                         
