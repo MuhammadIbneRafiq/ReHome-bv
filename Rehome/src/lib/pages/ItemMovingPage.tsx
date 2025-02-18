@@ -491,7 +491,7 @@ const ItemMovingPage = () => {
                                     </div>
                                     {/* Student ID Upload */}
                                     <ElevatorToggle
-                                        label="Are you a student? (Upload Student ID)"
+                                        label="Are you a student, then you get 7.5% discount?"
                                         checked={isStudent}
                                         onChange={setIsStudent}
                                     />
