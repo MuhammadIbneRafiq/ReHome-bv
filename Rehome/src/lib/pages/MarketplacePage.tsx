@@ -5,6 +5,7 @@ import { FaShoppingCart } from "react-icons/fa"; // Import cart icon
 import { Link } from 'react-router-dom';
 import {FurnitureItem} from '../../types/furniture'; // Import the type
 import ItemDetailsModal from '@/components/ItemDetailModal'; // Import the modal
+import rehomelogo from '../../assets/logo_marketplace.png'
 
 const MarketplacePage = () => {
     const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]); // Use any[] or create a type for your furniture data
@@ -114,19 +115,23 @@ const MarketplacePage = () => {
                                 {furnitureItems.map((item) => (
                                     <motion.div
                                         key={item.id}
-                                        className="bg-white shadow-lg rounded-lg p-2 hover:scale-105 transition-transform cursor-pointer"
+                                        className="bg-[#f3e4d6] shadow-lg rounded-lg p-2 hover:scale-105 transition-transform cursor-pointer"
                                         whileHover={{ scale: 1.05 }}
                                         onClick={() => openModal(item)}
                                     >
+                                        {item.isRehome === false || !item.hasOwnProperty('isRehome') ? (
+                                            <div className="flex justify-center mb-2">
+                                                <img src={rehomelogo} alt="Verified" className="h-8 w-auto" />
+                                            </div>
+                                        ) : null}
                                         <img
-                                            src={item.image_url && item.image_url.length > 0 ? item.image_url[0] : ''} // Use the first image URL
+                                            src={item.image_url && item.image_url.length > 0 ? item.image_url[0] : ''}
                                             alt={item.name}
                                             className="w-full h-32 object-cover rounded-md mb-1"
                                         />
                                         <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
                                         <p className="text-gray-600 text-xs">{item.description}</p>
                                         <p className="text-red-500 font-bold text-xs">${item.price}</p>
-                                        {/* The add to cart button will be added inside ItemDetailsModal component */}
                                     </motion.div>
                                 ))}
                             </div>
