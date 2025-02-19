@@ -5,17 +5,8 @@ import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { cityDayData, furnitureItems } from '../../lib/constants.ts'; // Uncomment when you have constants file!
+import fetchCheckoutUrl from './PricingHook';
 
-// // Dummy data for demonstration
-// const cityDayData = {
-//     "Amsterdam": ["Monday", "Tuesday", "Wednesday"],
-//     "Rotterdam": ["Thursday", "Friday"]
-// };
-// const furnitureItems = [
-//     { id: "sofa", name: "Sofa", points: 5 },
-//     { id: "bed", name: "Bed", points: 8 },
-//     { id: "table", name: "Table", points: 3 }
-// ];
 
 const HouseMovingPage = () => {
     const [step, setStep] = useState(1);
@@ -147,7 +138,7 @@ const HouseMovingPage = () => {
         console.log("Form submitted", {
             firstLocation, secondLocation, itemQuantities, floorPickup, floorDropoff, disassembly, contactInfo, estimatedPrice, selectedDate
         });
-        toast.success('Moving request submitted (mock)!', {
+        toast.success('Moving request submitted!', {
             position: "top-right",
             autoClose: 5000,
             hideProgressBar: false,
@@ -157,6 +148,82 @@ const HouseMovingPage = () => {
             progress: undefined,
         });
     };
+
+
+    const handleSubmit1 = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const payload = {
+            firstLocation, secondLocation, itemQuantities, floorPickup, floorDropoff, disassembly, contactInfo, estimatedPrice, selectedDate
+        }
+        // Display confirmation toast
+        toast.success("Confirmation email sent!", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      
+        // Display redirecting toast with countdown
+        toast.info("Redirecting to price page in 3...", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      
+
+        console.log('here is the payload', payload)
+        try {
+          // Send the POST request to your backend endpoint
+          const response = await fetch("http://localhost:3000/api/item-moving-requests", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+      
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          // Handle success (or redirection) here
+        } catch (error) {
+          console.error("Error submitting the moving request:", error);
+        }
+        try{
+            const emailResponse = await fetch('http://localhost:3000/api/send-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: contactInfo.email,
+                    firstName: contactInfo.firstName,
+                    lastName: contactInfo.lastName,
+                }),
+            });
+            console.log('great email sent!')
+    
+            if (!emailResponse.ok) {
+                throw new Error('Failed to send email');
+            }
+        } catch (error){
+            console.error('oops email  busted')
+        }
+    };
+    console.log('email is send')
+    // Check if estimatedPrice is not null before calling fetchCheckoutUrl
+    // if (estimatedPrice !== null) {
+    //     fetchCheckoutUrl(estimatedPrice); // Pass the number directly
+    // } else {
+    //     console.error("Estimated price is null. Cannot proceed with checkout."); // Handle the null case appropriately
+    // }
 
     const ElevatorToggle = ({ label, checked, onChange }: {
         label: string,
