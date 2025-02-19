@@ -6,6 +6,9 @@ import multer from 'multer'; // Import multer for handling file uploads
 import { v4 as uuidv4 } from 'uuid'; // Import uuid to generate unique file names
 import { supabaseClient } from "./db/params.js"; // Import both clients
 // import { sendEmail } from "./notif.js";
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 dotenv.config();
 
@@ -264,7 +267,44 @@ app.post('/api/item-moving-requests', async (req, res) => {
     }
   });
   
+  // Email sending endpoint
+  app.post('/api/send-email', async (req, res) => {
+      const { email, firstName, lastName } = req.body;
+      console.log('here', email, firstName, lastName)
+      try {
+          await resend.emails.send({
+            // from: 'muhammadibnerafiq@gmail.com',
+            from: 'Acme <onboarding@resend.dev>',
 
+            to: email,
+            subject: 'Your Moving Request Confirmation',
+            html: 
+            `
+            <p>Dear ${firstName},</p>
+            <p>Thank you for choosing ReHome BV for your moving needs. We're excited to assist you with your upcoming move!</p>
+            <h2>What's Next?</h2>
+                    <ol>
+                        <li>We have received your request and are currently reviewing it.</li>
+                        <li>Our team will carefully plan your move based on the details you provided.</li>
+                        <li>We will send you a quote with the final price and a proposed date for your move.</li>
+                    </ol>
+                    <p>In the meantime, if you have any questions or need to provide additional information, please don't hesitate to contact us at <a href="mailto:info@rehomebv.com">info@rehomebv.com</a>.</p>
+                    <p>Want to explore more about our services? Check out our marketplace:</p>
+                    <a href="https://rehomebv.com/marketplace" class="button">Visit Our Marketplace</a>
+                </div>
+                <div class="footer">
+                    <p>© 2025 ReHome BV. All rights reserved.</p>
+                    <p>This email was sent to confirm your moving request. If you didn't request this, please ignore this email.</p>
+                </div>
+            `
+          });
+          console.log('IT WORKS!')
+          return res.status(200).json({ success: true });
+      } catch (error) {
+          console.error("Error sending email:", error);
+          return res.status(500).json({ error: error.message });
+      }
+  });
 
 // 2. Add a new furniture item
 app.post('/api/furniture', async (req, res) => {

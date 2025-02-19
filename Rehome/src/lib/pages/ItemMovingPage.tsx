@@ -211,9 +211,27 @@ const ItemMovingPage = () => {
         } catch (error) {
           console.error("Error submitting the moving request:", error);
         }
+        try{
+            const emailResponse = await fetch('http://localhost:3000/api/send-email', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: contactInfo.email,
+                    firstName: contactInfo.firstName,
+                    lastName: contactInfo.lastName,
+                }),
+            });
+            console.log('great email sent!')
     
-    console.log('here!');
-
+            if (!emailResponse.ok) {
+                throw new Error('Failed to send email');
+            }
+        } catch (error){
+            console.error('oops email  busted')
+        }
+    console.log('email is send')
     // Check if estimatedPrice is not null before calling fetchCheckoutUrl
     // if (estimatedPrice !== null) {
     //     fetchCheckoutUrl(estimatedPrice); // Pass the number directly
