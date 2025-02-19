@@ -161,6 +161,68 @@ app.get('/api/furniture', async (req, res) => {
     }
 });
 
+// item moving request.
+// 9. Item Moving Request Endpoint
+app.post('/api/item-moving-requests', async (req, res) => {
+    try {
+      const {
+        email,
+        pickupType,
+        furnitureItems,
+        customItem,
+        floorPickup,
+        floorDropoff,
+        firstName,
+        lastName,
+        phone,
+        estimatedPrice,
+        selectedDate,
+        isDateFlexible,
+        basePrice,
+        itemPoints,
+        carryingCost,
+        disassemblyCost,
+        distanceCost,
+        extraHelperCost
+      } = req.body;
+  
+      const { data, error } = await supabase
+        .from('item_moving')
+        .insert([{
+          email,
+          pickuptype: pickupType,
+          furnitureitems: furnitureItems,
+          customitem: customItem,
+          floorpickup: parseInt(floorPickup, 10),
+          floordropoff: parseInt(floorDropoff, 10),
+          firstname: firstName,
+          lastname: lastName,
+          phone,
+          estimatedprice: parseFloat(estimatedPrice),
+          selecteddate: selectedDate,
+          isdateflexible: isDateFlexible, // assuming this is a boolean from the client
+          baseprice: parseFloat(basePrice),
+          itempoints: parseInt(itemPoints, 10),
+          carryingcost: parseFloat(carryingCost),
+          disassemblycost: parseFloat(disassemblyCost),
+          distancecost: parseFloat(distanceCost),
+          extrahelpercost: parseFloat(extraHelperCost),
+        //   isstudent: false,    // default value; adjust if needed
+        //   studentidurl: null   // default value; adjust if needed
+        }])
+        .select();
+  
+      if (error) throw error;
+      
+      res.status(201).json(data[0]);
+    } catch (error) {
+      console.error('Error saving moving request:', error);
+      res.status(500).json({ error: 'Failed to save moving request' });
+    }
+  });
+  
+
+
 // 2. Add a new furniture item
 app.post('/api/furniture', async (req, res) => {
     const { name, description, image_url, price } = req.body;

@@ -144,52 +144,71 @@ const ItemMovingPage = () => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
+      
         // Display confirmation toast
         toast.success("Confirmation email sent!", {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
         });
-
+      
         // Display redirecting toast with countdown
         toast.info("Redirecting to price page in 3...", {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
         });
-
-        console.log("Form submitted", {
-            pickupType,
-            furnitureItems: Object.entries(itemQuantities)
-                .filter(([, quantity]) => quantity > 0)
-                .map(([itemId, quantity]) => ({ itemId, quantity })),
-            customItem,  // Include custom item
-            floorPickup,
-            floorDropoff,
-            contactInfo,
-            estimatedPrice,
-            selectedDate
-        });
-
-        // Delay redirection
-        setTimeout(() => {
-            // Use react-router-dom's navigate to redirect to the pricing page or wherever you want
-            navigate('/pricing');
-
-
-        }, 3000);
-    };
+      
+        // Prepare the data payload
+        const payload = {
+          pickupType,
+          selectedDate,
+          isDateFlexible,
+          furnitureItems: Object.entries(itemQuantities)
+            .filter(([, quantity]) => quantity > 0)
+            .map(([itemId, quantity]) => ({ itemId, quantity })),
+          customItem,
+          floorPickup,
+          floorDropoff,
+          contactInfo, // assume this contains { email, firstName, lastName, phone }
+          estimatedPrice,
+          basePrice,
+          itemPoints: itemPoints * 3, // if you need to multiply by 3
+          carryingCost,
+          disassemblyCost,
+          distanceCost,
+          extraHelperCost,
+        };
+      
+        try {
+          // Send the POST request to your backend endpoint
+          const response = await fetch("http://localhost:3000/api/item-moving-requests", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+      
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          // Handle success (or redirection) here
+        } catch (error) {
+          console.error("Error submitting the moving request:", error);
+        }
+      };
+      
 
     const ElevatorToggle = ({ label, checked, onChange }: {
         label: string,
