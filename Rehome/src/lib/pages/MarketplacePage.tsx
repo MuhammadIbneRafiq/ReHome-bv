@@ -3,7 +3,7 @@ import MarketplaceSearch from '../../components/MarketplaceSearch';
 import { motion, AnimatePresence } from "framer-motion";
 import {FurnitureItem} from '../../types/furniture'; // Import the type
 import ItemDetailsModal from '@/components/ItemDetailModal'; // Import the modal
-import rehomelogo from '../../assets/logo_marketplace.png'
+import tickLogo from '../../assets/logo_marketplace.png'
 
 const MarketplacePage = () => {
     const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]); // Use any[] or create a type for your furniture data
@@ -27,7 +27,7 @@ const MarketplacePage = () => {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data: FurnitureItem[] = await response.json();
-                console.log('Furniture data:', data); // Debug: Check the fetched data
+                console.log('Fetched furniture data:', data); // Log the fetched data
                 setFurnitureItems(data);
             } catch (err: any) {
                 console.error('Error fetching furniture:', err);
@@ -118,9 +118,9 @@ const MarketplacePage = () => {
                                         whileHover={{ scale: 1.05 }}
                                         onClick={() => openModal(item)}
                                     >
-                                        {item.isRehome === true || !item.hasOwnProperty('isRehome') ? (
+                                        {item.isrehome === true ? (
                                             <div className="flex justify-center mb-2">
-                                                <img src={rehomelogo} alt="Verified" className="h-8 w-auto" />
+                                                <img src={tickLogo} alt="Verified" className="h-8 w-auto" />
                                             </div>
                                         ) : null}
                                         <img
@@ -131,6 +131,7 @@ const MarketplacePage = () => {
                                         <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
                                         <p className="text-gray-600 text-xs">{item.description}</p>
                                         <p className="text-red-500 font-bold text-xs">${item.price}</p>
+                                        <p className="text-gray-600 text-xs">Is Rehome: {item.isrehome ? 'Yes' : 'No'}</p>
                                     </motion.div>
                                 ))}
                             </div>
