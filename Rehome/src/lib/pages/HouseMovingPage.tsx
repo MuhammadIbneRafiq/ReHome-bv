@@ -48,6 +48,8 @@ const HouseMovingPage = () => {
     const [distanceCost, setDistanceCost] = useState<number>(0); // Initialize distanceCost in state
     const [extraHelperCost, setExtraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
+    const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({}); // State to track extra helper items
+    const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({}); // State to track disassembly items
 
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
@@ -535,28 +537,131 @@ const HouseMovingPage = () => {
                                             type="checkbox"
                                             className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             checked={disassembly}
-                                            onChange={(e) => setDisassembly(e.target.checked)}
+                                            onChange={(e) => {
+                                                setDisassembly(e.target.checked);
+                                                if (!e.target.checked) {
+                                                    setDisassemblyItems({}); // Reset disassembly items if unchecked
+                                                }
+                                            }}
                                         />
                                     </div>
                                     <div className="ml-3 text-sm">
                                         <label htmlFor="disassembly" className="font-medium text-gray-700">Require disassembly?</label>
                                     </div>
                                 </div>
-                                <div className="mt-4 relative flex items-start">
+                                {disassembly && (
+                                    <div className="mt-4">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Select Items for Disassembly</h3>
+                                        {Object.entries(itemQuantities).map(([id, qty]) => (
+                                            qty > 0 && ( // Only show items with a quantity greater than zero
+                                                <div key={id} className="flex items-center h-5">
+                                                    <input
+                                                        id={`disassembly-${id}`}
+                                                        type="checkbox"
+                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        checked={disassemblyItems[id] || false}
+                                                        onChange={(e) => {
+                                                            setDisassemblyItems({
+                                                                ...disassemblyItems,
+                                                                [id]: e.target.checked,
+                                                            });
+                                                        }}
+                                                    />
+                                                    <label htmlFor={`disassembly-${id}`} className="ml-2 text-sm font-medium text-gray-700">
+                                                        {id} {/* Display the item ID */}
+                                                    </label>
+                                                </div>
+                                            )
+                                        ))}
 
-                                    <div className="flex items-right h-5">
+                                        {/* Checkbox for Custom Item */}
+                                        {customItem && (
+                                            <div className="flex items-center h-5 mt-2">
+                                                <input
+                                                    id="disassembly-custom"
+                                                    type="checkbox"
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                    checked={disassemblyItems['custom'] || false}
+                                                    onChange={(e) => {
+                                                        setDisassemblyItems({
+                                                            ...disassemblyItems,
+                                                            custom: e.target.checked,
+                                                        });
+                                                    }}
+                                                />
+                                                <label htmlFor="disassembly-custom" className="ml-2 text-sm font-medium text-gray-700">
+                                                    Custom Item
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="mt-4 relative flex items-start">
+                                    <div className="flex items-center h-5">
                                         <input
                                             id="extraHelper"
                                             type="checkbox"
                                             className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             checked={extraHelper}
-                                            onChange={(e) => setExtraHelper(e.target.checked)}
+                                            onChange={(e) => {
+                                                setExtraHelper(e.target.checked);
+                                                if (!e.target.checked) {
+                                                    setExtraHelperItems({}); // Reset extra helper items if unchecked
+                                                }
+                                            }}
                                         />
                                     </div>
                                     <div className="ml-3 text-sm">
                                         <label htmlFor="extraHelper" className="font-medium text-gray-700">Require extra helper?</label>
                                     </div>
                                 </div>
+                                {extraHelper && (
+                                    <div className="mt-4">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Select Items for Extra Help</h3>
+                                        {Object.entries(itemQuantities).map(([id, qty]) => (
+                                            qty > 0 && ( // Only show items with a quantity greater than zero
+                                                <div key={id} className="flex items-center h-5">
+                                                    <input
+                                                        id={`extra-helper-${id}`}
+                                                        type="checkbox"
+                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        checked={extraHelperItems[id] || false}
+                                                        onChange={(e) => {
+                                                            setExtraHelperItems({
+                                                                ...extraHelperItems,
+                                                                [id]: e.target.checked,
+                                                            });
+                                                        }}
+                                                    />
+                                                    <label htmlFor={`extra-helper-${id}`} className="ml-2 text-sm font-medium text-gray-700">
+                                                        {id} {/* Display the item ID */}
+                                                    </label>
+                                                </div>
+                                            )
+                                        ))}
+
+                                        {/* Checkbox for Custom Item */}
+                                        {customItem && (
+                                            <div className="flex items-center h-5 mt-2">
+                                                <input
+                                                    id="extra-helper-custom"
+                                                    type="checkbox"
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                    checked={extraHelperItems['custom'] || false}
+                                                    onChange={(e) => {
+                                                        setExtraHelperItems({
+                                                            ...extraHelperItems,
+                                                            custom: e.target.checked,
+                                                        });
+                                                    }}
+                                                />
+                                                <label htmlFor="extra-helper-custom" className="ml-2 text-sm font-medium text-gray-700">
+                                                    Custom Item
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 {/* Elevator Toggles */}
                                 <ElevatorToggle
                                     label="Elevator available at Pickup?"
