@@ -1,10 +1,11 @@
 // src/pages/SellerDashboard.tsx
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle } from "react-icons/fa";
+import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV } from "react-icons/fa";
 import SellPage from "./SellPage";
 import ItemDetailsModal from '../../components/ItemDetailModal'
 import useUserStore from "@/services/state/useUserSessionStore"; // Import the user store
+import axios from 'axios'; // Import axios for API calls
 
 // Mock User Data (replace with your actual user data fetching)
 const mockUser = {
@@ -54,6 +55,22 @@ const SellerDashboard = () => {
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedItem(null);
+    };
+
+    const deleteListing = async (id: number) => {
+        try {
+            await axios.delete(`http://localhost:3000/api/furniture/${id}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                }
+            });
+            // Remove the deleted listing from the state
+            setListings(listings.filter(item => item.id !== id));
+            setSoldListings(soldListings.filter(item => item.id !== id));
+        } catch (err) {
+            console.error('Error deleting listing:', err);
+            setError('Failed to delete listing.');
+        }
     };
 
     useEffect(() => {
@@ -183,7 +200,7 @@ const SellerDashboard = () => {
                                 {listings.map((listing) => (
                                     <motion.div
                                         key={listing.id}
-                                        className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
+                                        className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer relative"
                                         whileHover={{ scale: 1.05 }}
                                         onClick={() => openModal(listing)}
                                     >
@@ -192,6 +209,17 @@ const SellerDashboard = () => {
                                         <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
                                         <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
                                         <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
+                                        <div className="absolute top-2 right-2">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Prevent modal from opening
+                                                    deleteListing(listing.id);
+                                                }}
+                                                className="text-gray-500 hover:text-red-500"
+                                            >
+                                                <FaEllipsisV />
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 ))}
                             </div>
