@@ -47,6 +47,7 @@ const HouseMovingPage = () => {
     const [disassemblyCost, setDisassemblyCost] = useState<number>(0); // Initialize disassemblyCost in state
     const [distanceCost, setDistanceCost] = useState<number>(0); // Initialize distanceCost in state
     const [extraHelperCost, setExtraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
+    const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
 
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
@@ -601,7 +602,9 @@ const HouseMovingPage = () => {
                                             id="flexibleDate"
                                             type="checkbox"
                                             className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            checked={isDateFlexible}
                                             onChange={(e) => {
+                                                setIsDateFlexible(e.target.checked);
                                                 if (e.target.checked) {
                                                     goToNextStep(); // Go to next step if date is flexible
                                                 }
@@ -823,6 +826,27 @@ const HouseMovingPage = () => {
                                         
                                         </motion.div>
                                     </div>
+
+                                    {/* Flexible Date Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">Date Flexibility</h3>
+                                        <p>{isDateFlexible ? "Yes" : "No"}</p>
+                                    </div>
+
+                                    {/* Log all relevant information */}
+                                    {console.log("Overview Information:", {
+                                        pickupType,
+                                        selectedDate,
+                                        isDateFlexible,
+                                        furnitureItems: Object.entries(itemQuantities)
+                                            .filter(([, quantity]) => quantity > 0)
+                                            .map(([itemId, quantity]) => ({ itemId, quantity })),
+                                        customItem,
+                                        floorPickup,
+                                        floorDropoff,
+                                        contactInfo,
+                                        estimatedPrice,
+                                    })}
 
                                     {/* Pricing Breakdown */}
                                     <div className="bg-gray-100 p-4 rounded-lg">
