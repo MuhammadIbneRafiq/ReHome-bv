@@ -44,6 +44,7 @@ const SellerDashboard = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
     const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState<number | null>(null); // Track which dropdown is open
 
     const user = useUserStore((state) => state.user); // Get the user data from the store
 
@@ -213,12 +214,26 @@ const SellerDashboard = () => {
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation(); // Prevent modal from opening
-                                                    deleteListing(listing.id);
+                                                    setDropdownOpen(dropdownOpen === listing.id ? null : listing.id); // Toggle dropdown
                                                 }}
                                                 className="text-gray-500 hover:text-red-500"
                                             >
                                                 <FaEllipsisV />
                                             </button>
+                                            {dropdownOpen === listing.id && (
+                                                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation(); // Prevent modal from opening
+                                                            deleteListing(listing.id);
+                                                            setDropdownOpen(null); // Close dropdown after deletion
+                                                        }}
+                                                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                                                    >
+                                                        Delete Listing
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </motion.div>
                                 ))}
