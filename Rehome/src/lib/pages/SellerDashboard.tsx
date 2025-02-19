@@ -98,6 +98,9 @@ const SellerDashboard = () => {
                 const active = data.filter(item => item.seller_email === user?.email && !item.sold);
                 const sold = data.filter(item => item.seller_email === user?.email && item.sold);
 
+                console.log('Active listings:', active);
+                console.log('Sold listings:', sold);
+
                 setListings(active);
                 setSoldListings(sold);
 
