@@ -5,7 +5,7 @@ import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
 import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
 import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
 import { motion, Variants } from "framer-motion"; // Import Framer Motion
-import { FaTruck, FaBoxOpen, FaHandshake, FaStar } from "react-icons/fa"; // Import Icons
+import { FaTruck, FaBoxOpen, FaHandshake, FaStar, FaDollarSign, FaUserGraduate, FaTools, FaHome } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
 import { MdCheckCircle, MdSupportAgent } from "react-icons/md";
 import {FurnitureItem} from "../types/furniture";
@@ -71,7 +71,7 @@ const LandingPage = () => {
                 transition={{ duration: 0.7, delay: 0.2 }}
                 className="mt-4 text-xl text-gray-500"
               >
-                Discover amazing deals on pre-loved furniture and make your move seamless.
+              Affordable and Flexible Moving Solutions Tailored to Your Needs
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -102,6 +102,11 @@ const LandingPage = () => {
         </div>
       </div>
 
+      
+
+      
+  
+
       {/* Features Section */}
       <div className="py-12 bg-orange-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -115,10 +120,10 @@ const LandingPage = () => {
               whileHover={{ scale: 1.05, boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)' }}
               className="bg-white rounded-lg shadow-md p-6"
             >
-              <FaTruck className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Reliable Moving</h3>
+              <FaUserGraduate className="h-12 w-12 text-orange-500 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Student-Friendly</h3>
               <p className="text-gray-600">
-                We ensure your furniture arrives safely and on time.
+                Ideal for small moves with minimal items.
               </p>
             </motion.div>
             {/* Feature 2 */}
@@ -126,11 +131,11 @@ const LandingPage = () => {
               whileHover={{ scale: 1.05, boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)' }}
               className="bg-white rounded-lg shadow-md p-6"
             >
-              <FaBoxOpen className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Wide Selection</h3>
+              <FaHome className="h-12 w-12 text-orange-500 mb-4" />
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Flexible & Customizable: </h3>
+              <p className="text-lg"></p>
               <p className="text-gray-600">
-                Browse a wide range of furniture and appliances.
-              </p>
+              Pricing based on item count, distance, and floor level.              </p>
             </motion.div>
             {/* Feature 3 */}
             <motion.div
@@ -138,9 +143,10 @@ const LandingPage = () => {
               className="bg-white rounded-lg shadow-md p-6"
             >
               <FaHandshake className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Trusted Service</h3>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">Collaborative Model: </h3>
               <p className="text-gray-600">
-                Get the best deals and support.
+              Engage in the moving process to save costs.
+
               </p>
             </motion.div>
           </div>
@@ -174,13 +180,14 @@ const LandingPage = () => {
                   {dummyData.map((item) => (
                       <motion.div
                           key={item.id}
-                          className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform"
+                          className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
                           whileHover={{ scale: 1.05 }} // Add hover animation
+                          onClick={() => window.location.href = '/marketplace'} // Navigate to marketplace on click
                       >
                           <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover rounded-md" />
                           <h3 className="text-xl font-semibold mt-2">{item.name}</h3>
                           <p className="text-gray-600">{item.description}</p>
-                          <p className="text-red-500 font-bold mt-2">{item.price}</p>
+                          <p className="text-red-500 font-bold mt-2">${item.price}</p>
                       </motion.div>
                   ))}
               </div>
