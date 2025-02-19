@@ -4,9 +4,7 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { number } from 'zod';
 
 // // Dummy data for demonstration
 const cityDayData = {
@@ -19,12 +17,16 @@ const furnitureItems = [
     { id: "table", name: "Table", points: 3 }
 ];
 
+const [firstLocation] = useState('');
+const [secondLocation] = useState('');
+const [floorPickup, setFloorPickup] = useState('');
+const [floorDropoff, setFloorDropoff] = useState('');
+
+// Define a type for the valid city keys
+type City = 'Amsterdam' | 'Rotterdam';  
+
 const ItemMovingPage = () => {
     const [step, setStep] = useState(1);
-    const [firstLocation, setFirstLocation] = useState('');
-    const [secondLocation, setSecondLocation] = useState('');
-    const [floorPickup, setFloorPickup] = useState('');
-    const [floorDropoff, setFloorDropoff] = useState('');
     const [disassembly, setDisassembly] = useState(false);
     const [contactInfo, setContactInfo] = useState({
         firstName: '',
@@ -40,13 +42,12 @@ const ItemMovingPage = () => {
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
     const [pickupType, setPickupType] = useState<'private' | 'store' | null>(null);
     const [customItem, setCustomItem] = useState(''); // State for custom item input
-    const navigate = useNavigate();
     const [basePrice, setBasePrice] = useState<number>(50); // Initialize basePrice in state
     const [itemPoints, setItemPoints] = useState<number>(0); // Initialize itemPoints in state
     const [carryingCost, setCarryingCost] = useState<number>(0); // Initialize carryingCost in state
     const [disassemblyCost, setDisassemblyCost] = useState<number>(0); // Initialize disassemblyCost in state
     const [distanceCost, setDistanceCost] = useState<number>(0); // Initialize distanceCost in state
-    const [extraHelperCost, setExtraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
+    const [extraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
     const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
     const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
     const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
@@ -54,16 +55,15 @@ const ItemMovingPage = () => {
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({}); // State to track disassembly items
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({}); // State to track extra helper items
-    const [isLoading, setIsLoading] = useState(false);
 
+    // Update the function to use the City type
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
-        const city = getCityFromPostalCode(location);
+        const city = getCityFromPostalCode(location) as City; // Type assertion
         if (!city) return false;
         const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-        return cityDayData[city]?.includes(dayOfWeek);
+        return cityDayData[city]?.includes(dayOfWeek) || false; // Use the city as a key
     };
-
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -211,8 +211,14 @@ const ItemMovingPage = () => {
           console.error("Error submitting the moving request:", error);
         }
     
-    console.log('here!')
-    fetchCheckoutUrl(estimatedPrice);
+    console.log('here!');
+
+    // Check if estimatedPrice is not null before calling fetchCheckoutUrl
+    if (estimatedPrice !== null) {
+        fetchCheckoutUrl(estimatedPrice); // Pass the number directly
+    } else {
+        console.error("Estimated price is null. Cannot proceed with checkout."); // Handle the null case appropriately
+    }
 
     };
 
@@ -233,8 +239,7 @@ const ItemMovingPage = () => {
         </div>
     );
 
-    const fetchCheckoutUrl = async (estimatedPrice: Int8Array) => {
-        setIsLoading(true);
+    const fetchCheckoutUrl = async (estimatedPrice: number) => {
         try {
             const response = await axios.post(
                 'http://localhost:3000/mollie', // Update this to your backend URL
@@ -254,7 +259,6 @@ const ItemMovingPage = () => {
                 progress: undefined,
             });
             console.error("Error creating Mollie checkout session:", error);
-            setIsLoading(false);
         }
     };
     
@@ -373,7 +377,10 @@ const ItemMovingPage = () => {
                                                 />
                                                 <div className="flex justify-end">
                                                     <button
-                                                        onClick={handleModalSubmit}
+                                                        onClick={() => {
+                                                            handleModalSubmit(); // Call the function here
+                                                            setIsModalOpen(false); // Close modal after submission
+                                                        }}
                                                         className="bg-blue-500 text-white py-2 px-4 rounded-md"
                                                     >
                                                         OK
