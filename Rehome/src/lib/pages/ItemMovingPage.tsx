@@ -844,6 +844,12 @@ const ItemMovingPage = () => {
                                         floorDropoff,
                                         contactInfo,
                                         estimatedPrice,
+                                        basePrice,
+                                        itemPoints: itemPoints * 3,
+                                        carryingCost,
+                                        disassemblyCost,
+                                        distanceCost,
+                                        extraHelperCost,
                                     })}
 
                                     {/* Pricing Breakdown */}
