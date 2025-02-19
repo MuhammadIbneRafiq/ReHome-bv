@@ -127,6 +127,7 @@ app.post("/auth/login", async (req, res) => {
         return res.status(400).json({ error: "Invalid request" });
     }
 
+
     try {
         const { data, error } = await supabaseClient.auth.signInWithPassword({
             email: email,

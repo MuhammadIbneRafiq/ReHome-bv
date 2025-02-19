@@ -2,24 +2,23 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Button } from "./ui/button";
 import { Link } from "react-router-dom";
-import { Menu, Sun, Moon } from "lucide-react"; // Import Sun and Moon
+import { Menu } from "lucide-react"; // Import Sun and Moon
 import UserAvatar from "./UserAvatar";
 import { useAuth } from "../hooks/useAuth";
 import '../index.css';
 import { useState, useEffect, useRef } from 'react'; // Import useRef
-import { useTheme } from "../services/providers/ThemeProvider";
 import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
 
 export default function Navbar() {
-    const { isAuthenticated, userEmail, handleLogout } = useAuth();
+    const { isAuthenticated } = useAuth();
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown
     const [isPopupOpen, setIsPopupOpen] = useState(false);
-    const { theme, toggleTheme } = useTheme(); // Assuming you have a theme context
 
     const dropdownRef = useRef<HTMLDivElement>(null); // Ref to the dropdown container
     const transportationButtonRef = useRef<HTMLButtonElement>(null);
+
 
     const toggleDropdown = () => {
         setIsDropdownOpen(!isDropdownOpen);
@@ -135,9 +134,7 @@ export default function Navbar() {
                             )}
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={toggleTheme} className="rehome-nav-icon-button"> {/* Style the icon button  */}
-                        {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                    </Button>
+
                     {!isAuthenticated && (
                         <>
                             <Link to="/register" className="rehome-nav-button">
@@ -146,20 +143,12 @@ export default function Navbar() {
                             <Link to="/login" className="rehome-nav-button">
                                 Log in
                             </Link>
-                        </>
-                    )}
-                    {isAuthenticated && (
-                        <>
-                            <Link to="/sell-dash" className="rehome-dashboard-button">
+                            <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                 Dashboard
                             </Link>
-                            <div className="flex items-center space-x-2">
-                                <UserAvatar />
-                                <span className="text-white">{userEmail}</span> {/* Display the email */}
-                                <Button variant="link" onClick={handleLogout}>Logout</Button>
-                            </div>
                         </>
                     )}
+                    {isAuthenticated && <UserAvatar />}
                     <div className="relative md:hidden">
                         {!isAuthenticated &&
                             <Button variant="ghost" size="icon" className="md:hidden three-dot dark:text-white text-black" onClick={togglePopup}>
@@ -196,9 +185,6 @@ export default function Navbar() {
                                         <>
                                             <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                                 Dashboard
-                                            </Link>
-                                            <Link to="/profile" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                                {userEmail}
                                             </Link>
                                         </>
                                     )}

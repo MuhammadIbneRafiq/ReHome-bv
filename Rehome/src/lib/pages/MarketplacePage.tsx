@@ -10,7 +10,7 @@ const MarketplacePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [cart, setCart] = useState<number[]>([]); // Simple cart (array of item IDs)
-    const [isAddingToCart, setIsAddingToCart] = useState(false);
+    const [setIsAddingToCart] = useState(false);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);

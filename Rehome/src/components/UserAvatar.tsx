@@ -11,19 +11,18 @@ import { User } from "lucide-react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "./ui/use-toast";
-import useUserStore from "../services/state/useUserSessionStore";
+import useUserStore from "@/services/state/useUserSessionStore";
 
 export default function UserAvatar() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    const setUser = useUserStore((state: { setUser: any; }) => state.setUser);
-    const user = useUserStore((state: { user: any; }) => state.user);
-    const role = useUserStore((state: { role: any; })=>state.role);
+    const setUser = useUserStore((state) => state.setUser);
+    const user = useUserStore((state) => state.user);
 
     async function logout() {
         try {
             await axios.post(
-                "https://backend-autolanding-ai.vercel.app/auth/logout",
+                "http://localhost:3000/auth/logout",
                 {},
                 {
                     headers: {
@@ -60,7 +59,6 @@ export default function UserAvatar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
-                <DropdownMenuLabel>role: {role}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={logout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>
