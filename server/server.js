@@ -20,6 +20,43 @@ app.use(json()); // for parsing application/json
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
+
+import { createMollieClient } from '@mollie/api-client';
+
+
+app.post("/mollie", async (req, res) => {
+const amount = req.body.amount; // Get the amount from the request
+  const mollieClient = createMollieClient({ apiKey: process.env.MOLLIE_API_KEY });
+
+  try {
+
+    const payment = await mollieClient.payments.create({
+    amount: {
+            currency: "EUR",
+            value: amount.toFixed(2) // Ensure it's formatted correctly
+    },      description: `Test payment for plan`,
+    redirectUrl: 'http://localhost:5173/marketplace',
+    webhookUrl: 'https://067b-212-123-245-200.ngrok-free.app/mollie-webhook',
+    method: 'ideal',
+    });
+
+    res.status(200).json({ checkoutUrl: payment.getCheckoutUrl() });
+  } catch (error) {
+    console.error("Error creating Mollie payment:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+  
+
+app.post('/mollie-webhook', (req, res) => {
+    const paymentId = req.body.id;
+    // Verify and process the payment
+    // Respond with a 200 status
+    console.log('here it is', paymentId)
+    res.sendStatus(200);
+  });
+  
+
 const authenticateUser = async (req, res, next) => {
     const authHeader = req.headers.authorization || "";
     const token = authHeader.split(" ")[1]; // Assuming "Bearer TOKEN"

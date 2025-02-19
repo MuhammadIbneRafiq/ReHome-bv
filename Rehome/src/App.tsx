@@ -6,7 +6,7 @@ import Navbar from "./components/Navbar";
 import LandingPage from "./lib/pages/LandingPage";
 import LoginPage from "./lib/pages/LoginPage";
 import SignupPage from "./lib/pages/SignupPage";
-import Pricing from "./lib/pages/Pricing";
+import Pricing from "./lib/pages/PricingHook";
 import MarketplacePage from "./lib/pages/MarketplacePage";
 import ItemMovingPage from "./lib/pages/ItemMovingPage";
 import HouseMovingPage from "./lib/pages/HouseMovingPage";

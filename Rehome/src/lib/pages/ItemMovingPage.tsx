@@ -5,6 +5,8 @@ import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import { number } from 'zod';
 
 // // Dummy data for demonstration
 const cityDayData = {
@@ -52,6 +54,7 @@ const ItemMovingPage = () => {
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({}); // State to track disassembly items
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({}); // State to track extra helper items
+    const [isLoading, setIsLoading] = useState(false);
 
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
@@ -207,8 +210,11 @@ const ItemMovingPage = () => {
         } catch (error) {
           console.error("Error submitting the moving request:", error);
         }
-      };
-      
+    
+    console.log('here!')
+    fetchCheckoutUrl(estimatedPrice);
+
+    };
 
     const ElevatorToggle = ({ label, checked, onChange }: {
         label: string,
@@ -226,6 +232,34 @@ const ItemMovingPage = () => {
             <span className="ml-2 text-sm text-gray-700">{label}</span>
         </div>
     );
+
+    const fetchCheckoutUrl = async (estimatedPrice: Int8Array) => {
+        setIsLoading(true);
+        try {
+            const response = await axios.post(
+                'http://localhost:3000/mollie', // Update this to your backend URL
+                { amount: estimatedPrice },
+                {}
+            );
+            console.log("Response:", response);
+            window.location.href = response.data.checkoutUrl;
+        } catch (error) {
+            toast.error('There was an error. Please try again.', {
+                position: "top-right",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+            });
+            console.error("Error creating Mollie checkout session:", error);
+            setIsLoading(false);
+        }
+    };
+    
+
+
 
     const stepVariants = {
         hidden: { opacity: 0, x: -50, transition: { duration: 0.3 } },
@@ -247,7 +281,6 @@ const ItemMovingPage = () => {
             toast.error("Please upload proof of payment."); // Show error if no file is uploaded
         }
     };
-
     return (
         <div className="min-h-screen bg-gradient-to-r from-yellow-300 to-red-400 py-12 px-4 sm:px-6 lg:px-8">
             <motion.div
@@ -926,6 +959,8 @@ const ItemMovingPage = () => {
                                     <FaArrowLeft className="inline-block mr-2" /> Previous
                                 </motion.button>
                         )}
+
+
                         {step === 6?
                            (<form onSubmit={handleSubmit}>
                             <motion.button
