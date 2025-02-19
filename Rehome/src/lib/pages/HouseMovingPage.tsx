@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaArrowUp, FaArrowDown, FaCalendarAlt, FaPeopleCarry, FaTruck, FaMinus, FaPlus, FaCube, FaToolbox, FaInfoCircle } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaTruck, FaMinus, FaPlus, FaCube, FaToolbox, FaInfoCircle } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { cityDayData, furnitureItems } from '../../lib/constants.ts'; // Uncomment when you have constants file!
-import fetchCheckoutUrl from './PricingHook';
+// import fetchCheckoutUrl from './PricingHook';
 
 
 const HouseMovingPage = () => {
@@ -29,15 +29,15 @@ const HouseMovingPage = () => {
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
     const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
     const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
-    const [pickupType, setPickupType] = useState<'private' | 'store' | null>(null);
-    const [customItem, setCustomItem] = useState(''); // State for custom item input
+    const [pickupType] = useState<'private' | 'store' | null>(null);
+    const [customItem] = useState(''); // State for custom item input
     // const navigate = useNavigate();
     const [basePrice, setBasePrice] = useState<number>(50); // Initialize basePrice in state
     const [itemPoints, setItemPoints] = useState<number>(0); // Initialize itemPoints in state
     const [carryingCost, setCarryingCost] = useState<number>(0); // Initialize carryingCost in state
     const [disassemblyCost, setDisassemblyCost] = useState<number>(0); // Initialize disassemblyCost in state
     const [distanceCost, setDistanceCost] = useState<number>(0); // Initialize distanceCost in state
-    const [extraHelperCost, setExtraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
+    const [extraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({}); // State to track extra helper items
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({}); // State to track disassembly items
