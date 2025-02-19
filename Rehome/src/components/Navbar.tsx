@@ -143,12 +143,16 @@ export default function Navbar() {
                             <Link to="/login" className="rehome-nav-button">
                                 Log in
                             </Link>
-                            <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                Dashboard
-                            </Link>
                         </>
                     )}
-                    {isAuthenticated && <UserAvatar />}
+                    {isAuthenticated && (
+                        <>
+                            <Link to="/sell-dash" className="rehome-dashboard-button">
+                                Dashboard
+                            </Link>
+                            <UserAvatar />
+                        </>
+                    )}
                     <div className="relative md:hidden">
                         {!isAuthenticated &&
                             <Button variant="ghost" size="icon" className="md:hidden three-dot dark:text-white text-black" onClick={togglePopup}>
