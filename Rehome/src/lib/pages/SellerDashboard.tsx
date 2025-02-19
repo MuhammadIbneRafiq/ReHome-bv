@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle } from "react-icons/fa";
 import SellPage from "./SellPage";
 import ItemDetailsModal from '../../components/ItemDetailModal'
+import useUserStore from "@/services/state/useUserSessionStore"; // Import the user store
 
 // Mock User Data (replace with your actual user data fetching)
 const mockUser = {
@@ -42,6 +43,8 @@ const SellerDashboard = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
     const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+
+    const user = useUserStore((state) => state.user); // Get the user data from the store
 
     const openModal = (item: FurnitureItem) => {
         setSelectedItem(item);
@@ -139,7 +142,7 @@ const SellerDashboard = () => {
                     transition={{ duration: 0.5 }}
                     className="text-3xl font-extrabold text-gray-900 mb-6"
                 >
-                    Welcome, {mockUser.firstName}!
+                    Welcome, {user?.email}!
                 </motion.h1>
 
                 {/* Analytics Section */}
