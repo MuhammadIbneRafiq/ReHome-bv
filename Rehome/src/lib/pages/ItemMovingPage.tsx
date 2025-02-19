@@ -50,6 +50,7 @@ const ItemMovingPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
     const [paymentProof, setPaymentProof] = useState<File | null>(null); // State for payment proof file
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
+    const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({}); // State to track disassembly items
 
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
@@ -430,13 +431,44 @@ const ItemMovingPage = () => {
                                             type="checkbox"
                                             className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             checked={disassembly}
-                                            onChange={(e) => setDisassembly(e.target.checked)}
+                                            onChange={(e) => {
+                                                setDisassembly(e.target.checked);
+                                                if (!e.target.checked) {
+                                                    setDisassemblyItems({}); // Reset disassembly items if unchecked
+                                                }
+                                            }}
                                         />
                                     </div>
                                     <div className="ml-3 text-sm">
                                         <label htmlFor="disassembly" className="font-medium text-gray-700">Require disassembly?</label>
                                     </div>
                                 </div>
+                                {disassembly && (
+                                    <div className="mt-4">
+                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Select Items for Disassembly</h3>
+                                        {Object.entries(itemQuantities).map(([id, qty]) => (
+                                            qty > 0 && ( // Only show items with a quantity greater than zero
+                                                <div key={id} className="flex items-center h-5">
+                                                    <input
+                                                        id={`disassembly-${id}`}
+                                                        type="checkbox"
+                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        checked={disassemblyItems[id] || false}
+                                                        onChange={(e) => {
+                                                            setDisassemblyItems({
+                                                                ...disassemblyItems,
+                                                                [id]: e.target.checked,
+                                                            });
+                                                        }}
+                                                    />
+                                                    <label htmlFor={`disassembly-${id}`} className="ml-2 text-sm font-medium text-gray-700">
+                                                        {id} {/* Display the item ID */}
+                                                    </label>
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                )}
                                 <div className="mt-4 relative flex items-start">
 
                                 <div className="flex items-right h-5">
