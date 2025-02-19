@@ -436,6 +436,21 @@ const ItemMovingPage = () => {
                                         <label htmlFor="disassembly" className="font-medium text-gray-700">Require disassembly?</label>
                                     </div>
                                 </div>
+                                <div className="mt-4 relative flex items-start">
+
+                                <div className="flex items-right h-5">
+                                    <input
+                                        id="extraHelper"
+                                        type="checkbox"
+                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                        checked={extraHelper}
+                                        onChange={(e) => setExtraHelper(e.target.checked)}
+                                    />
+                                </div>
+                                <div className="ml-3 text-sm">
+                                    <label htmlFor="extraHelper" className="font-medium text-gray-700">Require extra helper?</label>
+                                </div>
+                                </div>
                                 {/* Elevator Toggles */}
                                 <ElevatorToggle
                                     label="Elevator available at Pickup?"
@@ -473,7 +488,24 @@ const ItemMovingPage = () => {
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
                                     />
                                 </div>
-                                {/* Flexble dates yes or no */}
+                                {/* Flexible dates yes or no */}
+                                <div className="mt-4 relative flex items-start">
+                                    <div className="flex items-center h-5">
+                                        <input
+                                            id="flexibleDate"
+                                            type="checkbox"
+                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    goToNextStep(); // Go to next step if date is flexible
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="ml-3 text-sm">
+                                        <label htmlFor="flexibleDate" className="font-medium text-gray-700">Is your date flexible?</label>
+                                    </div>
+                                </div>
                             </motion.div>
                         )}
 

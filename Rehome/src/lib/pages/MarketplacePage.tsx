@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import MarketplaceSearch from '../../components/MarketplaceSearch';
 import { motion, AnimatePresence } from "framer-motion";
-import { FaShoppingCart } from "react-icons/fa"; // Import cart icon
-import { Link } from 'react-router-dom';
 import {FurnitureItem} from '../../types/furniture'; // Import the type
 import ItemDetailsModal from '@/components/ItemDetailModal'; // Import the modal
 import rehomelogo from '../../assets/logo_marketplace.png'
@@ -16,6 +14,7 @@ const MarketplacePage = () => {
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
+
 
     useEffect(() => {
         const fetchFurniture = async () => {

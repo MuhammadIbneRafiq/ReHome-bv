@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaArrowUp, FaArrowDown, FaCalendarAlt, FaPeopleCarry, FaTruck, FaMinus, FaPlus } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaArrowUp, FaArrowDown, FaCalendarAlt, FaPeopleCarry, FaTruck, FaMinus, FaPlus, FaCube, FaToolbox, FaInfoCircle } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -36,6 +36,17 @@ const HouseMovingPage = () => {
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
+    const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
+    const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
+
+    const [customItem, setCustomItem] = useState(''); // State for custom item input
+    // const navigate = useNavigate();
+    const [basePrice, setBasePrice] = useState<number>(50); // Initialize basePrice in state
+    const [itemPoints, setItemPoints] = useState<number>(0); // Initialize itemPoints in state
+    const [carryingCost, setCarryingCost] = useState<number>(0); // Initialize carryingCost in state
+    const [disassemblyCost, setDisassemblyCost] = useState<number>(0); // Initialize disassemblyCost in state
+    const [distanceCost, setDistanceCost] = useState<number>(0); // Initialize distanceCost in state
+    const [extraHelperCost, setExtraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
 
     const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
@@ -57,30 +68,41 @@ const HouseMovingPage = () => {
         return null; // Handle unknown postal codes
     };
 
-    const calculatePrice = () => {
-        let basePrice = 50;
-        const isCityDay = checkCityDay(firstLocation, selectedDate);
-        if (isCityDay) basePrice = 40;
+    const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        setStudentId(file || null);
+    };
 
-        let itemPoints = 0;
+    const calculatePrice = () => {
+        let calculatedBasePrice = 50; // Local variable for calculation
+        const isCityDay = checkCityDay(firstLocation, selectedDate);
+        if (isCityDay) calculatedBasePrice = 40;
+
+        setBasePrice(calculatedBasePrice); // Update state with calculated base price
+
+        let calculatedItemPoints = 0;
         for (const itemId in itemQuantities) {
             if (itemQuantities[itemId] > 0) {
                 const points = getItemPoints(itemId);
-                itemPoints += points * itemQuantities[itemId];
+                calculatedItemPoints += points * itemQuantities[itemId];
             }
         }
+        setItemPoints(calculatedItemPoints); // Update state with calculated item points
 
         const pickupFloor = elevatorPickup ? 1 : Math.max(1, parseInt(floorPickup, 10) || 1);
         const dropoffFloor = elevatorDropoff ? 1 : Math.max(1, parseInt(floorDropoff, 10) || 1);
-        let carryingCost = (Math.max(0, pickupFloor - 1) + Math.max(0, dropoffFloor - 1)) * 10;
+        const calculatedCarryingCost = (Math.max(0, pickupFloor - 1) + Math.max(0, dropoffFloor - 1)) * 10;
+        setCarryingCost(calculatedCarryingCost); // Update state with calculated carrying cost
 
-        let disassemblyCost = disassembly ? 20 : 0;
+        const calculatedDisassemblyCost = disassembly ? 20 : 0;
+        setDisassemblyCost(calculatedDisassemblyCost); // Update state with calculated disassembly cost
 
         const distance = firstLocation && secondLocation ? 50 : 0;
-        const distanceCost = distance * 0.5;
+        const calculatedDistanceCost = distance * 0.5;
+        setDistanceCost(calculatedDistanceCost); // Update state with calculated distance cost
 
-        const totalPrice = basePrice + itemPoints * 3 + carryingCost + disassemblyCost + distanceCost + (extraHelper ? 15 : 0);
-        setEstimatedPrice(totalPrice);
+        const totalPrice = calculatedBasePrice + calculatedItemPoints * 3 + calculatedCarryingCost + calculatedDisassemblyCost + calculatedDistanceCost + (extraHelper ? 15 : 0);
+        setEstimatedPrice(totalPrice); // Update estimated price
     };
 
     useEffect(() => {
@@ -329,23 +351,6 @@ const HouseMovingPage = () => {
                                                 />
                                             </div>
                                         </div>
-
-                                        {/* Moving info - Floor */}
-                                        <div className="mt-2">
-                                            <label
-                                                htmlFor="floorA"
-                                                className="block text-xs font-medium text-gray-500 mb-1"
-                                            >
-                                                Moving Info - Floor
-                                            </label>
-                                            <select
-                                                id="floorA"
-                                                className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                            >
-                                                <option>Ground floor</option>
-                                                {/* Add other options as needed */}
-                                            </select>
-                                        </div>
                                     </div>
 
                                     {/* End Address B */}
@@ -443,23 +448,6 @@ const HouseMovingPage = () => {
                                                 />
                                             </div>
                                         </div>
-
-                                        {/* Moving info - Floor */}
-                                        <div className="mt-2">
-                                            <label
-                                                htmlFor="floorB"
-                                                className="block text-xs font-medium text-gray-500 mb-1"
-                                            >
-                                                Moving Info - Floor
-                                            </label>
-                                            <select
-                                                id="floorB"
-                                                className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                            >
-                                                <option>Ground floor</option>
-                                                {/* Add other options as needed */}
-                                            </select>
-                                        </div>
                                     </div>
                                 </div>
                             </motion.div>
@@ -540,7 +528,7 @@ const HouseMovingPage = () => {
                                     </div>
                                 </div>
                                 <div className="mt-4 relative flex items-start">
-                                    <div className="flex items-center h-5">
+                                    <div className="flex items-left h-5">
                                         <input
                                             id="disassembly"
                                             type="checkbox"
@@ -551,6 +539,21 @@ const HouseMovingPage = () => {
                                     </div>
                                     <div className="ml-3 text-sm">
                                         <label htmlFor="disassembly" className="font-medium text-gray-700">Require disassembly?</label>
+                                    </div>
+                                </div>
+                                <div className="mt-4 relative flex items-start">
+
+                                    <div className="flex items-right h-5">
+                                        <input
+                                            id="extraHelper"
+                                            type="checkbox"
+                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            checked={extraHelper}
+                                            onChange={(e) => setExtraHelper(e.target.checked)}
+                                        />
+                                    </div>
+                                    <div className="ml-3 text-sm">
+                                        <label htmlFor="extraHelper" className="font-medium text-gray-700">Require extra helper?</label>
                                     </div>
                                 </div>
                                 {/* Elevator Toggles */}
@@ -567,6 +570,7 @@ const HouseMovingPage = () => {
                             </motion.div>
                         )}
 
+                        
                         {step === 5 && (
                             <motion.div
                                 key="step5"
@@ -576,19 +580,36 @@ const HouseMovingPage = () => {
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 5: Extra Helper */}
+                                {/* PREFFEREDD DATE@ */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Date and Time</h2>
+                                <div>
+                                    <label htmlFor="selectedDate" className="block text-sm font-medium text-gray-700">
+                                        Preferred Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        id="selectedDate"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                    />
+                                </div>
+                                {/* Flexible dates yes or no */}
                                 <div className="mt-4 relative flex items-start">
                                     <div className="flex items-center h-5">
                                         <input
-                                            id="extraHelper"
+                                            id="flexibleDate"
                                             type="checkbox"
                                             className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            checked={extraHelper}
-                                            onChange={(e) => setExtraHelper(e.target.checked)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    goToNextStep(); // Go to next step if date is flexible
+                                                }
+                                            }}
                                         />
                                     </div>
                                     <div className="ml-3 text-sm">
-                                        <label htmlFor="extraHelper" className="font-medium text-gray-700">Require extra helper?</label>
+                                        <label htmlFor="flexibleDate" className="font-medium text-gray-700">Is your date flexible?</label>
                                     </div>
                                 </div>
                             </motion.div>
@@ -604,6 +625,7 @@ const HouseMovingPage = () => {
                                 exit="exit"
                             >
                                 {/* Step 6: Contact Info */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Contact Information</h2>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Contact Information</label>
                                     <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -648,33 +670,199 @@ const HouseMovingPage = () => {
                                             />
                                         </div>
                                     </div>
+                                    {/* Student ID Upload */}
+                                    <ElevatorToggle
+                                        label="Are you a student, then you get 7.5% discount?"
+                                        checked={isStudent}
+                                        onChange={setIsStudent}
+                                    />
+                                    {isStudent && (
+                                        <div className="col-span-2 mt-4">
+                                            <label htmlFor="studentId" className="block text-sm font-medium text-gray-700">
+                                                Upload Student ID
+                                            </label>
+                                            <input
+                                                type="file"
+                                                id="studentId"
+                                                accept="image/*"
+                                                onChange={handleStudentIdUpload}
+                                                className="mt-1 block w-full text-sm text-slate-500
+                                                file:mr-4 file:py-2 file:px-4
+                                                file:rounded-md
+                                                file:border-0
+                                                file:text-sm file:font-semibold
+                                                file:bg-orange-500 file:text-white
+                                                hover:file:bg-orange-700"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         )}
 
                         {step === 7 && (
                             <motion.div
-                                key="step7"
-                                className="space-y-4"
+                                key="overview"
+                                className="space-y-6"
                                 variants={stepVariants}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 7: Price Estimation and Confirmation */}
-                                {estimatedPrice !== null ? (
-                                    <div>
-                                        <h3 className="text-xl font-semibold text-gray-800 mb-4">Estimated Price:</h3>
-                                        <div className="bg-green-100 p-4 rounded-lg shadow-md">
-                                            <p className="text-2xl font-bold text-green-700">
-                                                ${estimatedPrice.toLocaleString()}
-                                            </p>
-                                            <p className="text-sm text-gray-700">ReHome B.v. may decrease charges as its just an estimation.</p>
-                                        </div>
+                                {/* Step 7: Overview and Confirm */}
+                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Overview and Confirm</h2>
+                                <div className="bg-gray-100 p-4 rounded-md shadow-md">
+                                    {/* Ham List Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">
+                                            <FaCube className="mr-2 text-gray-600" /> Item List
+                                        </h3>
+                                        {Object.entries(itemQuantities).map(([id, qty]) => (
+                                            <motion.div
+                                                key={id}
+                                                className="flex justify-between py-1 text-gray-700 opacity-80"
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <span>{furnitureItems.find(i => i.id === id)?.name || 'Unknown Item'}</span>
+                                                <span>x{qty}</span>
+                                            </motion.div>
+                                        ))}
+                                        {customItem && (
+                                            <motion.div
+                                                className="flex justify-between py-1 text-gray-700 opacity-80"
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.3 }}
+                                            >
+                                                <span>Custom Item:</span>
+                                                <span>{customItem}</span>
+                                            </motion.div>
+                                        )}
                                     </div>
-                                ) : (
-                                    <p>Calculating price...</p>
-                                )}
+
+                                    {/* All-ons Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">
+                                            <FaToolbox className="mr-2 text-gray-600" /> Add-ons
+                                        </h3>
+                                        <motion.div
+                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <div>
+                                                <p>Disassembly: {disassembly ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
+                                                <p>Extra Helper: {extraHelper ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
+                                            </div>
+                                            <div>
+                                                <p>Pickup Elevator: {elevatorPickup ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
+                                                <p>Dropoff Elevator: {elevatorDropoff ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
+                                            </div>
+                                        </motion.div>
+                                    </div>
+
+                                    {/* Carried Display Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">
+                                            <FaTruck className="mr-2 text-gray-600" /> Carried Details
+                                        </h3>
+                                        <motion.div
+                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <div>
+                                                <p>Pickup Floor: {floorPickup}</p>
+                                                <p>Dropoff Floor: {floorDropoff}</p>
+                                            </div>
+                                            <div>
+                                                <p>Distance: {firstLocation && secondLocation ? "50km" : "N/A"}</p>
+                                            </div>
+                                        </motion.div>
+                                    </div>
+
+                                    {/* Contact Details Section */}
+                                    <div className="border-b pb-4">
+                                        <h3 className="text-lg font-bold mb-2 flex items-center">Contact Details</h3>
+                                        <motion.div
+                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
+                                            initial={{ opacity: 0, x: -20 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <div className="flex flex-col items-start p-4 border border-gray-200 rounded-xl shadow-md transition-shadow duration-300">
+
+                                                {/* Contact Details */}
+                                            
+                                                <div className="space-y-2">
+
+                                                    {Object.keys(contactInfo).length > 0 && (
+                                                        <div>
+                                                            <h3 className="text-lg font-medium text-gray-700">Contact Details:</h3>
+                                                            <p>Name: {contactInfo.firstName} {contactInfo.lastName}</p>
+                                                            <p>Email: {contactInfo.email}</p>
+                                                            <p>Phone: {contactInfo.phone}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Student ID Information */}
+                                                {isStudent && studentId && (
+                                                    <div className="flex justify-between py-1 text-gray-700 opacity-80">
+                                                        <span>Student ID Uploaded:</span>
+                                                        <span>{studentId.name}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                        
+                                        
+                                        </motion.div>
+                                    </div>
+
+                                    {/* Pricing Breakdown */}
+                                    <div className="bg-gray-100 p-4 rounded-lg">
+                                        <h3 className="text-lg font-bold mb-4">Payment Overview</h3>
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between">
+                                                <span>Base Price:</span>
+                                                <span>€{basePrice.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Items Points:</span>
+                                                <span>€{(itemPoints * 3).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Carrying Cost:</span>
+                                                <span>€{carryingCost.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Disassembly Cost:</span>
+                                                <span>€{disassemblyCost.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Distance Cost:</span>
+                                                <span>€{distanceCost.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Extra Helper Cost:</span>
+                                                <span>€{extraHelperCost.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-bold text-lg pt-2">
+                                                <span>Total Estimated:</span>
+                                                <span>€{estimatedPrice?.toFixed(2)}</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-gray-600 mt-2">
+                                            <FaInfoCircle className="inline mr-1" />
+                                            Final price may vary based on actual conditions
+                                        </p>
+                                    </div>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
