@@ -74,46 +74,51 @@ const SellerDashboard = () => {
         }
     };
 
-    useEffect(() => {
-        const fetchListings = async () => {
-            setLoading(true);
-            setError(null);
+    const fetchListings = async () => {
+        setLoading(true);
+        setError(null);
 
-            try {
-                const response = await fetch('http://localhost:3000/api/furniture', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+        try {
+            const response = await fetch('http://localhost:3000/api/furniture', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 }
+            });
 
-                const data: FurnitureItem[] = await response.json();
-                console.log('Fetched listings:', data);
-
-                // Separate active and sold listings based on the signed-in user's email
-                const active = data.filter(item => item.seller_email === user?.email && !item.sold);
-                const sold = data.filter(item => item.seller_email === user?.email && item.sold);
-
-                console.log('Active listings:', active);
-                console.log('Sold listings:', sold);
-
-                setListings(active);
-                setSoldListings(sold);
-
-            } catch (err: any) {
-                console.error('Error fetching listings:', err);
-                setError(err.message || 'Failed to fetch listings.');
-            } finally {
-                setLoading(false);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        };
 
+            const data: FurnitureItem[] = await response.json();
+            console.log('Fetched listings:', data);
+
+            // Separate active and sold listings based on the signed-in user's email
+            const active = data.filter(item => item.seller_email === user?.email && !item.sold);
+            const sold = data.filter(item => item.seller_email === user?.email && item.sold);
+
+            console.log('Active listings:', active);
+            console.log('Sold listings:', sold);
+
+            setListings(active);
+            setSoldListings(sold);
+
+        } catch (err: any) {
+            console.error('Error fetching listings:', err);
+            setError(err.message || 'Failed to fetch listings.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchListings();
     }, [user?.email]); // Fetch listings whenever the user's email changes
+
+    const handleModalClose = () => {
+        setIsSellModalOpen(false);
+        fetchListings(); // Refresh listings after closing the modal
+    };
 
     if (loading) {
         return (
@@ -290,7 +295,7 @@ const SellerDashboard = () => {
                                 exit="exit"
                                 transition={{ duration: 0.3 }}
                             >
-                                <SellPage onClose={() => setIsSellModalOpen(false)} />
+                                <SellPage onClose={handleModalClose} />
                             </motion.div>
                         </motion.div>
                     )}

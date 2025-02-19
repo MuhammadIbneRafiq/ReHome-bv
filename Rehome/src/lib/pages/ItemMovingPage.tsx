@@ -193,7 +193,7 @@ const ItemMovingPage = () => {
           distanceCost,
           extraHelperCost,
         };
-      
+        console.log('here is the payload', payload)
         try {
           // Send the POST request to your backend endpoint
           const response = await fetch("http://localhost:3000/api/item-moving-requests", {
@@ -215,11 +215,11 @@ const ItemMovingPage = () => {
     console.log('here!');
 
     // Check if estimatedPrice is not null before calling fetchCheckoutUrl
-    if (estimatedPrice !== null) {
-        fetchCheckoutUrl(estimatedPrice); // Pass the number directly
-    } else {
-        console.error("Estimated price is null. Cannot proceed with checkout."); // Handle the null case appropriately
-    }
+    // if (estimatedPrice !== null) {
+    //     fetchCheckoutUrl(estimatedPrice); // Pass the number directly
+    // } else {
+    //     console.error("Estimated price is null. Cannot proceed with checkout."); // Handle the null case appropriately
+    // }
 
     };
 

@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 import multer from 'multer'; // Import multer for handling file uploads
 import { v4 as uuidv4 } from 'uuid'; // Import uuid to generate unique file names
 import { supabaseClient } from "./db/params.js"; // Import both clients
-import { sendEmail } from "./notif.js";
+// import { sendEmail } from "./notif.js";
 
 dotenv.config();
 
@@ -213,6 +213,7 @@ app.post('/api/item-moving-requests', async (req, res) => {
         firstName,
         lastName,
         phone,
+        contactInfo,
         estimatedPrice,
         selectedDate,
         isDateFlexible,
@@ -223,19 +224,21 @@ app.post('/api/item-moving-requests', async (req, res) => {
         distanceCost,
         extraHelperCost
       } = req.body;
-  
+      console.log('the whole req.body', req.body)
+    //   console.log(email, 'here is the email')
+
       const { data, error } = await supabase
         .from('item_moving')
         .insert([{
-          email,
+          email: contactInfo['email'],
           pickuptype: pickupType,
           furnitureitems: furnitureItems,
           customitem: customItem,
           floorpickup: parseInt(floorPickup, 10),
           floordropoff: parseInt(floorDropoff, 10),
-          firstname: firstName,
-          lastname: lastName,
-          phone,
+          firstname: contactInfo['firstName'],
+          lastname: contactInfo['lastName'],
+          phone: contactInfo['phone'],
           estimatedprice: parseFloat(estimatedPrice),
           selecteddate: selectedDate,
           isdateflexible: isDateFlexible, // assuming this is a boolean from the client
@@ -249,6 +252,8 @@ app.post('/api/item-moving-requests', async (req, res) => {
         //   studentidurl: null   // default value; adjust if needed
         }])
         .select();
+
+        console.log('data to sb', data)
   
       if (error) throw error;
       

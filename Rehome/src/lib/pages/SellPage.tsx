@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
-const SellPage = (props: any) => {
-    const { onClose } = props;
+const SellPage = ({ onClose }: { onClose: () => void }) => {
     const [photos, setPhotos] = useState<File[]>([]);
     const [price, setPrice] = useState('');
     const [description, setDescription] = useState('');
@@ -73,6 +72,7 @@ const SellPage = (props: any) => {
             console.log('Listing created:', data); // Debug: Check the response
             // Redirect to the dashboard after successful submission
             navigate('/sell-dash'); // Use navigate to redirect
+            onClose(); // Close the modal after successful submission
         } catch (err: any) {
             console.error('Error submitting listing:', err);
             setSubmitError(err.message || 'Failed to submit listing.');
