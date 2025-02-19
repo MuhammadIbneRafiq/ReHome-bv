@@ -17,10 +17,6 @@ const furnitureItems = [
     { id: "table", name: "Table", points: 3 }
 ];
 
-const [firstLocation] = useState('');
-const [secondLocation] = useState('');
-const [floorPickup, setFloorPickup] = useState('');
-const [floorDropoff, setFloorDropoff] = useState('');
 
 // Define a type for the valid city keys
 type City = 'Amsterdam' | 'Rotterdam';  
@@ -34,6 +30,11 @@ const ItemMovingPage = () => {
         email: '',
         phone: '',
     });
+    const [firstLocation] = useState('');
+    const [secondLocation] = useState('');
+    const [floorPickup, setFloorPickup] = useState('');
+    const [floorDropoff, setFloorDropoff] = useState('');
+
     const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
     const [selectedDate, setSelectedDate] = useState('');
     const [elevatorPickup, setElevatorPickup] = useState(false);
