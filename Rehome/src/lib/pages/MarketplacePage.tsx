@@ -118,7 +118,7 @@ const MarketplacePage = () => {
                                         whileHover={{ scale: 1.05 }}
                                         onClick={() => openModal(item)}
                                     >
-                                        {item.isRehome === false || !item.hasOwnProperty('isRehome') ? (
+                                        {item.isRehome === true || !item.hasOwnProperty('isRehome') ? (
                                             <div className="flex justify-center mb-2">
                                                 <img src={rehomelogo} alt="Verified" className="h-8 w-auto" />
                                             </div>

@@ -37,8 +37,8 @@ interface FurnitureItem {
 
 const SellerDashboard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [listings, setListings] = useState<FurnitureItem[]>([]); // Use the new type
-    const [soldListings, setSoldListings] = useState<FurnitureItem[]>([]); // Separate sold listings
+    const [listings, setListings] = useState<FurnitureItem[]>([]);
+    const [soldListings, setSoldListings] = useState<FurnitureItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
@@ -56,17 +56,16 @@ const SellerDashboard = () => {
         setSelectedItem(null);
     };
 
-
     useEffect(() => {
         const fetchListings = async () => {
             setLoading(true);
             setError(null);
 
             try {
-                const response = await fetch('http://localhost:3000/api/furniture', { // Use your backend endpoint
+                const response = await fetch('http://localhost:3000/api/furniture', {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}` // Get the token from localStorage
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                     }
                 });
 
@@ -77,11 +76,11 @@ const SellerDashboard = () => {
                 const data: FurnitureItem[] = await response.json();
                 console.log('Fetched listings:', data);
 
-                // Separate active and sold listings
-                const active = data.filter(item => item.seller_email === mockUser.email && !item.sold);
-                const sold = data.filter(item => item.seller_email === mockUser.email && item.sold);
+                // Separate active and sold listings based on the signed-in user's email
+                const active = data.filter(item => item.seller_email === user?.email && !item.sold);
+                const sold = data.filter(item => item.seller_email === user?.email && item.sold);
 
-                setListings(active); // Update the state with the fetched listings
+                setListings(active);
                 setSoldListings(sold);
 
             } catch (err: any) {
@@ -93,27 +92,7 @@ const SellerDashboard = () => {
         };
 
         fetchListings();
-    }, [mockUser.email]); // Empty dependency array ensures this runs only once on mount
-    // const handleMarkAsSold = async (itemId: number) => {
-    //     try {
-    //         const response = await fetch(`http://localhost:3000/api/furniture/sold/${itemId}`, {
-    //             method: 'POST', // Use POST to mark as sold
-    //             headers: {
-    //                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-    //                 'Content-Type': 'application/json',
-    //             },
-    //         });
-    //         if (!response.ok) {
-    //             throw new Error(`HTTP error! status: ${response.status}`);
-    //         }
-    //         // After successfully marking as sold, update the listings
-    //         // Fetch listings again to refresh the data
-    //         fetchListings();
-    //     } catch (error: any) {
-    //         console.error('Error marking item as sold:', error);
-    //         setError(error.message || 'Failed to mark item as sold.');
-    //     }
-    //   };
+    }, [user?.email]); // Fetch listings whenever the user's email changes
 
     if (loading) {
         return (
@@ -193,27 +172,31 @@ const SellerDashboard = () => {
                             <FaPlus className="mr-2" /> Upload New Listing
                         </button>
                     </div>
-                    {/* Active Listings */}
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Active Listings</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                        {listings.map((listing) => (
-                            <motion.div
-                                key={listing.id}
-                                className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
-                                whileHover={{ scale: 1.05 }}
-                                onClick={() => openModal(listing)} // Open modal on click
-                            >
-                                <img src={listing.image_url[0]} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
-                                <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
-                                <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
-                                <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
-                                <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
-                                {/* <button onClick={() => handleMarkAsSold(listing.id)}>
-                                  Mark as Sold
-                                </button> */}
-                            </motion.div>
-                        ))}
-                    </div>
+                    {/* Check if there are no active listings */}
+                    {listings.length === 0 ? (
+                        <p className="text-gray-600">You have no active listings.</p>
+                    ) : (
+                        <>
+                            {/* Active Listings */}
+                            <h3 className="text-lg font-semibold text-gray-700 mb-2">Active Listings</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                {listings.map((listing) => (
+                                    <motion.div
+                                        key={listing.id}
+                                        className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
+                                        whileHover={{ scale: 1.05 }}
+                                        onClick={() => openModal(listing)}
+                                    >
+                                        <img src={listing.image_url[0]} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
+                                        <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
+                                        <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
+                                        <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
+                                        <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                       {/* Sold Listings */}
                     <h3 className="text-lg font-semibold text-gray-700 mb-2">Sold Listings</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
@@ -222,7 +205,7 @@ const SellerDashboard = () => {
                                 key={listing.id}
                                 className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
                                 whileHover={{ scale: 1.05 }}
-                                onClick={() => openModal(listing)} // Open modal on click
+                                onClick={() => openModal(listing)}
                             >
                                 <img src={listing.image_url[0]} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
                                 <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
