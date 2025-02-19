@@ -267,6 +267,68 @@ app.post('/api/item-moving-requests', async (req, res) => {
     }
   });
   
+// HOUSE Moving Request Endpoint
+  app.post('/api/house-moving-requests', async (req, res) => {
+    try {
+    const {
+        pickupType,
+        furnitureItems,
+        customItem,
+        floorPickup,
+        floorDropoff,
+        contactInfo,
+        estimatedPrice,
+        selectedDate,
+        isDateFlexible,
+        basePrice,
+        itemPoints,
+        carryingCost,
+        disassemblyCost,
+        distanceCost,
+        extraHelperCost
+    } = req.body;
+    console.log('the whole req.body', req.body)
+    //   console.log(email, 'here is the email')
+
+    const { data, error } = await supabase
+        .from('house_moving')
+        .insert([{
+        email: contactInfo['email'],
+        pickuptype: pickupType,
+        furnitureitems: furnitureItems,
+        customitem: customItem,
+        floorpickup: parseInt(floorPickup, 10),
+        floordropoff: parseInt(floorDropoff, 10),
+        firstname: contactInfo['firstName'],
+        lastname: contactInfo['lastName'],
+        phone: contactInfo['phone'],
+        estimatedprice: parseFloat(estimatedPrice),
+        selecteddate: selectedDate,
+        isdateflexible: isDateFlexible, // assuming this is a boolean from the client
+        baseprice: parseFloat(basePrice),
+        itempoints: parseInt(itemPoints, 10),
+        carryingcost: parseFloat(carryingCost),
+        disassemblycost: parseFloat(disassemblyCost),
+        distancecost: parseFloat(distanceCost),
+        extrahelpercost: parseFloat(extraHelperCost),
+        //   isstudent: false,    // default value; adjust if needed
+        //   studentidurl: null   // default value; adjust if needed
+        }])
+        .select();
+
+        console.log('data to sb', data)
+
+    if (error) throw error;
+
+    res.status(201).json(data[0]);
+    } catch (error) {
+    console.error('Error saving moving request:', error);
+    res.status(500).json({ error: 'Failed to save moving request' });
+    }
+    });
+
+
+
   // Email sending endpoint
   app.post('/api/send-email', async (req, res) => {
       const { email, firstName, lastName } = req.body;

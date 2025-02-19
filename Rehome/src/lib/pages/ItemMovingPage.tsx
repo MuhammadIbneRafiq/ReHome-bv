@@ -4,7 +4,7 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import fetchCheckoutUrl from './PricingHook';
+// import fetchCheckoutUrl from './PricingHook';
 // // Dummy data for demonstration
 const cityDayData = {
     "Amsterdam": ["Monday", "Tuesday", "Wednesday"],
@@ -286,11 +286,11 @@ const ItemMovingPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
             >
-                <div className="p-6">
-                    {/* Outer div for padding */}
-                    <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6">
-                        Item Moving Request
-                    </h1>
+            <div className="p-6">
+                {/* Outer div for padding */}
+                <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6">
+                    Item Moving Request
+                </h1>
 
                     {/* Progress Bar */}
                     <div className="flex justify-center space-x-3 mb-8">
@@ -817,7 +817,7 @@ const ItemMovingPage = () => {
                                         </motion.div>
                                     </div>
 
-                                    {/* Carried Display Section */}
+                                                                        {/* Carried Display Section */}
                                     <div className="border-b pb-4">
                                         <h3 className="text-lg font-bold mb-2 flex items-center">
                                             <FaTruck className="mr-2 text-gray-600" /> Carried Details

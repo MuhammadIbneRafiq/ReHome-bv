@@ -29,7 +29,7 @@ const HouseMovingPage = () => {
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
     const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
     const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
-
+    const [pickupType, setPickupType] = useState<'private' | 'store' | null>(null);
     const [customItem, setCustomItem] = useState(''); // State for custom item input
     // const navigate = useNavigate();
     const [basePrice, setBasePrice] = useState<number>(50); // Initialize basePrice in state
@@ -133,70 +133,62 @@ const HouseMovingPage = () => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Form submitted", {
-            firstLocation, secondLocation, itemQuantities, floorPickup, floorDropoff, disassembly, contactInfo, estimatedPrice, selectedDate
-        });
-        toast.success('Moving request submitted!', {
+        const payload = {
+            firstLocation,
+            secondLocation,
+            itemQuantities,
+            floorPickup,
+            floorDropoff,
+            disassembly,
+            contactInfo,
+            estimatedPrice,
+            selectedDate,
+        };
+
+        toast.success("Confirmation email sent!", {
             position: "top-right",
-            autoClose: 5000,
+            autoClose: 3000,
             hideProgressBar: false,
             closeOnClick: true,
             pauseOnHover: true,
             draggable: true,
             progress: undefined,
         });
-    };
 
-
-    const handleSubmit1 = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const payload = {
-            firstLocation, secondLocation, itemQuantities, floorPickup, floorDropoff, disassembly, contactInfo, estimatedPrice, selectedDate
-        }
-        // Display confirmation toast
-        toast.success("Confirmation email sent!", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-      
-        // Display redirecting toast with countdown
         toast.info("Redirecting to price page in 3...", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
         });
-      
 
-        console.log('here is the payload', payload)
+        console.log('here is the payload', payload);
         try {
-          // Send the POST request to your backend endpoint
-          const response = await fetch("http://localhost:3000/api/item-moving-requests", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          });
-      
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          // Handle success (or redirection) here
+            const response = await fetch("http://localhost:3000/api/item-moving-requests", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) { 
+                const errorData = await response.json();
+                throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
+            }
+
+            // Handle success (or redirection) here
         } catch (error) {
-          console.error("Error submitting the moving request:", error);
+            console.error("Error submitting the moving request:", error);
+            toast.error("An error occurred while submitting your request.");
         }
-        try{
+
+        try {
             const emailResponse = await fetch('http://localhost:3000/api/send-email', {
                 method: 'POST',
                 headers: {
@@ -208,22 +200,15 @@ const HouseMovingPage = () => {
                     lastName: contactInfo.lastName,
                 }),
             });
-            console.log('great email sent!')
-    
+
             if (!emailResponse.ok) {
                 throw new Error('Failed to send email');
             }
-        } catch (error){
-            console.error('oops email  busted')
+            console.log('Email sent successfully!');
+        } catch (error) {
+            console.error('Error sending email:', error);
         }
     };
-    console.log('email is send')
-    // Check if estimatedPrice is not null before calling fetchCheckoutUrl
-    // if (estimatedPrice !== null) {
-    //     fetchCheckoutUrl(estimatedPrice); // Pass the number directly
-    // } else {
-    //     console.error("Estimated price is null. Cannot proceed with checkout."); // Handle the null case appropriately
-    // }
 
     const ElevatorToggle = ({ label, checked, onChange }: {
         label: string,
@@ -249,14 +234,14 @@ const HouseMovingPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-r from-yellow-300 to-red-400 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-gradient-to-r from-yellow-300 to-red-400 py-12 px-8 sm:px-2 lg:px-8">
             <motion.div
                 className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
             >
-                <form onSubmit={handleSubmit} className="p-6">
+                <div className='p-12'>
                     <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6">
                         House Moving Request
                     </h1>
@@ -1007,7 +992,7 @@ const HouseMovingPage = () => {
 
                                     {/* Log all relevant information */}
                                     {console.log("Overview Information:", {
-                                        pickupType,
+                                        pickuptype: pickupType,
                                         selectedDate,
                                         isDateFlexible,
                                         furnitureItems: Object.entries(itemQuantities)
@@ -1086,17 +1071,21 @@ const HouseMovingPage = () => {
                             </motion.button>
                         )}
                         {step === 7 && estimatedPrice !== null && (
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                transition={{ duration: 0.2 }}
-                                type="submit"
-                                className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
-                            >
-                                Submit Request
-                            </motion.button>
+                            (<form onSubmit={handleSubmit}>
+
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    transition={{ duration: 0.2 }}
+                                    type="submit"
+                                    className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
+                                >
+                                    Submit Request
+                                </motion.button>
+                            </form>
+                            )
                         )}
                     </div>
-                </form>
+                </div>
             </motion.div>
         </div>
     );
