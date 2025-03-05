@@ -763,7 +763,7 @@ const HouseMovingPage = () => {
                                             onChange={(e) => {
                                                 setIsDateFlexible(e.target.checked);
                                                 if (e.target.checked) {
-                                                    goToNextStep(); // Go to next step if date is flexible
+                                                    nextStep(); // Go to next step if date is flexible
                                                 }
                                             }}
                                         />
