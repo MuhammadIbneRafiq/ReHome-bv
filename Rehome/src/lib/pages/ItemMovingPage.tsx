@@ -881,28 +881,7 @@ const ItemMovingPage = () => {
                                     <div className="border-b pb-4">
                                         <h3 className="text-lg font-bold mb-2 flex items-center">Date Flexibility</h3>
                                         <p>{isDateFlexible ? "Yes" : "No"}</p>
-                                    </div>
-
-                                    {/* Log all relevant information */}
-                                    {console.log("Overview Information:", {
-                                        pickupType,
-                                        selectedDate,
-                                        isDateFlexible,
-                                        furnitureItems: Object.entries(itemQuantities)
-                                            .filter(([, quantity]) => quantity > 0)
-                                            .map(([itemId, quantity]) => ({ itemId, quantity })),
-                                        customItem,
-                                        floorPickup,
-                                        floorDropoff,
-                                        contactInfo,
-                                        estimatedPrice,
-                                        basePrice,
-                                        itemPoints: itemPoints * 3,
-                                        carryingCost,
-                                        disassemblyCost,
-                                        distanceCost,
-                                        extraHelperCost,
-                                    })}
+                                    </div>                                    
 
                                     {/* Pricing Breakdown */}
                                     <div className="bg-gray-100 p-4 rounded-lg">

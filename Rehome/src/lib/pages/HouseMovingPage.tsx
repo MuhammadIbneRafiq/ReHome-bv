@@ -29,7 +29,6 @@ const HouseMovingPage = () => {
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
     const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
     const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
-    const [pickupType] = useState<'private' | 'store' | null>(null);
     const [customItem] = useState(''); // State for custom item input
     // const navigate = useNavigate();
     const [basePrice, setBasePrice] = useState<number>(50); // Initialize basePrice in state
@@ -104,7 +103,7 @@ const HouseMovingPage = () => {
     }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper, elevatorPickup, elevatorDropoff]);
 
     const nextStep = () => {
-        if (step < 7) setStep(step + 1);
+        if (step < 6) setStep(step + 1);
     };
 
     const prevStep = () => {
@@ -248,7 +247,7 @@ const HouseMovingPage = () => {
 
                     {/* Progress Bar */}
                     <div className="flex justify-center space-x-3 mb-8">
-                        {[1, 2, 3, 4, 5, 6, 7].map((s) => (
+                        {[1, 2, 3, 4, 5, 6].map((s) => (
                             <div
                                 key={s}
                                 className={`w-6 h-6 rounded-full flex items-center justify-center ${
@@ -274,42 +273,7 @@ const HouseMovingPage = () => {
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 1: Location Selection */}
-                                <div>
-                                    <label htmlFor="firstLocation" className="block text-sm font-medium text-gray-700">First Location (Postcode)</label>
-                                    <input
-                                        type="text"
-                                        id="firstLocation"
-                                        value={firstLocation}
-                                        onChange={(e) => setFirstLocation(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                        placeholder="e.g., 1234 AB"
-                                    />
-                                </div>
-                                <div>
-                                    <label htmlFor="secondLocation" className="block text-sm font-medium text-gray-700">Second Location (Postcode)</label>
-                                    <input
-                                        type="text"
-                                        id="secondLocation"
-                                        value={secondLocation}
-                                        onChange={(e) => setSecondLocation(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                        placeholder="e.g., 5678 CD"
-                                    />
-                                </div>
-                            </motion.div>
-                        )}
-
-                        {step === 2 && (
-                            <motion.div
-                                key="step2"
-                                className="space-y-4"
-                                variants={stepVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                {/* Step 2: Address Information */}
+                                {/* Step 1: Address Information */}
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     {/* Start Address A */}
                                     <div>
@@ -507,16 +471,17 @@ const HouseMovingPage = () => {
                                 </div>
                             </motion.div>
                         )}
-                        {step === 3 && (
+
+                        {step === 2 && (
                             <motion.div
-                                key="step3"
+                                key="step2"
                                 className="space-y-4"
                                 variants={stepVariants}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 3: Item List */}
+                                {/* Step 2: Item List */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Item List (Select Items)</label>
                                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4"> {/* Force 2 columns */}
@@ -548,16 +513,16 @@ const HouseMovingPage = () => {
                             </motion.div>
                         )}
 
-                        {step === 4 && (
+                        {step === 3 && (
                             <motion.div
-                                key="step4"
+                                key="step3"
                                 className="space-y-4"
                                 variants={stepVariants}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 4: Carrying Upstairs & (Dis)assembly */}
+                                {/* Step 3: Carrying Upstairs & (Dis)assembly */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label htmlFor="floorPickup" className="block text-sm font-medium text-gray-700">Floor (Pickup)</label>
@@ -729,16 +694,16 @@ const HouseMovingPage = () => {
                         )}
 
                         
-                        {step === 5 && (
+                        {step === 4 && (
                             <motion.div
-                                key="step5"
+                                key="step4"
                                 className="space-y-4"
                                 variants={stepVariants}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* PREFFEREDD DATE@ */}
+                                {/* Step 4: Date and Time */}
                                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Date and Time</h2>
                                 <div>
                                     <label htmlFor="selectedDate" className="block text-sm font-medium text-gray-700">
@@ -775,16 +740,16 @@ const HouseMovingPage = () => {
                             </motion.div>
                         )}
 
-                        {step === 6 && (
+                        {step === 5 && (
                             <motion.div
-                                key="step6"
+                                key="step5"
                                 className="space-y-4"
                                 variants={stepVariants}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 6: Contact Info */}
+                                {/* Step 5: Contact Info */}
                                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Contact Information</h2>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Contact Information</label>
@@ -860,16 +825,16 @@ const HouseMovingPage = () => {
                             </motion.div>
                         )}
 
-                        {step === 7 && (
+                        {step === 6 && (
                             <motion.div
-                                key="overview"
-                                className="space-y-6"
+                                key="step6"
+                                className="space-y-4"
                                 variants={stepVariants}
                                 initial="hidden"
                                 animate="visible"
                                 exit="exit"
                             >
-                                {/* Step 7: Overview and Confirm */}
+                                {/* Step 6: Overview and Confirm */}
                                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Overview and Confirm</h2>
                                 <div className="bg-gray-100 p-4 rounded-md shadow-md">
                                     {/* Ham List Section */}
@@ -977,20 +942,6 @@ const HouseMovingPage = () => {
                                         <p>{isDateFlexible ? "Yes" : "No"}</p>
                                     </div>
 
-                                    {console.log("Overview Information:", {
-                                        pickuptype: pickupType,
-                                        selectedDate,
-                                        isDateFlexible,
-                                        furnitureItems: Object.entries(itemQuantities)
-                                            .filter(([, quantity]) => quantity > 0)
-                                            .map(([itemId, quantity]) => ({ itemId, quantity })),
-                                        customItem,
-                                        floorPickup,
-                                        floorDropoff,
-                                        contactInfo,
-                                        estimatedPrice,
-                                    })}
-
                                     {/* Pricing Breakdown */}
                                     <div className="bg-gray-100 p-4 rounded-lg">
                                         <h3 className="text-lg font-bold mb-4">Payment Overview</h3>
@@ -1046,7 +997,7 @@ const HouseMovingPage = () => {
                                 <FaArrowLeft className="inline-block mr-2" /> Previous
                             </motion.button>
                         )}
-                        {step < 7 && (
+                        {step < 6 && (
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 transition={{ duration: 0.2 }}
@@ -1056,7 +1007,7 @@ const HouseMovingPage = () => {
                                 Next <FaArrowRight className="inline-block ml-2" />
                             </motion.button>
                         )}
-                        {step === 7 && estimatedPrice !== null && (
+                        {step === 6 && estimatedPrice !== null && (
                             <form onSubmit={handleSubmit}>
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
