@@ -8,11 +8,7 @@ import useUserStore from "@/services/state/useUserSessionStore"; // Import the u
 import axios from 'axios'; // Import axios for API calls
 
 // Mock User Data (replace with your actual user data fetching)
-const mockUser = {
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'muhammadibnerafiq@gmail.com',
-};
+
 
 // Mock Analytics Data (replace with your API calls)
 const mockAnalytics = {
