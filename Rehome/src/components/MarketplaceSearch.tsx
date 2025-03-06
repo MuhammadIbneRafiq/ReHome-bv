@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FaSearch, FaFilter } from 'react-icons/fa';  // Import icons
 import { AnimatePresence, motion } from 'framer-motion'; // Import framer-motion
 
