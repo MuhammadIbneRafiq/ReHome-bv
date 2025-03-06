@@ -943,7 +943,6 @@ const HouseMovingPage = () => {
                                         </motion.div>
                                     </div>
 
-                                    {/* Contact Details Section */}
                                     <div className="border-b pb-4">
                                         <h3 className="text-lg font-bold mb-2 flex items-center">Contact Details</h3>
                                         <motion.div
@@ -953,11 +952,7 @@ const HouseMovingPage = () => {
                                             transition={{ duration: 0.3 }}
                                         >
                                             <div className="flex flex-col items-start p-4 border border-gray-200 rounded-xl shadow-md transition-shadow duration-300">
-
-                                                {/* Contact Details */}
-                                            
                                                 <div className="space-y-2">
-
                                                     {Object.keys(contactInfo).length > 0 && (
                                                         <div>
                                                             <h3 className="text-lg font-medium text-gray-700">Contact Details:</h3>
@@ -967,8 +962,6 @@ const HouseMovingPage = () => {
                                                         </div>
                                                     )}
                                                 </div>
-
-                                                {/* Student ID Information */}
                                                 {isStudent && studentId && (
                                                     <div className="flex justify-between py-1 text-gray-700 opacity-80">
                                                         <span>Student ID Uploaded:</span>
@@ -976,19 +969,14 @@ const HouseMovingPage = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                            
-                                        
-                                        
                                         </motion.div>
                                     </div>
 
-                                    {/* Flexible Date Section */}
                                     <div className="border-b pb-4">
                                         <h3 className="text-lg font-bold mb-2 flex items-center">Date Flexibility</h3>
                                         <p>{isDateFlexible ? "Yes" : "No"}</p>
                                     </div>
 
-                                    {/* Log all relevant information */}
                                     {console.log("Overview Information:", {
                                         pickuptype: pickupType,
                                         selectedDate,
@@ -1069,8 +1057,7 @@ const HouseMovingPage = () => {
                             </motion.button>
                         )}
                         {step === 7 && estimatedPrice !== null && (
-                            (<form onSubmit={handleSubmit}>
-
+                            <form onSubmit={handleSubmit}>
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     transition={{ duration: 0.2 }}
@@ -1080,7 +1067,6 @@ const HouseMovingPage = () => {
                                     Submit Request
                                 </motion.button>
                             </form>
-                            )
                         )}
                     </div>
                 </div>
