@@ -1,54 +1,54 @@
-import React from "react";
 import Footer from "../../components/Footer";
 // Import Images - Assuming you have these files in assets
 import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
 import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
 import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
-import { motion, Variants } from "framer-motion"; // Import Framer Motion
-import { FaTruck, FaBoxOpen, FaHandshake, FaStar, FaDollarSign, FaUserGraduate, FaTools, FaHome } from "react-icons/fa"; // Import Icons
+import { motion } from "framer-motion"; // Import Framer Motion
+import { FaHandshake, FaStar, FaHome, FaUserGraduate } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
 import { MdCheckCircle, MdSupportAgent } from "react-icons/md";
-import {FurnitureItem} from "../types/furniture";
-import WhyChooseUsPage from "./WhyChooseUsPage"; // Import the component
+import { FurnitureItem } from "../../types/furniture";
 
 const LandingPage = () => {
   // Framer Motion Variants
-  const wordVariants: Variants = {
-    hidden: { opacity: 0, x: -20 }, // Start slightly offscreen to the left
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        type: "spring",
-        stiffness: 100,
-        damping: 15,
-        duration: 0.5,
-      },
-    },
-  };
 
     // Dummy Furniture Data with Images (You can keep this or fetch from API)
     const dummyData: FurnitureItem[] = [
         {
             id: 1,
             name: "Cozy Sofa",
-            image_url: sofaImage,
+            image_url: [sofaImage],
             description: "A comfortable and stylish sofa for your living room.",
             price: 299,
+            created_at: new Date().toISOString(),
+            seller_email: "info@rehome.com",
+            city_name: "Amsterdam",
+            sold: false,
+            isrehome: true
         },
         {
             id: 2,
             name: "Wooden Dining Table",
-            image_url: tableImage,
+            image_url: [tableImage],
             description: "A sturdy wooden dining table that seats 6 people.",
             price: 399,
+            created_at: new Date().toISOString(),
+            seller_email: "info@rehome.com",
+            city_name: "Amsterdam",
+            sold: false,
+            isrehome: true
         },
         {
             id: 3,
             name: "Modern Office Chair",
-            image_url: chairImage,
+            image_url: [chairImage],
             description: "An ergonomic office chair for maximum comfort.",
             price: 199,
+            created_at: new Date().toISOString(),
+            seller_email: "info@rehome.com",
+            city_name: "Amsterdam",
+            sold: false,
+            isrehome: true
         },
     ];
 
@@ -184,7 +184,7 @@ const LandingPage = () => {
                           whileHover={{ scale: 1.05 }} // Add hover animation
                           onClick={() => window.location.href = '/marketplace'} // Navigate to marketplace on click
                       >
-                          <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover rounded-md" />
+                          <img src={item.image_url[0]} alt={item.name} className="w-full h-48 object-cover rounded-md" />
                           <h3 className="text-xl font-semibold mt-2">{item.name}</h3>
                           <p className="text-gray-600">{item.description}</p>
                           <p className="text-red-500 font-bold mt-2">${item.price}</p>

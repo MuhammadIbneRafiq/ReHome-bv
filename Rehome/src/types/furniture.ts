@@ -10,4 +10,5 @@ export type FurnitureItem ={
     seller_email: string;
     city_name: string;
     sold: boolean;
+    isrehome: boolean;
 }

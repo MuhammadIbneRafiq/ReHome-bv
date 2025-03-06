@@ -1,7 +1,4 @@
-import React from 'react';
 import { FaDollarSign, FaTree, FaTruck, FaHandshake, FaStore, FaUsers } from 'react-icons/fa';
-import { MdCheckCircle } from "react-icons/md"; // Import more icons
-import { Link } from "react-router-dom";
 import logo from "../../assets/logorehome.jpg"
 
 const WhyChooseUsPage = () => {
