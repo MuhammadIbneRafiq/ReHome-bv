@@ -923,8 +923,6 @@ const HouseMovingPage = () => {
                                             </div>
                                         </motion.div>
                                     </div>
-
-                                    {/* Carried Display Section */}
                                     <div className="border-b pb-4">
                                         <h3 className="text-lg font-bold mb-2 flex items-center">
                                             <FaTruck className="mr-2 text-gray-600" /> Carried Details
