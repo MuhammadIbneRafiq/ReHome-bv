@@ -40,6 +40,23 @@ const formSchema = z.object({
   }),
 });
 
+// Add this function before onSubmit
+const axiosWithRetry = async (url: string, data: any, retries = 3, timeout = 10000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await axios.post(url, data, { timeout });
+    } catch (error: any) {
+      if (i === retries - 1) throw error; // If last retry, throw the error
+      if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+        continue;
+      }
+      throw error; // If not a timeout error, throw immediately
+    }
+  }
+};
+
 export default function SignupPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -63,7 +80,7 @@ export default function SignupPage() {
     setErrorMessage(null);
     
     try {
-      await axios.post(
+      const response = await axiosWithRetry(
         "https://rehome-backend.vercel.app/auth/signup",
         {
           email: values.email,
@@ -72,19 +89,44 @@ export default function SignupPage() {
         }
       );
 
-      toast({
-        title: t('auth.signupSuccess'),
-        description: t('common.success'),
-        className: "bg-green-50 border-green-200",
-      });
-      
-      // Redirect to login page after successful signup
-      navigate("/login");
+      // Check if we got an access token (auto-login)
+      if (response.data.accessToken) {
+        localStorage.setItem("accessToken", response.data.accessToken);
+        
+        toast({
+          title: t('auth.signupSuccess'),
+          description: t('common.success'),
+          className: "bg-green-50 border-green-200",
+        });
+        
+        // Redirect to dashboard since user is logged in
+        navigate("/sell-dash");
+      } else {
+        // If no auto-login, show success message and redirect to login
+        toast({
+          title: t('auth.signupSuccess'),
+          description: t('auth.pleaseLogin'),
+          className: "bg-green-50 border-green-200",
+        });
+        
+        navigate("/login");
+      }
     } catch (error: any) {
       console.error("Signup error:", error);
       
-      // Extract error message from response if available
-      const errorMsg = error.response?.data?.message || t('auth.signupError');
+      let errorMsg = t('auth.signupError');
+      
+      // Handle specific error cases
+      if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
+        errorMsg = "Server is taking too long to respond. Please try again.";
+      } else if (error.response?.status === 400) {
+        errorMsg = error.response.data?.error || "Invalid signup data";
+      } else if (error.response?.status === 409) {
+        errorMsg = "Email already exists. Please use a different email.";
+      } else if (!error.response && error.message === 'Network Error') {
+        errorMsg = "Unable to connect to the server. Please check your internet connection.";
+      }
+      
       setErrorMessage(errorMsg);
       
       toast({
@@ -247,7 +289,7 @@ export default function SignupPage() {
                   </div>
                 </div>
                 <div className="mt-6">
-                  <ThirdPartyAuth message={googleMessage} />
+                  <ThirdPartyAuth text={googleMessage} />
                 </div>
               </div>
             </Form>

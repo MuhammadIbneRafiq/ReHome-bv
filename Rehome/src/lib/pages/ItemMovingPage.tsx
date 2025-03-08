@@ -4,7 +4,7 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-// import fetchCheckoutUrl from './PricingHook';
+import fetchCheckoutUrl from './PricingHook';
 // // Dummy data for demonstration
 const cityDayData = {
     "Amsterdam": ["Monday", "Tuesday", "Wednesday"],
@@ -185,30 +185,25 @@ const ItemMovingPage = () => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
     };
 
+    const isFormValid = () => {
+        if (!selectedDate && !isDateFlexible) return false;
+        if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
+            !contactInfo.email.trim() || !contactInfo.phone.trim()) return false;
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(contactInfo.email)) return false;
+        
+        const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+        if (!phoneRegex.test(contactInfo.phone)) return false;
+        
+        return true;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Final validation before submission
-        if (!selectedDate && !isDateFlexible) {
-            toast.error("Please select a date or indicate that your date is flexible.");
-            return;
-        }
-
-        if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
-            !contactInfo.email.trim() || !contactInfo.phone.trim()) {
-            toast.error("Please fill in all contact information fields.");
-            return;
-        }
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(contactInfo.email)) {
-            toast.error("Please enter a valid email address.");
-            return;
-        }
-
-        const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
-        if (!phoneRegex.test(contactInfo.phone)) {
-            toast.error("Please enter a valid phone number.");
+        if (!isFormValid()) {
+            toast.error("Please fill in all required fields correctly.");
             return;
         }
 
@@ -262,7 +257,17 @@ const ItemMovingPage = () => {
                 progress: undefined,
             });
 
-            // Handle success (or redirection) here
+            // Redirect to payment after successful submission
+            if (estimatedPrice !== null) {
+                try {
+                    await fetchCheckoutUrl(estimatedPrice);
+                } catch (error) {
+                    console.error("Error redirecting to payment:", error);
+                    toast.error("Failed to redirect to payment page. Please try again.");
+                }
+            } else {
+                toast.error("Could not process payment: invalid price");
+            }
         } catch (error) {
             console.error("Error submitting the moving request:", error);
             toast.error("An error occurred while submitting your request.");
@@ -795,7 +800,7 @@ const ItemMovingPage = () => {
                                 </div>
                             </motion.div>
                         )}
-                        {step === 6 && (
+                        {step === 6 && estimatedPrice !== null && (
                             <motion.div
                                 key="overview"
                                 className="space-y-6"
@@ -987,8 +992,13 @@ const ItemMovingPage = () => {
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 transition={{ duration: 0.2 }}
-
-                                className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
+                                type="submit"
+                                disabled={!isFormValid()}
+                                className={`py-2 px-4 rounded-md ${
+                                    isFormValid() 
+                                    ? "bg-red-600 text-white hover:bg-red-700" 
+                                    : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                                }`}
                             >
                                 Confirm Booking
                             </motion.button>

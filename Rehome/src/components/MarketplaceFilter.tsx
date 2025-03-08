@@ -69,14 +69,6 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     onFilterChange(items); // Reset to original items
   };
 
-  // Handle city selection
-  const handleCityChange = (city: string) => {
-    setSelectedCities(prev => 
-      prev.includes(city) 
-        ? prev.filter(c => c !== city) 
-        : [...prev, city]
-    );
-  };
 
   // Handle price range change
   const handlePriceChange = (min: number, max: number) => {
