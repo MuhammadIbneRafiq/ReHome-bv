@@ -100,15 +100,60 @@ const LandingPage = () => {
               </motion.div>
             </div>
             <div>
-              {/*  Add your animated illustration here (e.g., a moving truck) */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1 }}
-                className="animate-pulse"
-              >
-                <img src="https://static.vecteezy.com/system/resources/previews/024/800/829/non_2x/a-delivery-truck-flat-design-home-delivery-service-concept-with-a-delivery-van-delivery-van-on-a-highway-flat-illustration-free-png.png" alt="Moving Truck" className="w-full md:w-3/4 mx-auto" />
-              </motion.div>
+              <div className="relative h-[300px] overflow-hidden">
+                {/* Road background */}
+                <motion.div
+                  className="absolute bottom-0 w-full h-32 bg-gray-800"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                />
+                
+                {/* Road markings - infinite animation */}
+                <motion.div
+                  className="absolute bottom-16 w-full flex justify-center gap-32"
+                  initial={{ x: "100%" }}
+                  animate={{ x: "-100%" }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                >
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="w-20 h-3 bg-white rounded-sm" />
+                  ))}
+                </motion.div>
+
+                {/* Truck with only bouncing motion */}
+                <motion.div
+                  animate={{
+                    y: [-2, 2],
+                    rotate: [-0.5, 0.5]
+                  }}
+                  transition={{
+                    y: {
+                      duration: 0.8,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut"
+                    },
+                    rotate: {
+                      duration: 0.8,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      ease: "easeInOut"
+                    }
+                  }}
+                  className="absolute bottom-12 left-1/4 transform -translate-x-1/2"
+                >
+                  <img 
+                    src="https://static.vecteezy.com/system/resources/previews/024/800/829/non_2x/a-delivery-truck-flat-design-home-delivery-service-concept-with-a-delivery-van-delivery-van-on-a-highway-flat-illustration-free-png.png" 
+                    alt="Moving Truck" 
+                    className="w-96 h-auto"
+                  />
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>
