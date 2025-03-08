@@ -65,7 +65,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Oops fill in all the details`);
             }
 
             const data = await response.json();

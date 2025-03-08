@@ -27,7 +27,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { FaEnvelope, FaLock, FaUserAlt } from "react-icons/fa";
+import { FaEnvelope, FaLock } from "react-icons/fa";
+import { AxiosResponse } from "axios";
 
 const formSchema = z.object({
   email: z.string().min(1, { message: "Email is required" }).email({ message: "Invalid email format" }),
@@ -35,27 +36,24 @@ const formSchema = z.object({
     .string()
     .min(8, { message: "Password must be at least 8 characters" })
     .max(20, { message: "Password must not exceed 20 characters" }),
-  role: z.enum(["buyer", "seller"], {
-    errorMap: () => ({ message: "Role is required" }),
-  }),
 });
 
 // Add this function before onSubmit
-const axiosWithRetry = async (url: string, data: any, retries = 3, timeout = 10000) => {
+const axiosWithRetry = async (url: string, data: any, retries = 3, timeout = 10000): Promise<AxiosResponse> => {
   for (let i = 0; i < retries; i++) {
     try {
       return await axios.post(url, data, { timeout });
     } catch (error: any) {
-      if (i === retries - 1) throw error; // If last retry, throw the error
+      if (i === retries - 1) throw error;
       if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
-        // Wait before retrying (exponential backoff)
         await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
         continue;
       }
-      throw error; // If not a timeout error, throw immediately
+      throw error;
     }
   }
-};
+  throw new Error('All retries failed');
+}
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -69,7 +67,6 @@ export default function SignupPage() {
     defaultValues: {
       email: "",
       password: "",
-      role: "buyer", // Initialize as buyer
     },
   });
 
@@ -81,32 +78,30 @@ export default function SignupPage() {
     
     try {
       const response = await axiosWithRetry(
-        "https://rehome-backend.vercel.app/auth/signup",
+        "http://localhost:3000/auth/signup",
         {
           email: values.email,
           password: values.password,
-          role: values.role,
         }
       );
 
-      // Check if we got an access token (auto-login)
       if (response.data.accessToken) {
         localStorage.setItem("accessToken", response.data.accessToken);
         
         toast({
-          title: t('auth.signupSuccess'),
-          description: t('common.success'),
+          title: "Welcome to ReHome!",
+          description: "Account created successfully. You are now logged in.",
           className: "bg-green-50 border-green-200",
+          duration: 3000,
         });
         
-        // Redirect to dashboard since user is logged in
         navigate("/sell-dash");
       } else {
-        // If no auto-login, show success message and redirect to login
         toast({
-          title: t('auth.signupSuccess'),
-          description: t('auth.pleaseLogin'),
+          title: "Account Created",
+          description: "Please log in with your credentials.",
           className: "bg-green-50 border-green-200",
+          duration: 3000,
         });
         
         navigate("/login");
@@ -116,13 +111,16 @@ export default function SignupPage() {
       
       let errorMsg = t('auth.signupError');
       
-      // Handle specific error cases
-      if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
+      if (error.response?.data?.error) {
+        errorMsg = error.response.data.error;
+      } else if (error.code === 'ECONNABORTED' || error.response?.status === 504) {
         errorMsg = "Server is taking too long to respond. Please try again.";
       } else if (error.response?.status === 400) {
         errorMsg = error.response.data?.error || "Invalid signup data";
       } else if (error.response?.status === 409) {
         errorMsg = "Email already exists. Please use a different email.";
+      } else if (error.response?.status === 500) {
+        errorMsg = error.response.data?.error || "Server error. Please try again later.";
       } else if (!error.response && error.message === 'Network Error') {
         errorMsg = "Unable to connect to the server. Please check your internet connection.";
       }
@@ -222,46 +220,6 @@ export default function SignupPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center">
-                        <FaUserAlt className="mr-2 text-orange-500" /> {t('auth.role')}
-                      </FormLabel>
-                      <div className="flex space-x-4">
-                        <div className="flex items-center">
-                          <input
-                            type="radio"
-                            id="buyer"
-                            value="buyer"
-                            checked={field.value === "buyer"}
-                            onChange={() => form.setValue("role", "buyer")}
-                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300"
-                          />
-                          <label htmlFor="buyer" className="ml-2 block text-sm text-gray-700">
-                            {t('auth.buyer')}
-                          </label>
-                        </div>
-                        <div className="flex items-center">
-                          <input
-                            type="radio"
-                            id="seller"
-                            value="seller"
-                            checked={field.value === "seller"}
-                            onChange={() => form.setValue("role", "seller")}
-                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300"
-                          />
-                          <label htmlFor="seller" className="ml-2 block text-sm text-gray-700">
-                            {t('auth.seller')}
-                          </label>
-                        </div>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <Button
                   type="submit"
                   className="w-full bg-orange-600 hover:bg-orange-700 transition-colors duration-300"
@@ -299,3 +257,4 @@ export default function SignupPage() {
     </div>
   );
 }
+
