@@ -58,8 +58,8 @@ export default function LoginPage() {
         values
       );
       
-      const { token } = response.data;
-      localStorage.setItem("accessToken", token);
+      const { accessToken } = response.data;
+      localStorage.setItem("accessToken", accessToken);
       
       toast({
         title: t('auth.loginSuccess'),
@@ -72,7 +72,7 @@ export default function LoginPage() {
       console.error(error);
       
       // Extract error message from response if available
-      const errorMsg = error.response?.data?.message || t('auth.loginError');
+      const errorMsg = error.response?.data?.error || t('auth.loginError');
       setErrorMessage(errorMsg);
       
       toast({
@@ -193,7 +193,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="mt-6">
-                <ThirdPartyAuth message={googleMessage} />
+                <ThirdPartyAuth text={googleMessage} />
               </div>
             </div>
           </CardContent>

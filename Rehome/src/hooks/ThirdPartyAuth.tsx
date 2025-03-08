@@ -15,10 +15,10 @@ const formSchema = z.object({
 });
 
 interface ThirdPartyInterface {
-    googleMessage: string;
+    text: string;
 }
 
-export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ googleMessage }) => {
+export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ text }) => {
     const { toast } = useToast();
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -33,7 +33,6 @@ export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ googleMessage })
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    // redirectTo: "http://localhost:5173/auth/callback",
                     redirectTo: "https://rehome-bv.vercel.app/auth/callback",
                 }
             });
@@ -54,8 +53,7 @@ export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ googleMessage })
 
     return (
         <div className="mx-auto rounded-full" onClick={() => googleAuth()}>
-            {/* Passing googleMessage to the child component */}
-            <GoogleSignInButton googleMessage={googleMessage} />
+            <GoogleSignInButton googleMessage={text} />
         </div>
     );
 };
