@@ -2,6 +2,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Navbar from "./components/Navbar";
 import { LanguageProvider } from "./hooks/useLanguage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Import Pages
 import LandingPage from "./lib/pages/LandingPage";
@@ -46,7 +47,11 @@ const App = () => {
                 <Route path="/item-moving" element={<ItemMovingPage />} />
                 <Route path="/item-donation" element={<ItemDonationPage />} />
                 <Route path="/special-request" element={<SpecialRequestPage />} />
-                <Route path="/sell-dash" element={<SellerDashboard />} />
+                <Route path="/sell-dash" element={
+                  <ProtectedRoute>
+                    <SellerDashboard />
+                  </ProtectedRoute>
+                } />
                 <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
                 <Route path="/contact-us" element={<ContactUsPage />} />
                 <Route path="/about-us" element={<AboutUsPage />} />

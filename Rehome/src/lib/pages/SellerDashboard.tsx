@@ -1,20 +1,21 @@
 // src/pages/SellerDashboard.tsx
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV } from "react-icons/fa";
+import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag } from "react-icons/fa";
+import { MdOutlineInventory2, MdSell } from "react-icons/md";
 import SellPage from "./SellPage";
 import ItemDetailsModal from '../../components/ItemDetailModal'
 import useUserStore from "@/services/state/useUserSessionStore"; // Import the user store
 import axios from 'axios'; // Import axios for API calls
-
-// Mock User Data (replace with your actual user data fetching)
-
+import { useTranslation } from "react-i18next";
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 
 // Mock Analytics Data (replace with your API calls)
 const mockAnalytics = {
     listings: 15,
-    earnings: 1250,
-    views: 5000,
+    earnings: 0,
+    views: 50,
     soldListings: 7,
     activeListings: 8,
 };
@@ -33,6 +34,8 @@ interface FurnitureItem {
 
 
 const SellerDashboard = () => {
+    const { t } = useTranslation();
+    const navigate = useNavigate();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [listings, setListings] = useState<FurnitureItem[]>([]);
     const [soldListings, setSoldListings] = useState<FurnitureItem[]>([]);
@@ -43,6 +46,15 @@ const SellerDashboard = () => {
     const [dropdownOpen, setDropdownOpen] = useState<number | null>(null); // Track which dropdown is open
 
     const user = useUserStore((state) => state.user); // Get the user data from the store
+
+    // Check if user is authenticated
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (!token || !user) {
+            toast.error(t('auth.authRequired'));
+            navigate('/login');
+        }
+    }, [user, navigate, t]);
 
     const openModal = (item: FurnitureItem) => {
         setSelectedItem(item);
@@ -64,9 +76,11 @@ const SellerDashboard = () => {
             // Remove the deleted listing from the state
             setListings(listings.filter(item => item.id !== id));
             setSoldListings(soldListings.filter(item => item.id !== id));
+            toast.success(t('common.success'));
         } catch (err) {
             console.error('Error deleting listing:', err);
             setError('Failed to delete listing.');
+            toast.error(t('common.error'));
         }
     };
 
@@ -108,7 +122,9 @@ const SellerDashboard = () => {
     };
 
     useEffect(() => {
-        fetchListings();
+        if (user?.email) {
+            fetchListings();
+        }
     }, [user?.email]); // Fetch listings whenever the user's email changes
 
     const handleModalClose = () => {
@@ -119,7 +135,8 @@ const SellerDashboard = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
-                <p>Loading listings...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+                <p className="mt-4 text-gray-600">{t('common.loading')}</p>
             </div>
         );
     }
@@ -127,7 +144,10 @@ const SellerDashboard = () => {
     if (error) {
         return (
             <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
-                <p>Error: {error}</p>
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                    <strong className="font-bold">{t('common.error')}: </strong>
+                    <span className="block sm:inline">{error}</span>
+                </div>
             </div>
         );
     }
@@ -143,7 +163,7 @@ const SellerDashboard = () => {
                     transition={{ duration: 0.5 }}
                     className="text-3xl font-extrabold text-gray-900 mb-6"
                 >
-                    Welcome, {user?.email}!
+                    {t('dashboard.welcome')}, {user?.email}!
                 </motion.h1>
 
                 {/* Analytics Section */}
@@ -159,16 +179,16 @@ const SellerDashboard = () => {
                             <FaBoxOpen className="text-orange-500 text-2xl" />
                             <span className="text-2xl font-semibold">{listings.length}</span> {/* Display the number of listings */}
                         </div>
-                        <p className="text-gray-500 mt-2">Active Listings</p>
+                        <p className="text-gray-500 mt-2">{t('dashboard.activeListing')}</p>
                     </div>
 
                     {/* Analytics Card - Earnings */}
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <div className="flex items-center justify-between">
                             <FaMoneyBillWave className="text-green-500 text-2xl" />
-                            <span className="text-2xl font-semibold">${mockAnalytics.earnings}</span>
+                            <span className="text-2xl font-semibold">€{mockAnalytics.earnings}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">Total Earnings</p>
+                        <p className="text-gray-500 mt-2">{t('dashboard.earnings')}</p>
                     </div>
 
                     {/* Analytics Card - Sold Listings */}
@@ -177,7 +197,7 @@ const SellerDashboard = () => {
                             <FaCheckCircle className="text-blue-500 text-2xl" />
                             <span className="text-2xl font-semibold">{soldListings.length}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">Sold Listings</p>
+                        <p className="text-gray-500 mt-2">{t('dashboard.soldItems')}</p>
                     </div>
                 </motion.div>
 
@@ -185,118 +205,206 @@ const SellerDashboard = () => {
                 <div>
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-semibold text-gray-800">
-                            Your Listings
+                            {t('dashboard.yourListings')}
                         </h2>
                         <button
                             onClick={() => setIsSellModalOpen(true)}
-                            className="flex items-center bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-20 rounded-md transition duration-300"
+                            className="flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
                         >
-                            <FaPlus className="mr-2" /> Upload New Listing
+                            <FaPlus className="mr-2" /> {t('dashboard.uploadListing')}
                         </button>
                     </div>
-                    {/* Check if there are no active listings */}
-                    {listings.length === 0 ? (
-                        <p className="text-gray-600">You have no active listings.</p>
-                    ) : (
-                        <>
-                            {/* Active Listings */}
-                            <h3 className="text-lg font-semibold text-gray-700 mb-2">Active Listings</h3>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    
+                    {/* Active Listings Section */}
+                    <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                        <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                            <MdOutlineInventory2 className="mr-2 text-orange-500" /> {t('dashboard.activeListing')}
+                        </h3>
+                        
+                        {/* Check if there are no active listings */}
+                        {listings.length === 0 ? (
+                            <div className="bg-orange-50 rounded-lg p-8 text-center">
+                                <FaTag className="mx-auto text-orange-400 text-5xl mb-4" />
+                                <h4 className="text-xl font-semibold text-gray-800 mb-2">{t('dashboard.noListings')}</h4>
+                                <p className="text-gray-600 mb-6">{t('dashboard.startSelling')}</p>
+                                <button
+                                    onClick={() => setIsSellModalOpen(true)}
+                                    className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
+                                >
+                                    <FaUpload className="mr-2" /> {t('dashboard.createFirst')}
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {listings.map((listing) => (
                                     <motion.div
                                         key={listing.id}
-                                        className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer relative"
-                                        whileHover={{ scale: 1.05 }}
+                                        className="bg-white border border-gray-200 shadow-sm rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer relative"
+                                        whileHover={{ scale: 1.02 }}
                                         onClick={() => openModal(listing)}
                                     >
-                                        <img src={listing.image_url[0]} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
-                                        <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
-                                        <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
-                                        <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
-                                        <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
-                                        <div className="absolute top-2 right-2">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // Prevent modal from opening
-                                                    setDropdownOpen(dropdownOpen === listing.id ? null : listing.id); // Toggle dropdown
-                                                }}
-                                                className="text-gray-500 hover:text-red-500"
-                                            >
-                                                <FaEllipsisV />
-                                            </button>
-                                            {dropdownOpen === listing.id && (
-                                                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation(); // Prevent modal from opening
-                                                            deleteListing(listing.id);
-                                                            setDropdownOpen(null); // Close dropdown after deletion
-                                                        }}
-                                                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
-                                                    >
-                                                        Delete Listing
-                                                    </button>
-                                                </div>
-                                            )}
+                                        <div className="relative h-48 mb-3 overflow-hidden rounded-md">
+                                            <img 
+                                                src={listing.image_url[0]} 
+                                                alt={listing.name} 
+                                                className="w-full h-full object-cover" 
+                                            />
+                                            <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
+                                                €{listing.price}
+                                            </div>
+                                        </div>
+                                        <h3 className="text-lg font-semibold mb-1 truncate">{listing.name}</h3>
+                                        <p className="text-gray-500 text-sm mb-2 truncate">{listing.description}</p>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-gray-500">{listing.city_name}</span>
+                                            <div className="relative">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Prevent modal from opening
+                                                        setDropdownOpen(dropdownOpen === listing.id ? null : listing.id); // Toggle dropdown
+                                                    }}
+                                                    className="text-gray-500 hover:text-red-500 p-1"
+                                                >
+                                                    <FaEllipsisV />
+                                                </button>
+                                                {dropdownOpen === listing.id && (
+                                                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation(); // Prevent modal from opening
+                                                                deleteListing(listing.id);
+                                                                setDropdownOpen(null); // Close dropdown after deletion
+                                                            }}
+                                                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                                                        >
+                                                            {t('common.delete')}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </motion.div>
                                 ))}
                             </div>
-                        </>
-                    )}
-                      {/* Sold Listings */}
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Sold Listings</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                        {soldListings.map((listing) => (
-                            <motion.div
-                                key={listing.id}
-                                className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
-                                whileHover={{ scale: 1.05 }}
-                                onClick={() => openModal(listing)}
-                            >
-                                <img src={listing.image_url[0]} alt={listing.name} className="w-full h-48 object-cover rounded-md mb-2" />
-                                <h3 className="text-lg font-semibold mb-1">{listing.name}</h3>
-                                <p className="text-gray-600 text-sm">Price: ${listing.price}</p>
-                                <p className="text-gray-600 text-sm">City: {listing.city_name}</p>
-                                <p className="text-gray-600 text-sm">Created At: {listing.created_at}</p>
-                            </motion.div>
-                        ))}
+                        )}
+                    </div>
+                    
+                    {/* Sold Listings Section */}
+                    <div className="bg-white rounded-lg shadow-md p-6">
+                        <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                            <MdSell className="mr-2 text-green-500" /> {t('dashboard.soldListing')}
+                        </h3>
+                        
+                        {/* Check if there are no sold listings */}
+                        {soldListings.length === 0 ? (
+                            <div className="bg-gray-50 rounded-lg p-8 text-center">
+                                <FaShoppingCart className="mx-auto text-gray-400 text-5xl mb-4" />
+                                <h4 className="text-xl font-semibold text-gray-800 mb-2">{t('dashboard.noSoldItems')}</h4>
+                                <p className="text-gray-600 mb-6">{t('dashboard.soldAppearHere')}</p>
+                                {listings.length === 0 ? (
+                                    <button
+                                        onClick={() => setIsSellModalOpen(true)}
+                                        className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
+                                    >
+                                        <FaUpload className="mr-2" /> {t('dashboard.createFirst')}
+                                    </button>
+                                ) : (
+                                    <p className="text-sm text-gray-500">{t('dashboard.promoteListings')}</p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {soldListings.map((listing) => (
+                                    <motion.div
+                                        key={listing.id}
+                                        className="bg-white border border-gray-200 shadow-sm rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer relative"
+                                        whileHover={{ scale: 1.02 }}
+                                        onClick={() => openModal(listing)}
+                                    >
+                                        <div className="relative h-48 mb-3 overflow-hidden rounded-md">
+                                            <img 
+                                                src={listing.image_url[0]} 
+                                                alt={listing.name} 
+                                                className="w-full h-full object-cover opacity-70" 
+                                            />
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <span className="bg-green-500 text-white text-sm font-bold px-3 py-1 rounded-full">
+                                                    {t('dashboard.soldTag')}
+                                                </span>
+                                            </div>
+                                            <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
+                                                €{listing.price}
+                                            </div>
+                                        </div>
+                                        <h3 className="text-lg font-semibold mb-1 truncate">{listing.name}</h3>
+                                        <p className="text-gray-500 text-sm mb-2 truncate">{listing.description}</p>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xs text-gray-500">{listing.city_name}</span>
+                                            <div className="relative">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // Prevent modal from opening
+                                                        setDropdownOpen(dropdownOpen === listing.id ? null : listing.id); // Toggle dropdown
+                                                    }}
+                                                    className="text-gray-500 hover:text-red-500 p-1"
+                                                >
+                                                    <FaEllipsisV />
+                                                </button>
+                                                {dropdownOpen === listing.id && (
+                                                    <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation(); // Prevent modal from opening
+                                                                deleteListing(listing.id);
+                                                                setDropdownOpen(null); // Close dropdown after deletion
+                                                            }}
+                                                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                                                        >
+                                                            {t('common.delete')}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
-
-                {/* Modal for New Listing (using the SellPage component) */}
-                <AnimatePresence>
-                    {isSellModalOpen && (
-                        <motion.div
-                            className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50"
-                            variants={{
-                                hidden: { opacity: 0 },
-                                visible: { opacity: 1 },
-                                exit: { opacity: 0 },
-                            }}
-                            initial="hidden"
-                            animate="visible"
-                            exit="exit"
-                            transition={{ duration: 0.3 }}
-                        >
-                            <motion.div
-                                className="bg-white rounded-lg shadow-lg p-6 max-w-4xl w-full"
-                                variants={{
-                                    hidden: { opacity: 0, scale: 0.8 },
-                                    visible: { opacity: 1, scale: 1 },
-                                    exit: { opacity: 0, scale: 0.8 },
-                                }}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                                transition={{ duration: 0.3 }}
-                            >
-                                <SellPage onClose={handleModalClose} />
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
+
+            {/* Sell Modal */}
+            <AnimatePresence>
+                {isSellModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                        >
+                            <div className="p-6">
+                                <div className="flex justify-between items-start mb-4">
+                                    <h2 className="text-2xl font-bold">{t('dashboard.newListing')}</h2>
+                                    <button
+                                        onClick={handleModalClose}
+                                        className="text-gray-500 hover:text-gray-700"
+                                    >
+                                        &times;
+                                    </button>
+                                </div>
+                                <SellPage onClose={handleModalClose} />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

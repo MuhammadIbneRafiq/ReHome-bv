@@ -12,8 +12,9 @@ export const useAuth = () => {
 
   const location = useLocation();
 
-  const handleLogout = () => {
-    localStorage.clear();
+  const logout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("token");
     setIsAuthenticated(false);
     setUser(undefined);
   };
@@ -21,44 +22,46 @@ export const useAuth = () => {
   useEffect(() => {
     async function fetchUser() {
       setLoading(true);
-      const accessToken = localStorage.getItem("accessToken");
+      // Check for both token names to ensure backward compatibility
+      const accessToken = localStorage.getItem("accessToken") || localStorage.getItem("token");
 
       if (!accessToken) {
-        handleLogout();
+        logout();
         setLoading(false);
         return;
       }
 
-      setLoading(false);
+      try {
+        const decoded = jwtDecode(accessToken);
 
-      const decoded = jwtDecode(accessToken || "");
+        if (!decoded.exp || decoded.exp * 1000 < Date.now()) {
+          console.log("Access Token has expired");
+          logout();
+          setLoading(false);
+          return;
+        }
 
-      if (!decoded.exp || decoded.exp * 1000 < Date.now()) {
-        console.log("Access Token has expired");
-        handleLogout();
+        setUser((decoded as any).user_metadata as UserData);
+        console.log('User authenticated');
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error("Error decoding token:", error);
+        logout();
+      } finally {
         setLoading(false);
-        return;
       }
-
-
-      setUser((decoded as any).user_metadata as UserData);
-      console.log('user here')
-      setIsAuthenticated(true);
-      setLoading(false);
     }
 
     fetchUser();
 
-    // TODO: Fix this later
-    // // Set up an interval to fetch data every minute
-    // const intervalId = setInterval(fetchUser, 60000); // 60000 ms = 1 minute
+    // Set up an interval to check authentication status
+    const intervalId = setInterval(fetchUser, 60000); // 60000 ms = 1 minute
 
-    // // Cleanup function to clear the interval when the component unmounts
-    // // or when the pathname changes
-    // return () => {
-    //     clearInterval(intervalId);
-    // };
+    // Cleanup function to clear the interval when the component unmounts
+    return () => {
+      clearInterval(intervalId);
+    };
   }, [location.pathname]);
 
-  return { isAuthenticated, loading };
+  return { isAuthenticated, loading, logout };
 };

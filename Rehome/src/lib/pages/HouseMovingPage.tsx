@@ -103,6 +103,44 @@ const HouseMovingPage = () => {
     }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper, elevatorPickup, elevatorDropoff]);
 
     const nextStep = () => {
+        // Validate date selection in step 4
+        if (step === 4 && !selectedDate && !isDateFlexible) {
+            toast.error("Please select a date or indicate that your date is flexible.");
+            return;
+        }
+
+        // Validate contact information in step 5
+        if (step === 5) {
+            if (!contactInfo.firstName.trim()) {
+                toast.error("Please enter your first name.");
+                return;
+            }
+            if (!contactInfo.lastName.trim()) {
+                toast.error("Please enter your last name.");
+                return;
+            }
+            if (!contactInfo.email.trim()) {
+                toast.error("Please enter your email.");
+                return;
+            }
+            if (!contactInfo.phone.trim()) {
+                toast.error("Please enter your phone number.");
+                return;
+            }
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(contactInfo.email)) {
+                toast.error("Please enter a valid email address.");
+                return;
+            }
+            // Basic phone validation (allows different formats)
+            const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+            if (!phoneRegex.test(contactInfo.phone)) {
+                toast.error("Please enter a valid phone number.");
+                return;
+            }
+        }
+
         if (step < 6) setStep(step + 1);
     };
 
@@ -134,6 +172,31 @@ const HouseMovingPage = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation before submission
+        if (!selectedDate && !isDateFlexible) {
+            toast.error("Please select a date or indicate that your date is flexible.");
+            return;
+        }
+
+        if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
+            !contactInfo.email.trim() || !contactInfo.phone.trim()) {
+            toast.error("Please fill in all contact information fields.");
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(contactInfo.email)) {
+            toast.error("Please enter a valid email address.");
+            return;
+        }
+
+        const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+        if (!phoneRegex.test(contactInfo.phone)) {
+            toast.error("Please enter a valid phone number.");
+            return;
+        }
+
         const payload = {
             firstLocation,
             secondLocation,
@@ -144,31 +207,11 @@ const HouseMovingPage = () => {
             contactInfo,
             estimatedPrice,
             selectedDate,
+            isDateFlexible,
         };
 
-        toast.success("Confirmation email sent!", {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-        });
-
-        toast.info("Redirecting to price page in 3...", {
-            position: "top-right",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-        });
-
-        console.log('here is the payload', payload);
         try {
-            const response = await fetch("https://rehome-backend.vercel.app/api/item-moving-requests", {
+            const response = await fetch("https://rehome-backend.vercel.app/api/house-moving-requests", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -181,32 +224,21 @@ const HouseMovingPage = () => {
                 throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
             }
 
+            toast.success("Request submitted successfully!", {
+                position: "top-right",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+            });
+
             // Handle success (or redirection) here
         } catch (error) {
             console.error("Error submitting the moving request:", error);
             toast.error("An error occurred while submitting your request.");
         }
-
-        // try {
-        //     const emailResponse = await fetch('https://rehome-backend.vercel.app/api/send-email', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/json',
-        //         },
-        //         body: JSON.stringify({
-        //             email: contactInfo.email,
-        //             firstName: contactInfo.firstName,
-        //             lastName: contactInfo.lastName,
-        //         }),
-        //     });
-
-        //     if (!emailResponse.ok) {
-        //         throw new Error('Failed to send email');
-        //     }
-        //     console.log('Email sent successfully!');
-        // } catch (error) {
-        //     console.error('Error sending email:', error);
-        // }
     };
 
     const ElevatorToggle = ({ label, checked, onChange }: {
@@ -707,7 +739,7 @@ const HouseMovingPage = () => {
                                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Date and Time</h2>
                                 <div>
                                     <label htmlFor="selectedDate" className="block text-sm font-medium text-gray-700">
-                                        Preferred Date
+                                        Preferred Date {!isDateFlexible && <span className="text-red-500">*</span>}
                                     </label>
                                     <input
                                         type="date"
@@ -715,6 +747,7 @@ const HouseMovingPage = () => {
                                         value={selectedDate}
                                         onChange={(e) => setSelectedDate(e.target.value)}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                        required={!isDateFlexible}
                                     />
                                 </div>
                                 {/* Flexible dates yes or no */}
@@ -755,43 +788,55 @@ const HouseMovingPage = () => {
                                     <label className="block text-sm font-medium text-gray-700">Contact Information</label>
                                     <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div>
-                                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name</label>
+                                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                                                First Name <span className="text-red-500">*</span>
+                                            </label>
                                             <input
                                                 type="text"
                                                 id="firstName"
                                                 value={contactInfo.firstName}
                                                 onChange={handleContactInfoChange}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                required
                                             />
                                         </div>
                                         <div>
-                                            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label>
+                                            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                                                Last Name <span className="text-red-500">*</span>
+                                            </label>
                                             <input
                                                 type="text"
                                                 id="lastName"
                                                 value={contactInfo.lastName}
                                                 onChange={handleContactInfoChange}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                required
                                             />
                                         </div>
                                         <div>
-                                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                                Email <span className="text-red-500">*</span>
+                                            </label>
                                             <input
                                                 type="email"
                                                 id="email"
                                                 value={contactInfo.email}
                                                 onChange={handleContactInfoChange}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                required
                                             />
                                         </div>
                                         <div>
-                                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                                                Phone Number <span className="text-red-500">*</span>
+                                            </label>
                                             <input
                                                 type="tel"
                                                 id="phone"
                                                 value={contactInfo.phone}
                                                 onChange={handleContactInfoChange}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                required
                                             />
                                         </div>
                                     </div>

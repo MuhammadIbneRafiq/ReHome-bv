@@ -117,8 +117,46 @@ const ItemMovingPage = () => {
         calculatePrice();
     }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper, elevatorPickup, elevatorDropoff]);
 
-    const goToNextStep = () => {
-        setStep(step + 1);
+    const nextStep = () => {
+        // Validate date selection in step 4
+        if (step === 4 && !selectedDate && !isDateFlexible) {
+            toast.error("Please select a date or indicate that your date is flexible.");
+            return;
+        }
+
+        // Validate contact information in step 5
+        if (step === 5) {
+            if (!contactInfo.firstName.trim()) {
+                toast.error("Please enter your first name.");
+                return;
+            }
+            if (!contactInfo.lastName.trim()) {
+                toast.error("Please enter your last name.");
+                return;
+            }
+            if (!contactInfo.email.trim()) {
+                toast.error("Please enter your email.");
+                return;
+            }
+            if (!contactInfo.phone.trim()) {
+                toast.error("Please enter your phone number.");
+                return;
+            }
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(contactInfo.email)) {
+                toast.error("Please enter a valid email address.");
+                return;
+            }
+            // Basic phone validation (allows different formats)
+            const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+            if (!phoneRegex.test(contactInfo.phone)) {
+                toast.error("Please enter a valid phone number.");
+                return;
+            }
+        }
+
+        if (step < 6) setStep(step + 1);
     };
 
     const prevStep = () => {
@@ -149,95 +187,86 @@ const ItemMovingPage = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-      
-        // Display confirmation toast
-        toast.success("Confirmation email sent!", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-      
-        // Display redirecting toast with countdown
-        toast.info("Redirecting to price page in 3...", {
-          position: "top-right",
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-      
-        // Prepare the data payload
-        const payload = {
-          pickupType,
-          selectedDate,
-          isDateFlexible,
-          furnitureItems: Object.entries(itemQuantities)
-            .filter(([, quantity]) => quantity > 0)
-            .map(([itemId, quantity]) => ({ itemId, quantity })),
-          customItem,
-          floorPickup,
-          floorDropoff,
-          contactInfo, // assume this contains { email, firstName, lastName, phone }
-          estimatedPrice,
-          basePrice,
-          itemPoints: itemPoints * 3, // if you need to multiply by 3
-          carryingCost,
-          disassemblyCost,
-          distanceCost,
-          extraHelperCost,
-        };
-        console.log('here is the payload', payload)
-        try {
-          // Send the POST request to your backend endpoint
-          const response = await fetch("https://rehome-backend.vercel.app/api/item-moving-requests", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          });
-      
-          if (!response.ok) {
-            throw new Error("Network response was not ok");
-          }
-          // Handle success (or redirection) here
-        } catch (error) {
-          console.error("Error submitting the moving request:", error);
-        }
-        // try{
-        //     const emailResponse = await fetch('https://rehome-backend.vercel.app/api/send-email', {
-        //         method: 'POST',
-        //         headers: {
-        //             'Content-Type': 'application/json',
-        //         },
-        //         body: JSON.stringify({
-        //             email: contactInfo.email,
-        //             firstName: contactInfo.firstName,
-        //             lastName: contactInfo.lastName,
-        //         }),
-        //     });
-        //     console.log('great email sent!')
-    
-        //     if (!emailResponse.ok) {
-        //         throw new Error('Failed to send email');
-        //     }
-        // } catch (error){
-        //     console.error('oops email  busted')
-        // }
-    console.log('email is send')
-    // Check if estimatedPrice is not null before calling fetchCheckoutUrl
-    // if (estimatedPrice !== null) {
-    //     fetchCheckoutUrl(estimatedPrice); // Pass the number directly
-    // } else {
-    //     console.error("Estimated price is null. Cannot proceed with checkout."); // Handle the null case appropriately
-    // }
 
+        // Final validation before submission
+        if (!selectedDate && !isDateFlexible) {
+            toast.error("Please select a date or indicate that your date is flexible.");
+            return;
+        }
+
+        if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
+            !contactInfo.email.trim() || !contactInfo.phone.trim()) {
+            toast.error("Please fill in all contact information fields.");
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(contactInfo.email)) {
+            toast.error("Please enter a valid email address.");
+            return;
+        }
+
+        const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+        if (!phoneRegex.test(contactInfo.phone)) {
+            toast.error("Please enter a valid phone number.");
+            return;
+        }
+
+        const payload = {
+            pickupType,
+            firstLocation,
+            secondLocation,
+            itemQuantities,
+            floorPickup,
+            floorDropoff,
+            disassembly,
+            contactInfo,
+            estimatedPrice,
+            selectedDate,
+            isDateFlexible,
+            elevatorPickup,
+            elevatorDropoff,
+            extraHelper,
+            disassemblyItems,
+            extraHelperItems,
+            isStudent,
+            basePrice,
+            itemPoints,
+            carryingCost,
+            disassemblyCost,
+            distanceCost,
+            extraHelperCost
+        };
+
+        try {
+            const response = await fetch("https://rehome-backend.vercel.app/api/item-moving-requests", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) { 
+                const errorData = await response.json();
+                throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
+            }
+
+            toast.success("Request submitted successfully!", {
+                position: "top-right",
+                autoClose: 3000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+            });
+
+            // Handle success (or redirection) here
+        } catch (error) {
+            console.error("Error submitting the moving request:", error);
+            toast.error("An error occurred while submitting your request.");
+        }
     };
 
     const ElevatorToggle = ({ label, checked, onChange }: {
@@ -272,7 +301,7 @@ const ItemMovingPage = () => {
     const handleModalSubmit = () => {
         if (paymentProof) {
             // Proceed to the next step if payment proof is uploaded
-            goToNextStep();
+            nextStep();
             setIsModalOpen(false); // Close the modal
         } else {
             toast.error("Please upload proof of payment."); // Show error if no file is uploaded
@@ -326,11 +355,11 @@ const ItemMovingPage = () => {
                                     <button
                                         onClick={() => {
                                             setPickupType('private');
-                                            goToNextStep(); 
+                                            nextStep(); 
                                         }}
                                         className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
                                     >
-                                        <FaHome className="h-6 w-6 text-blue-500 mt-1 mr-3" />
+                                        <FaHome className="h-6 w-6 text-orange-500 mt-1 mr-3" />
                                         {/* Icon sizing and alignment */}
                                         <div className="flex flex-col">
                                             <h3 className="text-base font-medium text-gray-700 text-left">From a private home</h3>
@@ -345,7 +374,7 @@ const ItemMovingPage = () => {
                                         }}
                                         className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
                                     >
-                                        <FaStore className="h-6 w-6 text-blue-500 mt-1 mr-3" />
+                                        <FaStore className="h-6 w-6 text-orange-500 mt-1 mr-3" />
                                         {/* Icon sizing and alignment */}
                                         <div className="flex flex-col">
                                             <h3 className="text-base font-medium text-gray-700 text-left">From a store</h3>
@@ -636,7 +665,7 @@ const ItemMovingPage = () => {
                                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Date and Time</h2>
                                 <div>
                                     <label htmlFor="selectedDate" className="block text-sm font-medium text-gray-700">
-                                        Preferred Date
+                                        Preferred Date {!isDateFlexible && <span className="text-red-500">*</span>}
                                     </label>
                                     <input
                                         type="date"
@@ -644,6 +673,7 @@ const ItemMovingPage = () => {
                                         value={selectedDate}
                                         onChange={(e) => setSelectedDate(e.target.value)}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                        required={!isDateFlexible}
                                     />
                                 </div>
                                 {/* Flexible dates yes or no */}
@@ -657,7 +687,7 @@ const ItemMovingPage = () => {
                                             onChange={(e) => {
                                                 setIsDateFlexible(e.target.checked);
                                                 if (e.target.checked) {
-                                                    goToNextStep();
+                                                    nextStep();
                                                 }
                                             }}
                                         />
@@ -684,43 +714,55 @@ const ItemMovingPage = () => {
                                     <label className="block text-sm font-medium text-gray-700">Contact Information</label>
                                     <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div>
-                                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">First Name</label>
+                                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                                                First Name <span className="text-red-500">*</span>
+                                            </label>
                                             <input
                                                 type="text"
                                                 id="firstName"
                                                 value={contactInfo.firstName}
                                                 onChange={handleContactInfoChange}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                required
                                             />
                                         </div>
                                         <div>
-                                            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">Last Name</label>
+                                            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                                                Last Name <span className="text-red-500">*</span>
+                                            </label>
                                             <input
                                                 type="text"
                                                 id="lastName"
                                                 value={contactInfo.lastName}
                                                 onChange={handleContactInfoChange}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                required
                                             />
                                         </div>
                                         <div>
-                                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+                                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                                Email <span className="text-red-500">*</span>
+                                            </label>
                                             <input
                                                 type="email"
                                                 id="email"
                                                 value={contactInfo.email}
                                                 onChange={handleContactInfoChange}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                required
                                             />
                                         </div>
                                         <div>
-                                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                                                Phone Number <span className="text-red-500">*</span>
+                                            </label>
                                             <input
                                                 type="tel"
                                                 id="phone"
                                                 value={contactInfo.phone}
                                                 onChange={handleContactInfoChange}
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                required
                                             />
                                         </div>
                                     </div>
@@ -955,7 +997,7 @@ const ItemMovingPage = () => {
                                      <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         transition={{ duration: 0.2 }}
-                                        onClick={goToNextStep}
+                                        onClick={nextStep}
                                         className="bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600"
                                     >
                                         Next <FaArrowRight className="inline-block ml-2" />

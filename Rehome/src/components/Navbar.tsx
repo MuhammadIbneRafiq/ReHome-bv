@@ -1,7 +1,7 @@
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { Button } from "./ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react"; // Import Sun and Moon
 import UserAvatar from "./UserAvatar";
 import { useAuth } from "../hooks/useAuth";
@@ -13,19 +13,31 @@ import { useLanguage } from '../hooks/useLanguage';
 
 export default function Navbar() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { currentLanguage, changeLanguage, languageOptions } = useLanguage();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, logout } = useAuth();
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown
     const [isPopupOpen, setIsPopupOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
 
     const dropdownRef = useRef<HTMLDivElement>(null); // Ref to the dropdown container
     const transportationButtonRef = useRef<HTMLButtonElement>(null);
-
+    const userMenuRef = useRef<HTMLDivElement>(null);
 
     const toggleDropdown = () => {
         setIsDropdownOpen(!isDropdownOpen);
+    };
+
+    const toggleUserMenu = () => {
+        setUserMenuOpen(!userMenuOpen);
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+        setUserMenuOpen(false);
     };
 
     const handleScroll = () => {
@@ -36,6 +48,7 @@ export default function Navbar() {
         }
         setLastScrollY(window.scrollY);
     };
+    
     useEffect(() => {
         const handleOutsideClick = (e: any) => {
             if (
@@ -47,6 +60,14 @@ export default function Navbar() {
             ) {
                 setIsDropdownOpen(false);
             }
+
+            if (
+                userMenuOpen &&
+                userMenuRef.current &&
+                !userMenuRef.current.contains(e.target)
+            ) {
+                setUserMenuOpen(false);
+            }
         };
 
         document.addEventListener("click", handleOutsideClick);
@@ -54,7 +75,7 @@ export default function Navbar() {
         return () => {
             document.removeEventListener("click", handleOutsideClick);
         };
-    }, [isDropdownOpen]);
+    }, [isDropdownOpen, userMenuOpen]);
 
     useEffect(() => {
         window.addEventListener('scroll', handleScroll);
@@ -141,12 +162,42 @@ export default function Navbar() {
                         </>
                     )}
                     {isAuthenticated && (
-                        <>
-                            <Link to="/sell-dash" className="rehome-dashboard-button">
-                                {t('navbar.dashboard')}
-                            </Link>
-                            <UserAvatar />
-                        </>
+                        <div className="relative">
+                            <div className="flex items-center space-x-3">
+                                <Link to="/sell-dash" className="rehome-dashboard-button">
+                                    {t('navbar.dashboard')}
+                                </Link>
+                                <div 
+                                    onClick={toggleUserMenu} 
+                                    className="cursor-pointer"
+                                >
+                                    <UserAvatar />
+                                </div>
+                            </div>
+                            
+                            {userMenuOpen && (
+                                <div 
+                                    ref={userMenuRef}
+                                    className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-50"
+                                >
+                                    <div className="py-1">
+                                        <Link 
+                                            to="/sell-dash" 
+                                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                            onClick={() => setUserMenuOpen(false)}
+                                        >
+                                            {t('dashboard.title')}
+                                        </Link>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        >
+                                            {t('auth.logout')}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
                     <div className="relative md:hidden">
                         {!isAuthenticated &&
@@ -185,9 +236,14 @@ export default function Navbar() {
                                             <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                                 {t('navbar.dashboard')}
                                             </Link>
+                                            <button 
+                                                onClick={handleLogout}
+                                                className="text-left text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white"
+                                            >
+                                                {t('auth.logout')}
+                                            </button>
                                         </>
                                     )}
-
                                 </nav>
                             </div>
                         )}

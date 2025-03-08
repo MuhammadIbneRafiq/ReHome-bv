@@ -26,7 +26,10 @@
     "close": "Sluiten",
     "back": "Terug",
     "next": "Volgende",
-    "previous": "Vorige"
+    "previous": "Vorige",
+    "apply": "Toepassen",
+    "reset": "Resetten",
+    "tip": "Tip"
   },
   "auth": {
     "email": "E-mail",
@@ -40,7 +43,20 @@
     "signInWith": "Inloggen met",
     "or": "of",
     "rememberMe": "Onthoud mij",
-    "logout": "Uitloggen"
+    "logout": "Uitloggen",
+    "loginSuccess": "Inloggen gelukt!",
+    "loginError": "Inloggen mislukt. Controleer uw gegevens.",
+    "signupSuccess": "Account succesvol aangemaakt!",
+    "signupError": "Account aanmaken mislukt. Probeer het opnieuw.",
+    "requiredField": "Dit veld is verplicht",
+    "invalidEmail": "Voer een geldig e-mailadres in",
+    "passwordLength": "Wachtwoord moet minimaal 8 tekens bevatten",
+    "passwordMismatch": "Wachtwoorden komen niet overeen",
+    "authRequired": "U moet inloggen om deze pagina te bekijken",
+    "role": "Rol",
+    "buyer": "Koper",
+    "seller": "Verkoper",
+    "enterEmailBelow": "Voer hieronder uw e-mailadres in om uw account aan te maken"
   },
   "homepage": {
     "welcome": "Welkom bij Rehome",
@@ -71,7 +87,52 @@
     "priceHighToLow": "Prijs: Hoog naar Laag",
     "priceLowToHigh": "Prijs: Laag naar Hoog",
     "noResults": "Geen resultaten gevonden",
-    "viewDetails": "Details bekijken"
+    "viewDetails": "Details bekijken",
+    "contactSeller": "Contact opnemen met verkoper",
+    "verifiedOnly": "Alleen Rehome Geverifieerd",
+    "featuredItems": "Uitgelichte artikelen",
+    "filter": "Filter",
+    "priceRange": "Prijsbereik",
+    "minPrice": "Minimale prijs",
+    "maxPrice": "Maximale prijs",
+    "city": "Stad",
+    "allCities": "Alle steden",
+    "checkout": "Afrekenen",
+    "processing": "Verwerken...",
+    "holdCtrl": "Houd Ctrl ingedrukt om meerdere steden te selecteren"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welkom terug",
+    "yourListings": "Uw advertenties",
+    "orders": "Uw bestellingen",
+    "messages": "Berichten",
+    "settings": "Accountinstellingen",
+    "newListing": "Nieuwe advertentie maken",
+    "analytics": "Statistieken bekijken",
+    "logout": "Uitloggen",
+    "uploadListing": "Nieuwe advertentie uploaden",
+    "activeListing": "Actieve advertenties",
+    "soldListing": "Verkochte advertenties",
+    "soldItems": "Verkochte items",
+    "earnings": "Totale inkomsten",
+    "noListings": "U heeft geen actieve advertenties",
+    "startSelling": "Begin met het verkopen van uw items door een nieuwe advertentie te maken",
+    "createFirst": "Maak uw eerste advertentie",
+    "noSoldItems": "Nog geen verkochte items",
+    "soldAppearHere": "Verkochte items verschijnen hier",
+    "promoteListings": "Blijf uw advertenties promoten om verkopen te realiseren",
+    "soldTag": "VERKOCHT"
+  },
+  "moving": {
+    "selectDate": "Selecteer een datum",
+    "fillContact": "Vul uw contactgegevens in",
+    "dateRequired": "Datumselectie is verplicht",
+    "contactRequired": "Contactgegevens zijn verplicht",
+    "paymentSuccess": "Betaling geslaagd!",
+    "paymentError": "Betaling mislukt. Probeer het opnieuw.",
+    "processingPayment": "Uw betaling wordt verwerkt...",
+    "redirecting": "U wordt doorgestuurd naar de betaalpagina..."
   },
   "itemMoving": {
     "title": "Artikelverplaatsingsdienst",
@@ -111,17 +172,6 @@
     "details": "Aanvraagdetails",
     "submit": "Aanvraag indienen",
     "contactSoon": "We nemen binnenkort contact met u op"
-  },
-  "dashboard": {
-    "title": "Dashboard",
-    "welcome": "Welkom terug",
-    "listings": "Uw advertenties",
-    "orders": "Uw bestellingen",
-    "messages": "Berichten",
-    "settings": "Accountinstellingen",
-    "createListing": "Nieuwe advertentie maken",
-    "viewAnalytics": "Statistieken bekijken",
-    "logout": "Uitloggen"
   },
   "footer": {
     "company": "Bedrijf",

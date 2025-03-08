@@ -26,7 +26,9 @@
     "close": "Close",
     "back": "Back",
     "next": "Next",
-    "previous": "Previous"
+    "previous": "Previous",
+    "apply": "Apply",
+    "reset": "Reset"
   },
   "auth": {
     "email": "Email",
@@ -62,16 +64,14 @@
     "title": "Marketplace",
     "subtitle": "Browse and buy quality furniture and home items",
     "search": "Search items...",
-    "categories": "Categories",
+    "filter": "Filter",
     "price": "Price",
-    "condition": "Condition",
     "location": "Location",
-    "sortBy": "Sort By",
-    "newest": "Newest",
-    "priceHighToLow": "Price: High to Low",
-    "priceLowToHigh": "Price: Low to High",
+    "verifiedOnly": "Rehome Verified Only",
+    "featuredItems": "Featured Items",
     "noResults": "No results found",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "contactSeller": "Contact Seller"
   },
   "itemMoving": {
     "title": "Item Moving Service",

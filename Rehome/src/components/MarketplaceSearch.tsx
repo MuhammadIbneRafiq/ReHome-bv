@@ -1,158 +1,42 @@
-import { useState } from 'react';
-import { FaSearch, FaFilter } from 'react-icons/fa';  // Import icons
-import { AnimatePresence, motion } from 'framer-motion'; // Import framer-motion
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FaSearch } from 'react-icons/fa';
 
-const MarketplaceSearch = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [location] = useState('');
-    const [category, setCategory] = useState(''); // e.g., sofa, table, chair
-    const [priceRange, setPriceRange] = useState({ min: '', max: '' }); //  min, max
-    const [sortBy] = useState('');
-    const [isFilterOpen, setIsFilterOpen] = useState(false); // State for filter visibility
-    const [isSold, setIsSold] = useState<boolean | null>(null); //  Filter by sold/unsold status
-    const [sellerType, setSellerType] = useState<'Rehome' | 'Customer' | ''>(''); // Filter by seller type
+interface SearchProps {
+  onSearch: (searchTerm: string) => void;
+}
 
-    const handleSearch = () => {
-        // Simulate a search result (replace with your data fetching)
-        console.log('Searching:', { searchTerm, location, category, priceRange, sortBy, isSold, sellerType });
-    };
-    const toggleFilter = () => {
-        setIsFilterOpen(!isFilterOpen);
-    };
+const MarketplaceSearch: React.FC<SearchProps> = ({ onSearch }) => {
+  const { t } = useTranslation();
+  const [searchTerm, setSearchTerm] = useState('');
 
-    return (
-        <div className="bg-white rounded-lg shadow-md p-4">
-            {/* Search Bar */}
-            <div className="flex items-center mb-4">
-                <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
-                    placeholder="Search items..."
-                />
-                <button
-                    onClick={handleSearch}
-                    className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                >
-                    <FaSearch />
-                </button>
-            </div>
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSearch(searchTerm);
+  };
 
-            {/* Filters Toggle Button */}
-            <button
-                onClick={toggleFilter}
-                className="flex items-center justify-center w-full bg-orange-100 text-orange-700 font-semibold py-2 px-4 rounded-md hover:bg-orange-200 transition duration-200"
-            >
-                <FaFilter className="mr-2" /> Filters
-            </button>
-
-            {/* Filters (Collapsible Section) */}
-            <AnimatePresence>
-                {isFilterOpen && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        className="mt-4 space-y-4"
-                    >
-
-                        {/* Location Filter */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Category
-                            </label>
-                            <select
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            >
-                                <option value="">All Cities</option>
-                                <option value="sofa">Amsterdam</option>
-                                <option value="table">Eindhoven</option>
-                                <option value="chair">Den Haag</option>
-                                <option value="bed">Den Bosch</option>
-                                <option value="other">Zwolle</option>
-                            </select>
-                        </div>
-
-                        {/* Price Range Filter */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Price Range
-                            </label>
-                            <div className="flex space-x-2">
-                                <input
-                                    type="number"
-                                    placeholder="Min"
-                                    value={priceRange.min}
-                                    onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
-                                    className="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="Max"
-                                    value={priceRange.max}
-                                    onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
-                                    className="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                                />
-                            </div>
-                        </div>
-
-                        {/* Sold/Unsold Filter */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Status
-                            </label>
-                            <select
-                                value={isSold === null ? '' : isSold ? 'sold' : 'unsold'}
-                                onChange={(e) => {
-                                    switch (e.target.value) {
-                                        case 'sold':
-                                            setIsSold(true);
-                                            break;
-                                        case 'unsold':
-                                            setIsSold(false);
-                                            break;
-                                        default:
-                                            setIsSold(null);
-                                    }
-                                }}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            >
-                                <option value="">All</option>
-                                <option value="sold">Sold</option>
-                                <option value="unsold">Unsold</option>
-                            </select>
-                        </div>
-
-                         {/* Seller Type Filter */}
-                         <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Seller
-                            </label>
-                            <select
-                                value={sellerType}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    if (value === "" || value === "Rehome" || value === "Customer") {
-                                        setSellerType(value);
-                                    }
-                                }}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            >
-                                <option value="">All</option>
-                                <option value="Rehome">Rehome</option>
-                                <option value="Customer">Customer</option>
-                            </select>
-                        </div>
-
-                    </motion.div>
-                )}
-            </AnimatePresence>
+  return (
+    <div className="bg-white rounded-lg shadow-md p-4">
+      <h3 className="text-lg font-semibold mb-4">{t('common.search')}</h3>
+      <form onSubmit={handleSearch}>
+        <div className="flex items-center mb-4">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={t('marketplace.search')}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mr-2"
+          />
+          <button
+            type="submit"
+            className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            <FaSearch />
+          </button>
         </div>
-    );
+      </form>
+    </div>
+  );
 };
 
 export default MarketplaceSearch;

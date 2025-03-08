@@ -12,21 +12,23 @@ import { Input } from "../../components/ui/input";
 import { Loader } from "lucide-react";
 import axios from "axios";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
-// import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
+import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
 import { useTranslation } from "react-i18next";
+import { motion } from "framer-motion";
+import { FaEnvelope, FaLock } from "react-icons/fa";
 
 const formSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Invalid email"),
+  email: z.string().min(1, { message: "Email is required" }).email({ message: "Invalid email format" }),
   password: z
     .string()
-    .min(8, "Password are at least 8 characters")
-    .max(20, "Password are not longer than 20 characters"),
+    .min(8, { message: "Password must be at least 8 characters" })
+    .max(20, { message: "Password must not exceed 20 characters" }),
 });
 
 export default function LoginPage() {
@@ -35,6 +37,7 @@ export default function LoginPage() {
   const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,28 +46,39 @@ export default function LoginPage() {
       password: "",
     },
   });
-  // const googleMessage: string = t('auth.login');
+  const googleMessage: string = t('auth.login');
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
+    setErrorMessage(null);
+    
     try {
       const response = await axios.post(
         "https://rehome-backend.vercel.app/auth/login",
         values
       );
+      
       const { token } = response.data;
-      localStorage.setItem("token", token);
+      localStorage.setItem("accessToken", token);
+      
       toast({
-        title: t('common.success'),
-        description: t('auth.login') + " " + t('common.success'),
+        title: t('auth.loginSuccess'),
+        description: t('common.success'),
+        className: "bg-green-50 border-green-200",
       });
-      navigate("/");
-    } catch (error) {
+      
+      navigate("/sell-dash");
+    } catch (error: any) {
       console.error(error);
+      
+      // Extract error message from response if available
+      const errorMsg = error.response?.data?.message || t('auth.loginError');
+      setErrorMessage(errorMsg);
+      
       toast({
         variant: "destructive",
         title: t('common.error'),
-        description: "Invalid credentials. Please try again.",
+        description: errorMsg,
       });
     } finally {
       setLoading(false);
@@ -73,36 +87,59 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-orange-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-md space-y-8"
+      >
         <div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
             {t('auth.login')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {t('auth.dontHaveAccount')}{" "}
-            <a
-              href="/register"
+            <Link
+              to="/register"
               className="font-medium text-orange-600 hover:text-orange-500"
             >
               {t('auth.createAccount')}
-            </a>
+            </Link>
           </p>
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">{t('auth.login')}</CardTitle>
+        
+        {errorMessage && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative"
+            role="alert"
+          >
+            <span className="block sm:inline">{errorMessage}</span>
+          </motion.div>
+        )}
+        
+        <Card className="shadow-lg border-orange-100">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-t-lg">
+            <CardTitle className="text-center text-gray-800">{t('auth.login')}</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('auth.email')}</FormLabel>
+                      <FormLabel className="flex items-center">
+                        <FaEnvelope className="mr-2 text-orange-500" /> {t('auth.email')}
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="example@example.com" {...field} />
+                        <Input 
+                          placeholder="example@example.com" 
+                          className="border-gray-300 focus:border-orange-500 focus:ring-orange-500" 
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -113,11 +150,14 @@ export default function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('auth.password')}</FormLabel>
+                      <FormLabel className="flex items-center">
+                        <FaLock className="mr-2 text-orange-500" /> {t('auth.password')}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="password"
                           placeholder="********"
+                          className="border-gray-300 focus:border-orange-500 focus:ring-orange-500"
                           {...field}
                         />
                       </FormControl>
@@ -127,7 +167,7 @@ export default function LoginPage() {
                 />
                 <Button
                   type="submit"
-                  className="w-full bg-orange-600 hover:bg-orange-700"
+                  className="w-full bg-orange-600 hover:bg-orange-700 transition-colors duration-300"
                   disabled={loading}
                 >
                   {loading ? (
@@ -152,13 +192,13 @@ export default function LoginPage() {
                   </span>
                 </div>
               </div>
-              {/* <div className="mt-6">
+              <div className="mt-6">
                 <ThirdPartyAuth message={googleMessage} />
-              </div> */}
+              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
     </div>
   );
 }
