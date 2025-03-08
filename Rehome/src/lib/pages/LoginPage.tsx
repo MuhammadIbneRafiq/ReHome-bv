@@ -18,7 +18,7 @@ import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
-import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
+// import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
 import { useTranslation } from "react-i18next";
 
 const formSchema = z.object({
@@ -43,7 +43,7 @@ export default function LoginPage() {
       password: "",
     },
   });
-  const googleMessage: string = t('auth.login');
+  // const googleMessage: string = t('auth.login');
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -152,9 +152,9 @@ export default function LoginPage() {
                   </span>
                 </div>
               </div>
-              <div className="mt-6">
+              {/* <div className="mt-6">
                 <ThirdPartyAuth message={googleMessage} />
-              </div>
+              </div> */}
             </div>
           </CardContent>
         </Card>
