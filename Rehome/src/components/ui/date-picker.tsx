@@ -1,4 +1,3 @@
-import * as React from "react"
 import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -45,7 +44,7 @@ export function DatePicker({
           mode="single"
           selected={selected}
           onSelect={onChange}
-          disabled={(date) =>
+          disabled={(date: Date) =>
             minDate ? date < minDate : false
           }
           initialFocus
