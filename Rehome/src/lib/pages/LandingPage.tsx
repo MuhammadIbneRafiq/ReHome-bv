@@ -111,18 +111,21 @@ const LandingPage = () => {
                 
                 {/* Road markings - infinite animation */}
                 <motion.div
-                  className="absolute bottom-16 w-full flex justify-center gap-32"
+                  className="absolute bottom-[14px] w-full flex justify-center"
                   initial={{ x: "100%" }}
                   animate={{ x: "-100%" }}
                   transition={{
-                    duration: 2,
+                    duration: 1.5,
                     repeat: Infinity,
-                    ease: "linear"
+                    ease: "linear",
+                    repeatDelay: 0
                   }}
                 >
-                  {[...Array(8)].map((_, i) => (
-                    <div key={i} className="w-20 h-3 bg-white rounded-sm" />
-                  ))}
+                  <div className="flex gap-12">
+                    {[...Array(20)].map((_, i) => (
+                      <div key={i} className="w-16 h-2 bg-white" style={{ boxShadow: '0 0 8px rgba(255,255,255,0.5)' }} />
+                    ))}
+                  </div>
                 </motion.div>
 
                 {/* Truck with only bouncing motion */}
