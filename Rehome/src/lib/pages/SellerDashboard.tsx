@@ -51,7 +51,7 @@ const SellerDashboard = () => {
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
         if (!token || !user) {
-            toast.error(t('auth.authRequired'));
+            toast.error("Please sign in to access your dashboard");
             navigate('/login');
         }
     }, [user, navigate, t]);
@@ -136,7 +136,7 @@ const SellerDashboard = () => {
         return (
             <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
-                <p className="mt-4 text-gray-600">{t('common.loading')}</p>
+                <p className="mt-4 text-gray-600">Loading your dashboard...</p>
             </div>
         );
     }
@@ -145,7 +145,7 @@ const SellerDashboard = () => {
         return (
             <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                    <strong className="font-bold">{t('common.error')}: </strong>
+                    <strong className="font-bold">Error: </strong>
                     <span className="block sm:inline">{error}</span>
                 </div>
             </div>
@@ -163,7 +163,7 @@ const SellerDashboard = () => {
                     transition={{ duration: 0.5 }}
                     className="text-3xl font-extrabold text-gray-900 mb-6"
                 >
-                    {t('dashboard.welcome')}, {user?.email}!
+                    Welcome back, {user?.email}!
                 </motion.h1>
 
                 {/* Analytics Section */}
@@ -177,9 +177,9 @@ const SellerDashboard = () => {
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <div className="flex items-center justify-between">
                             <FaBoxOpen className="text-orange-500 text-2xl" />
-                            <span className="text-2xl font-semibold">{listings.length}</span> {/* Display the number of listings */}
+                            <span className="text-2xl font-semibold">{listings.length}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">{t('dashboard.activeListing')}</p>
+                        <p className="text-gray-500 mt-2">Active Listings</p>
                     </div>
 
                     {/* Analytics Card - Earnings */}
@@ -188,7 +188,7 @@ const SellerDashboard = () => {
                             <FaMoneyBillWave className="text-green-500 text-2xl" />
                             <span className="text-2xl font-semibold">€{mockAnalytics.earnings}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">{t('dashboard.earnings')}</p>
+                        <p className="text-gray-500 mt-2">Total Earnings</p>
                     </div>
 
                     {/* Analytics Card - Sold Listings */}
@@ -197,7 +197,7 @@ const SellerDashboard = () => {
                             <FaCheckCircle className="text-blue-500 text-2xl" />
                             <span className="text-2xl font-semibold">{soldListings.length}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">{t('dashboard.soldItems')}</p>
+                        <p className="text-gray-500 mt-2">Sold Items</p>
                     </div>
                 </motion.div>
 
@@ -205,33 +205,33 @@ const SellerDashboard = () => {
                 <div>
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-2xl font-semibold text-gray-800">
-                            {t('dashboard.yourListings')}
+                            Your Listings
                         </h2>
                         <button
                             onClick={() => setIsSellModalOpen(true)}
                             className="flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
                         >
-                            <FaPlus className="mr-2" /> {t('dashboard.uploadListing')}
+                            <FaPlus className="mr-2" /> Add New Listing
                         </button>
                     </div>
                     
                     {/* Active Listings Section */}
                     <div className="bg-white rounded-lg shadow-md p-6 mb-8">
                         <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                            <MdOutlineInventory2 className="mr-2 text-orange-500" /> {t('dashboard.activeListing')}
+                            <MdOutlineInventory2 className="mr-2 text-orange-500" /> Active Listings
                         </h3>
                         
                         {/* Check if there are no active listings */}
                         {listings.length === 0 ? (
                             <div className="bg-orange-50 rounded-lg p-8 text-center">
                                 <FaTag className="mx-auto text-orange-400 text-5xl mb-4" />
-                                <h4 className="text-xl font-semibold text-gray-800 mb-2">{t('dashboard.noListings')}</h4>
-                                <p className="text-gray-600 mb-6">{t('dashboard.startSelling')}</p>
+                                <h4 className="text-xl font-semibold text-gray-800 mb-2">No Active Listings</h4>
+                                <p className="text-gray-600 mb-6">Start selling your items today!</p>
                                 <button
                                     onClick={() => setIsSellModalOpen(true)}
                                     className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
                                 >
-                                    <FaUpload className="mr-2" /> {t('dashboard.createFirst')}
+                                    <FaUpload className="mr-2" /> Create Your First Listing
                                 </button>
                             </div>
                         ) : (

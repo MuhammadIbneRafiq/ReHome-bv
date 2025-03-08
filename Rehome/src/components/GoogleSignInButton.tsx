@@ -7,14 +7,11 @@ interface GoogleInterface {
 
 const GoogleSignInButton: React.FC<GoogleInterface> = ({ googleMessage }) => {
     return (
-        <div className="rounded-full w-[230px] h-[46px] bg-white dark:bg-black border-3 border-blue dark:border-gray flex items-center cursor-pointer">
-            <div className='flex pl-4 items-center justify-center'>
-                <img src={googleLogo} className='h-[26px]' alt="Google logo" />
-            </div>
-            <div className='pl-4 font-semibold'>
-                {/* Displaying the dynamic message */}
-                <p>{googleMessage} with Google</p>
-            </div>
+        <div className="flex items-center justify-center w-full">
+            <button className="w-full max-w-[300px] h-[46px] bg-white hover:bg-gray-50 text-gray-800 font-semibold py-2 px-4 border border-gray-300 rounded-md shadow-sm transition-colors duration-200 flex items-center justify-center space-x-2">
+                <img src={googleLogo} className="h-[20px]" alt="Google logo" />
+                <span>{googleMessage}</span>
+            </button>
         </div>
     );
 };

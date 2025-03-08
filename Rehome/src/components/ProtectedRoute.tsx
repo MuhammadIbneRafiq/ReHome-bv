@@ -15,7 +15,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
-      toast.error(t('auth.authRequired'));
+      toast.error(t('Please sign in to continue'));
     }
   }, [isAuthenticated, loading, t]);
 

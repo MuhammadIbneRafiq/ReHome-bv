@@ -1,6 +1,8 @@
 {
   "navbar": {
-    "transportation": "Transport",
+    "home": "Home",
+    "sell": "Verkopen",
+    "transport": "Transport",
     "marketplace": "Marktplaats",
     "specialRequest": "Speciale Aanvraag",
     "itemMoving": "Artikelverplaatsing",
@@ -15,48 +17,52 @@
     "filter": "Filter",
     "sort": "Sorteren",
     "loading": "Laden...",
-    "error": "Er is een fout opgetreden",
-    "success": "Succes",
-    "submit": "Indienen",
+    "error": "Fout",
+    "success": "Gelukt",
+    "submit": "Versturen",
     "cancel": "Annuleren",
-    "save": "Opslaan",
+    "save": "Wijzigingen Opslaan",
     "delete": "Verwijderen",
     "edit": "Bewerken",
-    "view": "Bekijken",
+    "view": "Details Bekijken",
     "close": "Sluiten",
     "back": "Terug",
     "next": "Volgende",
     "previous": "Vorige",
     "apply": "Toepassen",
     "reset": "Resetten",
-    "tip": "Tip"
+    "tip": "Tip",
+    "submitting": "Versturen...",
+    "email": "E-mail",
+    "phone": "Telefoonnummer",
+    "unexpectedError": "Er is een onverwachte fout opgetreden"
   },
   "auth": {
-    "email": "E-mail",
+    "email": "E-mailadres",
     "password": "Wachtwoord",
-    "confirmPassword": "Bevestig Wachtwoord",
+    "confirmPassword": "Wachtwoord Bevestigen",
     "forgotPassword": "Wachtwoord vergeten?",
-    "resetPassword": "Wachtwoord resetten",
-    "createAccount": "Account aanmaken",
+    "resetPassword": "Wachtwoord Resetten",
+    "createAccount": "Account Aanmaken",
     "alreadyHaveAccount": "Heb je al een account?",
-    "dontHaveAccount": "Heb je nog geen account?",
+    "dontHaveAccount": "Nog geen account?",
     "signInWith": "Inloggen met",
     "or": "of",
     "rememberMe": "Onthoud mij",
     "logout": "Uitloggen",
-    "loginSuccess": "Inloggen gelukt!",
-    "loginError": "Inloggen mislukt. Controleer uw gegevens.",
-    "signupSuccess": "Account succesvol aangemaakt!",
-    "signupError": "Account aanmaken mislukt. Probeer het opnieuw.",
+    "loginSuccess": "Welkom terug!",
+    "loginError": "Inloggen niet gelukt. Controleer je gegevens.",
+    "signupSuccess": "Je account is succesvol aangemaakt!",
+    "signupError": "Account aanmaken niet gelukt. Probeer het opnieuw.",
     "requiredField": "Dit veld is verplicht",
     "invalidEmail": "Voer een geldig e-mailadres in",
     "passwordLength": "Wachtwoord moet minimaal 8 tekens bevatten",
     "passwordMismatch": "Wachtwoorden komen niet overeen",
-    "authRequired": "U moet inloggen om deze pagina te bekijken",
+    "authRequired": "Log in om door te gaan",
     "role": "Rol",
     "buyer": "Koper",
     "seller": "Verkoper",
-    "enterEmailBelow": "Voer hieronder uw e-mailadres in om uw account aan te maken"
+    "enterEmailBelow": "Vul je gegevens in om een account aan te maken"
   },
   "homepage": {
     "welcome": "Welkom bij Rehome",
@@ -99,30 +105,64 @@
     "allCities": "Alle steden",
     "checkout": "Afrekenen",
     "processing": "Verwerken...",
-    "holdCtrl": "Houd Ctrl ingedrukt om meerdere steden te selecteren"
+    "holdCtrl": "Houd Ctrl ingedrukt om meerdere steden te selecteren",
+    "filters": "Filters",
+    "selectCategory": "Selecteer Categorie",
+    "selectCondition": "Selecteer Staat",
+    "sold": "VERKOCHT",
+    "soldOut": "Uitverkocht",
+    "noItems": "Geen items gevonden",
+    "errors": {
+      "fetchFailed": "Ophalen van items mislukt. Probeer het opnieuw."
+    },
+    "categories": {
+      "furniture": "Meubels",
+      "electronics": "Elektronica",
+      "clothing": "Kleding",
+      "books": "Boeken",
+      "other": "Overig"
+    },
+    "conditions": {
+      "new": "Nieuw",
+      "likeNew": "Als Nieuw",
+      "good": "Goed",
+      "fair": "Redelijk",
+      "poor": "Matig"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
-    "welcome": "Welkom terug",
-    "yourListings": "Uw advertenties",
+    "welcome": "Welkom terug!",
+    "yourListings": "Jouw Advertenties",
     "orders": "Uw bestellingen",
     "messages": "Berichten",
     "settings": "Accountinstellingen",
-    "newListing": "Nieuwe advertentie maken",
+    "newListing": "Nieuwe Advertentie",
     "analytics": "Statistieken bekijken",
     "logout": "Uitloggen",
-    "uploadListing": "Nieuwe advertentie uploaden",
-    "activeListing": "Actieve advertenties",
-    "soldListing": "Verkochte advertenties",
-    "soldItems": "Verkochte items",
-    "earnings": "Totale inkomsten",
-    "noListings": "U heeft geen actieve advertenties",
-    "startSelling": "Begin met het verkopen van uw items door een nieuwe advertentie te maken",
-    "createFirst": "Maak uw eerste advertentie",
-    "noSoldItems": "Nog geen verkochte items",
-    "soldAppearHere": "Verkochte items verschijnen hier",
-    "promoteListings": "Blijf uw advertenties promoten om verkopen te realiseren",
-    "soldTag": "VERKOCHT"
+    "uploadListing": "Advertentie Toevoegen",
+    "activeListing": "Actieve Advertenties",
+    "soldListing": "Verkochte Items",
+    "soldItems": "Items Verkocht",
+    "earnings": "Totale Inkomsten",
+    "noListings": "Nog geen advertenties",
+    "startSelling": "Begin vandaag met verkopen!",
+    "createFirst": "Maak Je Eerste Advertentie",
+    "noSoldItems": "Nog Geen Items Verkocht",
+    "soldAppearHere": "Je verkochte items verschijnen hier zodra ze zijn gekocht",
+    "promoteListings": "Blijf je advertenties promoten om je eerste verkoop te maken!",
+    "soldTag": "VERKOCHT",
+    "createListing": "Nieuwe Advertentie",
+    "totalEarnings": "Totale Inkomsten",
+    "rating": "Beoordeling",
+    "recentActivity": "Recente Activiteit",
+    "recentListings": "Recente Advertenties",
+    "recentReviews": "Recente Beoordelingen",
+    "noReviews": "Nog geen beoordelingen",
+    "status": {
+      "active": "Actief",
+      "sold": "Verkocht"
+    }
   },
   "moving": {
     "selectDate": "Selecteer een datum",
@@ -135,31 +175,69 @@
     "redirecting": "U wordt doorgestuurd naar de betaalpagina..."
   },
   "itemMoving": {
-    "title": "Artikelverplaatsingsdienst",
-    "subtitle": "Professioneel en betrouwbaar artikeltransport",
-    "getQuote": "Krijg een offerte",
-    "bookNow": "Nu boeken",
-    "howItWorks": "Hoe het werkt",
-    "step1": "Vraag een offerte aan",
-    "step2": "Plan ophaling",
-    "step3": "Wij transporteren",
-    "step4": "Veilige levering",
-    "pricing": "Prijzen",
-    "faq": "Veelgestelde vragen"
+    "title": "Item Transport Service",
+    "requestDetails": "Transport Aanvraag Details",
+    "itemName": "Item Naam",
+    "itemNamePlaceholder": "bijv. Grote Bank",
+    "pickupLocation": "Ophaaladres",
+    "dropoffLocation": "Afleveradres",
+    "locationPlaceholder": "Voer adres of postcode in",
+    "pickupFloor": "Verdieping Ophaaladres",
+    "dropoffFloor": "Verdieping Afleveradres",
+    "dimensions": "Item Afmetingen",
+    "dimensions": {
+      "length": "Lengte (cm)",
+      "width": "Breedte (cm)",
+      "height": "Hoogte (cm)",
+      "weight": "Gewicht (kg)"
+    },
+    "additionalServices": "Extra Services",
+    "disassemblyService": "Item Demonteren/Monteren Service",
+    "moveDate": "Transport Datum",
+    "selectDate": "Kies een datum",
+    "dateFlexible": "Mijn datums zijn flexibel",
+    "contactInfo": "Contactgegevens",
+    "requestQuote": "Offerte Aanvragen",
+    "errors": {
+      "requiredFields": "Vul alle verplichte velden in",
+      "requestFailed": "Aanvraag versturen mislukt. Probeer het opnieuw.",
+      "invalidPrice": "Ongeldige prijs ontvangen van server"
+    },
+    "success": {
+      "title": "Offerte Gegenereerd",
+      "description": "Je transport aanvraag is ontvangen. Je wordt doorgestuurd naar betaling..."
+    }
   },
   "houseMoving": {
-    "title": "Huisverhuisdienst",
-    "subtitle": "Complete huisverhuisoplossingen",
-    "getQuote": "Krijg een offerte",
-    "bookNow": "Nu boeken",
-    "services": "Inbegrepen diensten",
-    "packing": "Inpakken",
-    "loading": "Laden",
-    "transport": "Transport",
-    "unloading": "Uitladen",
-    "unpacking": "Uitpakken",
-    "pricing": "Prijsplannen",
-    "faq": "Veelgestelde vragen"
+    "title": "Verhuisservice",
+    "requestDetails": "Verhuisaanvraag Details",
+    "pickupLocation": "Ophaaladres",
+    "dropoffLocation": "Afleveradres",
+    "locationPlaceholder": "Voer adres of postcode in",
+    "pickupFloor": "Verdieping Ophaaladres",
+    "dropoffFloor": "Verdieping Afleveradres",
+    "itemQuantities": "Aantal Items",
+    "items": {
+      "boxes": "Dozen",
+      "furniture": "Meubelstukken",
+      "appliances": "Apparaten"
+    },
+    "additionalServices": "Extra Services",
+    "disassemblyService": "Meubels Demonteren/Monteren Service",
+    "moveDate": "Verhuisdatum",
+    "selectDate": "Kies een datum",
+    "dateFlexible": "Mijn datums zijn flexibel",
+    "contactInfo": "Contactgegevens",
+    "requestQuote": "Offerte Aanvragen",
+    "errors": {
+      "requiredFields": "Vul alle verplichte velden in",
+      "requestFailed": "Aanvraag versturen mislukt. Probeer het opnieuw.",
+      "invalidPrice": "Ongeldige prijs ontvangen van server"
+    },
+    "success": {
+      "title": "Offerte Gegenereerd",
+      "description": "Je verhuisaanvraag is ontvangen. Je wordt doorgestuurd naar betaling..."
+    }
   },
   "specialRequest": {
     "title": "Speciale Aanvraag",
@@ -196,5 +274,209 @@
     "wooden_dining_table_desc": "Een stevige houten eettafel voor 6 personen.",
     "modern_office_chair": "Moderne Bureaustoel",
     "modern_office_chair_desc": "Een ergonomische bureaustoel voor maximaal comfort."
+  },
+  "sell": {
+    "createListing": "Nieuwe Advertentie",
+    "listingDetails": "Advertentie Details",
+    "itemName": "Naam",
+    "itemNamePlaceholder": "bijv. Comfortabele Bank",
+    "description": "Beschrijving",
+    "descriptionPlaceholder": "Beschrijf je item...",
+    "price": "Prijs",
+    "category": "Categorie",
+    "selectCategory": "Kies een categorie",
+    "condition": "Staat",
+    "selectCondition": "Kies de staat",
+    "location": "Locatie",
+    "locationPlaceholder": "bijv. Amsterdam, 1012 AB",
+    "images": "Foto's",
+    "categories": {
+      "furniture": "Meubels",
+      "electronics": "Elektronica",
+      "clothing": "Kleding",
+      "books": "Boeken",
+      "other": "Overig"
+    },
+    "conditions": {
+      "new": "Nieuw",
+      "likeNew": "Als Nieuw",
+      "good": "Goed",
+      "fair": "Redelijk",
+      "poor": "Matig"
+    }
+  },
+  "landing": {
+    "hero": {
+      "title": "Jouw Complete Oplossing voor Verhuizen en Meubels",
+      "subtitle": "Koop, verkoop en verhuiz meubels met gemak",
+      "browseButton": "Bekijk Marktplaats",
+      "sellButton": "Begin met Verkopen"
+    },
+    "features": {
+      "title": "Wat Wij Bieden",
+      "marketplace": {
+        "title": "Marktplaats",
+        "description": "Koop en verkoop kwaliteitsmeubels tegen goede prijzen"
+      },
+      "moving": {
+        "title": "Verhuisservice",
+        "description": "Professionele verhuisservice voor je meubels"
+      },
+      "selling": {
+        "title": "Makkelijk Verkopen",
+        "description": "Plaats je items snel en bereik meer kopers"
+      }
+    },
+    "howItWorks": {
+      "title": "Hoe Het Werkt",
+      "step1": {
+        "title": "Account Aanmaken",
+        "description": "Registreer en word lid van onze community"
+      },
+      "step2": {
+        "title": "Plaatsen of Zoeken",
+        "description": "Plaats je items of vind wat je nodig hebt"
+      },
+      "step3": {
+        "title": "Contact",
+        "description": "Chat met kopers of verkopers"
+      },
+      "step4": {
+        "title": "Afronden",
+        "description": "Rond je transactie veilig af"
+      }
+    },
+    "cta": {
+      "title": "Klaar om te Beginnen?",
+      "description": "Word vandaag nog lid van duizenden tevreden gebruikers",
+      "button": "Gratis Account Aanmaken"
+    }
+  },
+  "whyChooseUs": {
+    "hero": {
+      "title": "Waarom ReHome?",
+      "subtitle": "Jouw betrouwbare partner voor meubels en verhuizen",
+      "button": "Word Lid van Onze Community"
+    },
+    "reasons": {
+      "title": "Onze Belofte aan Jou",
+      "trust": {
+        "title": "Vertrouwen & Veiligheid",
+        "description": "Veilige transacties en geverifieerde gebruikers voor gemoedsrust"
+      },
+      "service": {
+        "title": "Kwaliteitsservice",
+        "description": "Professionele en betrouwbare service, elke keer weer"
+      },
+      "delivery": {
+        "title": "Eenvoudige Bezorging",
+        "description": "Zorgeloze bezorging en verhuisservice"
+      },
+      "community": {
+        "title": "Sterke Community",
+        "description": "Word lid van een groeiende community van tevreden gebruikers"
+      }
+    },
+    "testimonials": {
+      "title": "Wat Onze Gebruikers Zeggen",
+      "1": {
+        "name": "Sarah Johnson",
+        "role": "Student",
+        "content": "ReHome maakte het meubileren van mijn studentenkamer zo makkelijk en betaalbaar!"
+      },
+      "2": {
+        "name": "Michael van der Berg",
+        "role": "Expat",
+        "content": "De verhuisservice was uitstekend. Professioneel en stipt."
+      },
+      "3": {
+        "name": "Lisa de Vries",
+        "role": "Lokale Bewoner",
+        "content": "Geweldig platform voor het kopen en verkopen van meubels. Zeer aan te raden!"
+      }
+    },
+    "cta": {
+      "title": "Ervaar het ReHome Verschil",
+      "description": "Begin vandaag met kopen, verkopen of verhuizen van meubels",
+      "button": "Bekijk Marktplaats"
+    }
+  },
+  "contact": {
+    "title": "Contact",
+    "info": {
+      "title": "Contactgegevens",
+      "email": {
+        "title": "E-mail",
+        "value": "info@rehome.nl"
+      },
+      "phone": {
+        "title": "Telefoon",
+        "value": "+31 6 1234 5678"
+      },
+      "address": {
+        "title": "Adres",
+        "value": "Amsterdam, Nederland"
+      }
+    },
+    "form": {
+      "title": "Stuur Ons een Bericht",
+      "name": "Naam",
+      "namePlaceholder": "Vul je naam in",
+      "email": "E-mail",
+      "emailPlaceholder": "Vul je e-mailadres in",
+      "subject": "Onderwerp",
+      "subjectPlaceholder": "Waar gaat je bericht over?",
+      "message": "Bericht",
+      "messagePlaceholder": "Schrijf je bericht hier...",
+      "submit": "Verstuur Bericht"
+    },
+    "errors": {
+      "submitFailed": "Bericht versturen mislukt. Probeer het opnieuw."
+    },
+    "success": {
+      "title": "Bericht Verstuurd",
+      "description": "Bedankt voor je bericht. We nemen zo snel mogelijk contact met je op!"
+    }
+  },
+  "aboutUs": {
+    "hero": {
+      "title": "Over ReHome",
+      "subtitle": "Meubels verhuizen en verhandelen toegankelijk voor iedereen",
+      "button": "Neem Contact Op"
+    },
+    "mission": {
+      "title": "Onze Missie",
+      "description": "Wij willen de manier waarop mensen meubels kopen, verkopen en verhuizen revolutionair veranderen. Door kopers en verkopers te verbinden met betrouwbare verhuisservices, maken we het hele proces naadloos en stressvrij."
+    },
+    "values": {
+      "title": "Onze Waarden",
+      "community": {
+        "title": "Community Eerst",
+        "description": "Een betrouwbare community bouwen van kopers, verkopers en verhuizers"
+      },
+      "sustainability": {
+        "title": "Duurzaamheid",
+        "description": "Hergebruik van meubels stimuleren en afval verminderen"
+      },
+      "trust": {
+        "title": "Vertrouwen & Veiligheid",
+        "description": "Zorgen voor veilige transacties en betrouwbare services"
+      },
+      "impact": {
+        "title": "Sociale Impact",
+        "description": "Kwaliteitsmeubels toegankelijk maken voor iedereen"
+      }
+    },
+    "stats": {
+      "users": "Tevreden Gebruikers",
+      "items": "Items Verhandeld",
+      "moves": "Succesvolle Verhuizingen",
+      "satisfaction": "Klanttevredenheid"
+    },
+    "cta": {
+      "title": "Word Lid van Onze Community",
+      "description": "Doe mee met de meubelrevolutie",
+      "button": "Account Aanmaken"
+    }
   }
 } 

@@ -25,10 +25,10 @@ import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
-import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import { AxiosResponse } from "axios";
+import { useTranslation } from "react-i18next";
 
 const formSchema = z.object({
   email: z.string().min(1, { message: "Email is required" }).email({ message: "Invalid email format" }),
@@ -78,7 +78,7 @@ export default function SignupPage() {
     
     try {
       const response = await axiosWithRetry(
-        "http://localhost:3000/auth/signup",
+        'https://rehome-backend.vercel.app/auth/signup',
         {
           email: values.email,
           password: values.password,
@@ -89,8 +89,8 @@ export default function SignupPage() {
         localStorage.setItem("accessToken", response.data.accessToken);
         
         toast({
-          title: "Welcome to ReHome!",
-          description: "Account created successfully. You are now logged in.",
+          title: t('auth.signupSuccess'),
+          description: t('auth.loginSuccess'),
           className: "bg-green-50 border-green-200",
           duration: 3000,
         });
@@ -98,8 +98,8 @@ export default function SignupPage() {
         navigate("/sell-dash");
       } else {
         toast({
-          title: "Account Created",
-          description: "Please log in with your credentials.",
+          title: t('auth.signupSuccess'),
+          description: t('auth.loginError'),
           className: "bg-green-50 border-green-200",
           duration: 3000,
         });
@@ -155,7 +155,7 @@ export default function SignupPage() {
               to="/login"
               className="font-medium text-orange-600 hover:text-orange-500"
             >
-              {t('auth.login')}
+              {t('navbar.login')}
             </Link>
           </p>
         </div>
@@ -173,7 +173,7 @@ export default function SignupPage() {
         
         <Card className="shadow-lg border-orange-100">
           <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-t-lg">
-            <CardTitle className="text-center text-gray-800">{t('auth.createAccount')}</CardTitle>
+            <CardTitle className="text-center text-gray-800">{t('navbar.signup')}</CardTitle>
             <CardDescription className="text-center">
               {t('auth.enterEmailBelow')}
             </CardDescription>

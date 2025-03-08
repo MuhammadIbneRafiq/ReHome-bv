@@ -37,7 +37,7 @@ const Footer = () => {
             to="/item-donation" // Link to the item donation page
             className="rehome-button" // Same styling as the sell button
           >
-            {t('itemMoving.bookNow')}
+            Item Donation
           </Link>
         </div>
       </div>

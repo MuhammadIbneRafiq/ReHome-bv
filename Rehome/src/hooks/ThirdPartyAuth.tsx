@@ -52,7 +52,7 @@ export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ text }) => {
     }
 
     return (
-        <div className="mx-auto rounded-full" onClick={() => googleAuth()}>
+        <div onClick={() => googleAuth()}>
             <GoogleSignInButton googleMessage={text} />
         </div>
     );

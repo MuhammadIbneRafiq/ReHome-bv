@@ -46,7 +46,7 @@ export default function LoginPage() {
       password: "",
     },
   });
-  const googleMessage: string = t('auth.login');
+  const googleMessage: string = t('auth.signInWith');
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
@@ -63,7 +63,7 @@ export default function LoginPage() {
       
       toast({
         title: t('auth.loginSuccess'),
-        description: t('common.success'),
+        description: t('auth.loginSuccess'),
         className: "bg-green-50 border-green-200",
       });
       
@@ -95,7 +95,7 @@ export default function LoginPage() {
       >
         <div>
           <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-            {t('auth.login')}
+            {t('auth.loginSuccess')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             {t('auth.dontHaveAccount')}{" "}
@@ -121,7 +121,7 @@ export default function LoginPage() {
         
         <Card className="shadow-lg border-orange-100">
           <CardHeader className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-t-lg">
-            <CardTitle className="text-center text-gray-800">{t('auth.login')}</CardTitle>
+            <CardTitle className="text-center text-gray-800">{t('navbar.login')}</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
             <Form {...form}>
@@ -176,7 +176,7 @@ export default function LoginPage() {
                       {t('common.loading')}
                     </>
                   ) : (
-                    t('auth.login')
+                    t('navbar.login')
                   )}
                 </Button>
               </form>
