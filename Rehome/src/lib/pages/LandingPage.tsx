@@ -8,49 +8,61 @@ import { FaHandshake, FaStar, FaHome, FaUserGraduate } from "react-icons/fa"; //
 import { Link } from "react-router-dom";
 import { MdCheckCircle, MdSupportAgent } from "react-icons/md";
 import { FurnitureItem } from "../../types/furniture";
+import { useTranslation } from "react-i18next";
+import { translateFurnitureItem } from "../utils/dynamicTranslation";
 
 const LandingPage = () => {
-  // Framer Motion Variants
+  const { t } = useTranslation();
 
-    // Dummy Furniture Data with Images (You can keep this or fetch from API)
-    const dummyData: FurnitureItem[] = [
-        {
-            id: 1,
-            name: "Cozy Sofa",
-            image_url: [sofaImage],
-            description: "A comfortable and stylish sofa for your living room.",
-            price: 299,
-            created_at: new Date().toISOString(),
-            seller_email: "info@rehome.com",
-            city_name: "Amsterdam",
-            sold: false,
-            isrehome: true
-        },
-        {
-            id: 2,
-            name: "Wooden Dining Table",
-            image_url: [tableImage],
-            description: "A sturdy wooden dining table that seats 6 people.",
-            price: 399,
-            created_at: new Date().toISOString(),
-            seller_email: "info@rehome.com",
-            city_name: "Amsterdam",
-            sold: false,
-            isrehome: true
-        },
-        {
-            id: 3,
-            name: "Modern Office Chair",
-            image_url: [chairImage],
-            description: "An ergonomic office chair for maximum comfort.",
-            price: 199,
-            created_at: new Date().toISOString(),
-            seller_email: "info@rehome.com",
-            city_name: "Amsterdam",
-            sold: false,
-            isrehome: true
-        },
-    ];
+  // Dummy Furniture Data with Images (You can keep this or fetch from API)
+  const dummyData: FurnitureItem[] = [
+    {
+      id: 1,
+      name: "Cozy Sofa",
+      image_url: [sofaImage],
+      description: "A comfortable and stylish sofa for your living room.",
+      price: 299,
+      created_at: new Date().toISOString(),
+      seller_email: "info@rehome.com",
+      city_name: "Amsterdam",
+      sold: false,
+      isrehome: true
+    },
+    {
+      id: 2,
+      name: "Wooden Dining Table",
+      image_url: [tableImage],
+      description: "A sturdy wooden dining table that seats 6 people.",
+      price: 399,
+      created_at: new Date().toISOString(),
+      seller_email: "info@rehome.com",
+      city_name: "Amsterdam",
+      sold: false,
+      isrehome: true
+    },
+    {
+      id: 3,
+      name: "Modern Office Chair",
+      image_url: [chairImage],
+      description: "An ergonomic office chair for maximum comfort.",
+      price: 199,
+      created_at: new Date().toISOString(),
+      seller_email: "info@rehome.com",
+      city_name: "Amsterdam",
+      sold: false,
+      isrehome: true
+    },
+  ];
+
+  // Translate furniture items
+  const translatedItems = dummyData.map(item => {
+    const translated = translateFurnitureItem(item);
+    return {
+      ...item,
+      name: translated.name,
+      description: translated.description
+    };
+  });
 
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col">
@@ -71,7 +83,7 @@ const LandingPage = () => {
                 transition={{ duration: 0.7, delay: 0.2 }}
                 className="mt-4 text-xl text-gray-500"
               >
-              Affordable and Flexible Moving Solutions Tailored to Your Needs
+                {t('homepage.heroSubtitle')}
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -83,7 +95,7 @@ const LandingPage = () => {
                   to="/marketplace"
                   className="inline-block rehome-button"
                 >
-                  Explore the Marketplace
+                  {t('homepage.exploreMarketplace')}
                 </Link>
               </motion.div>
             </div>
@@ -102,157 +114,221 @@ const LandingPage = () => {
         </div>
       </div>
 
-      
-
-      
-  
-
-      {/* Features Section */}
-      <div className="py-12 bg-orange-100">
+      {/* Services Section */}
+      <div className="py-16 bg-orange-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-semibold text-gray-800 text-center mb-12">
-            Why Choose ReHome?
-          </h2>
-          <Link to="/why-choose-us">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <motion.div
-              whileHover={{ scale: 1.05, boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)' }}
-              className="bg-white rounded-lg shadow-md p-6"
-            >
-              <FaUserGraduate className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Student-Friendly</h3>
-              <p className="text-gray-600">
-                Ideal for small moves with minimal items.
-              </p>
-            </motion.div>
-            {/* Feature 2 */}
-            <motion.div
-              whileHover={{ scale: 1.05, boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)' }}
-              className="bg-white rounded-lg shadow-md p-6"
-            >
-              <FaHome className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Flexible & Customizable: </h3>
-              <p className="text-lg"></p>
-              <p className="text-gray-600">
-              Pricing based on item count, distance, and floor level.              </p>
-            </motion.div>
-            {/* Feature 3 */}
-            <motion.div
-              whileHover={{ scale: 1.05, boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)' }}
-              className="bg-white rounded-lg shadow-md p-6"
-            >
-              <FaHandshake className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">Collaborative Model: </h3>
-              <p className="text-gray-600">
-              Engage in the moving process to save costs.
-
-              </p>
-            </motion.div>
-          </div>
-          </Link>
-        </div>
-      </div>
-
-      {/* Reviews Section */}
-      <div className="py-12 bg-orange-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-semibold text-gray-800 text-center mb-6">
-            What Our Customers Say
-          </h2>
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <FaStar className="inline-block text-yellow-500 text-4xl mb-2" />
-            <p className="text-xl font-semibold text-gray-800 mb-2">
-              4.8 <span className="text-gray-500">/ 5</span>
-            </p>
-            <p className="text-gray-600 mb-4">Based on 8,100+ Google Reviews</p>
-            <p className="text-gray-700 italic">
-              "Great service, amazing furniture, and a smooth moving experience! Highly recommend."
+          <div className="text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              {t('homepage.services')}
+            </h2>
+            <p className="mt-4 text-lg text-gray-500">
+              {t('homepage.subtitle')}
             </p>
           </div>
-        </div>
-      </div>
-      {/* Featured Items Section */}
-      <div className="py-12 bg-orange-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <h2 className="text-3xl font-semibold text-gray-800 text-center mb-6">Featured Items</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {dummyData.map((item) => (
-                      <motion.div
-                          key={item.id}
-                          className="bg-white shadow-lg rounded-lg p-4 hover:scale-105 transition-transform cursor-pointer"
-                          whileHover={{ scale: 1.05 }} // Add hover animation
-                          onClick={() => window.location.href = '/marketplace'} // Navigate to marketplace on click
-                      >
-                          <img src={item.image_url[0]} alt={item.name} className="w-full h-48 object-cover rounded-md" />
-                          <h3 className="text-xl font-semibold mt-2">{item.name}</h3>
-                          <p className="text-gray-600">{item.description}</p>
-                          <p className="text-red-500 font-bold mt-2">${item.price}</p>
-                      </motion.div>
-                  ))}
+
+          <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Service 1 */}
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
+                    <FaHome className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dt className="text-lg font-medium text-gray-900">
+                      {t('navbar.houseMoving')}
+                    </dt>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <dd className="text-base text-gray-500">
+                    {t('houseMoving.subtitle')}
+                  </dd>
+                </div>
+                <div className="mt-5">
+                  <Link to="/house-moving" className="text-orange-600 hover:text-orange-700">
+                    {t('homepage.learnMore')} &rarr;
+                  </Link>
+                </div>
               </div>
-          </div>
-      </div>
-
-      {/* About Us, Contact Us, Why Choose Us Section */}
-      <div className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* About Us */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">About Us</h3>
-              <p className="text-gray-700">
-                ReHome B.v. is dedicated to providing high-quality, pre-loved furniture and appliances. We are committed to sustainability and helping our customers create beautiful homes.
-              </p>
             </div>
 
-            {/* Contact Us */}
-            <div className="bg-orange-100 rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">Contact Us</h3>
-              <p className="text-gray-700">
-                Have questions or need assistance? Contact us at{" "}
-                <a href="mailto:info@rehome.com" className="text-orange-500">info@rehome.com</a>{" "}
-                or call us at{" "}
-                <a href="tel:+15551234567" className="text-orange-500">+1 (555) 123-4567</a>.
-              </p>
+            {/* Service 2 */}
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
+                    <FaHandshake className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dt className="text-lg font-medium text-gray-900">
+                      {t('navbar.itemMoving')}
+                    </dt>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <dd className="text-base text-gray-500">
+                    {t('itemMoving.subtitle')}
+                  </dd>
+                </div>
+                <div className="mt-5">
+                  <Link to="/item-moving" className="text-orange-600 hover:text-orange-700">
+                    {t('homepage.learnMore')} &rarr;
+                  </Link>
+                </div>
+              </div>
             </div>
 
-            {/* Why Choose Us */}
-             <div className="bg-white rounded-lg shadow-md p-6">
-                <Link to="/why-choose-us">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-4">Why Choose Us</h3>
-                      <ul className="space-y-3">
-                        <motion.li
-                          whileHover={{ scale: 1.05 }}
-                          className="flex items-center text-gray-700"
-                        >
-                          <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Wide selection of quality pre-loved furniture.
-                        </motion.li>
-                        <motion.li
-                          whileHover={{ scale: 1.05 }}
-                          className="flex items-center text-gray-700"
-                        >
-                          <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Sustainable and eco-friendly choices.
-                        </motion.li>
-                        <motion.li
-                          whileHover={{ scale: 1.05 }}
-                          className="flex items-center text-gray-700"
-                        >
-                          <MdSupportAgent className="text-orange-500 mr-2 h-5 w-5" /> Excellent customer service and support.
-                        </motion.li>
-                        <motion.li
-                          whileHover={{ scale: 1.05 }}
-                          className="flex items-center text-gray-700"
-                        >
-                          <MdCheckCircle className="text-orange-500 mr-2 h-5 w-5" /> Competitive pricing.
-                        </motion.li>
-                      </ul>
-                 </Link>
+            {/* Service 3 */}
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
+                    <MdSupportAgent className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dt className="text-lg font-medium text-gray-900">
+                      {t('navbar.specialRequest')}
+                    </dt>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <dd className="text-base text-gray-500">
+                    {t('specialRequest.subtitle')}
+                  </dd>
+                </div>
+                <div className="mt-5">
+                  <Link to="/special-request" className="text-orange-600 hover:text-orange-700">
+                    {t('homepage.learnMore')} &rarr;
+                  </Link>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <Footer /> {/* Use the Footer component here */}
+
+      {/* Featured Items Section */}
+      <div className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              {t('homepage.featuredItems')}
+            </h2>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            {translatedItems.map((item) => (
+              <div key={item.id} className="bg-white overflow-hidden shadow rounded-lg border border-gray-200">
+                <div className="h-48 w-full overflow-hidden">
+                  <img
+                    src={item.image_url[0]}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="px-4 py-5 sm:p-6">
+                  <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
+                  <p className="mt-1 text-sm text-gray-500">{item.description}</p>
+                  <p className="mt-2 text-lg font-semibold text-orange-600">€{item.price}</p>
+                  <div className="mt-4">
+                    <Link
+                      to="/marketplace"
+                      className="text-orange-600 hover:text-orange-700"
+                    >
+                      {t('marketplace.viewDetails')} &rarr;
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <Link
+              to="/marketplace"
+              className="inline-block rehome-button"
+            >
+              {t('homepage.viewAll')}
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Why Choose Us Section */}
+      <div className="py-16 bg-orange-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              {t('homepage.whyChooseUs')}
+            </h2>
+          </div>
+
+          <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2">
+            {/* Reason 1 */}
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                  <MdCheckCircle className="h-6 w-6" />
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900">Professional Service</h3>
+                <p className="mt-2 text-base text-gray-500">
+                  Our team consists of trained professionals who handle your belongings with care.
+                </p>
+              </div>
+            </div>
+
+            {/* Reason 2 */}
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                  <FaStar className="h-6 w-6" />
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900">Quality Guaranteed</h3>
+                <p className="mt-2 text-base text-gray-500">
+                  We guarantee the quality of our service and the condition of marketplace items.
+                </p>
+              </div>
+            </div>
+
+            {/* Reason 3 */}
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                  <FaUserGraduate className="h-6 w-6" />
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900">Experienced Team</h3>
+                <p className="mt-2 text-base text-gray-500">
+                  With years of experience, we know how to handle any moving situation efficiently.
+                </p>
+              </div>
+            </div>
+
+            {/* Reason 4 */}
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                  <FaHandshake className="h-6 w-6" />
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900">Customer Satisfaction</h3>
+                <p className="mt-2 text-base text-gray-500">
+                  Your satisfaction is our priority, and we go the extra mile to ensure it.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
     </div>
   );
 };

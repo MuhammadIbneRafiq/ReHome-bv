@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"; // Import Link
+import { useTranslation } from "react-i18next";
 
 const socialMedia = [
   {
@@ -19,6 +20,8 @@ const socialMedia = [
 ];
 
 const Footer = () => {
+  const { t } = useTranslation();
+
   return (
     <footer className="w-full pt-20 pb-10 bg-gray-100">
       {/* background grid */}
@@ -28,19 +31,19 @@ const Footer = () => {
             to="/sell-dash"
             className="rehome-button"
           >
-            Looking to Sell?
+            {t('dashboard.createListing')}
           </Link>
           <Link
             to="/item-donation" // Link to the item donation page
             className="rehome-button" // Same styling as the sell button
           >
-            Want to Donate Items?
+            {t('itemMoving.bookNow')}
           </Link>
         </div>
       </div>
       <div className="flex mt-16 md:flex-row flex-col justify-around items-center">
         <p className="md:text-base text-sm md:font-normal font-light text-black dark:text-white">
-          Copyright © 2024 ReHome B.v.
+          {t('footer.copyright')}
         </p>
 
         <div className="flex items-center md:gap-3 gap-6">

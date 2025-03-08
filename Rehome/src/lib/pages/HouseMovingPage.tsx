@@ -187,26 +187,26 @@ const HouseMovingPage = () => {
             toast.error("An error occurred while submitting your request.");
         }
 
-        try {
-            const emailResponse = await fetch('https://rehome-backend.vercel.app/api/send-email', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: contactInfo.email,
-                    firstName: contactInfo.firstName,
-                    lastName: contactInfo.lastName,
-                }),
-            });
+        // try {
+        //     const emailResponse = await fetch('https://rehome-backend.vercel.app/api/send-email', {
+        //         method: 'POST',
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         },
+        //         body: JSON.stringify({
+        //             email: contactInfo.email,
+        //             firstName: contactInfo.firstName,
+        //             lastName: contactInfo.lastName,
+        //         }),
+        //     });
 
-            if (!emailResponse.ok) {
-                throw new Error('Failed to send email');
-            }
-            console.log('Email sent successfully!');
-        } catch (error) {
-            console.error('Error sending email:', error);
-        }
+        //     if (!emailResponse.ok) {
+        //         throw new Error('Failed to send email');
+        //     }
+        //     console.log('Email sent successfully!');
+        // } catch (error) {
+        //     console.error('Error sending email:', error);
+        // }
     };
 
     const ElevatorToggle = ({ label, checked, onChange }: {

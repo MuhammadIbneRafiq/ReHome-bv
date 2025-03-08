@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Navbar from "./components/Navbar";
+import { LanguageProvider } from "./hooks/useLanguage";
 
 // Import Pages
 import LandingPage from "./lib/pages/LandingPage";
@@ -33,28 +34,30 @@ const App = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <div className="min-h-screen">
-          <Navbar />
-          <main className="min-h-screen bg-orange-50">
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/marketplace" element={<MarketplacePage />} />
-              <Route path="/house-moving" element={<HouseMovingPage />} />
-              <Route path="/item-moving" element={<ItemMovingPage />} />
-              <Route path="/item-donation" element={<ItemDonationPage />} />
-              <Route path="/special-request" element={<SpecialRequestPage />} />
-              <Route path="/sell-dash" element={<SellerDashboard />} />
-              <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
-              <Route path="/contact-us" element={<ContactUsPage />} />
-              <Route path="/about-us" element={<AboutUsPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<SignupPage />} />
-              {/* <Route path="/pricing" element={<Pricing />} /> */}
-            </Routes>
-          </main>
-        </div>
-      </BrowserRouter>
+      <LanguageProvider>
+        <BrowserRouter>
+          <div className="min-h-screen">
+            <Navbar />
+            <main className="min-h-screen bg-orange-50">
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/marketplace" element={<MarketplacePage />} />
+                <Route path="/house-moving" element={<HouseMovingPage />} />
+                <Route path="/item-moving" element={<ItemMovingPage />} />
+                <Route path="/item-donation" element={<ItemDonationPage />} />
+                <Route path="/special-request" element={<SpecialRequestPage />} />
+                <Route path="/sell-dash" element={<SellerDashboard />} />
+                <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
+                <Route path="/contact-us" element={<ContactUsPage />} />
+                <Route path="/about-us" element={<AboutUsPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<SignupPage />} />
+                {/* <Route path="/pricing" element={<Pricing />} /> */}
+              </Routes>
+            </main>
+          </div>
+        </BrowserRouter>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 };

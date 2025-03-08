@@ -19,6 +19,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
 import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
+import { useTranslation } from "react-i18next";
 
 const formSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email"),
@@ -31,6 +32,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
 
@@ -41,31 +43,28 @@ export default function LoginPage() {
       password: "",
     },
   });
-  const googleMessage: string = "Login";
+  const googleMessage: string = t('auth.login');
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     try {
       const response = await axios.post(
         "https://rehome-backend.vercel.app/auth/login",
-        {
-          email: values.email,
-          password: values.password,
-        }
+        values
       );
-
-      const token = response.data.accessToken;
-      localStorage.setItem("accessToken", token);
-
-      navigate("/marketplace");
-    } catch (error: any) {
-      form.setError("root", {
-        message: error.response.data.error,
-      });
+      const { token } = response.data;
+      localStorage.setItem("token", token);
       toast({
-        title: "Error",
-        description: "An error occurred. Please try again.",
+        title: t('common.success'),
+        description: t('auth.login') + " " + t('common.success'),
+      });
+      navigate("/");
+    } catch (error) {
+      console.error(error);
+      toast({
         variant: "destructive",
+        title: t('common.error'),
+        description: "Invalid credentials. Please try again.",
       });
     } finally {
       setLoading(false);
@@ -73,70 +72,92 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full h-screen pt-24 flex justify-center items-center">
-      <div className="flex w-full max-w-7xl h-full justify-center">
-        <div className="flex w-[50%] px-4 h-full justify-center items-center">
-          <Card className="h-fit max-w-[700px] w-full">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-3xl text-center">Login</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-4">
-              <div className="flex justify-center">
-              </div>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-8"
-                >
-                  <div className="grid gap-4">
-                    <div className="grid gap-2">
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email Address</FormLabel>
-                            <FormControl>
-                              <Input
-                                placeholder="johndoe@gmail.com"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Password</FormLabel>
-                            <FormControl>
-                              <Input {...field} type="password" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    {form.formState.errors.root && (
-                      <FormMessage>
-                        {form.formState.errors.root.message}
-                      </FormMessage>
-                    )}
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading ? <Loader className="animate-spin" /> : "Login"}
-                    </Button>
-                    <ThirdPartyAuth googleMessage={googleMessage}/>
-                  </div>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
+    <div className="flex min-h-screen items-center justify-center bg-orange-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
+            {t('auth.login')}
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            {t('auth.dontHaveAccount')}{" "}
+            <a
+              href="/register"
+              className="font-medium text-orange-600 hover:text-orange-500"
+            >
+              {t('auth.createAccount')}
+            </a>
+          </p>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">{t('auth.login')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('auth.email')}</FormLabel>
+                      <FormControl>
+                        <Input placeholder="example@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('auth.password')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="********"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  type="submit"
+                  className="w-full bg-orange-600 hover:bg-orange-700"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      {t('common.loading')}
+                    </>
+                  ) : (
+                    t('auth.login')
+                  )}
+                </Button>
+              </form>
+            </Form>
+            <div className="mt-6">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="bg-white px-2 text-gray-500">
+                    {t('auth.or')}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-6">
+                <ThirdPartyAuth message={googleMessage} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

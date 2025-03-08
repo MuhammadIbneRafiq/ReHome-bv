@@ -70,7 +70,7 @@ const MarketplacePage = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-orange-50 pt-16 flex items-center justify-center">
-                <p>Loading furniture...backend needs to be faster/animations will be added</p>
+                <p>Loading furniture...backend will be faster/animations will be added</p>
             </div>
         );
     }

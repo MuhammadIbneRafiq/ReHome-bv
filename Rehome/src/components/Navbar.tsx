@@ -8,8 +8,12 @@ import { useAuth } from "../hooks/useAuth";
 import '../index.css';
 import { useState, useEffect, useRef } from 'react'; // Import useRef
 import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../hooks/useLanguage';
 
 export default function Navbar() {
+    const { t } = useTranslation();
+    const { currentLanguage, changeLanguage, languageOptions } = useLanguage();
     const { isAuthenticated } = useAuth();
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
@@ -61,17 +65,8 @@ export default function Navbar() {
         setIsPopupOpen(!isPopupOpen);
     };
 
-    // Dummy Language Options (Replace with your actual language selection logic)
-    const [selectedLanguage, setSelectedLanguage] = useState("en");
-    const languageOptions = [
-        { code: "en", label: "English" },
-        { code: "es", label: "Español" }, // Example
-        // Add more language options as needed
-    ];
-
     const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setSelectedLanguage(event.target.value);
-        // Add your logic to change the language (e.g., update context, etc.)
+        changeLanguage(event.target.value);
     };
 
     return (
@@ -88,7 +83,7 @@ export default function Navbar() {
                     {/* Language Selector */}
                     <div className="ml-6 relative">
                         <select
-                            value={selectedLanguage}
+                            value={currentLanguage}
                             onChange={handleLanguageChange}
                             className="bg-white text-sm text-gray-700 py-2 px-3 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none pr-8"
                         >
@@ -113,22 +108,22 @@ export default function Navbar() {
                                 onClick={toggleDropdown}
                                 className="rehome-nav-link"
                             >
-                                Transportation
+                                {t('navbar.transportation')}
                             </button>
                             <Link to="/marketplace" className="rehome-nav-link">
-                                Marketplace
+                                {t('navbar.marketplace')}
                             </Link>
                             <Link to="/special-request" className="rehome-nav-link">
-                                Special Request
+                                {t('navbar.specialRequest')}
                             </Link>
 
                             {isDropdownOpen && (
                                 <div ref={dropdownRef} className="absolute top-12 bg-white shadow-lg rounded-md  min-w-[150px] z-50"> {/* Added absolute positioning */}
                                     <Link to="/item-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
-                                        Item Moving
+                                        {t('navbar.itemMoving')}
                                     </Link>
                                     <Link to="/house-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
-                                        House Moving
+                                        {t('navbar.houseMoving')}
                                     </Link>
                                 </div>
                             )}
@@ -138,17 +133,17 @@ export default function Navbar() {
                     {!isAuthenticated && (
                         <>
                             <Link to="/register" className="rehome-nav-button">
-                                Sign up
+                                {t('navbar.signup')}
                             </Link>
                             <Link to="/login" className="rehome-nav-button">
-                                Log in
+                                {t('navbar.login')}
                             </Link>
                         </>
                     )}
                     {isAuthenticated && (
                         <>
                             <Link to="/sell-dash" className="rehome-dashboard-button">
-                                Dashboard
+                                {t('navbar.dashboard')}
                             </Link>
                             <UserAvatar />
                         </>
@@ -164,31 +159,31 @@ export default function Navbar() {
                                 <nav className="grid gap-2 p-4 text-sm font-medium">
                                     {/* New Navigation Items (Mobile) */}
                                     <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Marketplace
+                                        {t('navbar.marketplace')}
                                     </Link>
                                     <Link to="/item-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Item Moving/Transport
+                                        {t('navbar.itemMoving')}
                                     </Link>
                                     <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        House Moving
+                                        {t('navbar.houseMoving')}
                                     </Link>
                                     <Link to="/special-request" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Special Request
+                                        {t('navbar.specialRequest')}
                                     </Link>
                                     {!isAuthenticated && (
                                         <>
                                             <Link to="/register" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                                Sign up
+                                                {t('navbar.signup')}
                                             </Link>
                                             <Link to="/login" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                                Log in
+                                                {t('navbar.login')}
                                             </Link>
                                         </>
                                     )}
                                     {isAuthenticated && (
                                         <>
                                             <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                                Dashboard
+                                                {t('navbar.dashboard')}
                                             </Link>
                                         </>
                                     )}
