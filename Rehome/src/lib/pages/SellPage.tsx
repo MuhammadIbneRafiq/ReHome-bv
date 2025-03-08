@@ -34,7 +34,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                 for (const photo of photos) {
                     const formData = new FormData();
                     formData.append('photos', photo);
-                    const uploadResponse = await fetch('http://localhost:3000/api/upload', {
+                    const uploadResponse = await fetch('https://rehome-backend.vercel.app/api/upload', {
                         method: 'POST',
                         body: formData,
                     });
@@ -49,7 +49,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
             }
 
             // 2.  Send the listing data
-            const response = await fetch('http://localhost:3000/api/furniture/new', { // Replace with your actual backend URL
+            const response = await fetch('https://rehome-backend.vercel.app/api/furniture/new', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

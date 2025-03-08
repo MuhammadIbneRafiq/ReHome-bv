@@ -56,7 +56,7 @@ const SellerDashboard = () => {
 
     const deleteListing = async (id: number) => {
         try {
-            await axios.delete(`http://localhost:3000/api/furniture/${id}`, {
+            await axios.delete(`https://rehome-backend.vercel.app/api/furniture/${id}`, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 }
@@ -75,7 +75,7 @@ const SellerDashboard = () => {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:3000/api/furniture', {
+            const response = await fetch('https://rehome-backend.vercel.app/api/furniture', {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

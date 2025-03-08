@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 const fetchCheckoutUrl = async (estimatedPrice: number) => {
     try {
         const response = await axios.post(
-            'http://localhost:3000/mollie', // Update this to your backend URL
+            'https://rehome-backend.vercel.app/mollie', // Update this to your backend URL
             { amount: estimatedPrice },
             {}
         );

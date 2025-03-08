@@ -56,7 +56,10 @@ const SpecialRequestPage = () => {
     };
 
     try {
-      const response = await axios.post('http://localhost:3000/api/special-request', requestData); // Replace with your backend URL
+      const response = await axios.post(
+        'https://rehome-backend.vercel.app/api/special-request', 
+        requestData
+        ); 
       console.log('Server Response:', response.data);
       toast.success('Special request submitted successfully!', {
         position: "top-right",

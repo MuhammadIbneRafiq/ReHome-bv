@@ -22,7 +22,7 @@ const MarketplacePage = () => {
             setError(null);
 
             try {
-                const response = await fetch('http://localhost:3000/api/furniture'); // Adjust the URL if your backend port is different
+                const response = await fetch('https://rehome-backend.vercel.app/api/furniture'); // Use Vercel backend
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -70,7 +70,7 @@ const MarketplacePage = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-orange-50 pt-16 flex items-center justify-center">
-                <p>Loading furniture...</p>
+                <p>Loading furniture...backend needs to be faster/animations will be added</p>
             </div>
         );
     }

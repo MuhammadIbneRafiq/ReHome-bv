@@ -47,7 +47,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const response = await axios.post(
-        "http://localhost:3000/auth/login",
+        "https://rehome-backend.vercel.app/auth/login",
         {
           email: values.email,
           password: values.password,

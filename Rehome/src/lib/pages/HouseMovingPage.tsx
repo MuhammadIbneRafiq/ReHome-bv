@@ -168,7 +168,7 @@ const HouseMovingPage = () => {
 
         console.log('here is the payload', payload);
         try {
-            const response = await fetch("http://localhost:3000/api/item-moving-requests", {
+            const response = await fetch("https://rehome-backend.vercel.app/api/item-moving-requests", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -188,7 +188,7 @@ const HouseMovingPage = () => {
         }
 
         try {
-            const emailResponse = await fetch('http://localhost:3000/api/send-email', {
+            const emailResponse = await fetch('https://rehome-backend.vercel.app/api/send-email', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
