@@ -4,7 +4,7 @@ import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
 import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
 import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
 import { motion } from "framer-motion"; // Import Framer Motion
-import { FaHandshake, FaStar, FaHome, FaUserGraduate } from "react-icons/fa"; // Import Icons
+import { FaHandshake, FaStar, FaHome } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
 import { MdCheckCircle, MdSupportAgent } from "react-icons/md";
 import { FurnitureItem } from "../../types/furniture";
@@ -256,77 +256,58 @@ const LandingPage = () => {
       </div>
 
       {/* Why Choose Us Section */}
-      <div className="py-16 bg-orange-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-              {t('homepage.whyChooseUs')}
-            </h2>
-          </div>
+      <Link to="/why-choose-us" className="block hover:bg-orange-100 transition-colors">
+        <div className="py-16 bg-orange-50 hover:bg-orange-100 transition-colors">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+                Why Choose ReHome?
+              </h2>
+            </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2">
-            {/* Reason 1 */}
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
-                  <MdCheckCircle className="h-6 w-6" />
+            <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2">
+              {/* Reason 1 */}
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                    <MdCheckCircle className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Professional Service</h3>
+                  <p className="mt-2 text-base text-gray-500">
+                    Our team consists of trained professionals who handle your belongings with care.
+                  </p>
                 </div>
               </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">Professional Service</h3>
-                <p className="mt-2 text-base text-gray-500">
-                  Our team consists of trained professionals who handle your belongings with care.
-                </p>
+
+              {/* Reason 2 */}
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                    <FaStar className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Quality Guaranteed</h3>
+                  <p className="mt-2 text-base text-gray-500">
+                    We guarantee the quality of our service and the condition of marketplace items.
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Reason 2 */}
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
-                  <FaStar className="h-6 w-6" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">Quality Guaranteed</h3>
-                <p className="mt-2 text-base text-gray-500">
-                  We guarantee the quality of our service and the condition of marketplace items.
-                </p>
-              </div>
-            </div>
-
-            {/* Reason 3 */}
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
-                  <FaUserGraduate className="h-6 w-6" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">Experienced Team</h3>
-                <p className="mt-2 text-base text-gray-500">
-                  With years of experience, we know how to handle any moving situation efficiently.
-                </p>
-              </div>
-            </div>
-
-            {/* Reason 4 */}
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
-                  <FaHandshake className="h-6 w-6" />
-                </div>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">Customer Satisfaction</h3>
-                <p className="mt-2 text-base text-gray-500">
-                  Your satisfaction is our priority, and we go the extra mile to ensure it.
-                </p>
-              </div>
+            <div className="mt-10 text-center">
+              <span className="inline-flex items-center px-6 py-3 text-base font-medium text-orange-600">
+                Click anywhere to learn more
+                <svg className="ml-2 -mr-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </span>
             </div>
           </div>
         </div>
-      </div>
+      </Link>
 
       <Footer />
     </div>
