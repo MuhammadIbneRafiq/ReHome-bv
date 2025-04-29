@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Navbar from "./components/Navbar";
 import { LanguageProvider } from "./hooks/useLanguage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 
 // Import Pages
 import LandingPage from "./lib/pages/LandingPage";
@@ -18,6 +19,7 @@ import ContactUsPage from "./lib/pages/ContactUsPage";
 import AboutUsPage from "./lib/pages/AboutUsPage";
 import SellerDashboard from "./lib/pages/SellerDashboard";
 import SpecialRequestPage from "./lib/pages/SpecialRequestPage";
+import AdminDashboard from "./lib/pages/AdminDashboard";
 
 
 // const usePostData = <T,>(endpoint: string) => {
@@ -51,6 +53,11 @@ const App = () => {
                   <ProtectedRoute>
                     <SellerDashboard />
                   </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
                 } />
                 <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
                 <Route path="/contact-us" element={<ContactUsPage />} />

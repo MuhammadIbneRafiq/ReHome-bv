@@ -10,12 +10,20 @@ import { useState, useEffect, useRef } from 'react'; // Import useRef
 import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
+import useUserStore from "../services/state/useUserSessionStore";
+
+// List of admin email addresses - keep in sync with AdminRoute.tsx
+const ADMIN_EMAILS = [
+  'muhammadibnerafiq@gmail.com',
+  // Add other admin emails here
+];
 
 export default function Navbar() {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { currentLanguage, changeLanguage, languageOptions } = useLanguage();
     const { isAuthenticated, logout } = useAuth();
+    const user = useUserStore((state) => state.user);
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown
@@ -25,6 +33,14 @@ export default function Navbar() {
     const dropdownRef = useRef<HTMLDivElement>(null); // Ref to the dropdown container
     const transportationButtonRef = useRef<HTMLButtonElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
+
+    // Check if the user is an admin
+    const isAdmin = user && ADMIN_EMAILS.includes(user.email);
+    
+    // Debug logs
+    console.log('Navbar - User:', user?.email);
+    console.log('Navbar - Admin Emails:', ADMIN_EMAILS);
+    console.log('Navbar - Is Admin:', isAdmin);
 
     const toggleDropdown = () => {
         setIsDropdownOpen(!isDropdownOpen);
@@ -188,6 +204,16 @@ export default function Navbar() {
                                         >
                                             {t('dashboard.title')}
                                         </Link>
+                                        {/* Admin Dashboard Link - Only shown for admin users */}
+                                        {isAdmin && (
+                                            <Link 
+                                                to="/admin" 
+                                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                onClick={() => setUserMenuOpen(false)}
+                                            >
+                                                Admin Dashboard
+                                            </Link>
+                                        )}
                                         <button
                                             onClick={handleLogout}
                                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
