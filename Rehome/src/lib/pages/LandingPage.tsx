@@ -3,6 +3,7 @@ import Footer from "../../components/Footer";
 import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
 import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
 import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
+import logoImage from "../../assets/logorehome.jpg"; // Import the ReHome logo
 import { motion } from "framer-motion"; // Import Framer Motion
 import { FaHandshake, FaStar, FaHome } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
@@ -74,8 +75,8 @@ const LandingPage = () => {
               <motion.h1
                 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900"
               >
-                <motion.span className="text-orange-600">Re</motion.span>start and{" "}
-                <motion.span className="text-orange-600">re</motion.span>locate your home and life!
+                <motion.span className="text-orange-600">Re</motion.span>furnish and{" "}
+                <motion.span className="text-orange-600">Re</motion.span>locate your Home
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
@@ -150,11 +151,21 @@ const LandingPage = () => {
                   }}
                   className="absolute bottom-12 left-1/4 transform -translate-x-1/2"
                 >
-                  <img 
-                    src="https://static.vecteezy.com/system/resources/previews/024/800/829/non_2x/a-delivery-truck-flat-design-home-delivery-service-concept-with-a-delivery-van-delivery-van-on-a-highway-flat-illustration-free-png.png" 
-                    alt="Moving Truck" 
-                    className="w-96 h-auto"
-                  />
+                  <div className="relative">
+                    <img 
+                      src="https://static.vecteezy.com/system/resources/previews/024/800/829/non_2x/a-delivery-truck-flat-design-home-delivery-service-concept-with-a-delivery-van-delivery-van-on-a-highway-flat-illustration-free-png.png" 
+                      alt="Moving Truck" 
+                      className="w-96 h-auto"
+                    />
+                    {/* Logo overlay on the truck */}
+                    <div className="absolute top-[15%] left-[20%] transform -translate-x-1/2 -translate-y-1/2 w-30 h-30 flex items-center justify-center overflow-hidden rounded-full border-2 border-white shadow-lg bg-white">
+                      <img 
+                        src={logoImage} 
+                        alt="ReHome Logo" 
+                        className="w-24 h-24 object-contain" 
+                      />
+                    </div>
+                  </div>
                 </motion.div>
               </div>
             </div>

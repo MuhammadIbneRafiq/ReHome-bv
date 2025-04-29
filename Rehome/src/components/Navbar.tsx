@@ -11,6 +11,7 @@ import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
 import useUserStore from "../services/state/useUserSessionStore";
+import logoImage from "../assets/logorehome.jpg"; // Import the ReHome logo
 
 // List of admin email addresses - keep in sync with AdminRoute.tsx
 const ADMIN_EMAILS = [
@@ -115,7 +116,12 @@ export default function Navbar() {
             <ToastContainer />
             <nav aria-label="Main navigation" className="h-16 max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6">
                  <div className="flex items-center">
-                    <Link to="/" className="text-2xl font-bold text-white"> {/* ReHome Text Logo */}
+                    <Link to="/" className="flex items-center text-2xl font-bold text-white"> 
+                        <img 
+                            src={logoImage} 
+                            alt="ReHome Logo" 
+                            className="w-8 h-8 mr-2 rounded-full object-cover border border-white"
+                        />
                         Rehome B.v.
                     </Link>
                     {/* Language Selector */}
