@@ -34,13 +34,6 @@ export default function Navbar() {
     const transportationButtonRef = useRef<HTMLButtonElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
 
-    // Check if the user is an admin
-    const isAdmin = user && ADMIN_EMAILS.includes(user.email);
-    
-    // Debug logs
-    console.log('Navbar - User:', user?.email);
-    console.log('Navbar - Admin Emails:', ADMIN_EMAILS);
-    console.log('Navbar - Is Admin:', isAdmin);
 
     const toggleDropdown = () => {
         setIsDropdownOpen(!isDropdownOpen);

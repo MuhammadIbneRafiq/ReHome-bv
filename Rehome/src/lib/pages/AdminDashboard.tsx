@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit } from 'react-icons/fa';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
-import useUserStore from '../../services/state/useUserSessionStore';
+// import { useNavigate } from 'react-router-dom';
+// import useUserStore from '../../services/state/useUserSessionStore';
 
 // Furniture item interface
 interface FurnitureItem {
@@ -12,7 +12,7 @@ interface FurnitureItem {
   name: string;
   description: string;
   price: number;
-  image_url: string[];
+//   image_url: string[];
   created_at: string;
   city_name: string;
   sold: boolean;
@@ -42,14 +42,14 @@ interface CitySchedule {
   }[];
 }
 
-// List of admin email addresses - keep in sync with AdminRoute.tsx
-const ADMIN_EMAILS = [
-  'muhammadibnerafiq@gmail.com',
-  // Add other admin emails here
-];
+// // List of admin email addresses - keep in sync with AdminRoute.tsx
+// const ADMIN_EMAILS = [
+//   'muhammadibnerafiq@gmail.com',
+//   // Add other admin emails here
+// ];
 
 const AdminDashboard = () => {
-  const navigate = useNavigate();
+//   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'furniture' | 'transport' | 'schedule'>('furniture');
   const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]);
   const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([]);
@@ -61,9 +61,7 @@ const AdminDashboard = () => {
   const [newTimeSlot, setNewTimeSlot] = useState({ start: '08:00', end: '15:00', city: 'Rotterdam' });
   const [editingItem, setEditingItem] = useState<FurnitureItem | null>(null);
   const [editedPrice, setEditedPrice] = useState<number>(0);
-  
-  const user = useUserStore((state) => state.user);
-  
+    
   // Load data on initial render - AdminRoute handles access control
   useEffect(() => {
     fetchData();
@@ -95,7 +93,7 @@ const AdminDashboard = () => {
         name: 'Modern Sofa',
         description: 'Comfortable 3-seater sofa in gray',
         price: 599,
-        image_url: ['/furniture/sofa1.jpg'],
+        // image_url: ['/furniture/sofa1.jpg'],
         created_at: '2023-05-15',
         city_name: 'Amsterdam',
         sold: false
@@ -105,7 +103,7 @@ const AdminDashboard = () => {
         name: 'Coffee Table',
         description: 'Wooden coffee table with glass top',
         price: 249,
-        image_url: ['/furniture/table1.jpg'],
+        // image_url: ['/furniture/table1.jpg'],
         created_at: '2023-05-20',
         city_name: 'Rotterdam',
         sold: false
@@ -115,7 +113,7 @@ const AdminDashboard = () => {
         name: 'Dining Chair Set',
         description: 'Set of 4 dining chairs',
         price: 399,
-        image_url: ['/furniture/chairs1.jpg'],
+        // image_url: ['/furniture/chairs1.jpg'],
         created_at: '2023-05-25',
         city_name: 'Utrecht',
         sold: true
@@ -385,9 +383,8 @@ const AdminDashboard = () => {
                             <tr key={item.id}>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center">
-                                  <div className="h-10 w-10 flex-shrink-0 mr-3">
-                                    <img className="h-10 w-10 rounded-full object-cover" src={item.image_url[0] || '/placeholder.jpg'} alt="" />
-                                  </div>
+                                    {/* <img className="h-10 w-10 rounded-full object-cover" src={item.image_url[0] || '/placeholder.jpg'} alt="" /> */}
+                                  
                                   <div className="text-sm font-medium text-gray-900">{item.name}</div>
                                 </div>
                               </td>
