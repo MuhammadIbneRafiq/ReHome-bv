@@ -16,6 +16,7 @@ import useUserStore from "../services/state/useUserSessionStore";
 const ADMIN_EMAILS = [
   'muhammadibnerafiq@gmail.com',
   // Add other admin emails here
+  'samuel.stroehle8@gmail.com',
 ];
 
 export default function Navbar() {

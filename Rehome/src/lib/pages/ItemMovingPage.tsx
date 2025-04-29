@@ -234,6 +234,7 @@ const ItemMovingPage = () => {
         };
 
         try {
+            // Submit the moving request
             const response = await fetch("https://rehome-backend.vercel.app/api/item-moving-requests", {
                 method: "POST",
                 headers: {
@@ -247,9 +248,32 @@ const ItemMovingPage = () => {
                 throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
             }
 
-            toast.success("Request submitted successfully!", {
+            // Send confirmation email
+            try {
+                const emailResponse = await fetch("https://rehome-backend.vercel.app/api/send-email", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        email: contactInfo.email,
+                        firstName: contactInfo.firstName,
+                        lastName: contactInfo.lastName
+                    }),
+                });
+                
+                if (emailResponse.ok) {
+                    console.log("Confirmation email sent successfully");
+                } else {
+                    console.error("Failed to send confirmation email");
+                }
+            } catch (emailError) {
+                console.error("Error sending confirmation email:", emailError);
+            }
+
+            toast.success("Request submitted successfully! Check your email for confirmation.", {
                 position: "top-right",
-                autoClose: 3000,
+                autoClose: 5000,
                 hideProgressBar: false,
                 closeOnClick: true,
                 pauseOnHover: true,
