@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from 'react-toastify';
@@ -18,38 +18,17 @@ const ADMIN_EMAILS = [
 const AdminRoute = ({ children }: AdminRouteProps) => {
   const { isAuthenticated, loading } = useAuth();
   const user = useUserStore((state) => state.user);
-  // const location = useLocation();
+  const location = useLocation();
   const { t } = useTranslation();
-  
-  // Ref to track if toast has been shown
-  // const toastShownRef = useRef(false);
 
-  // Check if the user's email is in the admin emails list
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email);
-  
-  // For debugging
+  // Debug logs
   console.log('AdminRoute - User:', user?.email);
-  console.log('AdminRoute - Is Admin:', isAdmin);
-  console.log('AdminRoute - Is Authenticated:', isAuthenticated);
+  console.log('AdminRoute - Admin Access:', user && ADMIN_EMAILS.includes(user.email));
+  console.log('AdminRoute - Authenticated:', isAuthenticated);
   console.log('AdminRoute - Loading:', loading);
 
-  // useEffect(() => {
-  //   // Only show toast if it hasn't been shown already
-  //   if (toastShownRef.current) return;
-    
-  //   if (!loading) {
-  //     if (!isAuthenticated) {
-  //       toast.error(t('Please sign in to continue'));
-  //       toastShownRef.current = true;
-  //     } else if (!isAdmin) {
-  //       toast.error(t('Admin access required'));
-  //       toastShownRef.current = true;
-  //     }
-  //   }
-  // }, [isAuthenticated, loading, t, isAdmin]);
-
+  // Loading state
   if (loading) {
-    // Show loading state while checking authentication
     return (
       <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
@@ -58,18 +37,24 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
     );
   }
 
-  // // If not authenticated, redirect to login page with the return URL
-  // if (!isAuthenticated) {
-  //   return <Navigate to="/login" state={{ from: location }} replace />;
-  // }
-
-  // // If authenticated but not admin, redirect to home page
-  // if (!isAdmin) {
-  //   return <Navigate to="/" replace />;
-  // }
-
-  // If authenticated and admin, render the protected component
-  return <>{children}</>;
+  // Already logged in, check if admin
+  if (isAuthenticated && user) {
+    // Check if user email is in admin list
+    const isAdmin = ADMIN_EMAILS.includes(user.email);
+    
+    if (isAdmin) {
+      // User is authenticated and admin, render the protected component
+      return <>{children}</>;
+    } else {
+      // User is authenticated but not admin, redirect to home
+      toast.error('Admin access required');
+      return <Navigate to="/" replace />;
+    }
+  }
+  
+  // Not authenticated, redirect to login
+  toast.error('Please sign in to continue');
+  return <Navigate to="/login" state={{ from: location }} replace />;
 };
 
 export default AdminRoute; 

@@ -51,7 +51,14 @@ export default function Navbar() {
     };
 
     const handleLogout = () => {
+        // Clear local storage
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("token");
+        
+        // Call the auth logout function
         logout();
+        
+        // Navigate and close menu
         navigate('/');
         setUserMenuOpen(false);
     };
@@ -205,7 +212,7 @@ export default function Navbar() {
                                             {t('dashboard.title')}
                                         </Link>
                                         {/* Admin Dashboard Link - Only shown for admin users */}
-                                        {isAdmin && (
+                                        {user && ADMIN_EMAILS.includes(user.email) && (
                                             <Link 
                                                 to="/admin" 
                                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

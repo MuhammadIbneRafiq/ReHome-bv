@@ -8,7 +8,6 @@ import {
 
 import { Button } from "./ui/button";
 import { User } from "lucide-react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "./ui/use-toast";
 import useUserStore from "@/services/state/useUserSessionStore";
@@ -19,21 +18,23 @@ export default function UserAvatar() {
     const setUser = useUserStore((state) => state.setUser);
     const user = useUserStore((state) => state.user);
 
-    async function logout() {
+    function logout() {
         try {
-            await axios.post(
-                "https://rehome-backend.vercel.app/auth/logout",
-                {},
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem(
-                            "accessToken"
-                        )}`,
-                    },
-                }
-            );
-            localStorage.clear();
+            // Clear local storage
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("token");
+            
+            // Clear user from store
             setUser(undefined);
+            
+            // Show success message
+            toast({
+                title: "Logged out successfully",
+                description: "You have been logged out successfully.",
+                variant: "default",
+            });
+            
+            // Navigate to login page
             navigate("/login");
         } catch (error) {
             console.error("Failed to logout:", error);

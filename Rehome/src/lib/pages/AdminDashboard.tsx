@@ -64,24 +64,10 @@ const AdminDashboard = () => {
   
   const user = useUserStore((state) => state.user);
   
-  // Admin authentication check
+  // Load data on initial render - AdminRoute handles access control
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const isAdmin = user && ADMIN_EMAILS.includes(user.email);
-    
-    console.log('AdminDashboard - User:', user?.email);
-    console.log('AdminDashboard - Is Admin:', isAdmin);
-    
-    if (!token || !user) {
-      // Let the AdminRoute handle the redirect
-      navigate('/login');
-    } else if (!isAdmin) {
-      // Let the AdminRoute handle this case
-      navigate('/');
-    } else {
-      fetchData();
-    }
-  }, [user, navigate]);
+    fetchData();
+  }, []);
   
   // Fetch all necessary data
   const fetchData = async () => {
