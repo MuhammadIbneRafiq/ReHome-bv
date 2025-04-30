@@ -12,6 +12,9 @@ interface AdminRouteProps {
 // List of admin email addresses
 const ADMIN_EMAILS = [
   'muhammadibnerafiq@gmail.com',
+  'egzmanagement@gmail.com',
+  'samuel.stroehle8@gmail.com',
+  'info@rehomebv.com'
   // Add other admin emails here
 ];
 

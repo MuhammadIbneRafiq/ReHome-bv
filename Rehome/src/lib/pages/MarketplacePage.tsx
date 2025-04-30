@@ -126,8 +126,24 @@ const MarketplacePage = () => {
                     <div>
                         {/* Search and Filter */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {/* Search on Left */}
+                            {/* Filter and Search on Left */}
                             <div className="md:col-span-1">
+                                <h3 className="text-xl font-semibold mb-4">Create listing:</h3>
+                                <p className="text-sm mb-4">Similar to <a href="https://www.marktplaats.nl" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline">Marktplaats</a></p>
+                                
+                                <div className="mb-6 bg-white rounded-lg shadow p-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h4 className="font-medium">Sell Your Items</h4>
+                                        <button 
+                                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded"
+                                            onClick={() => window.location.href = '/sell-dash'}
+                                        >
+                                            Create Listing
+                                        </button>
+                                    </div>
+                                    <p className="text-sm text-gray-600">Create a new listing to sell your pre-loved items</p>
+                                </div>
+                                
                                 <MarketplaceSearch onSearch={handleSearch} />
                                 <MarketplaceFilter 
                                     items={furnitureItems} 
