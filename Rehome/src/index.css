@@ -13,8 +13,7 @@
 }
 html {
     height: 100%;
-    background-color: rgba(239, 172, 133, 0.977) !important;
-    color: rgb(223, 219, 214); /* Ensure text is readable */
+    color: inherit;
 }
 
 

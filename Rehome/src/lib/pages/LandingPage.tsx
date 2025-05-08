@@ -158,11 +158,12 @@ const LandingPage = () => {
                       className="w-96 h-auto"
                     />
                     {/* Logo overlay on the truck */}
-                    <div className="absolute top-[15%] left-[20%] transform -translate-x-1/2 -translate-y-1/2 w-30 h-30 flex items-center justify-center overflow-hidden rounded-full border-2 border-white shadow-lg bg-white">
+                    <div className="absolute top-[20%] left-[15%] transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 flex items-center justify-center overflow-hidden rounded-lg">
+                      <div className="absolute inset-0 bg-[#F97316]"></div>
                       <img 
                         src={logoImage} 
                         alt="ReHome Logo" 
-                        className="w-24 h-24 object-contain" 
+                        className="w-24 h-24 object-contain relative z-10" 
                       />
                     </div>
                   </div>
