@@ -11,9 +11,11 @@ import { MdCheckCircle, MdSupportAgent } from "react-icons/md";
 import { FurnitureItem } from "../../types/furniture";
 import { useTranslation } from "react-i18next";
 import { translateFurnitureItem } from "../utils/dynamicTranslation";
+import { useState } from "react";
 
 const LandingPage = () => {
   const { t } = useTranslation();
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Dummy Furniture Data with Images (You can keep this or fetch from API)
   const dummyData: FurnitureItem[] = [
@@ -71,9 +73,10 @@ const LandingPage = () => {
       <div className="bg-white py-20 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            <div>
+            {/* Left: Text */}
+            <div className="flex flex-col justify-center items-start">
               <motion.h1
-                className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900"
+                className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-2"
               >
                 <motion.span className="text-orange-600">Re</motion.span>furnish and{" "}
                 <motion.span className="text-orange-600">Re</motion.span>locate your Home
@@ -82,9 +85,9 @@ const LandingPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
-                className="mt-4 text-xl text-gray-500"
+                className="mt-2 text-lg text-gray-500"
               >
-                {t('homepage.heroSubtitle')}
+                Display Affordable House Moving and Transport for your Items.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -92,16 +95,17 @@ const LandingPage = () => {
                 transition={{ duration: 0.7, delay: 0.4 }}
                 className="mt-8"
               >
-                <Link
-                  to="/marketplace"
+                <button
                   className="inline-block rehome-button"
+                  onClick={() => setShowBookingModal(true)}
                 >
-                  {t('homepage.exploreMarketplace')}
-                </Link>
+                  Start Booking Process
+                </button>
               </motion.div>
             </div>
+            {/* Right: Truck Image */}
             <div>
-              <div className="relative h-[300px] overflow-hidden">
+              <div className="relative h-[300px] overflow-hidden flex items-center justify-center">
                 {/* Road background */}
                 <motion.div
                   className="absolute bottom-0 w-full h-32 bg-gray-800"
@@ -109,7 +113,6 @@ const LandingPage = () => {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 />
-                
                 {/* Road markings - infinite animation */}
                 <motion.div
                   className="absolute bottom-[14px] w-full flex justify-center"
@@ -128,8 +131,7 @@ const LandingPage = () => {
                     ))}
                   </div>
                 </motion.div>
-
-                {/* Truck with only bouncing motion */}
+                {/* Truck with orange box and logo overlay */}
                 <motion.div
                   animate={{
                     y: [-2, 2],
@@ -149,21 +151,22 @@ const LandingPage = () => {
                       ease: "easeInOut"
                     }
                   }}
-                  className="absolute bottom-12 left-1/4 transform -translate-x-1/2"
+                  className="absolute bottom-12 left-1/2 transform -translate-x-1/2"
                 >
-                  <div className="relative">
+                  <div className="relative flex items-center">
+                    {/* Truck base image (hide original box) */}
                     <img 
                       src="https://static.vecteezy.com/system/resources/previews/024/800/829/non_2x/a-delivery-truck-flat-design-home-delivery-service-concept-with-a-delivery-van-delivery-van-on-a-highway-flat-illustration-free-png.png" 
                       alt="Moving Truck" 
                       className="w-96 h-auto"
+                      style={{ filter: 'brightness(0.85)' }}
                     />
-                    {/* Logo overlay on the truck */}
-                    <div className="absolute top-[20%] left-[15%] transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 flex items-center justify-center overflow-hidden rounded-lg">
-                      <div className="absolute inset-0 bg-[#F97316]"></div>
+                    {/* Orange box overlay */}
+                    <div className="absolute top-[0%] left-[0%] w-[195px] h-[109px] bg-[#F97316] rounded-md flex items-center justify-center z-10">
                       <img 
                         src={logoImage} 
                         alt="ReHome Logo" 
-                        className="w-24 h-24 object-contain relative z-10" 
+                        className="w-16 h-16 object-contain" 
                       />
                     </div>
                   </div>
@@ -173,6 +176,20 @@ const LandingPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Booking Modal */}
+      {showBookingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+            <h3 className="text-xl font-bold mb-4 text-gray-900">Choose Service</h3>
+            <div className="flex flex-col gap-4">
+              <Link to="/item-transport" className="rehome-button text-center">Item Transport</Link>
+              <Link to="/house-moving" className="rehome-button text-center">House Moving</Link>
+            </div>
+            <button className="mt-6 text-gray-500 hover:text-orange-600" onClick={() => setShowBookingModal(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* Services Section */}
       <div className="py-16 bg-orange-50">

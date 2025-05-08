@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart } from "react-icons/fa";
 import logo from "../../src/assets/logorehome.jpg";
 import { useNavigate } from 'react-router-dom';
+import dayjs from 'dayjs';
 
 interface ItemDetailsModalProps {
   isOpen: boolean;
@@ -32,8 +33,14 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   if (!isOpen || !item) return null;
   const navigate = useNavigate(); // Initialize navigate
 
-  const { id, name, description, image_url, price, city_name, sold } = item;
+  const { id, name, description, image_url, price, city_name, sold, seller_email } = item;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  // Bidding system state
+  const [bids, setBids] = useState<{amount: number, user: string, time: string}[]>([]);
+  const [messages, setMessages] = useState<string[]>([]);
+  const [showBidModal, setShowBidModal] = useState(false);
+  const [bidAmount, setBidAmount] = useState('');
+  const [bidError, setBidError] = useState('');
 
   const goToNextImage = () => {
     setCurrentImageIndex(prev => (prev + 1) % image_url.length);
@@ -41,6 +48,33 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
   const goToPrevImage = () => {
     setCurrentImageIndex(prev => (prev - 1 + image_url.length) % image_url.length);
+  };
+
+  // Get highest bid
+  const highestBid = bids.length > 0 ? Math.max(...bids.map(b => b.amount)) : null;
+
+  // Handle bid submit
+  const handleBidSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseFloat(bidAmount);
+    if (isNaN(amount) || amount <= 0) {
+      setBidError('Please enter a valid bid amount.');
+      return;
+    }
+    if (highestBid && amount <= highestBid) {
+      setBidError('Your bid must be higher than the current highest bid.');
+      return;
+    }
+    // Add bid
+    setBids(prev => [...prev, { amount, user: 'You', time: dayjs().format('YYYY-MM-DD HH:mm') }]);
+    // Add message
+    setMessages(prev => [
+      ...prev,
+      `Hi, I placed a bid of €${amount} for your item ${name}. Let me know if you're interested!`
+    ]);
+    setShowBidModal(false);
+    setBidAmount('');
+    setBidError('');
   };
 
   return (
@@ -128,6 +162,54 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   </span>
                 </div>
                 
+                {/* Bidding Section */}
+                <div className="mb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Bids:</span>
+                    {bids.length === 0 ? (
+                      <span className="text-gray-500">Make the first bid now</span>
+                    ) : (
+                      <span className="text-orange-600 font-bold">Highest bid: €{highestBid}</span>
+                    )}
+                    <button
+                      className="ml-4 px-4 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                      onClick={() => setShowBidModal(true)}
+                    >
+                      Bid
+                    </button>
+                  </div>
+                </div>
+
+                {/* Bid/Message Overview */}
+                {(bids.length > 0 || messages.length > 0) && (
+                  <div className="mb-4 bg-orange-50 p-3 rounded">
+                    <h4 className="font-semibold mb-2 text-orange-700">Bid/Message Overview</h4>
+                    {bids.length > 0 && (
+                      <div className="mb-2">
+                        <div className="font-medium text-gray-700 mb-1">Bids:</div>
+                        <ul className="text-sm text-gray-800 space-y-1">
+                          {bids.map((bid, idx) => (
+                            <li key={idx} className="flex justify-between">
+                              <span>€{bid.amount} by {bid.user}</span>
+                              <span className="text-gray-400">{bid.time}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {messages.length > 0 && (
+                      <div>
+                        <div className="font-medium text-gray-700 mb-1">Messages:</div>
+                        <ul className="text-sm text-gray-800 space-y-1">
+                          {messages.map((msg, idx) => (
+                            <li key={idx}>{msg}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 text-gray-600">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
@@ -167,6 +249,34 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Bid Modal */}
+        {showBidModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-xs w-full relative">
+              <button className="absolute top-2 right-2 text-gray-400 hover:text-orange-600 text-xl" onClick={() => setShowBidModal(false)}>&times;</button>
+              <h3 className="text-lg font-bold mb-4 text-orange-700">Bids</h3>
+              <form onSubmit={handleBidSubmit}>
+                <label className="block text-gray-700 mb-2 font-medium">Your bid</label>
+                <input
+                  type="number"
+                  min={highestBid ? highestBid + 1 : 1}
+                  step="0.01"
+                  value={bidAmount}
+                  onChange={e => setBidAmount(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="Enter your bid"
+                  required
+                />
+                {bidError && <div className="text-red-500 text-sm mb-2">{bidError}</div>}
+                <div className="flex justify-between mt-4">
+                  <button type="button" className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" onClick={() => setShowBidModal(false)}>Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">Place bid</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
