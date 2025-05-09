@@ -33,7 +33,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   if (!isOpen || !item) return null;
   const navigate = useNavigate(); // Initialize navigate
 
-  const { id, name, description, image_url, price, city_name, sold, seller_email } = item;
+  const { id, name, description, image_url, price, city_name, sold } = item;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   // Bidding system state
   const [bids, setBids] = useState<{amount: number, user: string, time: string}[]>([]);

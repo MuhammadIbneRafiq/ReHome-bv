@@ -175,21 +175,20 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Booking Modal */}
-      {showBookingModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
-            <h3 className="text-xl font-bold mb-4 text-gray-900">Choose Service</h3>
-            <div className="flex flex-col gap-4">
-              <Link to="/item-transport" className="rehome-button text-center">Item Transport</Link>
-              <Link to="/house-moving" className="rehome-button text-center">House Moving</Link>
+        {/* Booking Modal */}
+        {showBookingModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+              <h3 className="text-xl font-bold mb-4 text-gray-900">Choose Service</h3>
+              <div className="flex flex-col gap-4">
+                <Link to="/item-transport" className="rehome-button text-center">Item Transport</Link>
+                <Link to="/house-moving" className="rehome-button text-center">House Moving</Link>
+              </div>
+              <button className="mt-6 text-gray-500 hover:text-orange-600" onClick={() => setShowBookingModal(false)}>Cancel</button>
             </div>
-            <button className="mt-6 text-gray-500 hover:text-orange-600" onClick={() => setShowBookingModal(false)}>Cancel</button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Services Section */}
       <div className="py-16 bg-orange-50">
