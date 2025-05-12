@@ -20,6 +20,15 @@ const furnitureItems = [
 // Define a type for the valid city keys
 type City = 'Amsterdam' | 'Rotterdam';  
 
+const itemCategories = [
+  { name: "Bathroom Furniture", items: ["Cabinet", "Mirror", "Sink"] },
+  { name: "Sofa's and Chairs", items: ["Sofa", "Armchair", "Office Chair", "Chair"] },
+  { name: "Tables", items: ["Dining Table", "Coffee Table", "Side Table", "TV Table"] },
+  { name: "Appliances", items: ["Washing Machine", "Fridge", "Freezer", "Oven"] },
+  { name: "Bedroom", items: ["Bed", "Wardrobe", "Closet", "Drawer"] },
+  { name: "Others", items: ["Lamp", "Curtain", "Carpet", "Plant", "Vase", "Kitchen Equipment"] }
+];
+
 const ItemMovingPage = () => {
     const [step, setStep] = useState(1);
     const [disassembly, setDisassembly] = useState(false);
@@ -55,6 +64,8 @@ const ItemMovingPage = () => {
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({}); // State to track disassembly items
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({}); // State to track extra helper items
+    const [preferredTimeSpan, setPreferredTimeSpan] = useState(''); // State for preferred time span
+    const [selectedItems, setSelectedItems] = useState<{ [item: string]: { quantity: number, photo?: File|null } }>({});
 
     // Update the function to use the City type
     const checkCityDay = (location: string, date: string): boolean => {
@@ -148,8 +159,8 @@ const ItemMovingPage = () => {
                 toast.error("Please enter a valid email address.");
                 return;
             }
-            // Basic phone validation (allows different formats)
-            const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+            // Basic phone validation (E.164 international format)
+            const phoneRegex = /^\+?[1-9]\d{1,14}$/;
             if (!phoneRegex.test(contactInfo.phone)) {
                 toast.error("Please enter a valid phone number.");
                 return;
@@ -193,7 +204,7 @@ const ItemMovingPage = () => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(contactInfo.email)) return false;
         
-        const phoneRegex = /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/;
+        const phoneRegex = /^\+?[1-9]\d{1,14}$/;
         if (!phoneRegex.test(contactInfo.phone)) return false;
         
         return true;
@@ -455,48 +466,43 @@ const ItemMovingPage = () => {
                             >
                                 {/* Step 3: Item Selection and Add-ons (for Private Home) */}
                                 <h2 className="text-xl font-semibold text-gray-800 mb-4">Item Selection</h2>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Item List (Select Items)</label>
-                                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {/* Force 2 columns */}
-                                        {furnitureItems.map((item) => (
-                                            <div key={item.id} className="flex items-center justify-between px-4 py-2 rounded-md shadow-sm bg-white">
-                                                <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                                                <div className="flex items-center space-x-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => decrementItem(item.id)}
-                                                        disabled={!itemQuantities[item.id]}
-                                                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-2 rounded-full focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
-                                                    >
-                                                        <FaMinus className="h-4 w-4" />
-                                                    </button>
-                                                    <span className="text-base font-semibold text-gray-800">{itemQuantities[item.id] || 0}</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => incrementItem(item.id)}
-                                                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-1 px-2 rounded-full focus:outline-none focus:shadow-outline"
-                                                    >
-                                                        <FaPlus className="h-4 w-4" />
-                                                    </button>
+                                {itemCategories.map(cat => (
+                                    <div key={cat.name} className="mb-4">
+                                        <h3 className="font-bold text-gray-700 mb-2">{cat.name}</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                            {cat.items.map(item => (
+                                                <div key={item} className="flex items-center gap-2 bg-gray-50 p-2 rounded">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!selectedItems[item]}
+                                                        onChange={e => {
+                                                            setSelectedItems(prev => e.target.checked ? { ...prev, [item]: { quantity: 1 } } : Object.fromEntries(Object.entries(prev).filter(([k]) => k !== item)));
+                                                        }}
+                                                    />
+                                                    <span>{item}</span>
+                                                    {selectedItems[item] && (
+                                                        <>
+                                                            <input
+                                                                type="number"
+                                                                min={1}
+                                                                value={selectedItems[item].quantity}
+                                                                onChange={e => setSelectedItems(prev => ({ ...prev, [item]: { ...prev[item], quantity: Number(e.target.value) } }))}
+                                                                className="w-16 ml-2 border rounded"
+                                                            />
+                                                            <input
+                                                                type="file"
+                                                                accept="image/*"
+                                                                onChange={e => setSelectedItems(prev => ({ ...prev, [item]: { ...prev[item], photo: e.target.files?.[0] || null } }))}
+                                                                className="ml-2"
+                                                            />
+                                                            {selectedItems[item].photo && <img src={URL.createObjectURL(selectedItems[item].photo!)} alt="preview" className="h-10 w-10 object-cover rounded ml-2" />}
+                                                        </>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="mt-4">
-                                    <label htmlFor="customItem" className="block text-sm font-medium text-gray-700">
-                                        Can't find your item? Add them here
-                                    </label>
-                                    <input
-                                        type="text"
-                                        id="customItem"
-                                        value={customItem}
-                                        onChange={(e) => setCustomItem(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                        placeholder="Enter item name"
-                                    />
-                                </div>
+                                ))}
                             </motion.div>
                         )}
 
@@ -725,6 +731,21 @@ const ItemMovingPage = () => {
                                         <label htmlFor="flexibleDate" className="font-medium text-gray-700">Is your date flexible?</label>
                                     </div>
                                 </div>
+                                <div className="mt-4">
+                                    <label htmlFor="preferredTimeSpan" className="block text-sm font-medium text-gray-700">Preferred Time Span</label>
+                                    <select
+                                        id="preferredTimeSpan"
+                                        value={preferredTimeSpan}
+                                        onChange={e => setPreferredTimeSpan(e.target.value)}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                        required
+                                    >
+                                        <option value="">Select a time span</option>
+                                        <option value="8-12">8-12</option>
+                                        <option value="12-16">12-16</option>
+                                        <option value="16-20">16-20</option>
+                                    </select>
+                                </div>
                             </motion.div>
                         )}
 
@@ -841,29 +862,18 @@ const ItemMovingPage = () => {
                                         <h3 className="text-lg font-bold mb-2 flex items-center">
                                             <FaCube className="mr-2 text-gray-600" /> Item List
                                         </h3>
-                                        {Object.entries(itemQuantities).map(([id, qty]) => (
+                                        {Object.entries(selectedItems).map(([item, data]) => (
                                             <motion.div
-                                                key={id}
+                                                key={item}
                                                 className="flex justify-between py-1 text-gray-700 opacity-80"
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{ duration: 0.3 }}
                                             >
-                                                <span>{furnitureItems.find(i => i.id === id)?.name || 'Unknown Item'}</span>
-                                                <span>x{qty}</span>
+                                                <span>{item} x{data.quantity}</span>
+                                                {data.photo && <img src={URL.createObjectURL(data.photo)} alt="preview" className="h-10 w-10 object-cover rounded ml-2" />}
                                             </motion.div>
                                         ))}
-                                        {customItem && (
-                                            <motion.div
-                                                className="flex justify-between py-1 text-gray-700 opacity-80"
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.3 }}
-                                            >
-                                                <span>Custom Item:</span>
-                                                <span>{customItem}</span>
-                                            </motion.div>
-                                        )}
                                     </div>
 
                                     {/* All-ons Section */}
