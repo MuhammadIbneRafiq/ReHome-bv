@@ -28,16 +28,88 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   // Distance filter
   const [distance, setDistance] = useState<number>(0);
   
-  // Main categories and subcategories
+  // Main categories and subcategories based on requirements
   const categories = [
-    { name: 'Furniture', subcategories: ['Sofa', 'Table', 'Chair', 'Bed', 'Wardrobe', 'Shelf'] },
-    { name: 'Electronics', subcategories: ['TV', 'Computer', 'Laptop', 'Phone', 'Audio'] },
-    { name: 'Household', subcategories: ['Lamps', 'Decorations', 'Curtains', 'Rugs'] },
-    { name: 'Kitchen', subcategories: ['Appliances', 'Utensils', 'Cookware', 'Tableware'] },
-    { name: 'Others', subcategories: [] }
+    { 
+      name: 'Bathroom Furniture', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Sofa\'s and Chairs', 
+      subcategories: [
+        'Sofa',
+        'Armchairs',
+        'Office Chair/ Bureuaustoel',
+        'Chairs',
+        'Kussens'
+      ] 
+    },
+    { 
+      name: 'Kasten', 
+      subcategories: [
+        'Closet (Kleidingkast)',
+        'Bookcase (Boekenkast)',
+        'Drawer/ Dressoir',
+        'TV Tables'
+      ] 
+    },
+    { 
+      name: 'Bedroom', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Tables', 
+      subcategories: [
+        'Office Table (Bureau)',
+        'Dining Table',
+        'Sidetables',
+        'Coffee Table'
+      ] 
+    },
+    { 
+      name: 'Appliances', 
+      subcategories: [
+        'Washing Machine',
+        'Fridge',
+        'Freezer',
+        'Others'
+      ] 
+    },
+    { 
+      name: 'Mirrors', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Lamps', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Carpets', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Curtains', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Plants', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Vazes', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Kitchen equipment', 
+      subcategories: [] 
+    },
+    { 
+      name: 'Others', 
+      subcategories: [] 
+    }
   ];
   
-  // Condition options
+  // Condition options as per requirements
   const conditions = [
     { value: '1', label: 'Like New - Almost no signs of use, very well maintained' },
     { value: '2', label: 'Excellent - Minimal wear, barely noticeable imperfections' },
@@ -135,12 +207,56 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     setSelectedSubCategory(''); // Reset subcategory when category changes
   };
 
+  // Apply filters when any filter changes
+  useEffect(() => {
+    applyFilters();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCities, selectedPriceRange, selectedCategory, selectedSubCategory, selectedCondition, showRehomeOnly]);
+
   return (
     <div className="bg-white rounded-lg shadow-md p-4 mt-4">
       <h2 className="text-lg font-semibold mb-2">Filters</h2>
       
       {/* Filters Content */}
       <div className="space-y-4">
+        {/* Category Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Category selection
+          </label>
+          <div className="space-y-2">
+            <select
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+              value={selectedCategory}
+              onChange={handleCategoryChange}
+            >
+              <option value="">All Categories</option>
+              {categories.map(category => (
+                <option key={category.name} value={category.name}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+            
+            {selectedCategory && categories.find(c => c.name === selectedCategory)?.subcategories.length > 0 && (
+              <select
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                value={selectedSubCategory}
+                onChange={(e) => setSelectedSubCategory(e.target.value)}
+              >
+                <option value="">All {selectedCategory}</option>
+                {categories
+                  .find(c => c.name === selectedCategory)
+                  ?.subcategories.map(sub => (
+                    <option key={sub} value={sub}>
+                      {sub}
+                    </option>
+                  ))}
+              </select>
+            )}
+          </div>
+        </div>
+        
         {/* Price Range Filter */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -235,60 +351,13 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
           </div>
         </div>
         
-        {/* Category Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category selection
-          </label>
-          <div className="space-y-2">
-            <select
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-              value={selectedCategory}
-              onChange={handleCategoryChange}
-            >
-              <option value="">All Categories</option>
-              {categories.map(category => (
-                <option key={category.name} value={category.name}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            
-            {selectedCategory && categories.find(c => c.name === selectedCategory)?.subcategories && categories.find(c => c.name === selectedCategory)!.subcategories.length > 0 && (
-              <select
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                value={selectedSubCategory}
-                onChange={(e) => setSelectedSubCategory(e.target.value)}
-              >
-                <option value="">All {selectedCategory} subcategories</option>
-                {categories.find(c => c.name === selectedCategory)?.subcategories.map(sub => (
-                  <option key={sub} value={sub}>
-                    {sub}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Needs to be possible to filter by top category and specific category
-          </p>
-        </div>
-        
-        {/* Filter Actions */}
-        <div className="flex space-x-2 pt-2">
-          <button 
-            onClick={applyFilters} 
-            className="w-full bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Apply Filters
-          </button>
-          <button 
-            onClick={resetFilters} 
-            className="w-full border border-gray-300 hover:bg-gray-100 text-gray-700 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            Reset
-          </button>
-        </div>
+        {/* Reset Filters Button */}
+        <button
+          onClick={resetFilters}
+          className="mt-4 w-full bg-gray-100 text-gray-800 py-2 px-4 border border-gray-300 rounded-md shadow-sm hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+        >
+          Reset Filters
+        </button>
       </div>
     </div>
   );

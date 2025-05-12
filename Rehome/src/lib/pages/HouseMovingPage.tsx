@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { cityDayData, furnitureItems } from '../../lib/constants.ts'; // Uncomment when you have constants file!
 import fetchCheckoutUrl from './PricingHook';
+import { useTranslation } from 'react-i18next';
 
 const itemCategories = [
     { name: "Bathroom Furniture", items: ["Cabinet", "Mirror", "Sink"] },
@@ -17,6 +18,7 @@ const itemCategories = [
 ];
 
 const HouseMovingPage = () => {
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [firstLocation, setFirstLocation] = useState('');
     const [secondLocation, setSecondLocation] = useState('');
@@ -50,6 +52,7 @@ const HouseMovingPage = () => {
     const [disassemblyItems, setDisassemblyItems] = useState({}); // State to track disassembly items
     const [preferredTimeSpan, setPreferredTimeSpan] = useState(''); // State for preferred time span
     const [selectedItems, setSelectedItems] = useState({});
+    const [paymentLoading, setPaymentLoading] = useState(false);
 
     const checkCityDay = (location, date) => {
         if (!location || !date) return false;
@@ -299,294 +302,304 @@ const HouseMovingPage = () => {
         exit: { opacity: 0, x: 50, transition: { duration: 0.3 } },
     };
 
-    return (
-        <div className="min-h-screen bg-gradient-to-r from-yellow-300 to-red-400 py-12 px-8 sm:px-2 lg:px-8">
-            <motion.div
-                className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-            >
-                <div className='p-12'>
-                    <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6">
-                        House Moving Request
-                    </h1>
-
-                    {/* Progress Bar */}
-                    <div className="flex justify-center space-x-3 mb-8">
-                        {[1, 2, 3, 4, 5, 6].map((s) => (
-                            <div
-                                key={s}
-                                className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                                    step === s
-                                        ? "bg-orange-500 text-white"
-                                        : step > s
-                                            ? "bg-green-400 text-white"
-                                            : "bg-gray-200 text-gray-500"
-                                } transition-colors duration-300`}
-                            >
-                                {step > s && <FaCheckCircle />}
-                            </div>
-                        ))}
+    // Add a real-time pricing display component that will be shown throughout the process
+    const PriceSummary = ({ 
+        basePrice, 
+        itemPoints, 
+        carryingCost, 
+        disassemblyCost, 
+        distanceCost, 
+        extraHelperCost, 
+        isStudent 
+    }) => {
+        const total = basePrice + (itemPoints * 3) + carryingCost + disassemblyCost + distanceCost + extraHelperCost;
+        const discountedTotal = isStudent && studentId ? total * 0.9 : total; // 10% discount for students
+        
+        return (
+            <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                <div className="space-y-2">
+                    <div className="flex justify-between">
+                        <span>Base Price:</span>
+                        <span>€{basePrice.toFixed(2)}</span>
                     </div>
+                    <div className="flex justify-between">
+                        <span>Items:</span>
+                        <span>€{(itemPoints * 3).toFixed(2)}</span>
+                    </div>
+                    {carryingCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Carrying:</span>
+                            <span>€{carryingCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {disassemblyCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Disassembly:</span>
+                            <span>€{disassemblyCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {distanceCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Distance:</span>
+                            <span>€{distanceCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {extraHelperCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Extra Helper:</span>
+                            <span>€{extraHelperCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between font-semibold">
+                            <span>Total Estimate:</span>
+                            <span>€{total.toFixed(2)}</span>
+                        </div>
+                        {isStudent && studentId && (
+                            <div className="flex justify-between text-green-600 font-semibold">
+                                <span>Student Discount (10%):</span>
+                                <span>€{discountedTotal.toFixed(2)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
-                    <div className="flex flex-col lg:flex-row">
-                        <div className="flex-1">
-                            <AnimatePresence initial={false} mode="wait">
-                                {step === 1 && (
-                                    <motion.div
-                                        key="step1"
-                                        className="space-y-4"
-                                        variants={stepVariants}
-                                        initial="hidden"
-                                        animate="visible"
-                                        exit="exit"
+    // Location step component
+    const LocationStep = ({ 
+        firstLocation, 
+        setFirstLocation, 
+        secondLocation, 
+        setSecondLocation,
+        floorPickup,
+        setFloorPickup,
+        floorDropoff,
+        setFloorDropoff,
+        elevatorPickup,
+        setElevatorPickup,
+        elevatorDropoff,
+        setElevatorDropoff
+    }) => {
+        const ElevatorToggle = ({ label, checked, onChange }) => (
+            <Switch.Group as="div" className="flex items-center">
+                <Switch
+                    checked={checked}
+                    onChange={onChange}
+                    className={`${
+                        checked ? 'bg-orange-600' : 'bg-gray-200'
+                    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+                >
+                    <span
+                        className={`${
+                            checked ? 'translate-x-6' : 'translate-x-1'
+                        } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                    />
+                </Switch>
+                <Switch.Label as="span" className="ml-3 text-sm">
+                    {label}
+                </Switch.Label>
+            </Switch.Group>
+        );
+
+        return (
+            <div className="space-y-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                        Pickup Address
+                    </label>
+                    <input
+                        type="text"
+                        value={firstLocation}
+                        onChange={(e) => setFirstLocation(e.target.value)}
+                        placeholder="Enter pickup address"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                        required
+                    />
+                    
+                    <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Floor (Enter 0 for ground floor)
+                        </label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={floorPickup}
+                            onChange={(e) => setFloorPickup(e.target.value)}
+                            placeholder="Floor number"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                        />
+                    </div>
+                    
+                    <div className="mt-2">
+                        <ElevatorToggle
+                            label="Elevator available at pickup location"
+                            checked={elevatorPickup}
+                            onChange={setElevatorPickup}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                        Dropoff Address
+                    </label>
+                    <input
+                        type="text"
+                        value={secondLocation}
+                        onChange={(e) => setSecondLocation(e.target.value)}
+                        placeholder="Enter dropoff address"
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                        required
+                    />
+                    
+                    <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Floor (Enter 0 for ground floor)
+                        </label>
+                        <input
+                            type="number"
+                            min="0"
+                            value={floorDropoff}
+                            onChange={(e) => setFloorDropoff(e.target.value)}
+                            placeholder="Floor number"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                        />
+                    </div>
+                    
+                    <div className="mt-2">
+                        <ElevatorToggle
+                            label="Elevator available at dropoff location"
+                            checked={elevatorDropoff}
+                            onChange={setElevatorDropoff}
+                        />
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    return (
+        <div className="min-h-screen bg-orange-50 pt-24 pb-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('houseMoving.title')}</h1>
+                <p className="text-lg text-gray-600 mb-6">{t('houseMoving.subtitle')}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Main Content - Left 2/3 */}
+                    <div className="md:col-span-2">
+                        <div className="bg-white shadow-md rounded-lg p-6">
+                            {/* Progress Step Indicator */}
+                            <div className="flex justify-between mb-8">
+                                {[1, 2, 3, 4, 5, 6].map((s) => (
+                                    <div 
+                                        key={s}
+                                        className={`relative flex flex-col items-center ${s < step ? 'text-green-600' : s === step ? 'text-orange-600' : 'text-gray-400'}`}
                                     >
-                                        {/* Step 1: Address Information */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                            {/* Start Address A */}
-                                            <div>
-                                                <h3 className="text-lg font-medium text-gray-700 mb-2">Start address A</h3>
-                                                {/* Country */}
-                                                <div>
-                                                    <label
-                                                        htmlFor="countryA"
-                                                        className="block text-xs font-medium text-gray-500 mb-1"
-                                                    >
-                                                        Country
-                                                    </label>
-                                                    <select
-                                                        id="countryA"
-                                                        className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        value="The Netherlands"
-                                                    >
-                                                        <option>The Netherlands</option>
-                                                    </select>
-                                                </div>
-
-                                                {/* Postal Code, House Number, Addition */}
-                                                <div className="grid grid-cols-3 gap-2 mt-2">
-                                                    <div>
-                                                        <label
-                                                            htmlFor="postalA"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            Postal
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="postalA"
-                                                            value={firstLocation}
-                                                            onChange={(e) => setFirstLocation(e.target.value)}
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label
-                                                            htmlFor="houseNumberA"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            House number
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            id="houseNumberA"
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label
-                                                            htmlFor="additionA"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            Addition
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="additionA"
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* City and Street */}
-                                                <div className="grid grid-cols-2 gap-2 mt-2">
-                                                    <div>
-                                                        <label
-                                                            htmlFor="cityA"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            City
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="cityA"
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label
-                                                            htmlFor="streetA"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            Street
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="streetA"
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                        <p className="text-xs text-gray-500 mt-1">Start typing and select your street from the list (auto-complete coming soon).</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* End Address B */}
-                                            <div>
-                                                <h3 className="text-lg font-medium text-gray-700 mb-2">End address B</h3>
-                                                {/* Country */}
-                                                <div>
-                                                    <label
-                                                        htmlFor="countryB"
-                                                        className="block text-xs font-medium text-gray-500 mb-1"
-                                                    >
-                                                        Country
-                                                    </label>
-                                                    <select
-                                                        id="countryB"
-                                                        className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        value="The Netherlands"
-                                                    >
-                                                        <option>The Netherlands</option>
-                                                    </select>
-                                                </div>
-
-                                                {/* Postal Code, House Number, Addition */}
-                                                <div className="grid grid-cols-3 gap-2 mt-2">
-                                                    <div>
-                                                        <label
-                                                            htmlFor="postalB"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            Postal
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="postalB"
-                                                            value={secondLocation}
-                                                            onChange={(e) => setSecondLocation(e.target.value)}
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label
-                                                            htmlFor="houseNumberB"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            House number
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            id="houseNumberB"
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label
-                                                            htmlFor="additionB"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            Addition
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="additionB"
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* City and Street */}
-                                                <div className="grid grid-cols-2 gap-2 mt-2">
-                                                    <div>
-                                                        <label
-                                                            htmlFor="cityB"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            City
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="cityB"
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label
-                                                            htmlFor="streetB"
-                                                            className="block text-xs font-medium text-gray-500 mb-1"
-                                                        >
-                                                            Street
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            id="streetB"
-                                                            className="shadow-sm focus:ring-orange-500 focus:border-orange-500 block w-full text-sm border-gray-300 rounded-md"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        <div className={`rounded-full transition duration-500 ease-in-out h-10 w-10 flex items-center justify-center mb-1 ${s < step ? 'bg-green-600' : s === step ? 'bg-orange-600' : 'bg-gray-200'} ${s <= step ? 'text-white' : 'text-gray-600'}`}>
+                                            {s < step ? <FaCheckCircle className="h-6 w-6" /> : s}
                                         </div>
-                                    </motion.div>
-                                )}
+                                        <div className="text-xs text-center">
+                                            {s === 1 && 'Location'}
+                                            {s === 2 && 'Date & Time'}
+                                            {s === 3 && 'Items'}
+                                            {s === 4 && 'Add-ons'}
+                                            {s === 5 && 'Contact'}
+                                            {s === 6 && 'Overview'}
+                                        </div>
+                                        {s < 6 && (
+                                            <div className="absolute top-5 -right-full w-full h-0.5 bg-gray-200">
+                                                <div 
+                                                    className="h-full bg-green-600 transition-all duration-500 ease-out"
+                                                    style={{ width: s < step ? '100%' : '0%' }}
+                                                ></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
 
-                                {/* Other steps would go here */}
-                            </AnimatePresence>
+                            {/* Step 1: Locations */}
+                            {step === 1 && (
+                                <LocationStep 
+                                    firstLocation={firstLocation}
+                                    setFirstLocation={setFirstLocation}
+                                    secondLocation={secondLocation}
+                                    setSecondLocation={setSecondLocation}
+                                    floorPickup={floorPickup}
+                                    setFloorPickup={setFloorPickup}
+                                    floorDropoff={floorDropoff}
+                                    setFloorDropoff={setFloorDropoff}
+                                    elevatorPickup={elevatorPickup}
+                                    setElevatorPickup={setElevatorPickup}
+                                    elevatorDropoff={elevatorDropoff}
+                                    setElevatorDropoff={setElevatorDropoff}
+                                />
+                            )}
+
+                            {/* Existing Step Components... */}
 
                             {/* Navigation Buttons */}
                             <div className="flex justify-between mt-8">
                                 {step > 1 && (
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        transition={{ duration: 0.2 }}
+                                    <button 
+                                        type="button"
                                         onClick={prevStep}
-                                        className="bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200"
+                                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
                                     >
-                                        <FaArrowLeft className="inline-block mr-2" /> Previous
-                                    </motion.button>
+                                        <FaArrowLeft className="mr-2 -ml-1 h-5 w-5" /> Previous
+                                    </button>
                                 )}
-                                {step < 6 && (
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        transition={{ duration: 0.2 }}
-                                        onClick={nextStep}
-                                        className="bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600"
-                                    >
-                                        Next <FaArrowRight className="inline-block ml-2" />
-                                    </motion.button>
-                                )}
-                                {step === 6 && estimatedPrice !== null && (
-                                    <form onSubmit={handleSubmit}>
-                                        <motion.button
-                                            whileHover={{ scale: 1.05 }}
-                                            transition={{ duration: 0.2 }}
-                                            type="submit"
-                                            disabled={!isFormValid()}
-                                            className={`py-2 px-4 rounded-md ${
-                                                isFormValid() 
-                                                ? "bg-red-600 text-white hover:bg-red-700" 
-                                                : "bg-gray-400 text-gray-200 cursor-not-allowed"
-                                            }`}
+                                <div>
+                                    {step < 6 ? (
+                                        <button 
+                                            type="button"
+                                            onClick={nextStep}
+                                            className="inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
                                         >
-                                            Submit Request
-                                        </motion.button>
-                                    </form>
-                                )}
+                                            Next <FaArrowRight className="ml-2 -mr-1 h-5 w-5" />
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            type="button"
+                                            onClick={handleSubmit}
+                                            disabled={!isFormValid()}
+                                            className={`inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${isFormValid() ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
+                                        >
+                                            {paymentLoading ? (
+                                                <>
+                                                    <span className="animate-pulse">Processing...</span>
+                                                    <svg className="animate-spin ml-2 -mr-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                </>
+                                            ) : (
+                                                <>Submit Request</>
+                                            )}
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
+                    
+                    {/* Pricing Display - Right 1/3 */}
+                    <div className="md:col-span-1">
+                        <PriceSummary 
+                            basePrice={basePrice} 
+                            itemPoints={itemPoints} 
+                            carryingCost={carryingCost} 
+                            disassemblyCost={disassemblyCost} 
+                            distanceCost={distanceCost} 
+                            extraHelperCost={extraHelper ? 15 : 0}
+                            isStudent={isStudent}
+                        />
+                    </div>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 };

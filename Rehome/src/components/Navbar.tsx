@@ -115,7 +115,7 @@ export default function Navbar() {
         >
             <ToastContainer />
             <nav aria-label="Main navigation" className="h-16 max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6">
-                 <div className="flex items-center">
+                <div className="flex items-center">
                     <Link to="/" className="flex items-center text-2xl font-bold text-white"> 
                         <img 
                             src={logoImage} 
@@ -124,6 +124,17 @@ export default function Navbar() {
                         />
                         Rehome B.v.
                     </Link>
+                    
+                    {/* Left Side Navigation Items - Item Donation and Marketplace */}
+                    <div className="hidden md:flex ml-6 space-x-4">
+                        <Link to="/donate" className="rehome-nav-link">
+                            {t('navbar.itemDonation')}
+                        </Link>
+                        <Link to="/marketplace" className="rehome-nav-link">
+                            {t('navbar.marketplace')}
+                        </Link>
+                    </div>
+                    
                     {/* Language Selector */}
                     <div className="ml-6 relative">
                         <select
@@ -144,33 +155,18 @@ export default function Navbar() {
                 </div>
 
                 <div className="flex items-center justify-center gap-4 md:gap-6">
-                    {/* New Navigation Items */}
+                    {/* Right Side Navigation Items - House Moving, Item Transport, Special Request */}
                     <div className="hidden md:flex flex-col items-center"> {/* Use flex-col to stack items */}
                         <div className="flex space-x-4 relative"> {/* Added relative class */}
-                            <button
-                                ref={transportationButtonRef}
-                                onClick={toggleDropdown}
-                                className="rehome-nav-link"
-                            >
-                                {t('navbar.transportation')}
-                            </button>
-                            <Link to="/marketplace" className="rehome-nav-link">
-                                {t('navbar.marketplace')}
+                            <Link to="/house-moving" className="rehome-nav-link">
+                                {t('navbar.houseMoving')}
+                            </Link>
+                            <Link to="/item-moving" className="rehome-nav-link">
+                                {t('navbar.itemMoving')}
                             </Link>
                             <Link to="/special-request" className="rehome-nav-link">
                                 {t('navbar.specialRequest')}
                             </Link>
-
-                            {isDropdownOpen && (
-                                <div ref={dropdownRef} className="absolute top-12 bg-white shadow-lg rounded-md  min-w-[150px] z-50"> {/* Added absolute positioning */}
-                                    <Link to="/item-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
-                                        {t('navbar.itemMoving')}
-                                    </Link>
-                                    <Link to="/house-moving" className="block px-4 py-2 text-gray-700 hover:bg-gray-200 whitespace-nowrap">
-                                        {t('navbar.houseMoving')}
-                                    </Link>
-                                </div>
-                            )}
                         </div>
                     </div>
 
@@ -241,9 +237,12 @@ export default function Navbar() {
                         {isPopupOpen && (
                             <div className="absolute border-solid border-2 border-black-200 right-0 top-10 bg-transperant text-gray-400 shadow-lg rounded-lg w-40">
                                 <nav className="grid gap-2 p-4 text-sm font-medium">
-                                    {/* New Navigation Items (Mobile) */}
+                                    {/* Mobile Navigation */}
                                     <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         {t('navbar.marketplace')}
+                                    </Link>
+                                    <Link to="/donate" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                        {t('navbar.itemDonation')}
                                     </Link>
                                     <Link to="/item-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         {t('navbar.itemMoving')}
@@ -254,29 +253,6 @@ export default function Navbar() {
                                     <Link to="/special-request" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         {t('navbar.specialRequest')}
                                     </Link>
-                                    {!isAuthenticated && (
-                                        <>
-                                            <Link to="/register" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                                {t('navbar.signup')}
-                                            </Link>
-                                            <Link to="/login" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                                {t('navbar.login')}
-                                            </Link>
-                                        </>
-                                    )}
-                                    {isAuthenticated && (
-                                        <>
-                                            <Link to="/sell-dash" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                                {t('navbar.dashboard')}
-                                            </Link>
-                                            <button 
-                                                onClick={handleLogout}
-                                                className="text-left text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white"
-                                            >
-                                                {t('auth.logout')}
-                                            </button>
-                                        </>
-                                    )}
                                 </nav>
                             </div>
                         )}

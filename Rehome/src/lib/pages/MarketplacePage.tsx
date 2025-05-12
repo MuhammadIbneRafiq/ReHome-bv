@@ -7,9 +7,12 @@ import tickLogo from '../../assets/logo_marketplace.png'
 import { useTranslation } from "react-i18next";
 import MarketplaceFilter from "../../components/MarketplaceFilter";
 import { translateFurnitureItem } from "../utils/dynamicTranslation";
+import { Link } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 const MarketplacePage = () => {
     const { t } = useTranslation();
+    const { isAuthenticated } = useAuth();
     const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]); // Use any[] or create a type for your furniture data
     const [filteredItems, setFilteredItems] = useState<FurnitureItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -116,6 +119,22 @@ const MarketplacePage = () => {
                 <h1 className="text-3xl font-bold text-gray-900 mb-6">{t('marketplace.title')}</h1>
                 <p className="text-lg text-gray-600 mb-8">{t('marketplace.subtitle')}</p>
                 
+                {/* Create Listing Button - Moved to top */}
+                <div className="mb-8 bg-white rounded-lg shadow p-4">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h3 className="font-medium text-lg">Sell Your Items</h3>
+                            <p className="text-sm text-gray-600">Create a new listing to sell your pre-loved items</p>
+                        </div>
+                        <Link 
+                            to={isAuthenticated ? '/sell-dash' : '/login?redirect=/sell-dash'}
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded"
+                        >
+                            Create Listing
+                        </Link>
+                    </div>
+                </div>
+                
                 {loading ? (
                     <div className="flex justify-center items-center h-64">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
@@ -128,22 +147,6 @@ const MarketplacePage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {/* Filter and Search on Left */}
                             <div className="md:col-span-1">
-                                <h3 className="text-xl font-semibold mb-4">Create listing:</h3>
-                                <p className="text-sm mb-4">Similar to <a href="https://www.marktplaats.nl" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline">Marktplaats</a></p>
-                                
-                                <div className="mb-6 bg-white rounded-lg shadow p-4">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h4 className="font-medium">Sell Your Items</h4>
-                                        <button 
-                                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded"
-                                            onClick={() => window.location.href = '/sell-dash'}
-                                        >
-                                            Create Listing
-                                        </button>
-                                    </div>
-                                    <p className="text-sm text-gray-600">Create a new listing to sell your pre-loved items</p>
-                                </div>
-                                
                                 <MarketplaceSearch onSearch={handleSearch} />
                                 <MarketplaceFilter 
                                     items={furnitureItems} 
@@ -168,7 +171,7 @@ const MarketplacePage = () => {
                                             >
                                                 {item.isrehome === true ? (
                                                     <div className="flex justify-center mb-2">
-                                                        <img src={tickLogo} alt="Verified" className="h-8 w-auto" />
+                                                        <img src={tickLogo} alt="ReHome Collection" className="h-8 w-auto" />
                                                     </div>
                                                 ) : null}
                                                 <img

@@ -5,9 +5,9 @@ import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
 import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
 import logoImage from "../../assets/logorehome.jpg"; // Import the ReHome logo
 import { motion } from "framer-motion"; // Import Framer Motion
-import { FaHandshake, FaStar, FaHome } from "react-icons/fa"; // Import Icons
+import { FaHandshake, FaStar, FaHome, FaTruck } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
-import { MdCheckCircle, MdSupportAgent } from "react-icons/md";
+import { MdCheckCircle, } from "react-icons/md";
 import { FurnitureItem } from "../../types/furniture";
 import { useTranslation } from "react-i18next";
 import { translateFurnitureItem } from "../utils/dynamicTranslation";
@@ -87,7 +87,7 @@ const LandingPage = () => {
                 transition={{ duration: 0.7, delay: 0.2 }}
                 className="mt-2 text-lg text-gray-500"
               >
-                Display Affordable House Moving and Transport for your Items.
+                Affordable House Moving and Transport for your Items
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -105,7 +105,7 @@ const LandingPage = () => {
             </div>
             {/* Right: Truck Image */}
             <div>
-              <div className="relative h-[300px] overflow-hidden flex items-center justify-center">
+              <div className="relative h-[280px] overflow-hidden flex items-center justify-center">
                 {/* Road background */}
                 <motion.div
                   className="absolute bottom-0 w-full h-32 bg-gray-800"
@@ -158,7 +158,7 @@ const LandingPage = () => {
                     <img 
                       src="https://static.vecteezy.com/system/resources/previews/024/800/829/non_2x/a-delivery-truck-flat-design-home-delivery-service-concept-with-a-delivery-van-delivery-van-on-a-highway-flat-illustration-free-png.png" 
                       alt="Moving Truck" 
-                      className="w-96 h-auto"
+                      className="w-80 h-auto"
                       style={{ filter: 'brightness(0.85)' }}
                     />
                     {/* Orange box overlay */}
@@ -166,7 +166,7 @@ const LandingPage = () => {
                       <img 
                         src={logoImage} 
                         alt="ReHome Logo" 
-                        className="w-16 h-16 object-contain" 
+                        className="w-14 h-14 object-contain" 
                       />
                     </div>
                   </div>
@@ -202,8 +202,8 @@ const LandingPage = () => {
             </p>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Service 1 */}
+          <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Service 1: House Moving */}
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
@@ -221,20 +221,23 @@ const LandingPage = () => {
                     {t('houseMoving.subtitle')}
                   </dd>
                 </div>
-                <div className="mt-5">
-                  <Link to="/house-moving" className="text-orange-600 hover:text-orange-700">
+                <div className="mt-5 flex flex-col gap-2">
+                  <Link to="/house-moving/learn-more" className="text-orange-600 hover:text-orange-700">
                     {t('homepage.learnMore')} &rarr;
+                  </Link>
+                  <Link to="/house-moving" className="rehome-button-sm text-center">
+                    Start Booking Process
                   </Link>
                 </div>
               </div>
             </div>
 
-            {/* Service 2 */}
+            {/* Service 2: Item Transport */}
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
-                    <FaHandshake className="h-6 w-6 text-white" />
+                    <FaTruck className="h-6 w-6 text-white" />
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-lg font-medium text-gray-900">
@@ -247,20 +250,23 @@ const LandingPage = () => {
                     {t('itemMoving.subtitle')}
                   </dd>
                 </div>
-                <div className="mt-5">
-                  <Link to="/item-moving" className="text-orange-600 hover:text-orange-700">
+                <div className="mt-5 flex flex-col gap-2">
+                  <Link to="/item-moving/learn-more" className="text-orange-600 hover:text-orange-700">
                     {t('homepage.learnMore')} &rarr;
+                  </Link>
+                  <Link to="/item-moving" className="rehome-button-sm text-center">
+                    Start Booking Process
                   </Link>
                 </div>
               </div>
             </div>
 
-            {/* Service 3 */}
+            {/* Service 3: Special Request */}
             <div className="bg-white overflow-hidden shadow rounded-lg">
               <div className="px-4 py-5 sm:p-6">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
-                    <MdSupportAgent className="h-6 w-6 text-white" />
+                    <FaHandshake className="h-6 w-6 text-white" />
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-lg font-medium text-gray-900">
@@ -270,12 +276,44 @@ const LandingPage = () => {
                 </div>
                 <div className="mt-4">
                   <dd className="text-base text-gray-500">
-                    {t('specialRequest.subtitle')}
+                    Custom solutions for your unique moving and storage needs.
                   </dd>
                 </div>
-                <div className="mt-5">
-                  <Link to="/special-request" className="text-orange-600 hover:text-orange-700">
+                <div className="mt-5 flex flex-col gap-2">
+                  <Link to="/special-request/learn-more" className="text-orange-600 hover:text-orange-700">
                     {t('homepage.learnMore')} &rarr;
+                  </Link>
+                  <Link to="/special-request" className="rehome-button-sm text-center">
+                    Start Booking Process
+                  </Link>
+                </div>
+              </div>
+            </div>
+
+            {/* Service 4: 2nd Hand Furniture Marketplace */}
+            <div className="bg-white overflow-hidden shadow rounded-lg">
+              <div className="px-4 py-5 sm:p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
+                    <FaStar className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="ml-5 w-0 flex-1">
+                    <dt className="text-lg font-medium text-gray-900">
+                      2nd Hand Furniture
+                    </dt>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <dd className="text-base text-gray-500">
+                    Browse our selection of quality second-hand furniture for your home.
+                  </dd>
+                </div>
+                <div className="mt-5 flex flex-col gap-2">
+                  <Link to="/marketplace/learn-more" className="text-orange-600 hover:text-orange-700">
+                    {t('homepage.learnMore')} &rarr;
+                  </Link>
+                  <Link to="/marketplace" className="rehome-button-sm text-center">
+                    Explore Marketplace
                   </Link>
                 </div>
               </div>
