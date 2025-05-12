@@ -8,7 +8,10 @@
     "itemDonation": "Furniture Donation",
     "signup": "Sign up",
     "login": "Log in",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "home": "Home",
+    "sell": "Sell",
+    "transport": "Transport"
   },
   "common": {
     "language": "Language",
@@ -29,7 +32,12 @@
     "next": "Next",
     "previous": "Previous",
     "apply": "Apply",
-    "reset": "Reset"
+    "reset": "Reset",
+    "tip": "Tip",
+    "submitting": "Submitting...",
+    "email": "Email",
+    "phone": "Phone Number",
+    "unexpectedError": "An unexpected error occurred"
   },
   "auth": {
     "email": "Email",
@@ -43,7 +51,20 @@
     "signInWith": "Sign in with",
     "or": "or",
     "rememberMe": "Remember me",
-    "logout": "Log out"
+    "logout": "Log out",
+    "loginSuccess": "Welcome back!",
+    "loginError": "Login failed. Please check your credentials.",
+    "signupSuccess": "Your account has been created successfully!",
+    "signupError": "Failed to create account. Please try again.",
+    "requiredField": "This field is required",
+    "invalidEmail": "Please enter a valid email address",
+    "passwordLength": "Password must be at least 8 characters long",
+    "passwordMismatch": "Passwords do not match",
+    "authRequired": "Please log in to continue",
+    "role": "Role",
+    "buyer": "Buyer",
+    "seller": "Seller",
+    "enterEmailBelow": "Enter your details to create an account"
   },
   "homepage": {
     "welcome": "Welcome to Rehome",
@@ -72,7 +93,44 @@
     "featuredItems": "Featured Items",
     "noResults": "No results found",
     "viewDetails": "View Details",
-    "contactSeller": "Contact Seller"
+    "contactSeller": "Contact Seller",
+    "categories": "Categories",
+    "condition": "Condition",
+    "sortBy": "Sort by",
+    "newest": "Newest",
+    "priceHighToLow": "Price: High to Low",
+    "priceLowToHigh": "Price: Low to High",
+    "priceRange": "Price Range",
+    "minPrice": "Minimum Price",
+    "maxPrice": "Maximum Price",
+    "city": "City",
+    "allCities": "All Cities",
+    "checkout": "Checkout",
+    "processing": "Processing...",
+    "holdCtrl": "Hold Ctrl to select multiple cities",
+    "filters": "Filters",
+    "selectCategory": "Select Category",
+    "selectCondition": "Select Condition",
+    "sold": "SOLD",
+    "soldOut": "Sold Out",
+    "noItems": "No items found",
+    "errors": {
+      "fetchFailed": "Failed to fetch items. Please try again."
+    },
+    "categories": {
+      "furniture": "Furniture",
+      "electronics": "Electronics",
+      "clothing": "Clothing",
+      "books": "Books",
+      "other": "Other"
+    },
+    "conditions": {
+      "new": "New",
+      "likeNew": "Like New",
+      "good": "Good",
+      "fair": "Fair",
+      "poor": "Poor"
+    }
   },
   "itemMoving": {
     "title": "Item Moving Service",
@@ -122,7 +180,29 @@
     "settings": "Account Settings",
     "createListing": "Create New Listing",
     "viewAnalytics": "View Analytics",
-    "logout": "Log Out"
+    "logout": "Log Out",
+    "soldListing": "Sold Items",
+    "noSoldItems": "No Items Sold Yet",
+    "soldAppearHere": "Your sold items will appear here once they are purchased",
+    "promoteListings": "Keep promoting your listings to make your first sale!",
+    "yourListings": "Your Listings",
+    "activeListing": "Active Listings",
+    "soldItems": "Items Sold",
+    "earnings": "Total Earnings",
+    "noListings": "No listings yet",
+    "startSelling": "Start selling today!",
+    "createFirst": "Create Your First Listing",
+    "soldTag": "SOLD",
+    "totalEarnings": "Total Earnings",
+    "rating": "Rating",
+    "recentActivity": "Recent Activity",
+    "recentListings": "Recent Listings",
+    "recentReviews": "Recent Reviews",
+    "noReviews": "No reviews yet",
+    "status": {
+      "active": "Active",
+      "sold": "Sold"
+    }
   },
   "footer": {
     "company": "Company",
