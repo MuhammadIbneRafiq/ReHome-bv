@@ -4,8 +4,8 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaTruck, FaMinus, FaPlus, FaC
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { cityDayData, furnitureItems } from '../../lib/constants.ts'; // Uncomment when you have constants file!
-import fetchCheckoutUrl from './PricingHook';
+import { cityDayData, furnitureItems } from '../../lib/constants';
+import fetchCheckoutUrl from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 
 const itemCategories = [
@@ -539,7 +539,442 @@ const HouseMovingPage = () => {
                                 />
                             )}
 
-                            {/* Existing Step Components... */}
+                            {/* Step 2: Date & Time Selection */}
+                            {step === 2 && (
+                                <div className="space-y-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Select Moving Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            min={new Date().toISOString().split('T')[0]} // Set minimum date to today
+                                        />
+                                        <div className="mt-2 flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                id="flexible-date"
+                                                checked={isDateFlexible}
+                                                onChange={(e) => setIsDateFlexible(e.target.checked)}
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="flexible-date" className="ml-2 block text-sm text-gray-700">
+                                                My date is flexible, ReHome can suggest a suitable date
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Preferred Time Span
+                                        </label>
+                                        <select
+                                            value={preferredTimeSpan}
+                                            onChange={(e) => setPreferredTimeSpan(e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                        >
+                                            <option value="">Select preferred time...</option>
+                                            <option value="morning">Morning (8AM - 12PM)</option>
+                                            <option value="afternoon">Afternoon (12PM - 5PM)</option>
+                                            <option value="evening">Evening (5PM - 8PM)</option>
+                                            <option value="flexible">Flexible (Any time)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div className="mt-4 bg-orange-100 p-4 rounded-lg">
+                                        <div className="flex items-start">
+                                            <FaInfoCircle className="text-orange-600 mt-1 flex-shrink-0" />
+                                            <div className="ml-3">
+                                                <h3 className="text-sm font-medium text-gray-900">Availability Information</h3>
+                                                <p className="mt-1 text-sm text-gray-700">
+                                                    Our team operates in most major cities daily. In Amsterdam we offer service 7 days a week. 
+                                                    Selecting a flexible date may help us accommodate your request more easily and can sometimes result in faster service.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Step 3: Items Selection */}
+                            {step === 3 && (
+                                <div className="space-y-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Select the items you need to move. This helps us estimate the size of vehicle and resources needed.
+                                    </p>
+                                    
+                                    {itemCategories.map((category) => (
+                                        <div key={category.name} className="mb-6">
+                                            <h3 className="text-lg font-medium text-gray-900 mb-3">{category.name}</h3>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {category.items.map((item) => {
+                                                    const itemId = `${category.name}-${item}`;
+                                                    return (
+                                                        <div key={itemId} className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
+                                                            <span className="text-gray-800">{item}</span>
+                                                            <div className="flex items-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => decrementItem(itemId)}
+                                                                    disabled={!itemQuantities[itemId]}
+                                                                    className={`p-1 rounded-full ${
+                                                                        !itemQuantities[itemId] ? 'text-gray-300' : 'text-orange-600 hover:bg-orange-100'
+                                                                    }`}
+                                                                >
+                                                                    <FaMinus className="h-4 w-4" />
+                                                                </button>
+                                                                <span className="w-8 text-center">{itemQuantities[itemId] || 0}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => incrementItem(itemId)}
+                                                                    className="p-1 rounded-full text-orange-600 hover:bg-orange-100"
+                                                                >
+                                                                    <FaPlus className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    
+                                    <div className="mt-6">
+                                        <label className="block text-sm font-medium text-gray-700">
+                                            Special instructions for your items (optional)
+                                        </label>
+                                        <textarea
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            rows={3}
+                                            placeholder="e.g., Fragile items, special handling requirements, etc."
+                                        ></textarea>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Step 4: Add-ons & Services */}
+                            {step === 4 && (
+                                <div className="space-y-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Select additional services you may need for your move.
+                                    </p>
+                                    
+                                    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                                        <div className="flex items-start">
+                                            <div className="flex-shrink-0">
+                                                <FaToolbox className="h-6 w-6 text-orange-600" />
+                                            </div>
+                                            <div className="ml-3 flex-grow">
+                                                <div className="flex justify-between">
+                                                    <label htmlFor="disassembly-toggle" className="font-medium text-gray-900">Disassembly & Reassembly</label>
+                                                    <span className="text-gray-700">€20</span>
+                                                </div>
+                                                <p className="text-gray-500 text-sm mt-1">
+                                                    We'll disassemble furniture at pickup and reassemble at dropoff
+                                                </p>
+                                                <div className="mt-2">
+                                                    <Switch
+                                                        checked={disassembly}
+                                                        onChange={setDisassembly}
+                                                        className={`${disassembly ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+                                                        id="disassembly-toggle"
+                                                    >
+                                                        <span className={`${disassembly ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                    </Switch>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                                        <div className="flex items-start">
+                                            <div className="flex-shrink-0">
+                                                <FaPlus className="h-6 w-6 text-orange-600" />
+                                            </div>
+                                            <div className="ml-3 flex-grow">
+                                                <div className="flex justify-between">
+                                                    <label htmlFor="extra-helper-toggle" className="font-medium text-gray-900">Extra Helper</label>
+                                                    <span className="text-gray-700">€15</span>
+                                                </div>
+                                                <p className="text-gray-500 text-sm mt-1">
+                                                    Add an extra helper for heavy or numerous items
+                                                </p>
+                                                <div className="mt-2">
+                                                    <Switch
+                                                        checked={extraHelper}
+                                                        onChange={setExtraHelper}
+                                                        className={`${extraHelper ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+                                                        id="extra-helper-toggle"
+                                                    >
+                                                        <span className={`${extraHelper ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                    </Switch>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                                        <div className="flex items-start">
+                                            <div className="flex-shrink-0">
+                                                <FaInfoCircle className="h-6 w-6 text-orange-600" />
+                                            </div>
+                                            <div className="ml-3 flex-grow">
+                                                <div className="flex justify-between">
+                                                    <label htmlFor="student-toggle" className="font-medium text-gray-900">Student Discount (10%)</label>
+                                                    <span className="text-green-600 font-medium">-10%</span>
+                                                </div>
+                                                <p className="text-gray-500 text-sm mt-1">
+                                                    Available for students with valid ID
+                                                </p>
+                                                <div className="mt-2">
+                                                    <Switch
+                                                        checked={isStudent}
+                                                        onChange={setIsStudent}
+                                                        className={`${isStudent ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+                                                        id="student-toggle"
+                                                    >
+                                                        <span className={`${isStudent ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                    </Switch>
+                                                </div>
+                                                
+                                                {isStudent && (
+                                                    <div className="mt-3">
+                                                        <label className="block text-sm font-medium text-gray-700">
+                                                            Upload Student ID
+                                                        </label>
+                                                        <input
+                                                            type="file"
+                                                            onChange={handleStudentIdUpload}
+                                                            className="mt-1 block w-full text-sm text-gray-500
+                                                                file:mr-4 file:py-2 file:px-4
+                                                                file:rounded-md file:border-0
+                                                                file:text-sm file:font-semibold
+                                                                file:bg-orange-50 file:text-orange-700
+                                                                hover:file:bg-orange-100"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Step 5: Contact Information */}
+                            {step === 5 && (
+                                <div className="space-y-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Please provide your contact information so we can get in touch about your move.
+                                    </p>
+                                    
+                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                        <div>
+                                            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                                                First Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="firstName"
+                                                value={contactInfo.firstName}
+                                                onChange={handleContactInfoChange}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                required
+                                            />
+                                        </div>
+                                        
+                                        <div>
+                                            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                                                Last Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="lastName"
+                                                value={contactInfo.lastName}
+                                                onChange={handleContactInfoChange}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                            Email Address
+                                        </label>
+                                        <input
+                                            type="email"
+                                            id="email"
+                                            value={contactInfo.email}
+                                            onChange={handleContactInfoChange}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            required
+                                        />
+                                    </div>
+                                    
+                                    <div>
+                                        <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                                            Phone Number
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            id="phone"
+                                            value={contactInfo.phone}
+                                            onChange={handleContactInfoChange}
+                                            placeholder="+31612345678"
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            required
+                                        />
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            Please include country code (e.g., +31 for Netherlands)
+                                        </p>
+                                    </div>
+                                    
+                                    <div className="mt-4">
+                                        <div className="flex items-start">
+                                            <div className="flex items-center h-5">
+                                                <input
+                                                    id="terms"
+                                                    name="terms"
+                                                    type="checkbox"
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                />
+                                            </div>
+                                            <div className="ml-3 text-sm">
+                                                <label htmlFor="terms" className="font-medium text-gray-700">
+                                                    I agree to the Terms and Conditions
+                                                </label>
+                                                <p className="text-gray-500">
+                                                    By proceeding, you agree to our <a href="#" className="text-orange-600 hover:text-orange-800">Terms of Service</a> and <a href="#" className="text-orange-600 hover:text-orange-800">Privacy Policy</a>.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Step 6: Summary & Confirmation */}
+                            {step === 6 && (
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-medium text-gray-900">Booking Summary</h3>
+                                    
+                                    <div className="bg-orange-50 p-4 rounded-lg space-y-4">
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">Locations</h4>
+                                            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                <div>
+                                                    <span className="text-gray-500 text-sm">Pickup:</span>
+                                                    <p className="text-gray-900">{firstLocation || "Not specified"}</p>
+                                                    <p className="text-gray-600 text-sm">
+                                                        Floor: {floorPickup || "0"} {elevatorPickup ? "(with elevator)" : ""}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-500 text-sm">Dropoff:</span>
+                                                    <p className="text-gray-900">{secondLocation || "Not specified"}</p>
+                                                    <p className="text-gray-600 text-sm">
+                                                        Floor: {floorDropoff || "0"} {elevatorDropoff ? "(with elevator)" : ""}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">Date & Time</h4>
+                                            <p className="text-gray-900">
+                                                {isDateFlexible 
+                                                    ? "Flexible date (we'll contact you to confirm)" 
+                                                    : selectedDate 
+                                                        ? new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                                                        : "Not specified"
+                                                }
+                                            </p>
+                                            <p className="text-gray-600 text-sm">
+                                                {preferredTimeSpan 
+                                                    ? preferredTimeSpan === "morning" 
+                                                        ? "Morning (8AM - 12PM)"
+                                                        : preferredTimeSpan === "afternoon"
+                                                            ? "Afternoon (12PM - 5PM)"
+                                                            : preferredTimeSpan === "evening"
+                                                                ? "Evening (5PM - 8PM)"
+                                                                : "Flexible (Any time)"
+                                                    : "No preferred time specified"
+                                                }
+                                            </p>
+                                        </div>
+                                        
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">Items</h4>
+                                            {Object.keys(itemQuantities).length > 0 ? (
+                                                <ul className="mt-2 space-y-1">
+                                                    {Object.entries(itemQuantities).map(([itemId, quantity]) => (
+                                                        <li key={itemId} className="flex justify-between text-sm">
+                                                            <span className="text-gray-600">{itemId.split('-')[1]}</span>
+                                                            <span className="text-gray-900">{quantity}x</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <p className="text-gray-600 text-sm">No items selected</p>
+                                            )}
+                                        </div>
+                                        
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">Additional Services</h4>
+                                            <ul className="mt-2 space-y-1">
+                                                <li className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Disassembly & Reassembly</span>
+                                                    <span className="text-gray-900">{disassembly ? "Yes" : "No"}</span>
+                                                </li>
+                                                <li className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Extra Helper</span>
+                                                    <span className="text-gray-900">{extraHelper ? "Yes" : "No"}</span>
+                                                </li>
+                                                <li className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Student Discount</span>
+                                                    <span className="text-gray-900">{isStudent && studentId ? "Yes (10% off)" : "No"}</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div>
+                                            <h4 className="font-medium text-gray-900">Contact Information</h4>
+                                            <ul className="mt-2 space-y-1">
+                                                <li className="text-sm">
+                                                    <span className="text-gray-600">Name:</span>
+                                                    <span className="text-gray-900 ml-2">{contactInfo.firstName} {contactInfo.lastName}</span>
+                                                </li>
+                                                <li className="text-sm">
+                                                    <span className="text-gray-600">Email:</span>
+                                                    <span className="text-gray-900 ml-2">{contactInfo.email}</span>
+                                                </li>
+                                                <li className="text-sm">
+                                                    <span className="text-gray-600">Phone:</span>
+                                                    <span className="text-gray-900 ml-2">{contactInfo.phone}</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-green-50 p-4 rounded-lg">
+                                        <div className="flex">
+                                            <FaInfoCircle className="h-5 w-5 text-green-500" />
+                                            <div className="ml-3">
+                                                <h3 className="text-sm font-medium text-green-800">Next Steps</h3>
+                                                <div className="mt-2 text-sm text-green-700">
+                                                    <p>
+                                                        After submitting your request, you'll receive a confirmation email. 
+                                                        Our team will review your requirements and contact you within 24 hours 
+                                                        to confirm all details. Payment will be processed after confirmation.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Navigation Buttons */}
                             <div className="flex justify-between mt-8">
