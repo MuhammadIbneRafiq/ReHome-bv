@@ -127,7 +127,7 @@ export default function Navbar() {
                     
                     {/* Left Side Navigation Items - Item Donation and Marketplace */}
                     <div className="hidden md:flex ml-6 space-x-4">
-                        <Link to="/donate" className="rehome-nav-link">
+                        <Link to="/item-donation" className="rehome-nav-link">
                             {t('navbar.itemDonation')}
                         </Link>
                         <Link to="/marketplace" className="rehome-nav-link">
@@ -241,7 +241,7 @@ export default function Navbar() {
                                     <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         {t('navbar.marketplace')}
                                     </Link>
-                                    <Link to="/donate" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
+                                    <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
                                         {t('navbar.itemDonation')}
                                     </Link>
                                     <Link to="/item-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">

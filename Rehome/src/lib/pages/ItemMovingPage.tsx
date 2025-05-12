@@ -4,7 +4,9 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import fetchCheckoutUrl from './PricingHook';
+import fetchCheckoutUrl from './PricingHook.tsx';
+import { useTranslation } from 'react-i18next';
+
 // // Dummy data for demonstration
 const cityDayData = {
     "Amsterdam": ["Monday", "Tuesday", "Wednesday"],
@@ -30,6 +32,7 @@ const itemCategories = [
 ];
 
 const ItemMovingPage = () => {
+    const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [disassembly, setDisassembly] = useState(false);
     const [contactInfo, setContactInfo] = useState({
@@ -38,8 +41,8 @@ const ItemMovingPage = () => {
         email: '',
         phone: '',
     });
-    const [firstLocation] = useState('');
-    const [secondLocation] = useState('');
+    const [firstLocation, setFirstLocation] = useState('');
+    const [secondLocation, setSecondLocation] = useState('');
     const [floorPickup, setFloorPickup] = useState('');
     const [floorDropoff, setFloorDropoff] = useState('');
 
@@ -66,6 +69,7 @@ const ItemMovingPage = () => {
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({}); // State to track extra helper items
     const [preferredTimeSpan, setPreferredTimeSpan] = useState(''); // State for preferred time span
     const [selectedItems, setSelectedItems] = useState<{ [item: string]: { quantity: number, photo?: File|null } }>({});
+    const [paymentLoading, setPaymentLoading] = useState(false); // State for payment loading
 
     // Update the function to use the City type
     const checkCityDay = (location: string, date: string): boolean => {
@@ -347,710 +351,765 @@ const ItemMovingPage = () => {
             toast.error("Please upload proof of payment."); // Show error if no file is uploaded
         }
     };
-    return (
-        <div className="min-h-screen bg-gradient-to-r from-yellow-300 to-red-400 py-12 px-4 sm:px-6 lg:px-8">
-            <motion.div
-                className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
-            >
-            <div className="p-6">
-                {/* Outer div for padding */}
-                <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6">
-                    Item Moving Request
-                </h1>
 
-                    {/* Progress Bar */}
-                    <div className="flex justify-center space-x-3 mb-8">
-                        {Array.from({ length: 7 }, (_, i) => i + 1).map((s) => ( // All 7 steps show
-                            <div
-                                key={s}
-                                className={`w-6 h-6 rounded-full flex items-center justify-center ${step === s
-                                    ? "bg-orange-500 text-white"
-                                    : step > s
-                                        ? "bg-green-400 text-white"
-                                        : "bg-gray-200 text-gray-500"
-                                    } transition-colors duration-300`}
-                            >
-                                {step > s && <FaCheckCircle />}
-                            </div>
-                        ))}
+    // Add a real-time pricing display component that will be shown throughout the process
+    const PriceSummary = ({ 
+        basePrice, 
+        itemPoints, 
+        carryingCost, 
+        disassemblyCost, 
+        distanceCost, 
+        extraHelperCost, 
+        isStudent 
+    }) => {
+        const total = basePrice + (itemPoints * 3) + carryingCost + disassemblyCost + distanceCost + extraHelperCost;
+        const discountedTotal = isStudent && studentId ? total * 0.9 : total; // 10% discount for students
+        
+        return (
+            <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                <div className="space-y-2">
+                    <div className="flex justify-between">
+                        <span>Base Price:</span>
+                        <span>€{basePrice.toFixed(2)}</span>
                     </div>
+                    <div className="flex justify-between">
+                        <span>Items:</span>
+                        <span>€{(itemPoints * 3).toFixed(2)}</span>
+                    </div>
+                    {carryingCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Carrying:</span>
+                            <span>€{carryingCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {disassemblyCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Disassembly:</span>
+                            <span>€{disassemblyCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {distanceCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Distance:</span>
+                            <span>€{distanceCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {extraHelperCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Extra Helper:</span>
+                            <span>€{extraHelperCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between font-semibold">
+                            <span>Total Estimate:</span>
+                            <span>€{total.toFixed(2)}</span>
+                        </div>
+                        {isStudent && studentId && (
+                            <div className="flex justify-between text-green-600 font-semibold">
+                                <span>Student Discount (10%):</span>
+                                <span>€{discountedTotal.toFixed(2)}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
-                    <AnimatePresence initial={false} mode="wait">
-                        {step === 1 && (
-                            <motion.div
-                                key="step1"
-                                className="space-y-4"
-                                variants={stepVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                {/* Step 1: Pickup Selection */}
-                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Where do we pick it up?</h2>
-                                <div className="grid grid-cols-1 gap-4">
-                                    {/* From a private home */}
-                                    <button
-                                        onClick={() => {
-                                            setPickupType('private');
-                                            nextStep(); 
-                                        }}
-                                        className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
+    return (
+        <div className="min-h-screen bg-orange-50 pt-24 pb-12">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('itemMoving.title', 'Item Transport')}</h1>
+                <p className="text-lg text-gray-600 mb-6">{t('itemMoving.subtitle', 'Transport your items safely and affordably')}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Main Content - Left 2/3 */}
+                    <div className="md:col-span-2">
+                        <div className="bg-white shadow-md rounded-lg p-6">
+                            {/* Progress Step Indicator */}
+                            <div className="flex justify-between mb-8">
+                                {[1, 2, 3, 4, 5, 6].map((s) => (
+                                    <div 
+                                        key={s}
+                                        className={`relative flex flex-col items-center ${s < step ? 'text-green-600' : s === step ? 'text-orange-600' : 'text-gray-400'}`}
                                     >
-                                        <FaHome className="h-6 w-6 text-orange-500 mt-1 mr-3" />
-                                        {/* Icon sizing and alignment */}
-                                        <div className="flex flex-col">
-                                            <h3 className="text-base font-medium text-gray-700 text-left">From a private home</h3>
-                                            <p className="text-sm text-gray-500 text-left mt-1">From someone you know or via an online marketplace</p>
+                                        <div className={`rounded-full transition duration-500 ease-in-out h-10 w-10 flex items-center justify-center mb-1 ${s < step ? 'bg-green-600' : s === step ? 'bg-orange-600' : 'bg-gray-200'} ${s <= step ? 'text-white' : 'text-gray-600'}`}>
+                                            {s < step ? <FaCheckCircle className="h-6 w-6" /> : s}
                                         </div>
-                                    </button>
+                                        <div className="text-xs text-center">
+                                            {s === 1 && 'Pickup Type'}
+                                            {s === 2 && 'Date & Time'}
+                                            {s === 3 && 'Items'}
+                                            {s === 4 && 'Add-ons'}
+                                            {s === 5 && 'Contact'}
+                                            {s === 6 && 'Overview'}
+                                        </div>
+                                        {s < 6 && (
+                                            <div className="absolute top-5 -right-full w-full h-0.5 bg-gray-200">
+                                                <div 
+                                                    className="h-full bg-green-600 transition-all duration-500 ease-out"
+                                                    style={{ width: s < step ? '100%' : '0%' }}
+                                                ></div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
 
-                                    {/* From a store */}
-                                    <button
-                                        onClick={() => {
-                                            setIsModalOpen(true); // Open modal instead of going to next step
-                                        }}
-                                        className="flex flex-row items-start p-4 border border-gray-200 rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300"
-                                    >
-                                        <FaStore className="h-6 w-6 text-orange-500 mt-1 mr-3" />
-                                        {/* Icon sizing and alignment */}
-                                        <div className="flex flex-col">
-                                            <h3 className="text-base font-medium text-gray-700 text-left">From a store</h3>
-                                            <p className="text-sm text-gray-500 mt-1">For example from a furniture store</p>
-                                        </div>
-                                    </button>
-                                    {isModalOpen && (
+                            {/* Step 1: Pickup Selection */}
+                            {step === 1 && (
+                                <div className="space-y-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Select the type of pickup location for your items.
+                                    </p>
+                                    
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div 
-                                            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
-                                            onClick={() => setIsModalOpen(false)} // Close modal on outside click
+                                            className={`border rounded-lg p-6 cursor-pointer transition-colors ${
+                                                pickupType === 'private' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                                            }`}
+                                            onClick={() => setPickupType('private')}
                                         >
-                                            <div 
-                                                className="bg-white p-6 rounded-lg shadow-lg" 
-                                                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
-                                            >
-                                                <h2 className="text-lg font-semibold mb-4">Upload Proof of Payment</h2>
+                                            <div className="flex items-center">
+                                                <div className={`rounded-full p-3 ${pickupType === 'private' ? 'bg-orange-500' : 'bg-gray-200'}`}>
+                                                    <FaHome className={`h-6 w-6 ${pickupType === 'private' ? 'text-white' : 'text-gray-600'}`} />
+                                                </div>
+                                                <h3 className="ml-3 text-lg font-medium text-gray-900">Private Address</h3>
+                                            </div>
+                                            <p className="mt-2 text-sm text-gray-500">
+                                                Pick up items from a home, apartment, or other residential location.
+                                            </p>
+                                        </div>
+                                        
+                                        <div 
+                                            className={`border rounded-lg p-6 cursor-pointer transition-colors ${
+                                                pickupType === 'store' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                                            }`}
+                                            onClick={() => setPickupType('store')}
+                                        >
+                                            <div className="flex items-center">
+                                                <div className={`rounded-full p-3 ${pickupType === 'store' ? 'bg-orange-500' : 'bg-gray-200'}`}>
+                                                    <FaStore className={`h-6 w-6 ${pickupType === 'store' ? 'text-white' : 'text-gray-600'}`} />
+                                                </div>
+                                                <h3 className="ml-3 text-lg font-medium text-gray-900">Store/Business</h3>
+                                            </div>
+                                            <p className="mt-2 text-sm text-gray-500">
+                                                Pick up items from a store, warehouse, or other business location.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {pickupType && (
+                                        <div className="mt-8 space-y-6">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">
+                                                    Pickup Address
+                                                </label>
                                                 <input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={handlePaymentProofUpload}
-                                                    className="mb-4"
+                                                    type="text"
+                                                    value={firstLocation}
+                                                    onChange={(e) => setFirstLocation(e.target.value)}
+                                                    placeholder="Enter pickup address"
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    required
                                                 />
-                                                <div className="flex justify-end">
-                                                    <button
-                                                        onClick={() => {
-                                                            handleModalSubmit(); // Call the function here
-                                                            setIsModalOpen(false); // Close modal after submission
-                                                        }}
-                                                        className="bg-blue-500 text-white py-2 px-4 rounded-md"
-                                                    >
-                                                        OK
-                                                    </button>
+                                                
+                                                <div className="mt-3">
+                                                    <label className="block text-sm font-medium text-gray-700">
+                                                        Floor (Enter 0 for ground floor)
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={floorPickup}
+                                                        onChange={(e) => setFloorPickup(e.target.value)}
+                                                        placeholder="Floor number"
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    />
+                                                </div>
+                                                
+                                                <div className="mt-2">
+                                                    <ElevatorToggle
+                                                        label="Elevator available at pickup location"
+                                                        checked={elevatorPickup}
+                                                        onChange={setElevatorPickup}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700">
+                                                    Dropoff Address
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={secondLocation}
+                                                    onChange={(e) => setSecondLocation(e.target.value)}
+                                                    placeholder="Enter dropoff address"
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    required
+                                                />
+                                                
+                                                <div className="mt-3">
+                                                    <label className="block text-sm font-medium text-gray-700">
+                                                        Floor (Enter 0 for ground floor)
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        value={floorDropoff}
+                                                        onChange={(e) => setFloorDropoff(e.target.value)}
+                                                        placeholder="Floor number"
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    />
+                                                </div>
+                                                
+                                                <div className="mt-2">
+                                                    <ElevatorToggle
+                                                        label="Elevator available at dropoff location"
+                                                        checked={elevatorDropoff}
+                                                        onChange={setElevatorDropoff}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
                                     )}
                                 </div>
-                            </motion.div>
-                        )}
+                            )}
 
-                        {step === 2 && (
-                            <motion.div
-                                key="step2"
-                                className="space-y-4"
-                                variants={stepVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                {/* Step 3: Item Selection and Add-ons (for Private Home) */}
-                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Item Selection</h2>
-                                {itemCategories.map(cat => (
-                                    <div key={cat.name} className="mb-4">
-                                        <h3 className="font-bold text-gray-700 mb-2">{cat.name}</h3>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                            {cat.items.map(item => (
-                                                <div key={item} className="flex items-center gap-2 bg-gray-50 p-2 rounded">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!selectedItems[item]}
-                                                        onChange={e => {
-                                                            setSelectedItems(prev => e.target.checked ? { ...prev, [item]: { quantity: 1 } } : Object.fromEntries(Object.entries(prev).filter(([k]) => k !== item)));
-                                                        }}
-                                                    />
-                                                    <span>{item}</span>
-                                                    {selectedItems[item] && (
-                                                        <>
-                                                            <input
-                                                                type="number"
-                                                                min={1}
-                                                                value={selectedItems[item].quantity}
-                                                                onChange={e => setSelectedItems(prev => ({ ...prev, [item]: { ...prev[item], quantity: Number(e.target.value) } }))}
-                                                                className="w-16 ml-2 border rounded"
-                                                            />
-                                                            <input
-                                                                type="file"
-                                                                accept="image/*"
-                                                                onChange={e => setSelectedItems(prev => ({ ...prev, [item]: { ...prev[item], photo: e.target.files?.[0] || null } }))}
-                                                                className="ml-2"
-                                                            />
-                                                            {selectedItems[item].photo && <img src={URL.createObjectURL(selectedItems[item].photo!)} alt="preview" className="h-10 w-10 object-cover rounded ml-2" />}
-                                                        </>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ))}
-                            </motion.div>
-                        )}
-
-                        {step === 3 && (
-                            <motion.div
-                                key="step3"
-                                className="space-y-4"
-                                variants={stepVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                {/* Step 4: Carrying Upstairs & (Dis)assembly */}
-                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Carrying & (Dis)assembly</h2>
-                                <div className="grid grid-cols-2 gap-4">
+                            {/* Step 2: Date & Time */}
+                            {step === 2 && (
+                                <div className="space-y-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Select your preferred date and time for pickup and delivery.
+                                    </p>
+                                    
                                     <div>
-                                        <label htmlFor="floorPickup" className="block text-sm font-medium text-gray-700">Floor (Pickup)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Preferred Date
+                                        </label>
                                         <input
-                                            type="number"
-                                            id="floorPickup"
-                                            value={floorPickup}
-                                            onChange={(e) => setFloorPickup(e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                            placeholder="e.g., 2 (2nd Floor)"
+                                            type="date"
+                                            value={selectedDate}
+                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            min={new Date().toISOString().split('T')[0]}
+                                            required
+                                            disabled={isDateFlexible}
                                         />
                                     </div>
-                                    <div>
-                                        <label htmlFor="floorDropoff" className="block text-sm font-medium text-gray-700">Floor (Drop-off)</label>
+                                    
+                                    <div className="flex items-center mt-2">
                                         <input
-                                            type="number"
-                                            id="floorDropoff"
-                                            value={floorDropoff}
-                                            onChange={(e) => setFloorDropoff(e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                            placeholder="e.g., 1 (Ground Floor)"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="mt-4 relative flex items-start">
-                                    <div className="flex items-center h-5">
-                                        <input
-                                            id="disassembly"
+                                            id="date-flexibility"
                                             type="checkbox"
-                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            checked={disassembly}
-                                            onChange={(e) => {
-                                                setDisassembly(e.target.checked);
-                                                if (!e.target.checked) {
-                                                    setDisassemblyItems({}); // Reset disassembly items if unchecked
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="ml-3 text-sm">
-                                        <label htmlFor="disassembly" className="font-medium text-gray-700">Require disassembly?</label>
-                                    </div>
-                                </div>
-                                {disassembly && (
-                                    <div className="mt-4">
-                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Select Items for Disassembly</h3>
-                                        {Object.entries(itemQuantities).map(([id, qty]) => (
-                                            qty > 0 && ( // Only show items with a quantity greater than zero
-                                                <div key={id} className="flex items-center h-5">
-                                                    <input
-                                                        id={`disassembly-${id}`}
-                                                        type="checkbox"
-                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                        checked={disassemblyItems[id] || false}
-                                                        onChange={(e) => {
-                                                            setDisassemblyItems({
-                                                                ...disassemblyItems,
-                                                                [id]: e.target.checked,
-                                                            });
-                                                        }}
-                                                    />
-                                                    <label htmlFor={`disassembly-${id}`} className="ml-2 text-sm font-medium text-gray-700">
-                                                        {id} {/* Display the item ID */}
-                                                    </label>
-                                                </div>
-                                            )
-                                        ))}
-
-                                        {/* Checkbox for Custom Item */}
-                                        {customItem && (
-                                            <div className="flex items-center h-5 mt-2">
-                                                <input
-                                                    id="disassembly-custom"
-                                                    type="checkbox"
-                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                    checked={disassemblyItems['custom'] || false}
-                                                    onChange={(e) => {
-                                                        setDisassemblyItems({
-                                                            ...disassemblyItems,
-                                                            custom: e.target.checked,
-                                                        });
-                                                    }}
-                                                />
-                                                <label htmlFor="disassembly-custom" className="ml-2 text-sm font-medium text-gray-700">
-                                                    Custom Item
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                <div className="mt-4 relative flex items-start">
-                                    <div className="flex items-center h-5">
-                                        <input
-                                            id="extraHelper"
-                                            type="checkbox"
-                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            checked={extraHelper}
-                                            onChange={(e) => {
-                                                setExtraHelper(e.target.checked);
-                                                if (!e.target.checked) {
-                                                    setExtraHelperItems({}); // Reset extra helper items if unchecked
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                    <div className="ml-3 text-sm">
-                                        <label htmlFor="extraHelper" className="font-medium text-gray-700">Require extra helper?</label>
-                                    </div>
-                                </div>
-                                {extraHelper && (
-                                    <div className="mt-4">
-                                        <h3 className="text-lg font-semibold text-gray-800 mb-2">Select Items for Extra Help</h3>
-                                        {Object.entries(itemQuantities).map(([id, qty]) => (
-                                            qty > 0 && ( // Only show items with a quantity greater than zero
-                                                <div key={id} className="flex items-center h-5">
-                                                    <input
-                                                        id={`extra-helper-${id}`}
-                                                        type="checkbox"
-                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                        checked={extraHelperItems[id] || false}
-                                                        onChange={(e) => {
-                                                            setExtraHelperItems({
-                                                                ...extraHelperItems,
-                                                                [id]: e.target.checked,
-                                                            });
-                                                        }}
-                                                    />
-                                                    <label htmlFor={`extra-helper-${id}`} className="ml-2 text-sm font-medium text-gray-700">
-                                                        {id} {/* Display the item ID */}
-                                                    </label>
-                                                </div>
-                                            )
-                                        ))}
-
-                                        {/* Checkbox for Custom Item */}
-                                        {customItem && (
-                                            <div className="flex items-center h-5 mt-2">
-                                                <input
-                                                    id="extra-helper-custom"
-                                                    type="checkbox"
-                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                    checked={extraHelperItems['custom'] || false}
-                                                    onChange={(e) => {
-                                                        setExtraHelperItems({
-                                                            ...extraHelperItems,
-                                                            custom: e.target.checked,
-                                                        });
-                                                    }}
-                                                />
-                                                <label htmlFor="extra-helper-custom" className="ml-2 text-sm font-medium text-gray-700">
-                                                    Custom Item
-                                                </label>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {/* Elevator Toggles */}
-                                <ElevatorToggle
-                                    label="Elevator available at Pickup?"
-                                    checked={elevatorPickup}
-                                    onChange={setElevatorPickup}
-                                />
-                                <ElevatorToggle
-                                    label="Elevator available at Dropoff?"
-                                    checked={elevatorDropoff}
-                                    onChange={setElevatorDropoff}
-                                />
-                            </motion.div>
-                        )}
-
-                        {step === 4 && (
-                            <motion.div
-                                key="step5"
-                                className="space-y-4"
-                                variants={stepVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                {/* Step 5: Date and Time Selection */}
-                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Date and Time</h2>
-                                <div>
-                                    <label htmlFor="selectedDate" className="block text-sm font-medium text-gray-700">
-                                        Preferred Date {!isDateFlexible && <span className="text-red-500">*</span>}
-                                    </label>
-                                    <input
-                                        type="date"
-                                        id="selectedDate"
-                                        value={selectedDate}
-                                        onChange={(e) => setSelectedDate(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                        required={!isDateFlexible}
-                                    />
-                                </div>
-                                {/* Flexible dates yes or no */}
-                                <div className="mt-4 relative flex items-start">
-                                    <div className="flex items-center h-5">
-                                        <input
-                                            id="flexibleDate"
-                                            type="checkbox"
-                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             checked={isDateFlexible}
                                             onChange={(e) => {
                                                 setIsDateFlexible(e.target.checked);
-                                                if (e.target.checked) {
-                                                    nextStep();
-                                                }
+                                                if (e.target.checked) setSelectedDate('');
                                             }}
+                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                         />
+                                        <label htmlFor="date-flexibility" className="ml-2 block text-sm text-gray-600">
+                                            My schedule is flexible
+                                        </label>
                                     </div>
-                                    <div className="ml-3 text-sm">
-                                        <label htmlFor="flexibleDate" className="font-medium text-gray-700">Is your date flexible?</label>
+                                    
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            Preferred Time Slot
+                                        </label>
+                                        <select
+                                            value={preferredTimeSpan}
+                                            onChange={(e) => setPreferredTimeSpan(e.target.value)}
+                                            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
+                                        >
+                                            <option value="">Select a time slot...</option>
+                                            <option value="morning">Morning (9:00 - 12:00)</option>
+                                            <option value="afternoon">Afternoon (12:00 - 17:00)</option>
+                                            <option value="evening">Evening (17:00 - 20:00)</option>
+                                            <option value="anytime">Anytime</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div className="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
+                                        <h3 className="text-sm font-medium text-blue-800 flex items-center">
+                                            <FaInfoCircle className="mr-2" /> Pricing Information
+                                        </h3>
+                                        <p className="mt-1 text-sm text-blue-700">
+                                            Weekday rates apply Monday through Friday. Weekend rates (Saturday/Sunday) have a 15% surcharge.
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="mt-4">
-                                    <label htmlFor="preferredTimeSpan" className="block text-sm font-medium text-gray-700">Preferred Time Span</label>
-                                    <select
-                                        id="preferredTimeSpan"
-                                        value={preferredTimeSpan}
-                                        onChange={e => setPreferredTimeSpan(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
-                                        required
-                                    >
-                                        <option value="">Select a time span</option>
-                                        <option value="8-12">8-12</option>
-                                        <option value="12-16">12-16</option>
-                                        <option value="16-20">16-20</option>
-                                    </select>
+                            )}
+                            
+                            {/* Step 3: Item Selection */}
+                            {step === 3 && (
+                                <div className="space-y-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Select the items you need to move.
+                                    </p>
+                                    
+                                    <div className="space-y-6">
+                                        {itemCategories.map((category, index) => (
+                                            <div key={index} className="border border-gray-200 rounded-lg p-4">
+                                                <h3 className="text-md font-medium text-gray-800 mb-3">{category.name}</h3>
+                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                    {category.items.map((item, itemIndex) => (
+                                                        <div key={itemIndex} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-md">
+                                                            <span className="text-sm text-gray-700">{item}</span>
+                                                            <div className="flex items-center space-x-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => decrementItem(`${category.name}-${item}`)}
+                                                                    className={`w-8 h-8 flex items-center justify-center rounded-full border ${
+                                                                        (itemQuantities[`${category.name}-${item}`] || 0) > 0
+                                                                            ? 'border-orange-500 text-orange-500 hover:bg-orange-50'
+                                                                            : 'border-gray-300 text-gray-300 cursor-not-allowed'
+                                                                    }`}
+                                                                    disabled={(itemQuantities[`${category.name}-${item}`] || 0) === 0}
+                                                                >
+                                                                    <FaMinus className="h-3 w-3" />
+                                                                </button>
+                                                                <span className="text-sm w-6 text-center">
+                                                                    {itemQuantities[`${category.name}-${item}`] || 0}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => incrementItem(`${category.name}-${item}`)}
+                                                                    className="w-8 h-8 flex items-center justify-center rounded-full border border-orange-500 text-orange-500 hover:bg-orange-50"
+                                                                >
+                                                                    <FaPlus className="h-3 w-3" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    <div className="mt-6">
+                                        <label htmlFor="custom-item" className="block text-sm font-medium text-gray-700">
+                                            Add a custom item (if not listed above)
+                                        </label>
+                                        <div className="mt-1 flex rounded-md shadow-sm">
+                                            <input
+                                                type="text"
+                                                id="custom-item"
+                                                value={customItem}
+                                                onChange={(e) => setCustomItem(e.target.value)}
+                                                placeholder="Enter item name"
+                                                className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border-gray-300 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (customItem.trim()) {
+                                                        incrementItem(`Custom-${customItem.trim()}`);
+                                                        setCustomItem('');
+                                                    }
+                                                }}
+                                                disabled={!customItem.trim()}
+                                                className="inline-flex items-center px-4 py-2 border border-transparent rounded-r-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
-                            </motion.div>
-                        )}
-
-                        {step === 5 && (
-                            <motion.div
-                                key="step6"
-                                className="space-y-4"
-                                variants={stepVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                {/* Step 6: Contact Info */}
-                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Contact Information</h2>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Contact Information</label>
-                                    <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                            )}
+                            
+                            {/* Step 4: Add-ons */}
+                            {step === 4 && (
+                                <div className="space-y-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Select any additional services you need for your move.
+                                    </p>
+                                    
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Disassembly & Reassembly</h3>
+                                        <div className="flex items-center mb-4">
+                                            <input
+                                                id="disassembly-service"
+                                                type="checkbox"
+                                                checked={disassembly}
+                                                onChange={(e) => setDisassembly(e.target.checked)}
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="disassembly-service" className="ml-2 block text-sm text-gray-700">
+                                                I need items disassembled and/or reassembled
+                                            </label>
+                                        </div>
+                                        
+                                        {disassembly && (
+                                            <div className="ml-6 space-y-3">
+                                                <p className="text-sm text-gray-600">
+                                                    Select which items need disassembly/reassembly:
+                                                </p>
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((item, index) => (
+                                                    <div key={index} className="flex items-center">
+                                                        <input
+                                                            id={`disassembly-${item}`}
+                                                            type="checkbox"
+                                                            checked={disassemblyItems[item] || false}
+                                                            onChange={(e) => setDisassemblyItems({
+                                                                ...disassemblyItems,
+                                                                [item]: e.target.checked
+                                                            })}
+                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        />
+                                                        <label htmlFor={`disassembly-${item}`} className="ml-2 block text-sm text-gray-700">
+                                                            {item.replace(/-/g, ' - ')} ({itemQuantities[item]})
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Extra Helper</h3>
+                                        <div className="flex items-center mb-4">
+                                            <input
+                                                id="extra-helper"
+                                                type="checkbox"
+                                                checked={extraHelper}
+                                                onChange={(e) => setExtraHelper(e.target.checked)}
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="extra-helper" className="ml-2 block text-sm text-gray-700">
+                                                I need an extra helper for my move (+€15)
+                                            </label>
+                                        </div>
+                                        
+                                        {extraHelper && (
+                                            <div className="ml-6 space-y-3">
+                                                <p className="text-sm text-gray-600">
+                                                    Select which items need an extra helper:
+                                                </p>
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((item, index) => (
+                                                    <div key={index} className="flex items-center">
+                                                        <input
+                                                            id={`helper-${item}`}
+                                                            type="checkbox"
+                                                            checked={extraHelperItems[item] || false}
+                                                            onChange={(e) => setExtraHelperItems({
+                                                                ...extraHelperItems,
+                                                                [item]: e.target.checked
+                                                            })}
+                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        />
+                                                        <label htmlFor={`helper-${item}`} className="ml-2 block text-sm text-gray-700">
+                                                            {item.replace(/-/g, ' - ')} ({itemQuantities[item]})
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Student Discount</h3>
+                                        <div className="flex items-center mb-4">
+                                            <input
+                                                id="student-discount"
+                                                type="checkbox"
+                                                checked={isStudent}
+                                                onChange={(e) => setIsStudent(e.target.checked)}
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="student-discount" className="ml-2 block text-sm text-gray-700">
+                                                I am a student (10% discount with valid ID)
+                                            </label>
+                                        </div>
+                                        
+                                        {isStudent && (
+                                            <div className="ml-6 space-y-3">
+                                                <p className="text-sm text-gray-600">
+                                                    Please upload a photo of your student ID (required for discount)
+                                                </p>
+                                                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                                    <div className="space-y-1 text-center">
+                                                        <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                        <div className="flex text-sm text-gray-600">
+                                                            <label htmlFor="student-id-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-orange-600 hover:text-orange-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-orange-500">
+                                                                <span>Upload a file</span>
+                                                                <input id="student-id-upload" name="student-id-upload" type="file" className="sr-only" onChange={handleStudentIdUpload} />
+                                                            </label>
+                                                            <p className="pl-1">or drag and drop</p>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500">
+                                                            PNG, JPG, GIF up to 10MB
+                                                        </p>
+                                                        {studentId && (
+                                                            <p className="text-sm text-green-600">
+                                                                ID uploaded: {studentId.name}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Step 5: Contact Information */}
+                            {step === 5 && (
+                                <div className="space-y-6">
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Please provide your contact information.
+                                    </p>
+                                    
+                                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                                         <div>
                                             <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-                                                First Name <span className="text-red-500">*</span>
+                                                First Name
                                             </label>
                                             <input
                                                 type="text"
                                                 id="firstName"
                                                 value={contactInfo.firstName}
                                                 onChange={handleContactInfoChange}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                                                 required
                                             />
                                         </div>
                                         <div>
                                             <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-                                                Last Name <span className="text-red-500">*</span>
+                                                Last Name
                                             </label>
                                             <input
                                                 type="text"
                                                 id="lastName"
                                                 value={contactInfo.lastName}
                                                 onChange={handleContactInfoChange}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                                                 required
                                             />
                                         </div>
                                         <div>
                                             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                                Email <span className="text-red-500">*</span>
+                                                Email
                                             </label>
                                             <input
                                                 type="email"
                                                 id="email"
                                                 value={contactInfo.email}
                                                 onChange={handleContactInfoChange}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                                                 required
                                             />
                                         </div>
                                         <div>
                                             <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                                                Phone Number <span className="text-red-500">*</span>
+                                                Phone Number
                                             </label>
                                             <input
                                                 type="tel"
                                                 id="phone"
                                                 value={contactInfo.phone}
                                                 onChange={handleContactInfoChange}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                                                className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                                                placeholder="+31 6 12345678"
                                                 required
                                             />
                                         </div>
                                     </div>
-                                    {/* Student ID Upload */}
-                                    <ElevatorToggle
-                                        label="Are you a student, then you get 7.5% discount?"
-                                        checked={isStudent}
-                                        onChange={setIsStudent}
-                                    />
-                                    {isStudent && (
-                                        <div className="col-span-2 mt-4">
-                                            <label htmlFor="studentId" className="block text-sm font-medium text-gray-700">
-                                                Upload Student ID
-                                            </label>
+                                    
+                                    <div className="mt-4">
+                                        <div className="flex items-center">
                                             <input
-                                                type="file"
-                                                id="studentId"
-                                                accept="image/*"
-                                                onChange={handleStudentIdUpload}
-                                                className="mt-1 block w-full text-sm text-slate-500
-                                                file:mr-4 file:py-2 file:px-4
-                                                file:rounded-md
-                                                file:border-0
-                                                file:text-sm file:font-semibold
-                                                file:bg-orange-500 file:text-white
-                                                hover:file:bg-orange-700"
+                                                id="agree-terms"
+                                                type="checkbox"
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                required
                                             />
+                                            <label htmlFor="agree-terms" className="ml-2 text-sm text-gray-700">
+                                                I agree to the <a href="#" className="text-orange-600 hover:text-orange-500">Terms and Conditions</a> and <a href="#" className="text-orange-600 hover:text-orange-500">Privacy Policy</a>
+                                            </label>
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Step 6: Order Summary */}
+                            {step === 6 && (
+                                <div className="space-y-6">
+                                    <h3 className="text-lg font-medium text-gray-900">Order Summary</h3>
+                                    
+                                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                                        <h4 className="text-md font-medium text-gray-800 mb-3">Pickup & Delivery Details</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <p className="text-gray-500">Pickup Address:</p>
+                                                <p className="font-medium">{firstLocation}</p>
+                                                <p className="text-gray-500 mt-1">Floor: {floorPickup || '0'} {elevatorPickup ? '(Elevator Available)' : ''}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-500">Delivery Address:</p>
+                                                <p className="font-medium">{secondLocation}</p>
+                                                <p className="text-gray-500 mt-1">Floor: {floorDropoff || '0'} {elevatorDropoff ? '(Elevator Available)' : ''}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                                        <h4 className="text-md font-medium text-gray-800 mb-3">Schedule</h4>
+                                        <div className="text-sm">
+                                            {isDateFlexible ? (
+                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">Flexible</span></p>
+                                            ) : (
+                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">{new Date(selectedDate).toLocaleDateString()}</span></p>
+                                            )}
+                                            {preferredTimeSpan && (
+                                                <p className="mt-1"><span className="text-gray-500">Time:</span> <span className="font-medium">
+                                                    {preferredTimeSpan === 'morning' ? 'Morning (9:00 - 12:00)' : 
+                                                     preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 17:00)' : 
+                                                     preferredTimeSpan === 'evening' ? 'Evening (17:00 - 20:00)' : 'Anytime'}
+                                                </span></p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                                        <h4 className="text-md font-medium text-gray-800 mb-3">Items</h4>
+                                        <ul className="space-y-2 text-sm">
+                                            {Object.keys(itemQuantities).map((item, index) => (
+                                                <li key={index} className="flex justify-between">
+                                                    <span>{item.replace(/-/g, ' - ')}</span>
+                                                    <span className="font-medium">x{itemQuantities[item]}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                                        <h4 className="text-md font-medium text-gray-800 mb-3">Additional Services</h4>
+                                        <ul className="space-y-2 text-sm">
+                                            {disassembly && (
+                                                <li className="flex justify-between">
+                                                    <span>Disassembly & Reassembly</span>
+                                                    <span className="font-medium">€{disassemblyCost.toFixed(2)}</span>
+                                                </li>
+                                            )}
+                                            {extraHelper && (
+                                                <li className="flex justify-between">
+                                                    <span>Extra Helper</span>
+                                                    <span className="font-medium">€15.00</span>
+                                                </li>
+                                            )}
+                                            {carryingCost > 0 && (
+                                                <li className="flex justify-between">
+                                                    <span>Floor Carrying Cost</span>
+                                                    <span className="font-medium">€{carryingCost.toFixed(2)}</span>
+                                                </li>
+                                            )}
+                                            {isStudent && studentId && (
+                                                <li className="flex justify-between text-green-600">
+                                                    <span>Student Discount (10%)</span>
+                                                    <span className="font-medium">-€{(estimatedPrice * 0.1).toFixed(2)}</span>
+                                                </li>
+                                            )}
+                                        </ul>
+                                    </div>
+                                    
+                                    <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                                        <h4 className="text-md font-medium text-gray-800 mb-3">Contact Information</h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <p className="text-gray-500">Name:</p>
+                                                <p className="font-medium">{contactInfo.firstName} {contactInfo.lastName}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-500">Email:</p>
+                                                <p className="font-medium">{contactInfo.email}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-gray-500">Phone:</p>
+                                                <p className="font-medium">{contactInfo.phone}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                                        <div className="flex justify-between items-center">
+                                            <h4 className="text-lg font-bold text-gray-900">Total Price:</h4>
+                                            <p className="text-xl font-bold text-orange-600">
+                                                €{isStudent && studentId ? (estimatedPrice * 0.9).toFixed(2) : estimatedPrice?.toFixed(2)}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Navigation Buttons */}
+                            <div className="flex justify-between mt-8">
+                                {step > 1 && (
+                                    <button 
+                                        type="button"
+                                        onClick={prevStep}
+                                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                                    >
+                                        <FaArrowLeft className="mr-2 -ml-1 h-5 w-5" /> Previous
+                                    </button>
+                                )}
+                                <div>
+                                    {step < 6 ? (
+                                        <button 
+                                            type="button"
+                                            onClick={nextStep}
+                                            disabled={step === 1 && !pickupType}
+                                            className={`inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${
+                                                step === 1 && !pickupType ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700'
+                                            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500`}
+                                        >
+                                            Next <FaArrowRight className="ml-2 -mr-1 h-5 w-5" />
+                                        </button>
+                                    ) : (
+                                        <button 
+                                            type="button"
+                                            onClick={handleSubmit}
+                                            disabled={!isFormValid()}
+                                            className={`inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${isFormValid() ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
+                                        >
+                                            {paymentLoading ? (
+                                                <>
+                                                    <span className="animate-pulse">Processing...</span>
+                                                    <svg className="animate-spin ml-2 -mr-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                </>
+                                            ) : (
+                                                <>Submit Request</>
+                                            )}
+                                        </button>
                                     )}
                                 </div>
-                            </motion.div>
-                        )}
-                        {step === 6 && estimatedPrice !== null && (
-                            <motion.div
-                                key="overview"
-                                className="space-y-6"
-                                variants={stepVariants}
-                                initial="hidden"
-                                animate="visible"
-                                exit="exit"
-                            >
-                                {/* Step 7: Overview and Confirm */}
-                                <h2 className="text-xl font-semibold text-gray-800 mb-4">Overview and Confirm</h2>
-                                <div className="bg-gray-100 p-4 rounded-md shadow-md">
-                                    {/* Ham List Section */}
-                                    <div className="border-b pb-4">
-                                        <h3 className="text-lg font-bold mb-2 flex items-center">
-                                            <FaCube className="mr-2 text-gray-600" /> Item List
-                                        </h3>
-                                        {Object.entries(selectedItems).map(([item, data]) => (
-                                            <motion.div
-                                                key={item}
-                                                className="flex justify-between py-1 text-gray-700 opacity-80"
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ duration: 0.3 }}
-                                            >
-                                                <span>{item} x{data.quantity}</span>
-                                                {data.photo && <img src={URL.createObjectURL(data.photo)} alt="preview" className="h-10 w-10 object-cover rounded ml-2" />}
-                                            </motion.div>
-                                        ))}
-                                    </div>
-
-                                    {/* All-ons Section */}
-                                    <div className="border-b pb-4">
-                                        <h3 className="text-lg font-bold mb-2 flex items-center">
-                                            <FaToolbox className="mr-2 text-gray-600" /> Add-ons
-                                        </h3>
-                                        <motion.div
-                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            transition={{ duration: 0.3 }}
-                                        >
-                                            <div>
-                                                <p>Disassembly: {disassembly ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
-                                                <p>Extra Helper: {extraHelper ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
-                                            </div>
-                                            <div>
-                                                <p>Pickup Elevator: {elevatorPickup ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
-                                                <p>Dropoff Elevator: {elevatorDropoff ? <span className="text-green-500">Yes</span> : <span className="text-red-500">No</span>}</p>
-                                            </div>
-                                        </motion.div>
-                                    </div>
-
-                                                                        {/* Carried Display Section */}
-                                    <div className="border-b pb-4">
-                                        <h3 className="text-lg font-bold mb-2 flex items-center">
-                                            <FaTruck className="mr-2 text-gray-600" /> Carried Details
-                                        </h3>
-                                        <motion.div
-                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                        >
-                                            <div>
-                                                <p>Pickup Floor: {floorPickup}</p>
-                                                <p>Dropoff Floor: {floorDropoff}</p>
-                                            </div>
-                                            <div>
-                                                <p>Distance: {firstLocation && secondLocation ? "50km" : "N/A"}</p>
-                                            </div>
-                                        </motion.div>
-                                    </div>
-
-                                    {/* Contact Details Section */}
-                                    <div className="border-b pb-4">
-                                        <h3 className="text-lg font-bold mb-2 flex items-center">Contact Details</h3>
-                                        <motion.div
-                                            className="grid grid-cols-2 gap-4 text-gray-700 opacity-80"
-                                            initial={{ opacity: 0, x: -20 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ duration: 0.3 }}
-                                        >
-                                            <div className="flex flex-col items-start p-4 border border-gray-200 rounded-xl shadow-md transition-shadow duration-300">
-
-                                                {/* Contact Details */}
-                                            
-                                                <div className="space-y-2">
-
-                                                    {Object.keys(contactInfo).length > 0 && (
-                                                        <div>
-                                                            <h3 className="text-lg font-medium text-gray-700">Contact Details:</h3>
-                                                            <p>Name: {contactInfo.firstName} {contactInfo.lastName}</p>
-                                                            <p>Email: {contactInfo.email}</p>
-                                                            <p>Phone: {contactInfo.phone}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* Student ID Information */}
-                                                {isStudent && studentId && (
-                                                    <div className="flex justify-between py-1 text-gray-700 opacity-80">
-                                                        <span>Student ID Uploaded:</span>
-                                                        <span>{studentId.name}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            
-                                        
-                                        
-                                        </motion.div>
-                                    </div>
-
-                                    {/* Flexible Date Section */}
-                                    <div className="border-b pb-4">
-                                        <h3 className="text-lg font-bold mb-2 flex items-center">Date Flexibility</h3>
-                                        <p>{isDateFlexible ? "Yes" : "No"}</p>
-                                    </div>                                    
-
-                                    {/* Pricing Breakdown */}
-                                    <div className="bg-gray-100 p-4 rounded-lg">
-                                        <h3 className="text-lg font-bold mb-4">Payment Overview</h3>
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between">
-                                                <span>Base Price:</span>
-                                                <span>€{basePrice.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Items Points:</span>
-                                                <span>€{(itemPoints * 3).toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Carrying Cost:</span>
-                                                <span>€{carryingCost.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Disassembly Cost:</span>
-                                                <span>€{disassemblyCost.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Distance Cost:</span>
-                                                <span>€{distanceCost.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                                <span>Extra Helper Cost:</span>
-                                                <span>€{extraHelperCost.toFixed(2)}</span>
-                                            </div>
-                                            <div className="flex justify-between font-bold text-lg pt-2">
-                                                <span>Total Estimated:</span>
-                                                <span>€{estimatedPrice?.toFixed(2)}</span>
-                                            </div>
-                                        </div>
-                                        <p className="text-sm text-gray-600 mt-2">
-                                            <FaInfoCircle className="inline mr-1" />
-                                            Final price may vary based on actual conditions
-                                        </p>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-
-                    </AnimatePresence>
-                        {/* Navigation Buttons */}
-                        <div className="flex justify-between mt-8">
-                            {step > 1 && (
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    transition={{ duration: 0.2 }}
-                                    onClick={prevStep}
-                                    className="bg-gray-100 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-200"
-                                >
-                                    <FaArrowLeft className="inline-block mr-2" /> Previous
-                                </motion.button>
-                        )}
-
-
-                        {step === 6?
-                           (<form onSubmit={handleSubmit}>
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                transition={{ duration: 0.2 }}
-                                type="submit"
-                                disabled={!isFormValid()}
-                                className={`py-2 px-4 rounded-md ${
-                                    isFormValid() 
-                                    ? "bg-red-600 text-white hover:bg-red-700" 
-                                    : "bg-gray-400 text-gray-200 cursor-not-allowed"
-                                }`}
-                            >
-                                Confirm Booking
-                            </motion.button>
-                            </form>)
-                                   :   (
-                                     <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        transition={{ duration: 0.2 }}
-                                        onClick={nextStep}
-                                        className="bg-orange-500 text-white py-2 px-4 rounded-md hover:bg-orange-600"
-                                    >
-                                        Next <FaArrowRight className="inline-block ml-2" />
-                                    </motion.button>
-                                   )
-                        }
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Pricing Display - Right 1/3 */}
+                    <div className="md:col-span-1">
+                        <PriceSummary 
+                            basePrice={basePrice} 
+                            itemPoints={itemPoints} 
+                            carryingCost={carryingCost} 
+                            disassemblyCost={disassemblyCost} 
+                            distanceCost={distanceCost} 
+                            extraHelperCost={extraHelper ? 15 : 0}
+                            isStudent={isStudent}
+                        />
+                    </div>
                 </div>
             </div>
-         </motion.div>
         </div>
     );
 };
