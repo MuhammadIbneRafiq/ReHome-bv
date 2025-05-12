@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart } from "react-icons/fa";
+import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments } from "react-icons/fa";
 import logo from "../../src/assets/logorehome.jpg";
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { useAuth } from '../hooks/useAuth';
+import useUserStore from '../services/state/useUserSessionStore';
+import { sendMessage } from '../services/marketplaceMessageService';
 
 interface ItemDetailsModalProps {
   isOpen: boolean;
@@ -32,6 +35,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 }) => {
   if (!isOpen || !item) return null;
   const navigate = useNavigate(); // Initialize navigate
+  const { isAuthenticated } = useAuth();
+  const user = useUserStore((state) => state.user);
 
   const { id, name, description, image_url, price, city_name, sold } = item;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -41,7 +46,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [showBidModal, setShowBidModal] = useState(false);
   const [bidAmount, setBidAmount] = useState('');
   const [bidError, setBidError] = useState('');
-
+  
   const goToNextImage = () => {
     setCurrentImageIndex(prev => (prev + 1) % image_url.length);
   };
@@ -77,6 +82,31 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     setBidError('');
   };
 
+  // Handle initiating chat from item details
+  const handleInitiateChat = async () => {
+    if (!user) {
+      navigate('/login?redirect=back');
+      return;
+    }
+
+    // Send an initial message to start the conversation if this is the first interaction
+    try {
+      await sendMessage({
+        item_id: id,
+        content: `Hi, I'm interested in your item: ${name}`,
+        sender_id: user.email,
+        sender_name: user.email,
+        receiver_id: item.seller_email
+      });
+      
+      // Close the modal and redirect to the chat dashboard
+      onClose();
+      navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: id } });
+    } catch (error) {
+      console.error('Error initiating chat:', error);
+    }
+  };
+
   return (
     <motion.div
       className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 backdrop-blur-sm"
@@ -85,7 +115,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="bg-white rounded-xl shadow-2xl p-8 max-w-6xl w-full mx-4 relative overflow-hidden"
+        className="bg-white rounded-xl shadow-2xl p-8 max-w-5xl w-full mx-4 relative overflow-hidden"
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
       >
@@ -162,6 +192,28 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   </span>
                 </div>
                 
+                {/* Action buttons */}
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {!sold && (
+                    <button
+                      onClick={() => onAddToCart && onAddToCart(id)}
+                      className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                    >
+                      <FaShoppingCart />
+                      Add to Cart
+                    </button>
+                  )}
+                  
+                  {/* Chat button - now redirects to the chat dashboard */}
+                  <button
+                    onClick={handleInitiateChat}
+                    className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                  >
+                    <FaComments />
+                    Chat with Seller
+                  </button>
+                </div>
+                
                 {/* Bidding Section */}
                 <div className="mb-4">
                   <div className="flex items-center gap-2">
@@ -236,14 +288,6 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 >
                   {sold ? <FaCheckCircle /> : 'Mark as Sold'}
                   {sold ? 'Marked Sold' : 'Mark as Sold'}
-                </button>
-              )}
-              {onAddToCart && (
-                <button
-                  onClick={() => {onAddToCart(id); navigate('/pricing')}}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
-                >
-                  <FaShoppingCart /> Add to Cart
                 </button>
               )}
             </div>

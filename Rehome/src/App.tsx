@@ -20,7 +20,7 @@ import AboutUsPage from "./lib/pages/AboutUsPage";
 import SellerDashboard from "./lib/pages/SellerDashboard";
 import SpecialRequestPage from "./lib/pages/SpecialRequestPage";
 import AdminDashboard from "./lib/pages/AdminDashboard";
-
+import MessagesPage from "./lib/pages/MessagesPage";
 
 // const usePostData = <T,>(endpoint: string) => {
 //   return useMutation<T, Error, T>(
@@ -52,6 +52,11 @@ const App = () => {
                 <Route path="/sell-dash" element={
                   <ProtectedRoute>
                     <SellerDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/messages" element={
+                  <ProtectedRoute>
+                    <MessagesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/admin" element={

@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
 import useUserStore from "../services/state/useUserSessionStore";
 import logoImage from "../assets/logorehome.jpg"; // Import the ReHome logo
+import MessageNotifications from './MessageNotifications';
 
 // List of admin email addresses - keep in sync with AdminRoute.tsx
 const ADMIN_EMAILS = [
@@ -181,6 +182,9 @@ export default function Navbar() {
                                 <Link to="/sell-dash" className="rehome-dashboard-button">
                                     {t('navbar.dashboard')}
                                 </Link>
+                                <Link to="/messages" className="text-white">
+                                    <MessageNotifications />
+                                </Link>
                                 <div 
                                     onClick={toggleUserMenu} 
                                     className="cursor-pointer"
@@ -198,9 +202,14 @@ export default function Navbar() {
                                         <Link 
                                             to="/sell-dash" 
                                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                            onClick={() => setUserMenuOpen(false)}
                                         >
-                                            {t('dashboard.title')}
+                                            {t('navbar.dashboard')}
+                                        </Link>
+                                        <Link 
+                                            to="/messages" 
+                                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                        >
+                                            Messages
                                         </Link>
                                         {/* Admin Dashboard Link - Only shown for admin users */}
                                         {user && ADMIN_EMAILS.includes(user.email) && (
