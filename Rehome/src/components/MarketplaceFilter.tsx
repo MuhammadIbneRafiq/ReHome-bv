@@ -238,7 +238,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
               ))}
             </select>
             
-            {selectedCategory && categories.find(c => c.name === selectedCategory)?.subcategories.length > 0 && (
+            {selectedCategory && categories.find(c => c.name === selectedCategory)?.subcategories && categories.find(c => c.name === selectedCategory)!.subcategories.length > 0 && (
               <select
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                 value={selectedSubCategory}

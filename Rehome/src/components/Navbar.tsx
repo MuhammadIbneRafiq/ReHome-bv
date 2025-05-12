@@ -36,11 +36,6 @@ export default function Navbar() {
     const transportationButtonRef = useRef<HTMLButtonElement>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
 
-
-    const toggleDropdown = () => {
-        setIsDropdownOpen(!isDropdownOpen);
-    };
-
     const toggleUserMenu = () => {
         setUserMenuOpen(!userMenuOpen);
     };
