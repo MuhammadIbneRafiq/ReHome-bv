@@ -392,12 +392,6 @@ const SellerDashboard = () => {
                             <div className="p-6">
                                 <div className="flex justify-between items-start mb-4">
                                     <h2 className="text-2xl font-bold">{t('dashboard.newListing')}</h2>
-                                    <button
-                                        onClick={handleModalClose}
-                                        className="text-gray-500 hover:text-gray-700"
-                                    >
-                                        &times;
-                                    </button>
                                 </div>
                                 <SellPage onClose={handleModalClose} />
                             </div>
