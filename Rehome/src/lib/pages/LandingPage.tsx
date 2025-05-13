@@ -151,7 +151,7 @@ const LandingPage = () => {
                       ease: "easeInOut"
                     }
                   }}
-                  className="absolute bottom-12 left-1/2 transform -translate-x-1/2"
+                  className="absolute bottom-12 left-[30%] transform -translate-x-1/2"
                 >
                   <div className="relative flex items-center">
                     {/* Truck base image (hide original box) */}
@@ -162,7 +162,7 @@ const LandingPage = () => {
                       style={{ filter: 'brightness(0.85)' }}
                     />
                     {/* Orange box overlay */}
-                    <div className="absolute top-[0%] left-[0%] w-[195px] h-[109px] bg-[#F97316] rounded-md flex items-center justify-center z-10">
+                    <div className="absolute top-[0%] left-[0%] w-[209px] h-[119px] bg-[#F97535] rounded-md flex items-center justify-center z-10">
                       <img 
                         src={logoImage} 
                         alt="ReHome Logo" 
