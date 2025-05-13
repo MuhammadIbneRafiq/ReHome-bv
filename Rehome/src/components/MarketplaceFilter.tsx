@@ -307,7 +307,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
               value={distance}
               onChange={(e) => setDistance(Number(e.target.value))}
             >
-              <option value="0">Any distance</option>
+              <option value="0">Any</option>
               <option value="5">5 km</option>
               <option value="10">10 km</option>
               <option value="25">25 km</option>
