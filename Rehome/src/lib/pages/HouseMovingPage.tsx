@@ -1,12 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaTruck, FaMinus, FaPlus, FaCube, FaToolbox, FaInfoCircle } from "react-icons/fa";
+import { useState, useEffect } from 'react';
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaMinus, FaPlus, FaToolbox, FaInfoCircle } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { cityDayData, furnitureItems } from '../../lib/constants';
 import fetchCheckoutUrl from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
+
+// Define interfaces for component props
+interface ContactInfo {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+}
+
+interface ItemQuantities {
+    [key: string]: number;
+}
+
+interface PriceSummaryProps {
+    basePrice: number;
+    itemPoints: number;
+    carryingCost: number;
+    disassemblyCost: number;
+    distanceCost: number;
+    extraHelperCost: number;
+    isStudent: boolean;
+}
+
+interface LocationStepProps {
+    firstLocation: string;
+    setFirstLocation: (value: string) => void;
+    secondLocation: string;
+    setSecondLocation: (value: string) => void;
+    floorPickup: string;
+    setFloorPickup: (value: string) => void;
+    floorDropoff: string;
+    setFloorDropoff: (value: string) => void;
+    elevatorPickup: boolean;
+    setElevatorPickup: (value: boolean) => void;
+    elevatorDropoff: boolean;
+    setElevatorDropoff: (value: boolean) => void;
+}
+
+interface ElevatorToggleProps {
+    label: string;
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+}
 
 const itemCategories = [
     { name: "Bathroom Furniture", items: ["Cabinet", "Mirror", "Sink"] },
@@ -25,36 +67,36 @@ const HouseMovingPage = () => {
     const [floorPickup, setFloorPickup] = useState('');
     const [floorDropoff, setFloorDropoff] = useState('');
     const [disassembly, setDisassembly] = useState(false);
-    const [contactInfo, setContactInfo] = useState({
+    const [contactInfo, setContactInfo] = useState<ContactInfo>({
         firstName: '',
         lastName: '',
         email: '',
         phone: '',
     });
-    const [estimatedPrice, setEstimatedPrice] = useState(null);
+    const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
     const [selectedDate, setSelectedDate] = useState('');
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
-    const [itemQuantities, setItemQuantities] = useState({});
+    const [itemQuantities, setItemQuantities] = useState<ItemQuantities>({});
     const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
-    const [studentId, setStudentId] = useState(null); // State for student ID file
-    const [customItem] = useState(''); // State for custom item input
+    const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
+    // const [customItem] = useState(''); // State for custom item input
     // const navigate = useNavigate();
     const [basePrice, setBasePrice] = useState(50); // Initialize basePrice in state
     const [itemPoints, setItemPoints] = useState(0); // Initialize itemPoints in state
     const [carryingCost, setCarryingCost] = useState(0); // Initialize carryingCost in state
     const [disassemblyCost, setDisassemblyCost] = useState(0); // Initialize disassemblyCost in state
     const [distanceCost, setDistanceCost] = useState(0); // Initialize distanceCost in state
-    const [extraHelperCost] = useState(0); // Initialize extraHelperCost in state
+    // const [extraHelperCost] = useState(0); // Initialize extraHelperCost in state
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
-    const [extraHelperItems, setExtraHelperItems] = useState({}); // State to track extra helper items
-    const [disassemblyItems, setDisassemblyItems] = useState({}); // State to track disassembly items
+    // const [extraHelperItems, setExtraHelperItems] = useState({}); // State to track extra helper items
+    // const [disassemblyItems, setDisassemblyItems] = useState({}); // State to track disassembly items
     const [preferredTimeSpan, setPreferredTimeSpan] = useState(''); // State for preferred time span
-    const [selectedItems, setSelectedItems] = useState({});
-    const [paymentLoading, setPaymentLoading] = useState(false);
+    // const [selectedItems, setSelectedItems] = useState({});
+    const [paymentLoading] = useState(false);
 
-    const checkCityDay = (location, date) => {
+    const checkCityDay = (location: string, date: string): boolean => {
         if (!location || !date) return false;
         const city = getCityFromPostalCode(location);
         if (!city) return false;
@@ -62,19 +104,19 @@ const HouseMovingPage = () => {
         return cityDayData[city]?.includes(dayOfWeek);
     };
 
-    const getItemPoints = (itemId) => {
+    const getItemPoints = (itemId: string): number => {
         const item = furnitureItems.find(item => item.id === itemId);
         return item ? item.points : 0;
     };
 
-    const getCityFromPostalCode = (postalCode) => {
+    const getCityFromPostalCode = (postalCode: string): string | null => {
         // Simplified postal code to city mapping - adapt to your data source
         if (postalCode.startsWith("1")) return "Amsterdam";
         if (postalCode.startsWith("5")) return "Eindhoven";
         return null; // Handle unknown postal codes
     };
 
-    const handleStudentIdUpload = (event) => {
+    const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
         const file = event.target.files?.[0];
         setStudentId(file || null);
     };
@@ -161,14 +203,14 @@ const HouseMovingPage = () => {
         if (step > 1) setStep(step - 1);
     };
 
-    const incrementItem = (itemId) => {
+    const incrementItem = (itemId: string) => {
         setItemQuantities(prevQuantities => ({
             ...prevQuantities,
             [itemId]: (prevQuantities[itemId] || 0) + 1,
         }));
     };
 
-    const decrementItem = (itemId) => {
+    const decrementItem = (itemId: string) => {
         setItemQuantities(prevQuantities => {
             const newQuantity = (prevQuantities[itemId] || 0) - 1;
             if (newQuantity <= 0) {
@@ -179,7 +221,7 @@ const HouseMovingPage = () => {
         });
     };
 
-    const handleContactInfoChange = (e) => {
+    const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
     };
 
@@ -197,7 +239,7 @@ const HouseMovingPage = () => {
         return true;
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!isFormValid()) {
@@ -283,27 +325,8 @@ const HouseMovingPage = () => {
         }
     };
 
-    const ElevatorToggle = ({ label, checked, onChange }) => (
-        <div className="flex items-center mt-2">
-            <Switch
-                checked={checked}
-                onChange={onChange}
-                className={`${checked ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
-            >
-                <span className={`${checked ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
-            </Switch>
-            <span className="ml-2 text-sm text-gray-700">{label}</span>
-        </div>
-    );
-
-    const stepVariants = {
-        hidden: { opacity: 0, x: -50, transition: { duration: 0.3 } },
-        visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
-        exit: { opacity: 0, x: 50, transition: { duration: 0.3 } },
-    };
-
     // Add a real-time pricing display component that will be shown throughout the process
-    const PriceSummary = ({ 
+    const PriceSummary: React.FC<PriceSummaryProps> = ({ 
         basePrice, 
         itemPoints, 
         carryingCost, 
@@ -369,7 +392,7 @@ const HouseMovingPage = () => {
     };
 
     // Location step component
-    const LocationStep = ({ 
+    const LocationStep: React.FC<LocationStepProps> = ({ 
         firstLocation, 
         setFirstLocation, 
         secondLocation, 
@@ -383,7 +406,7 @@ const HouseMovingPage = () => {
         elevatorDropoff,
         setElevatorDropoff
     }) => {
-        const ElevatorToggle = ({ label, checked, onChange }) => (
+        const LocElevatorToggle: React.FC<ElevatorToggleProps> = ({ label, checked, onChange }) => (
             <Switch.Group as="div" className="flex items-center">
                 <Switch
                     checked={checked}
@@ -434,7 +457,7 @@ const HouseMovingPage = () => {
                     </div>
                     
                     <div className="mt-2">
-                        <ElevatorToggle
+                        <LocElevatorToggle
                             label="Elevator available at pickup location"
                             checked={elevatorPickup}
                             onChange={setElevatorPickup}
@@ -470,7 +493,7 @@ const HouseMovingPage = () => {
                     </div>
                     
                     <div className="mt-2">
-                        <ElevatorToggle
+                        <LocElevatorToggle
                             label="Elevator available at dropoff location"
                             checked={elevatorDropoff}
                             onChange={setElevatorDropoff}
