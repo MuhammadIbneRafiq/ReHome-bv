@@ -9,7 +9,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // Check if the connection to Supabase is working
 const checkSupabaseConnection = async () => {
   try {
-    const { data, error } = await supabase.from('marketplace_messages').select('id').limit(1);
+    const { error } = await supabase.from('marketplace_messages').select('id').limit(1);
     
     if (error) {
       console.error('Supabase connection error:', error);

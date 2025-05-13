@@ -3,8 +3,6 @@ import { motion } from 'framer-motion';
 import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments } from "react-icons/fa";
 import logo from "../../src/assets/logorehome.jpg";
 import { useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
-import { useAuth } from '../hooks/useAuth';
 import useUserStore from '../services/state/useUserSessionStore';
 import { sendMessage } from '../services/marketplaceMessageService';
 import { toast } from 'react-toastify';
@@ -36,7 +34,6 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 }) => {
   if (!isOpen || !item) return null;
   const navigate = useNavigate(); // Initialize navigate
-  const { isAuthenticated } = useAuth();
   const user = useUserStore((state) => state.user);
 
   const { id, name, description, image_url, price, city_name, sold, seller_email } = item;
@@ -76,7 +73,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       return;
     }
     // Add bid
-    setBids(prev => [...prev, { amount, user: 'You', time: dayjs().format('YYYY-MM-DD HH:mm') }]);
+    const currentTime = new Date().toISOString();
+    setBids(prev => [...prev, { amount, user: 'You', time: currentTime }]);
     // Add message
     setMessages(prev => [
       ...prev,

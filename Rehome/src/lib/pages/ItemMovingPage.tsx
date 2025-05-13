@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaTruck, FaCube, FaToolbox, FaInfoCircle } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaInfoCircle } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -62,14 +61,11 @@ const ItemMovingPage = () => {
     const [extraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
     const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
     const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
-    const [isModalOpen, setIsModalOpen] = useState(false); // State for modal visibility
-    const [paymentProof, setPaymentProof] = useState<File | null>(null); // State for payment proof file
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({}); // State to track disassembly items
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({}); // State to track extra helper items
     const [preferredTimeSpan, setPreferredTimeSpan] = useState(''); // State for preferred time span
-    const [selectedItems, setSelectedItems] = useState<{ [item: string]: { quantity: number, photo?: File|null } }>({});
-    const [paymentLoading, setPaymentLoading] = useState(false); // State for payment loading
+    const [paymentLoading] = useState(false); // State for payment loading
 
     // Update the function to use the City type
     const checkCityDay = (location: string, date: string): boolean => {
@@ -999,7 +995,7 @@ const ItemMovingPage = () => {
                                             {isStudent && studentId && (
                                                 <li className="flex justify-between text-green-600">
                                                     <span>Student Discount (10%)</span>
-                                                    <span className="font-medium">-€{(estimatedPrice * 0.1).toFixed(2)}</span>
+                                                    <span className="font-medium">-€{((estimatedPrice || 0) * 0.1).toFixed(2)}</span>
                                                 </li>
                                             )}
                                         </ul>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaEnvelope, FaEnvelopeOpen } from 'react-icons/fa';
+import { FaEnvelope } from 'react-icons/fa';
 import { createClient } from '@supabase/supabase-js';
 import useUserStore from '../services/state/useUserSessionStore';
 
@@ -21,7 +21,7 @@ const MessageNotifications: React.FC<MessageNotificationsProps> = ({ onClick }) 
 
     // Fetch unread message count
     const fetchUnreadCount = async () => {
-      const { data, error, count } = await supabase
+      const { error, count } = await supabase
         .from('marketplace_messages')
         .select('*', { count: 'exact' })
         .eq('receiver_id', user.email)
