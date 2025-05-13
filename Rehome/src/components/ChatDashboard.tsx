@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
 import { getMessagesByUserId, getMessagesByItemId, markMessagesAsRead, subscribeToUserMessages, sendMessage, MarketplaceMessage } from '../services/marketplaceMessageService';
-import { FaChevronRight, FaEnvelope, FaEnvelopeOpen, FaExclamationTriangle } from 'react-icons/fa';
+import { FaEnvelope, FaEnvelopeOpen, FaExclamationTriangle } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
@@ -119,7 +119,7 @@ const ChatDashboard: React.FC = () => {
             new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
           )[0];
           
-          const otherUserId = lastMsg.sender_id === user.email ? lastMsg.receiver_id : lastMsg.sender_id;
+          // const otherUserId = lastMsg.sender_id === user.email ? lastMsg.receiver_id : lastMsg.sender_id;
           const otherUserName = lastMsg.sender_id === user.email ? lastMsg.receiver_id : lastMsg.sender_name;
           
           const unreadCount = msgs.filter(msg => 
