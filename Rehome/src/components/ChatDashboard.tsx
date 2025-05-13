@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
 import { getMessagesByUserId, getMessagesByItemId, markMessagesAsRead, subscribeToUserMessages, sendMessage, MarketplaceMessage } from '../services/marketplaceMessageService';
-import { FaChevronRight, FaEnvelope, FaEnvelopeOpen } from 'react-icons/fa';
+import { FaChevronRight, FaEnvelope, FaEnvelopeOpen, FaExclamationTriangle } from 'react-icons/fa';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 
 interface Conversation {
   itemId: number;
@@ -13,14 +15,63 @@ interface Conversation {
   unreadCount: number;
 }
 
+interface ItemDetails {
+  id: number;
+  name: string;
+}
+
 const ChatDashboard: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeConversation, setActiveConversation] = useState<number | null>(null);
   const [messages, setMessages] = useState<MarketplaceMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [itemsDetails, setItemsDetails] = useState<{[key: number]: ItemDetails}>({});
   const user = useUserStore((state) => state.user);
   const location = useLocation();
+
+  // Fetch item details 
+  const fetchItemDetails = async (itemIds: number[]) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+      
+      const uniqueIds = [...new Set(itemIds)]; // Remove duplicates
+      
+      // Fetch details for each item
+      const itemsData: {[key: number]: ItemDetails} = {};
+      
+      for (const id of uniqueIds) {
+        try {
+          const response = await axios.get(`https://rehome-backend.vercel.app/api/furniture/${id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.data) {
+            itemsData[id] = {
+              id: response.data.id,
+              name: response.data.name || `Item #${id}`
+            };
+          }
+        } catch (err) {
+          console.error(`Error fetching item ${id}:`, err);
+          // Use a default name if we couldn't fetch this item
+          itemsData[id] = { id, name: `Item #${id}` };
+        }
+      }
+      
+      setItemsDetails(itemsData);
+    } catch (err) {
+      console.error('Error fetching item details:', err);
+    }
+  };
 
   // Check for activeItemId in location state to set active conversation
   useEffect(() => {
@@ -35,21 +86,30 @@ const ChatDashboard: React.FC = () => {
 
     const fetchMessages = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
         const allMessages = await getMessagesByUserId(user.email);
         
+        if (allMessages.length === 0) {
+          setLoading(false);
+          return;
+        }
+        
         // Group messages by item_id
         const groupedMessages: { [key: number]: MarketplaceMessage[] } = {};
-        const itemDetails: { [key: number]: { name: string } } = {};
+        const itemIds: number[] = [];
         
         allMessages.forEach(message => {
           if (!groupedMessages[message.item_id]) {
             groupedMessages[message.item_id] = [];
-            // We'll need to fetch item details from the backend in real implementation
-            itemDetails[message.item_id] = { name: `Item #${message.item_id}` };
+            itemIds.push(message.item_id);
           }
           groupedMessages[message.item_id].push(message);
         });
+        
+        // Fetch item details to get proper names
+        await fetchItemDetails(itemIds);
         
         // Create conversation summaries
         const conversationList: Conversation[] = Object.keys(groupedMessages).map(itemIdStr => {
@@ -68,7 +128,7 @@ const ChatDashboard: React.FC = () => {
           
           return {
             itemId,
-            itemName: itemDetails[itemId].name,
+            itemName: itemsDetails[itemId]?.name || `Item #${itemId}`,
             otherUser: otherUserName,
             lastMessage: lastMsg.content,
             lastMessageTime: lastMsg.created_at || '',
@@ -84,6 +144,7 @@ const ChatDashboard: React.FC = () => {
         setConversations(conversationList);
       } catch (error) {
         console.error('Error fetching messages:', error);
+        setError('Failed to load your messages. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -117,10 +178,13 @@ const ChatDashboard: React.FC = () => {
           
           return updatedConversations;
         } else {
+          // Fetch the item details for this new conversation
+          fetchItemDetails([newMsg.item_id]);
+          
           // Create a new conversation
           const newConversation: Conversation = {
             itemId: newMsg.item_id,
-            itemName: `Item #${newMsg.item_id}`, // We'll need to fetch item details
+            itemName: itemsDetails[newMsg.item_id]?.name || `Item #${newMsg.item_id}`,
             otherUser: newMsg.sender_id === user.email ? newMsg.receiver_id : newMsg.sender_name,
             lastMessage: newMsg.content,
             lastMessageTime: newMsg.created_at || '',
@@ -171,6 +235,7 @@ const ChatDashboard: React.FC = () => {
         );
       } catch (error) {
         console.error('Error fetching conversation messages:', error);
+        toast.error('Failed to load conversation messages');
       }
     };
     
@@ -180,6 +245,8 @@ const ChatDashboard: React.FC = () => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !activeConversation || !user) return;
+    
+    setIsSending(true);
     
     const msg: MarketplaceMessage = {
       item_id: activeConversation,
@@ -194,6 +261,9 @@ const ChatDashboard: React.FC = () => {
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
+      // Toast notification is handled in the service
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -201,6 +271,21 @@ const ChatDashboard: React.FC = () => {
     return (
       <div className="p-8 text-center">
         <p className="text-gray-600">Please log in to view your messages.</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <FaExclamationTriangle className="text-4xl text-red-500 mx-auto mb-2" />
+        <p className="text-red-600 font-medium">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
@@ -301,14 +386,19 @@ const ChatDashboard: React.FC = () => {
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type a message..."
-                  className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  disabled={isSending}
+                  className="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-100"
                 />
                 <button
                   type="submit"
-                  className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  disabled={!newMessage.trim()}
+                  className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-orange-300"
+                  disabled={!newMessage.trim() || isSending}
                 >
-                  Send
+                  {isSending ? (
+                    <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                    'Send'
+                  )}
                 </button>
               </form>
             </div>

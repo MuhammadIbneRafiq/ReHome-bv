@@ -330,28 +330,6 @@ const ItemMovingPage = () => {
         </div>
     );
 
-
-    const stepVariants = {
-        hidden: { opacity: 0, x: -50, transition: { duration: 0.3 } },
-        visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
-        exit: { opacity: 0, x: 50, transition: { duration: 0.3 } },
-    };
-
-    const handlePaymentProofUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        setPaymentProof(file || null);
-    };
-
-    const handleModalSubmit = () => {
-        if (paymentProof) {
-            // Proceed to the next step if payment proof is uploaded
-            nextStep();
-            setIsModalOpen(false); // Close the modal
-        } else {
-            toast.error("Please upload proof of payment."); // Show error if no file is uploaded
-        }
-    };
-
     // Add a real-time pricing display component that will be shown throughout the process
     const PriceSummary = ({ 
         basePrice, 
@@ -361,6 +339,14 @@ const ItemMovingPage = () => {
         distanceCost, 
         extraHelperCost, 
         isStudent 
+    }: {
+        basePrice: number;
+        itemPoints: number;
+        carryingCost: number;
+        disassemblyCost: number;
+        distanceCost: number;
+        extraHelperCost: number;
+        isStudent: boolean;
     }) => {
         const total = basePrice + (itemPoints * 3) + carryingCost + disassemblyCost + distanceCost + extraHelperCost;
         const discountedTotal = isStudent && studentId ? total * 0.9 : total; // 10% discount for students
@@ -1041,7 +1027,7 @@ const ItemMovingPage = () => {
                                         <div className="flex justify-between items-center">
                                             <h4 className="text-lg font-bold text-gray-900">Total Price:</h4>
                                             <p className="text-xl font-bold text-orange-600">
-                                                €{isStudent && studentId ? (estimatedPrice * 0.9).toFixed(2) : estimatedPrice?.toFixed(2)}
+                                                €{isStudent && studentId ? ((estimatedPrice || 0) * 0.9).toFixed(2) : (estimatedPrice || 0).toFixed(2)}
                                             </p>
                                         </div>
                                     </div>

@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import { useAuth } from '../hooks/useAuth';
 import useUserStore from '../services/state/useUserSessionStore';
 import { sendMessage } from '../services/marketplaceMessageService';
+import { toast } from 'react-toastify';
 
 interface ItemDetailsModalProps {
   isOpen: boolean;
@@ -38,7 +39,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const { isAuthenticated } = useAuth();
   const user = useUserStore((state) => state.user);
 
-  const { id, name, description, image_url, price, city_name, sold } = item;
+  const { id, name, description, image_url, price, city_name, sold, seller_email } = item;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   // Bidding system state
   const [bids, setBids] = useState<{amount: number, user: string, time: string}[]>([]);
@@ -46,7 +47,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [showBidModal, setShowBidModal] = useState(false);
   const [bidAmount, setBidAmount] = useState('');
   const [bidError, setBidError] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   
+  // Check if user is the seller
+  const isUserSeller = user?.email === seller_email;
+
   const goToNextImage = () => {
     setCurrentImageIndex(prev => (prev + 1) % image_url.length);
   };
@@ -89,14 +94,21 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       return;
     }
 
+    // Don't allow chatting with yourself
+    if (isUserSeller) {
+      toast.info("You can't chat with yourself as the seller");
+      return;
+    }
+
     // Send an initial message to start the conversation if this is the first interaction
     try {
+      setIsProcessing(true);
       await sendMessage({
         item_id: id,
         content: `Hi, I'm interested in your item: ${name}`,
         sender_id: user.email,
         sender_name: user.email,
-        receiver_id: item.seller_email
+        receiver_id: seller_email
       });
       
       // Close the modal and redirect to the chat dashboard
@@ -104,6 +116,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: id } });
     } catch (error) {
       console.error('Error initiating chat:', error);
+      toast.error("Failed to initiate chat. Please try again later.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -180,6 +195,13 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               <h1 className="text-3xl font-bold text-gray-900">{name}</h1>
             </div>
 
+            {isUserSeller && (
+              <div className="mb-4 bg-blue-100 text-blue-800 px-3 py-2 rounded-md">
+                <FaCheckCircle className="inline-block mr-2" />
+                This is your listing
+              </div>
+            )}
+
             <div className="space-y-6 flex-1">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
@@ -194,7 +216,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 
                 {/* Action buttons */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  {!sold && (
+                  {!sold && !isUserSeller && (
                     <button
                       onClick={() => onAddToCart && onAddToCart(id)}
                       className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
@@ -204,33 +226,42 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     </button>
                   )}
                   
-                  {/* Chat button - now redirects to the chat dashboard */}
-                  <button
-                    onClick={handleInitiateChat}
-                    className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-                  >
-                    <FaComments />
-                    Chat with Seller
-                  </button>
+                  {/* Chat button - disabled for own items */}
+                  {!isUserSeller && (
+                    <button
+                      onClick={handleInitiateChat}
+                      disabled={isProcessing}
+                      className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      {isProcessing ? (
+                        <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                      ) : (
+                        <FaComments />
+                      )}
+                      Chat with Seller
+                    </button>
+                  )}
                 </div>
                 
-                {/* Bidding Section */}
-                <div className="mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold">Bids:</span>
-                    {bids.length === 0 ? (
-                      <span className="text-gray-500">Make the first bid now</span>
-                    ) : (
-                      <span className="text-orange-600 font-bold">Highest bid: €{highestBid}</span>
-                    )}
-                    <button
-                      className="ml-4 px-4 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded"
-                      onClick={() => setShowBidModal(true)}
-                    >
-                      Bid
-                    </button>
+                {/* Bidding Section - hide for own items */}
+                {!isUserSeller && (
+                  <div className="mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">Bids:</span>
+                      {bids.length === 0 ? (
+                        <span className="text-gray-500">Make the first bid now</span>
+                      ) : (
+                        <span className="text-orange-600 font-bold">Highest bid: €{highestBid}</span>
+                      )}
+                      <button
+                        className="ml-4 px-4 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                        onClick={() => setShowBidModal(true)}
+                      >
+                        Bid
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Bid/Message Overview */}
                 {(bids.length > 0 || messages.length > 0) && (
