@@ -90,8 +90,8 @@ const HouseMovingPage = () => {
     const [distanceCost, setDistanceCost] = useState(0); // Initialize distanceCost in state
     // const [extraHelperCost] = useState(0); // Initialize extraHelperCost in state
     const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
-    // const [extraHelperItems, setExtraHelperItems] = useState({}); // State to track extra helper items
-    // const [disassemblyItems, setDisassemblyItems] = useState({}); // State to track disassembly items
+    const [extraHelperItems, setExtraHelperItems] = useState<{[key: string]: boolean}>({}); // State to track extra helper items
+    const [disassemblyItems, setDisassemblyItems] = useState<{[key: string]: boolean}>({}); // State to track disassembly items
     const [preferredTimeSpan, setPreferredTimeSpan] = useState(''); // State for preferred time span
     // const [selectedItems, setSelectedItems] = useState({});
     const [paymentLoading] = useState(false);
@@ -142,14 +142,20 @@ const HouseMovingPage = () => {
         const calculatedCarryingCost = (Math.max(0, pickupFloor - 1) + Math.max(0, dropoffFloor - 1)) * 10;
         setCarryingCost(calculatedCarryingCost); // Update state with calculated carrying cost
 
-        const calculatedDisassemblyCost = disassembly ? 20 : 0;
+        // Count disassembly items
+        const disassemblyItemsCount = disassembly ? Object.values(disassemblyItems).filter(Boolean).length : 0;
+        const calculatedDisassemblyCost = disassembly ? Math.max(20, disassemblyItemsCount * 5) : 0;
         setDisassemblyCost(calculatedDisassemblyCost); // Update state with calculated disassembly cost
 
         const distance = firstLocation && secondLocation ? 50 : 0;
         const calculatedDistanceCost = distance * 0.5;
         setDistanceCost(calculatedDistanceCost); // Update state with calculated distance cost
 
-        const totalPrice = calculatedBasePrice + calculatedItemPoints * 3 + calculatedCarryingCost + calculatedDisassemblyCost + calculatedDistanceCost + (extraHelper ? 15 : 0);
+        // Count extra helper items
+        const extraHelperItemsCount = extraHelper ? Object.values(extraHelperItems).filter(Boolean).length : 0;
+        const extraHelperCost = extraHelper ? Math.max(15, extraHelperItemsCount * 3) : 0;
+
+        const totalPrice = calculatedBasePrice + calculatedItemPoints * 3 + calculatedCarryingCost + calculatedDisassemblyCost + calculatedDistanceCost + extraHelperCost;
         setEstimatedPrice(totalPrice); // Update estimated price
     };
 
@@ -693,7 +699,12 @@ const HouseMovingPage = () => {
                                             <div className="ml-3 flex-grow">
                                                 <div className="flex justify-between">
                                                     <label htmlFor="disassembly-toggle" className="font-medium text-gray-900">Disassembly & Reassembly</label>
-                                                    <span className="text-gray-700">€20</span>
+                                                    <span className="text-gray-700">
+                                                        {disassembly && Object.values(disassemblyItems).filter(Boolean).length > 0
+                                                          ? `€${Math.max(20, Object.values(disassemblyItems).filter(Boolean).length * 5)}`
+                                                          : '€20'
+                                                        }
+                                                    </span>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
                                                     We'll disassemble furniture at pickup and reassemble at dropoff
@@ -708,6 +719,34 @@ const HouseMovingPage = () => {
                                                         <span className={`${disassembly ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
                                                     </Switch>
                                                 </div>
+                                                
+                                                {disassembly && (
+                                                    <div className="mt-4 ml-2 space-y-2">
+                                                        <p className="text-sm text-gray-600">
+                                                            Select which items need disassembly/reassembly:
+                                                        </p>
+                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((item, index) => (
+                                                            <div key={index} className="flex items-center">
+                                                                <input
+                                                                    id={`disassembly-${item}`}
+                                                                    type="checkbox"
+                                                                    checked={disassemblyItems[item] || false}
+                                                                    onChange={(e) => setDisassemblyItems({
+                                                                        ...disassemblyItems,
+                                                                        [item]: e.target.checked
+                                                                    })}
+                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor={`disassembly-${item}`} className="ml-2 block text-sm text-gray-700">
+                                                                    {item.split('-')[1]} ({itemQuantities[item]})
+                                                                </label>
+                                                            </div>
+                                                        ))}
+                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
+                                                            <p className="text-sm text-gray-500 italic">No items selected yet. Please add items in the previous step.</p>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -720,7 +759,12 @@ const HouseMovingPage = () => {
                                             <div className="ml-3 flex-grow">
                                                 <div className="flex justify-between">
                                                     <label htmlFor="extra-helper-toggle" className="font-medium text-gray-900">Extra Helper</label>
-                                                    <span className="text-gray-700">€15</span>
+                                                    <span className="text-gray-700">
+                                                        {extraHelper && Object.values(extraHelperItems).filter(Boolean).length > 0
+                                                          ? `€${Math.max(15, Object.values(extraHelperItems).filter(Boolean).length * 3)}`
+                                                          : '€15'
+                                                        }
+                                                    </span>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
                                                     Add an extra helper for heavy or numerous items
@@ -735,6 +779,34 @@ const HouseMovingPage = () => {
                                                         <span className={`${extraHelper ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
                                                     </Switch>
                                                 </div>
+                                                
+                                                {extraHelper && (
+                                                    <div className="mt-4 ml-2 space-y-2">
+                                                        <p className="text-sm text-gray-600">
+                                                            Select which items need an extra helper:
+                                                        </p>
+                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((item, index) => (
+                                                            <div key={index} className="flex items-center">
+                                                                <input
+                                                                    id={`helper-${item}`}
+                                                                    type="checkbox"
+                                                                    checked={extraHelperItems[item] || false}
+                                                                    onChange={(e) => setExtraHelperItems({
+                                                                        ...extraHelperItems,
+                                                                        [item]: e.target.checked
+                                                                    })}
+                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor={`helper-${item}`} className="ml-2 block text-sm text-gray-700">
+                                                                    {item.split('-')[1]} ({itemQuantities[item]})
+                                                                </label>
+                                                            </div>
+                                                        ))}
+                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
+                                                            <p className="text-sm text-gray-500 italic">No items selected yet. Please add items in the previous step.</p>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -934,7 +1006,11 @@ const HouseMovingPage = () => {
                                                 <ul className="mt-2 space-y-1">
                                                     {Object.entries(itemQuantities).map(([itemId, quantity]) => (
                                                         <li key={itemId} className="flex justify-between text-sm">
-                                                            <span className="text-gray-600">{itemId.split('-')[1]}</span>
+                                                            <span className="text-gray-600">
+                                                                {itemId.split('-')[1]} 
+                                                                {disassemblyItems[itemId] && <span className="ml-1 text-orange-600">(Disassembly)</span>}
+                                                                {extraHelperItems[itemId] && <span className="ml-1 text-orange-600">(Extra Helper)</span>}
+                                                            </span>
                                                             <span className="text-gray-900">{quantity}x</span>
                                                         </li>
                                                     ))}
@@ -1052,7 +1128,7 @@ const HouseMovingPage = () => {
                             carryingCost={carryingCost} 
                             disassemblyCost={disassemblyCost} 
                             distanceCost={distanceCost} 
-                            extraHelperCost={extraHelper ? 15 : 0}
+                            extraHelperCost={extraHelper ? Math.max(15, Object.values(extraHelperItems).filter(Boolean).length * 3) : 0}
                             isStudent={isStudent}
                         />
                     </div>
