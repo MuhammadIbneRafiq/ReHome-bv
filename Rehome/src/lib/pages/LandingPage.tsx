@@ -12,6 +12,7 @@ import { FurnitureItem } from "../../types/furniture";
 import { useTranslation } from "react-i18next";
 import { translateFurnitureItem } from "../utils/dynamicTranslation";
 import { useState } from "react";
+import FeaturedItems from "../../components/marketplace/FeaturedItems";
 
 const LandingPage = () => {
   const { t } = useTranslation();
@@ -241,20 +242,20 @@ const LandingPage = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-lg font-medium text-gray-900">
-                      {t('navbar.itemMoving')}
+                      Item Transport
                     </dt>
                   </div>
                 </div>
                 <div className="mt-4">
                   <dd className="text-base text-gray-500">
-                    {t('itemMoving.subtitle')}
+                    Professional and reliable item transportation
                   </dd>
                 </div>
                 <div className="mt-5 flex flex-col gap-2">
-                  <Link to="/item-moving/learn-more" className="text-orange-600 hover:text-orange-700">
+                  <Link to="/item-transport/learn-more" className="text-orange-600 hover:text-orange-700">
                     {t('homepage.learnMore')} &rarr;
                   </Link>
-                  <Link to="/item-moving" className="rehome-button-sm text-center">
+                  <Link to="/item-transport" className="rehome-button-sm text-center">
                     Start Booking Process
                   </Link>
                 </div>
@@ -276,7 +277,7 @@ const LandingPage = () => {
                 </div>
                 <div className="mt-4">
                   <dd className="text-base text-gray-500">
-                    Custom solutions for your unique moving and storage needs.
+                    Custom solutions for unique needs
                   </dd>
                 </div>
                 <div className="mt-5 flex flex-col gap-2">
@@ -299,13 +300,13 @@ const LandingPage = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-lg font-medium text-gray-900">
-                      2nd Hand Furniture
+                      2ndHand Marketplace
                     </dt>
                   </div>
                 </div>
                 <div className="mt-4">
                   <dd className="text-base text-gray-500">
-                    Browse our selection of quality second-hand furniture for your home.
+                    Browse our selection of quality second-hand furniture for your home
                   </dd>
                 </div>
                 <div className="mt-5 flex flex-col gap-2">
@@ -323,51 +324,7 @@ const LandingPage = () => {
       </div>
 
       {/* Featured Items Section */}
-      <div className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-              {t('homepage.featuredItems')}
-            </h2>
-          </div>
-
-          <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {translatedItems.map((item) => (
-              <div key={item.id} className="bg-white overflow-hidden shadow rounded-lg border border-gray-200">
-                <div className="h-48 w-full overflow-hidden">
-                  <img
-                    src={item.image_url[0]}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="px-4 py-5 sm:p-6">
-                  <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
-                  <p className="mt-1 text-sm text-gray-500">{item.description}</p>
-                  <p className="mt-2 text-lg font-semibold text-orange-600">€{item.price}</p>
-                  <div className="mt-4">
-                    <Link
-                      to="/marketplace"
-                      className="text-orange-600 hover:text-orange-700"
-                    >
-                      {t('marketplace.viewDetails')} &rarr;
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-12 text-center">
-            <Link
-              to="/marketplace"
-              className="inline-block rehome-button"
-            >
-              {t('homepage.viewAll')}
-            </Link>
-          </div>
-        </div>
-      </div>
+      <FeaturedItems maxItems={6} />
 
       {/* Why Choose Us Section */}
       <Link to="/why-choose-us" className="block hover:bg-orange-100 transition-colors">

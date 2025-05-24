@@ -1,9 +1,10 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Navbar from "./components/Navbar";
 import { LanguageProvider } from "./hooks/useLanguage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
+import { CartProvider } from "./contexts/CartContext";
 
 // Import Pages
 import LandingPage from "./lib/pages/LandingPage";
@@ -21,6 +22,10 @@ import SellerDashboard from "./lib/pages/SellerDashboard";
 import SpecialRequestPage from "./lib/pages/SpecialRequestPage";
 import AdminDashboard from "./lib/pages/AdminDashboard";
 import MessagesPage from "./lib/pages/MessagesPage";
+import HouseMovingLearnMore from "./lib/pages/HouseMovingLearnMore";
+import ItemTransportLearnMore from "./lib/pages/ItemTransportLearnMore";
+import SpecialRequestLearnMore from "./lib/pages/SpecialRequestLearnMore";
+import MarketplaceLearnMore from "./lib/pages/MarketplaceLearnMore";
 
 // const usePostData = <T,>(endpoint: string) => {
 //   return useMutation<T, Error, T>(
@@ -38,42 +43,49 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <BrowserRouter>
-          <div className="min-h-screen">
-            <Navbar />
-            <main className="min-h-screen bg-orange-50">
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/marketplace" element={<MarketplacePage />} />
-                <Route path="/house-moving" element={<HouseMovingPage />} />
-                <Route path="/item-moving" element={<ItemMovingPage />} />
-                <Route path="/item-donation" element={<ItemDonationPage />} />
-                <Route path="/special-request" element={<SpecialRequestPage />} />
-                <Route path="/sell-dash" element={
-                  <ProtectedRoute>
-                    <SellerDashboard />
-                  </ProtectedRoute>
-                } />
-                <Route path="/messages" element={
-                  <ProtectedRoute>
-                    <MessagesPage />
-                  </ProtectedRoute>
-                } />
-                <Route path="/admin" element={
-                  <AdminRoute>
-                    <AdminDashboard />
-                  </AdminRoute>
-                } />
-                <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
-                <Route path="/contact-us" element={<ContactUsPage />} />
-                <Route path="/about-us" element={<AboutUsPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<SignupPage />} />
-                {/* <Route path="/pricing" element={<Pricing />} /> */}
-              </Routes>
-            </main>
-          </div>
-        </BrowserRouter>
+        <CartProvider>
+          <BrowserRouter>
+            <div className="min-h-screen">
+              <Navbar />
+              <main className="min-h-screen bg-orange-50">
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/marketplace" element={<MarketplacePage />} />
+                  <Route path="/marketplace/learn-more" element={<MarketplaceLearnMore />} />
+                  <Route path="/house-moving" element={<HouseMovingPage />} />
+                  <Route path="/house-moving/learn-more" element={<HouseMovingLearnMore />} />
+                  <Route path="/item-transport" element={<ItemMovingPage />} />
+                  <Route path="/item-transport/learn-more" element={<ItemTransportLearnMore />} />
+                  <Route path="/item-moving" element={<Navigate to="/item-transport" replace />} />
+                  <Route path="/item-donation" element={<ItemDonationPage />} />
+                  <Route path="/special-request" element={<SpecialRequestPage />} />
+                  <Route path="/special-request/learn-more" element={<SpecialRequestLearnMore />} />
+                  <Route path="/sell-dash" element={
+                    <ProtectedRoute>
+                      <SellerDashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/messages" element={
+                    <ProtectedRoute>
+                      <MessagesPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/admin" element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  } />
+                  <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
+                  <Route path="/contact-us" element={<ContactUsPage />} />
+                  <Route path="/about-us" element={<AboutUsPage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<SignupPage />} />
+                  {/* <Route path="/pricing" element={<Pricing />} /> */}
+                </Routes>
+              </main>
+            </div>
+          </BrowserRouter>
+        </CartProvider>
       </LanguageProvider>
     </QueryClientProvider>
   );
