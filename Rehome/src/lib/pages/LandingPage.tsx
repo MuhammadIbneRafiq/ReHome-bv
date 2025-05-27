@@ -1,16 +1,16 @@
 import Footer from "../../components/Footer";
 // Import Images - Assuming you have these files in assets
-import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
-import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
-import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
+// import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
+// import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
+// import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
 import logoImage from "../../assets/logorehome.jpg"; // Import the ReHome logo
 import { motion } from "framer-motion"; // Import Framer Motion
 import { FaHandshake, FaStar, FaHome, FaTruck } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
 import { MdCheckCircle, } from "react-icons/md";
-import { FurnitureItem } from "../../types/furniture";
+// import { FurnitureItem } from "../../types/furniture";
 import { useTranslation } from "react-i18next";
-import { translateFurnitureItem } from "../utils/dynamicTranslation";
+// import { translateFurnitureItem } from "../utils/dynamicTranslation";
 import { useState } from "react";
 import FeaturedItems from "../../components/marketplace/FeaturedItems";
 
@@ -19,54 +19,54 @@ const LandingPage = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   // Dummy Furniture Data with Images (You can keep this or fetch from API)
-  const dummyData: FurnitureItem[] = [
-    {
-      id: 1,
-      name: "Cozy Sofa",
-      image_url: [sofaImage],
-      description: "A comfortable and stylish sofa for your living room.",
-      price: 299,
-      created_at: new Date().toISOString(),
-      seller_email: "info@rehome.com",
-      city_name: "Amsterdam",
-      sold: false,
-      isrehome: true
-    },
-    {
-      id: 2,
-      name: "Wooden Dining Table",
-      image_url: [tableImage],
-      description: "A sturdy wooden dining table that seats 6 people.",
-      price: 399,
-      created_at: new Date().toISOString(),
-      seller_email: "info@rehome.com",
-      city_name: "Amsterdam",
-      sold: false,
-      isrehome: true
-    },
-    {
-      id: 3,
-      name: "Modern Office Chair",
-      image_url: [chairImage],
-      description: "An ergonomic office chair for maximum comfort.",
-      price: 199,
-      created_at: new Date().toISOString(),
-      seller_email: "info@rehome.com",
-      city_name: "Amsterdam",
-      sold: false,
-      isrehome: true
-    },
-  ];
+  // const dummyData: FurnitureItem[] = [
+  //   {
+  //     id: 1,
+  //     name: "Cozy Sofa",
+  //     image_url: [sofaImage],
+  //     description: "A comfortable and stylish sofa for your living room.",
+  //     price: 299,
+  //     created_at: new Date().toISOString(),
+  //     seller_email: "info@rehome.com",
+  //     city_name: "Amsterdam",
+  //     sold: false,
+  //     isrehome: true
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Wooden Dining Table",
+  //     image_url: [tableImage],
+  //     description: "A sturdy wooden dining table that seats 6 people.",
+  //     price: 399,
+  //     created_at: new Date().toISOString(),
+  //     seller_email: "info@rehome.com",
+  //     city_name: "Amsterdam",
+  //     sold: false,
+  //     isrehome: true
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Modern Office Chair",
+  //     image_url: [chairImage],
+  //     description: "An ergonomic office chair for maximum comfort.",
+  //     price: 199,
+  //     created_at: new Date().toISOString(),
+  //     seller_email: "info@rehome.com",
+  //     city_name: "Amsterdam",
+  //     sold: false,
+  //     isrehome: true
+  //   },
+  // ];
 
-  // Translate furniture items
-  const translatedItems = dummyData.map(item => {
-    const translated = translateFurnitureItem(item);
-    return {
-      ...item,
-      name: translated.name,
-      description: translated.description
-    };
-  });
+  // // Translate furniture items
+  // const translatedItems = dummyData.map(item => {
+  //   const translated = translateFurnitureItem(item);
+  //   return {
+  //     ...item,
+  //     name: translated.name,
+  //     description: translated.description
+  //   };
+  // });
 
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col">
@@ -213,18 +213,18 @@ const LandingPage = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-lg font-medium text-gray-900">
-                      {t('navbar.houseMoving')}
+                      House Moving
                     </dt>
                   </div>
                 </div>
                 <div className="mt-4">
                   <dd className="text-base text-gray-500">
-                    {t('houseMoving.subtitle')}
+                    Complete house relocation solutions
                   </dd>
                 </div>
                 <div className="mt-5 flex flex-col gap-2">
                   <Link to="/house-moving/learn-more" className="text-orange-600 hover:text-orange-700">
-                    {t('homepage.learnMore')} &rarr;
+                    Learn More &rarr;
                   </Link>
                   <Link to="/house-moving" className="rehome-button-sm text-center">
                     Start Booking Process
@@ -253,7 +253,7 @@ const LandingPage = () => {
                 </div>
                 <div className="mt-5 flex flex-col gap-2">
                   <Link to="/item-transport/learn-more" className="text-orange-600 hover:text-orange-700">
-                    {t('homepage.learnMore')} &rarr;
+                    Learn More &rarr;
                   </Link>
                   <Link to="/item-transport" className="rehome-button-sm text-center">
                     Start Booking Process
@@ -271,7 +271,7 @@ const LandingPage = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-lg font-medium text-gray-900">
-                      {t('navbar.specialRequest')}
+                      Special Request
                     </dt>
                   </div>
                 </div>
@@ -282,7 +282,7 @@ const LandingPage = () => {
                 </div>
                 <div className="mt-5 flex flex-col gap-2">
                   <Link to="/special-request/learn-more" className="text-orange-600 hover:text-orange-700">
-                    {t('homepage.learnMore')} &rarr;
+                    Learn More &rarr;
                   </Link>
                   <Link to="/special-request" className="rehome-button-sm text-center">
                     Start Booking Process
@@ -311,7 +311,7 @@ const LandingPage = () => {
                 </div>
                 <div className="mt-5 flex flex-col gap-2">
                   <Link to="/marketplace/learn-more" className="text-orange-600 hover:text-orange-700">
-                    {t('homepage.learnMore')} &rarr;
+                    Learn More &rarr;
                   </Link>
                   <Link to="/marketplace" className="rehome-button-sm text-center">
                     Explore Marketplace
@@ -332,12 +332,15 @@ const LandingPage = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-                Why Choose ReHome?
+                About Us & Why Choose ReHome
               </h2>
+              <p className="mt-4 text-lg text-gray-500">
+                Sustainable. Affordable. Convenient.
+              </p>
             </div>
 
-            <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2">
-              {/* Reason 1 */}
+            <div className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {/* Sustainability */}
               <div className="flex">
                 <div className="flex-shrink-0">
                   <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
@@ -345,14 +348,14 @@ const LandingPage = () => {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-lg font-medium text-gray-900">Professional Service</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Sustainability</h3>
                   <p className="mt-2 text-base text-gray-500">
-                    Our team consists of trained professionals who handle your belongings with care.
+                    We actively reduce waste by keeping usable furniture in circulation — through resale, donation, and responsible recycling.
                   </p>
                 </div>
               </div>
 
-              {/* Reason 2 */}
+              {/* Fairness & Transparency */}
               <div className="flex">
                 <div className="flex-shrink-0">
                   <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
@@ -360,9 +363,69 @@ const LandingPage = () => {
                   </div>
                 </div>
                 <div className="ml-4">
-                  <h3 className="text-lg font-medium text-gray-900">Quality Guaranteed</h3>
+                  <h3 className="text-lg font-medium text-gray-900">Fairness & Transparency</h3>
                   <p className="mt-2 text-base text-gray-500">
-                    We guarantee the quality of our service and the condition of marketplace items.
+                    No hidden charges. No forced extras. Our pricing adapts to your exact needs and is visible upfront.
+                  </p>
+                </div>
+              </div>
+
+              {/* Built by Students */}
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                    <FaHome className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Built by Students, for Real Life</h3>
+                  <p className="mt-2 text-base text-gray-500">
+                    Founded by Tilburg University students, our services reflect real-world needs: small-scale moves, tight budgets, and flexible support.
+                  </p>
+                </div>
+              </div>
+
+              {/* Community & Accessibility */}
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                    <FaHandshake className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Community & Accessibility</h3>
+                  <p className="mt-2 text-base text-gray-500">
+                    We serve students, expats, and locals alike — offering affordable solutions that don't compromise on quality or service.
+                  </p>
+                </div>
+              </div>
+
+              {/* Reduce. Reuse. Recycle. */}
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                    <FaTruck className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Reduce. Reuse. Recycle.</h3>
+                  <p className="mt-2 text-base text-gray-500">
+                    A core principle in our operations — from logistics to furniture reuse.
+                  </p>
+                </div>
+              </div>
+
+              {/* Economically and Environmentally Fair */}
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
+                    <MdCheckCircle className="h-6 w-6" />
+                  </div>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-lg font-medium text-gray-900">Economically and Environmentally Fair</h3>
+                  <p className="mt-2 text-base text-gray-500">
+                    We keep our prices low without cutting corners — so your wallet and the planet both benefit.
                   </p>
                 </div>
               </div>
@@ -370,7 +433,7 @@ const LandingPage = () => {
 
             <div className="mt-10 text-center">
               <span className="inline-flex items-center px-6 py-3 text-base font-medium text-orange-600">
-                Click anywhere to learn more
+                Click here to learn more
                 <svg className="ml-2 -mr-1 w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>

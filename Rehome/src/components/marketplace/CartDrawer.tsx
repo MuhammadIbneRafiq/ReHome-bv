@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import logoImage from "../../assets/logorehome.jpg";
 import CheckoutConfirmation from './CheckoutConfirmation';
 
@@ -11,7 +11,7 @@ interface CartDrawerProps {
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
   const { items, removeItem, updateQuantity, clearCart, totalPrice, itemCount } = useCart();
   const cartRef = useRef<HTMLDivElement>(null);
   const [showCheckoutConfirmation, setShowCheckoutConfirmation] = useState(false);
@@ -85,6 +85,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
         className={`fixed inset-0 bg-black bg-opacity-50 z-40 transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
+        onClick={onClose}
       />
 
       {/* Cart Drawer */}
@@ -93,6 +94,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
         className={`fixed top-0 right-0 h-screen w-full sm:w-96 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="bg-orange-500 text-white p-4 flex justify-between items-center">
