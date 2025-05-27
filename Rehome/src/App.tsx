@@ -5,6 +5,8 @@ import { LanguageProvider } from "./hooks/useLanguage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import { CartProvider } from "./contexts/CartContext";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Import Pages
 import LandingPage from "./lib/pages/LandingPage";
@@ -83,6 +85,18 @@ const App = () => {
                   {/* <Route path="/pricing" element={<Pricing />} /> */}
                 </Routes>
               </main>
+              <ToastContainer
+                position="top-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+              />
             </div>
           </BrowserRouter>
         </CartProvider>

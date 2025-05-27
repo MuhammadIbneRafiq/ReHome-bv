@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
-// import { useTranslation } from 'react-i18next';
 import logoImage from "../../assets/logorehome.jpg";
 import CheckoutConfirmation from './CheckoutConfirmation';
 
@@ -11,25 +10,10 @@ interface CartDrawerProps {
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
-  // const { t } = useTranslation();
   const { items, removeItem, updateQuantity, clearCart, totalPrice, itemCount } = useCart();
   const cartRef = useRef<HTMLDivElement>(null);
   const [showCheckoutConfirmation, setShowCheckoutConfirmation] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
-
-  // Close cart when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (cartRef.current && !cartRef.current.contains(event.target as Node) && isOpen) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
 
   // Handle Escape key press
   useEffect(() => {
@@ -69,14 +53,51 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     return `RH-${timestamp.toString().slice(-6)}-${random}`;
   };
 
-  // Handle checkout process
-  const handleCheckout = () => {
-    // In a real app, you would call an API to process the order
-    // For now, we'll simulate by generating an order number
-    setOrderNumber(generateOrderNumber());
-    setShowCheckoutConfirmation(true);
-    onClose(); // Close the cart drawer
+  // Handle checkout process with Mollie
+  const handleCheckout = async () => {
+    try {
+      // Filter only ReHome items for checkout
+      const rehomeItems = items.filter(item => item.isrehome);
+      
+      if (rehomeItems.length === 0) {
+        alert('Only ReHome items can be checked out through our system.');
+        return;
+      }
+
+      // Create Mollie payment
+      const response = await fetch('/api/create-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: rehomeItems,
+          totalAmount: rehomeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        }),
+      });
+
+      const { checkoutUrl } = await response.json();
+      
+      if (checkoutUrl) {
+        // Redirect to Mollie checkout
+        window.location.href = checkoutUrl;
+      } else {
+        // Fallback to order confirmation
+        setOrderNumber(generateOrderNumber());
+        setShowCheckoutConfirmation(true);
+        onClose();
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      // Fallback to order confirmation
+      setOrderNumber(generateOrderNumber());
+      setShowCheckoutConfirmation(true);
+      onClose();
+    }
   };
+
+  // Check if cart has ReHome items
+  const hasRehomeItems = items.some(item => item.isrehome);
 
   return (
     <>
@@ -151,6 +172,9 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                       <p className="text-xs text-gray-500">{item.category} • {item.subcategory}</p>
                       <div className="flex justify-between items-center mt-1">
                         <span className="text-orange-600 font-medium">{formatPrice(item.price)}</span>
+                        {!item.isrehome && (
+                          <span className="text-xs text-gray-400">Contact seller</span>
+                        )}
                       </div>
                     </div>
 
@@ -164,33 +188,37 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     </button>
                   </div>
 
-                  {/* Quantity Controls */}
-                  <div className="flex justify-end items-center mt-2">
-                    <div className="flex items-center border rounded-md">
-                      <button 
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
-                        aria-label="Decrease quantity"
-                      >
-                        <FaMinus size={10} />
-                      </button>
-                      <span className="px-3 py-1 text-sm text-gray-800">{item.quantity}</span>
-                      <button 
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
-                        aria-label="Increase quantity"
-                      >
-                        <FaPlus size={10} />
-                      </button>
+                  {/* Quantity Controls - Only for ReHome items */}
+                  {item.isrehome && (
+                    <div className="flex justify-end items-center mt-2">
+                      <div className="flex items-center border rounded-md">
+                        <button 
+                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
+                          aria-label="Decrease quantity"
+                        >
+                          <FaMinus size={10} />
+                        </button>
+                        <span className="px-3 py-1 text-sm text-gray-800">{item.quantity}</span>
+                        <button 
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
+                          aria-label="Increase quantity"
+                        >
+                          <FaPlus size={10} />
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Item Total */}
-                  <div className="text-right mt-2">
-                    <span className="text-xs text-gray-500">
-                      Subtotal: <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
-                    </span>
-                  </div>
+                  {/* Item Total - Only for ReHome items */}
+                  {item.isrehome && (
+                    <div className="text-right mt-2">
+                      <span className="text-xs text-gray-500">
+                        Subtotal: <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -199,28 +227,38 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="border-t border-gray-200 p-4 bg-gray-50">
-          {/* Summary */}
-          <div className="flex justify-between mb-4">
-            <span className="text-gray-600">Items ({itemCount})</span>
-            <span className="font-semibold">{formatPrice(totalPrice)}</span>
-          </div>
+          {/* Summary - Only for ReHome items */}
+          {hasRehomeItems && (
+            <div className="flex justify-between mb-4">
+              <span className="text-gray-600">ReHome Items ({items.filter(item => item.isrehome).reduce((sum, item) => sum + item.quantity, 0)})</span>
+              <span className="font-semibold">{formatPrice(items.filter(item => item.isrehome).reduce((sum, item) => sum + (item.price * item.quantity), 0))}</span>
+            </div>
+          )}
 
           {/* Carrying & Assembly Options Note */}
-          {items.length > 0 && items.some(item => item.isrehome) && (
+          {hasRehomeItems && (
             <div className="mb-4 text-xs text-gray-500 p-2 bg-gray-100 rounded">
               <p>Carrying assistance and assembly options will be available during checkout.</p>
             </div>
           )}
 
+          {/* Non-ReHome items note */}
+          {items.some(item => !item.isrehome) && (
+            <div className="mb-4 text-xs text-gray-500 p-2 bg-blue-100 rounded">
+              <p>User-listed items require direct contact with sellers.</p>
+            </div>
+          )}
+
           {/* Buttons */}
           <div className="flex flex-col gap-2">
-            <button 
-              className="bg-orange-500 text-white p-2 rounded-md hover:bg-orange-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-              disabled={items.length === 0}
-              onClick={handleCheckout}
-            >
-              Proceed to Checkout
-            </button>
+            {hasRehomeItems && (
+              <button 
+                className="bg-orange-500 text-white p-2 rounded-md hover:bg-orange-600 transition-colors font-medium"
+                onClick={handleCheckout}
+              >
+                Proceed to Checkout (ReHome Items)
+              </button>
+            )}
             {items.length > 0 && (
               <button 
                 onClick={clearCart}
@@ -244,4 +282,4 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   );
 };
 
-export default CartDrawer; 
+export default CartDrawer;

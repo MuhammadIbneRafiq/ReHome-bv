@@ -9,6 +9,8 @@ import MarketplaceFilter from "../../components/MarketplaceFilter";
 import { translateFurnitureItem } from "../utils/dynamicTranslation";
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'react-toastify';
+import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
 
 const MarketplacePage = () => {
     const { t } = useTranslation();
@@ -17,11 +19,12 @@ const MarketplacePage = () => {
     const [filteredItems, setFilteredItems] = useState<FurnitureItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [cart, setCart] = useState<number[]>([]); // Simple cart (array of item IDs)
+    const [cart, setCart] = useState<{id: number, quantity: number}[]>([]); // Cart with quantities
     const [_, setIsAddingToCart] = useState(false);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
+    const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
 
     useEffect(() => {
         const fetchFurniture = async () => {
@@ -49,21 +52,108 @@ const MarketplacePage = () => {
     }, []);
 
     const addToCart = (itemId: number) => {
+        // Check if item is from ReHome
+        const item = furnitureItems.find(item => item.id === itemId);
+        if (!item?.isrehome) {
+            toast.error('Only ReHome items can be added to cart. Contact seller directly for user listings.');
+            return;
+        }
+
         setIsAddingToCart(true);
         setTimeout(() => {
-            setCart(prev => [...prev, itemId]);
+            setCart(prev => {
+                const existingItem = prev.find(cartItem => cartItem.id === itemId);
+                if (existingItem) {
+                    return prev.map(cartItem => 
+                        cartItem.id === itemId 
+                            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+                            : cartItem
+                    );
+                } else {
+                    return [...prev, { id: itemId, quantity: 1 }];
+                }
+            });
             setIsAddingToCart(false);
+            toast.success('Item added to cart! Check your cart at the bottom right.');
         }, 500); // Simulate a delay
     };
 
-    const handleCheckout = () => {
+    const removeFromCart = (itemId: number) => {
+        setCart(prev => prev.filter(item => item.id !== itemId));
+    };
+
+    const updateQuantity = (itemId: number, newQuantity: number) => {
+        if (newQuantity <= 0) {
+            removeFromCart(itemId);
+            return;
+        }
+        setCart(prev => 
+            prev.map(item => 
+                item.id === itemId 
+                    ? { ...item, quantity: newQuantity }
+                    : item
+            )
+        );
+    };
+
+    const getTotalPrice = () => {
+        return cart.reduce((total, cartItem) => {
+            const item = furnitureItems.find(item => item.id === cartItem.id);
+            return total + (item ? item.price * cartItem.quantity : 0);
+        }, 0);
+    };
+
+    const getTotalItems = () => {
+        return cart.reduce((total, item) => total + item.quantity, 0);
+    };
+
+    const handleCheckout = async () => {
         setCheckoutLoading(true);
-        // Simulate checkout process
-        setTimeout(() => {
-            alert(`Checkout completed for ${cart.length} items!`);
-            setCart([]);
+        
+        try {
+            // Get the actual items from cart
+            const cartItems = cart.map(cartItem => {
+                const item = furnitureItems.find(item => item.id === cartItem.id);
+                return { ...item, quantity: cartItem.quantity };
+            }).filter(item => item && item.isrehome);
+            
+            if (cartItems.length === 0) {
+                toast.error('Only ReHome items can be checked out through our system.');
+                setCheckoutLoading(false);
+                return;
+            }
+
+            const totalAmount = getTotalPrice();
+
+            // Create Mollie payment
+            const response = await fetch('https://rehome-backend.vercel.app/api/mollie', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    amount: totalAmount,
+                    items: cartItems,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            if (data.checkoutUrl) {
+                // Redirect to Mollie checkout
+                window.location.href = data.checkoutUrl;
+            } else {
+                throw new Error('No checkout URL received');
+            }
+        } catch (error) {
+            console.error('Checkout error:', error);
+            toast.error('Checkout failed. Please try again.');
             setCheckoutLoading(false);
-        }, 2000);
+        }
     };
 
     const openModal = (item: FurnitureItem) => {
@@ -196,41 +286,104 @@ const MarketplacePage = () => {
             {cart.length > 0 && (
                 <div className="fixed bottom-4 right-4">
                     <button
-                        onClick={handleCheckout}
-                        disabled={checkoutLoading}
-                        className={`flex items-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-md shadow-md transition duration-300 ${
-                            checkoutLoading ? 'opacity-75 cursor-not-allowed' : ''
-                        }`}
+                        onClick={() => setIsCartDrawerOpen(true)}
+                        className="flex items-center bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-md shadow-md transition duration-300"
                     >
-                        <AnimatePresence>
-                            {checkoutLoading ? (
-                                <motion.span
-                                    key="loading"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="mr-2"
-                                >
-                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                </motion.span>
-                            ) : (
-                                <motion.span
-                                    key="cart"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="mr-2"
-                                >
-                                    🛒
-                                </motion.span>
-                            )}
-                        </AnimatePresence>
-                        {checkoutLoading ? t('marketplace.processing') : `${t('marketplace.checkout')} (${cart.length})`}
+                        <span className="mr-2">🛒</span>
+                        Cart ({getTotalItems()}) - €{getTotalPrice().toFixed(2)}
                     </button>
                 </div>
+            )}
+
+            {/* Cart Drawer */}
+            {isCartDrawerOpen && (
+                <>
+                    {/* Overlay */}
+                    <div 
+                        className="fixed inset-0 bg-black bg-opacity-50 z-40"
+                        onClick={() => setIsCartDrawerOpen(false)}
+                    />
+
+                    {/* Cart Drawer */}
+                    <div className="fixed top-0 right-0 h-screen w-full sm:w-96 bg-white shadow-xl z-50 transform transition-transform duration-300">
+                        {/* Header */}
+                        <div className="bg-orange-500 text-white p-4 flex justify-between items-center">
+                            <h2 className="text-xl font-bold flex items-center">
+                                <FaShoppingCart className="mr-2" /> Shopping Cart
+                            </h2>
+                            <button 
+                                onClick={() => setIsCartDrawerOpen(false)}
+                                className="p-1 rounded-full hover:bg-orange-600 transition-colors"
+                            >
+                                <FaTimes />
+                            </button>
+                        </div>
+
+                        {/* Cart Content */}
+                        <div className="flex flex-col h-[calc(100%-14rem)] overflow-y-auto p-4">
+                            {cart.map(cartItem => {
+                                const item = furnitureItems.find(item => item.id === cartItem.id);
+                                if (!item) return null;
+                                
+                                return (
+                                    <div key={item.id} className="border-b border-gray-200 py-4">
+                                        <div className="flex mb-2">
+                                            <img 
+                                                src={item.image_url[0]} 
+                                                alt={item.name} 
+                                                className="w-20 h-20 object-cover rounded"
+                                            />
+                                            <div className="ml-4 flex-grow">
+                                                <h3 className="text-sm font-medium">{item.name}</h3>
+                                                <p className="text-orange-600 font-medium">€{item.price}</p>
+                                            </div>
+                                            <button 
+                                                onClick={() => removeFromCart(item.id)}
+                                                className="text-gray-400 hover:text-red-500"
+                                            >
+                                                <FaTrash />
+                                            </button>
+                                        </div>
+                                        
+                                        {/* Quantity Controls */}
+                                        <div className="flex justify-end items-center">
+                                            <div className="flex items-center border rounded-md">
+                                                <button 
+                                                    onClick={() => updateQuantity(item.id, cartItem.quantity - 1)}
+                                                    className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
+                                                >
+                                                    <FaMinus size={10} />
+                                                </button>
+                                                <span className="px-3 py-1 text-sm">{cartItem.quantity}</span>
+                                                <button 
+                                                    onClick={() => updateQuantity(item.id, cartItem.quantity + 1)}
+                                                    className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
+                                                >
+                                                    <FaPlus size={10} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="border-t border-gray-200 p-4 bg-gray-50">
+                            <div className="flex justify-between mb-4">
+                                <span className="text-gray-600">Total ({getTotalItems()} items)</span>
+                                <span className="font-semibold">€{getTotalPrice().toFixed(2)}</span>
+                            </div>
+                            <button 
+                                className="w-full bg-orange-500 text-white p-2 rounded-md hover:bg-orange-600 transition-colors font-medium disabled:bg-gray-300"
+                                onClick={handleCheckout}
+                                disabled={checkoutLoading}
+                            >
+                                {checkoutLoading ? 'Processing...' : 'Proceed to Checkout'}
+                            </button>
+                        </div>
+                    </div>
+                </>
             )}
         </div>
     );

@@ -13,7 +13,6 @@ import { useLanguage } from '../hooks/useLanguage';
 import useUserStore from "../services/state/useUserSessionStore";
 import logoImage from "../assets/logorehome.jpg"; // Import the ReHome logo
 import MessageNotifications from './MessageNotifications';
-import CartButton from './marketplace/CartButton';
 
 // List of admin email addresses - keep in sync with AdminRoute.tsx
 const ADMIN_EMAILS = [
@@ -167,9 +166,6 @@ export default function Navbar() {
                         </div>
                     </div>
                     
-                    {/* Shopping Cart Button */}
-                    <CartButton />
-
                     {!isAuthenticated && (
                         <>
                             <Link to="/register" className="rehome-nav-button">

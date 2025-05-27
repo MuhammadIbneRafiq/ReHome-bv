@@ -20,6 +20,7 @@ interface ItemDetailsModalProps {
     city_name: string;
     sold: boolean;
     seller_email: string;
+    isrehome?: boolean;
   } | null;
   onAddToCart?: (itemId: number) => void;
   onMarkAsSold?: (itemId: number) => void;
@@ -36,7 +37,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const navigate = useNavigate(); // Initialize navigate
   const user = useUserStore((state) => state.user);
 
-  const { id, name, description, image_url, price, city_name, sold, seller_email } = item;
+  const { id, name, description, image_url, price, city_name, sold, seller_email, isrehome } = item;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   // Bidding system state
   const [bids, setBids] = useState<{amount: number, user: string, time: string}[]>([]);
@@ -214,7 +215,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 
                 {/* Action buttons */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  {!sold && !isUserSeller && (
+                  {!sold && !isUserSeller && isrehome && (
                     <button
                       onClick={() => onAddToCart && onAddToCart(id)}
                       className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
@@ -222,6 +223,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       <FaShoppingCart />
                       Add to Cart
                     </button>
+                  )}
+                  
+                  {!sold && !isUserSeller && !isrehome && (
+                    <div className="col-span-2 bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-center font-medium">
+                      Contact seller directly for user listings
+                    </div>
                   )}
                   
                   {/* Chat button - disabled for own items */}
