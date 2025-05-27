@@ -2,11 +2,10 @@ import { FurnitureItem } from "../types/furniture";
 import sofaImage from "../assets/IMG-20250208-WA0001.jpg";
 import tableImage from "../assets/IMG-20250208-WA0010.jpg";
 import chairImage from "../assets/IMG-20250208-WA0013.jpg";
-import wardrobeImage from "../assets/wardrobe.jpg";
-import bedImage from "../assets/bed.jpg";
-import fridgeImage from "../assets/fridge.jpg";
-import lampImage from "../assets/lamp.jpg";
-import deskImage from "../assets/desk.jpg";
+import bedImage from "../assets/IMG-20250208-WA0013.jpg";
+import fridgeImage from "../assets/IMG-20250208-WA0013.jpg";
+import lampImage from "../assets/IMG-20250208-WA0013.jpg";
+import deskImage from "../assets/IMG-20250208-WA0013.jpg";
 
 // Sample data - in a real app, this would come from an API
 const marketplaceItems: FurnitureItem[] = [
@@ -24,20 +23,6 @@ const marketplaceItems: FurnitureItem[] = [
     isrehome: true,
     category: "Bedroom",
     subcategory: "Bed"
-  },
-  {
-    id: 2,
-    name: "Wooden Wardrobe",
-    image_url: [wardrobeImage],
-    description: "Spacious wooden wardrobe with three doors.",
-    price: 280,
-    created_at: new Date().toISOString(),
-    seller_email: "info@rehome.com",
-    city_name: "Utrecht",
-    sold: false,
-    isrehome: true,
-    category: "Bedroom",
-    subcategory: "Wardrobe"
   },
   // Sofas and Chairs category
   {
