@@ -40,6 +40,10 @@ body {
 .rehome-button {
   @apply bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-4 rounded shadow-md hover:opacity-90 transition duration-300;
 }
+
+.rehome-button-sm {
+  @apply bg-gradient-to-r from-orange-500 to-red-600 text-white py-2 px-3 rounded-md text-sm font-medium shadow-sm hover:from-orange-600 hover:to-red-700 hover:shadow-md transform hover:scale-105 transition-all duration-200;
+}
 .rehome-icon-button {
     @apply text-white hover:text-orange-200; /* Base styles - White text */
     /* Add more styles for hover effects */

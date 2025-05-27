@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import MarketplaceSearch from '../../components/MarketplaceSearch';
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {FurnitureItem} from '../../types/furniture'; // Import the type
 import ItemDetailsModal from '@/components/ItemDetailModal'; // Import the modal
 import tickLogo from '../../assets/logo_marketplace.png'
+import logoImage from '../../assets/logorehome.jpg'
 import { useTranslation } from "react-i18next";
 import MarketplaceFilter from "../../components/MarketplaceFilter";
 import { translateFurnitureItem } from "../utils/dynamicTranslation";
@@ -124,9 +125,14 @@ const MarketplacePage = () => {
             }
 
             const totalAmount = getTotalPrice();
+            
+            console.log('Sending to Mollie:', {
+                amount: totalAmount,
+                items: cartItems,
+            });
 
             // Create Mollie payment
-            const response = await fetch('https://rehome-backend.vercel.app/api/mollie', {
+            const response = await fetch('https://rehome-backend.vercel.app/mollie', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -137,11 +143,17 @@ const MarketplacePage = () => {
                 }),
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
 
             const data = await response.json();
+            console.log('Response data:', data);
             
             if (data.checkoutUrl) {
                 // Redirect to Mollie checkout
@@ -151,7 +163,7 @@ const MarketplacePage = () => {
             }
         } catch (error) {
             console.error('Checkout error:', error);
-            toast.error('Checkout failed. Please try again.');
+            toast.error(`Checkout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
             setCheckoutLoading(false);
         }
     };
@@ -255,15 +267,20 @@ const MarketplacePage = () => {
                                         {translatedItems.map((item) => (
                                             <motion.div
                                                 key={item.id}
-                                                className="bg-[#f3e4d6] shadow-lg rounded-lg p-2 hover:scale-105 transition-transform cursor-pointer"
+                                                className="bg-[#f3e4d6] shadow-lg rounded-lg p-2 hover:scale-105 transition-transform cursor-pointer relative"
                                                 whileHover={{ scale: 1.05 }}
                                                 onClick={() => openModal(item)}
                                             >
-                                                {item.isrehome === true ? (
-                                                    <div className="flex justify-center mb-2">
-                                                        <img src={tickLogo} alt="ReHome Collection" className="h-8 w-auto" />
+                                                {/* ReHome logo badge for ReHome items */}
+                                                {item.isrehome && (
+                                                    <div className="absolute top-2 left-2 z-10 bg-white p-1 rounded-md shadow-md">
+                                                        <img 
+                                                            src={logoImage} 
+                                                            alt="ReHome Verified" 
+                                                            className="w-8 h-8 object-contain" 
+                                                        />
                                                     </div>
-                                                ) : null}
+                                                )}
                                                 <img
                                                     src={item.image_url && item.image_url.length > 0 ? item.image_url[0] : ''}
                                                     alt={item.name}

@@ -205,8 +205,8 @@ const LandingPage = () => {
 
           <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {/* Service 1: House Moving */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
+            <div className="bg-white overflow-hidden shadow rounded-lg flex flex-col">
+              <div className="px-4 py-5 sm:p-6 flex-grow">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
                     <FaHome className="h-6 w-6 text-white" />
@@ -222,20 +222,22 @@ const LandingPage = () => {
                     Complete house relocation solutions
                   </dd>
                 </div>
-                <div className="mt-5 flex flex-col gap-2">
+                <div className="mt-5">
                   <Link to="/house-moving/learn-more" className="text-orange-600 hover:text-orange-700">
                     Learn More &rarr;
                   </Link>
-                  <Link to="/house-moving" className="rehome-button-sm text-center">
-                    Start Booking Process
-                  </Link>
                 </div>
+              </div>
+              <div className="px-4 pb-5">
+                <Link to="/house-moving" className="rehome-button-sm text-center block">
+                  Start Booking Process
+                </Link>
               </div>
             </div>
 
             {/* Service 2: Item Transport */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
+            <div className="bg-white overflow-hidden shadow rounded-lg flex flex-col">
+              <div className="px-4 py-5 sm:p-6 flex-grow">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
                     <FaTruck className="h-6 w-6 text-white" />
@@ -251,20 +253,22 @@ const LandingPage = () => {
                     Professional and reliable item transportation
                   </dd>
                 </div>
-                <div className="mt-5 flex flex-col gap-2">
+                <div className="mt-5">
                   <Link to="/item-transport/learn-more" className="text-orange-600 hover:text-orange-700">
                     Learn More &rarr;
                   </Link>
-                  <Link to="/item-transport" className="rehome-button-sm text-center">
-                    Start Booking Process
-                  </Link>
                 </div>
+              </div>
+              <div className="px-4 pb-5">
+                <Link to="/item-transport" className="rehome-button-sm text-center block">
+                  Start Booking Process
+                </Link>
               </div>
             </div>
 
             {/* Service 3: Special Request */}
-            <div className="bg-white overflow-hidden shadow rounded-lg">
-              <div className="px-4 py-5 sm:p-6">
+            <div className="bg-white overflow-hidden shadow rounded-lg flex flex-col">
+              <div className="px-4 py-5 sm:p-6 flex-grow">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 bg-orange-500 rounded-md p-3">
                     <FaHandshake className="h-6 w-6 text-white" />
@@ -280,14 +284,16 @@ const LandingPage = () => {
                     Custom solutions for unique needs
                   </dd>
                 </div>
-                <div className="mt-5 flex flex-col gap-2">
+                <div className="mt-5">
                   <Link to="/special-request/learn-more" className="text-orange-600 hover:text-orange-700">
                     Learn More &rarr;
                   </Link>
-                  <Link to="/special-request" className="rehome-button-sm text-center">
-                    Start Booking Process
-                  </Link>
                 </div>
+              </div>
+              <div className="px-4 pb-5">
+                <Link to="/special-request" className="rehome-button-sm text-center block">
+                  Start Booking Process
+                </Link>
               </div>
             </div>
 
@@ -300,7 +306,7 @@ const LandingPage = () => {
                   </div>
                   <div className="ml-5 w-0 flex-1">
                     <dt className="text-lg font-medium text-gray-900">
-                      2ndHand Marketplace
+                      2nd-hand Marketplace
                     </dt>
                   </div>
                 </div>
@@ -315,6 +321,9 @@ const LandingPage = () => {
                   </Link>
                   <Link to="/marketplace" className="rehome-button-sm text-center">
                     Explore Marketplace
+                  </Link>
+                  <Link to="/special-request" className="rehome-button-sm text-center bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
+                    Special Requests
                   </Link>
                 </div>
               </div>
