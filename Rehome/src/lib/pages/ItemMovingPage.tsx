@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import fetchCheckoutUrl from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
+import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 
 // // Dummy data for demonstration
 const cityDayData = {
@@ -486,16 +487,13 @@ const ItemMovingPage = () => {
                                     {pickupType && (
                                         <div className="mt-8 space-y-6">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">
-                                                    Pickup Address
-                                                </label>
-                                                <input
-                                                    type="text"
+                                                <LocationAutocomplete
+                                                    label="Pickup Address"
                                                     value={firstLocation}
-                                                    onChange={(e) => setFirstLocation(e.target.value)}
+                                                    onChange={(value) => setFirstLocation(value)}
                                                     placeholder="Enter pickup address"
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                                     required
+                                                    countryCode="nl"
                                                 />
                                                 
                                                 <div className="mt-3">
@@ -522,16 +520,13 @@ const ItemMovingPage = () => {
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700">
-                                                    Dropoff Address
-                                                </label>
-                                                <input
-                                                    type="text"
+                                                <LocationAutocomplete
+                                                    label="Dropoff Address"
                                                     value={secondLocation}
-                                                    onChange={(e) => setSecondLocation(e.target.value)}
+                                                    onChange={(value) => setSecondLocation(value)}
                                                     placeholder="Enter dropoff address"
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                                     required
+                                                    countryCode="nl"
                                                 />
                                                 
                                                 <div className="mt-3">

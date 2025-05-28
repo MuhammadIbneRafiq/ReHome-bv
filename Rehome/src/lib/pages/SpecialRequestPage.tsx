@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 // import { useTranslation } from 'react-i18next';
 import { FaWarehouse, FaBroom, FaGlobe } from 'react-icons/fa';
+import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 
 type ServiceFieldsType = {
   [key: string]: string[];
@@ -291,16 +292,15 @@ const SpecialRequestPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Pickup Address</label>
-                  <input
-                    type="text"
+                  <LocationAutocomplete
+                    label="Pickup Address"
                     value={fields.pickupAddress || ''}
-                    onChange={e => handleFieldChange('pickupAddress', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    onChange={(value) => handleFieldChange('pickupAddress', value)}
                     placeholder="Where should we pick up your items?"
                     required
+                    error={errors.pickupAddress}
+                    countryCode="nl"
                   />
-                  {errors.pickupAddress && <p className="text-red-500 text-sm">{errors.pickupAddress}</p>}
                 </div>
 
                 <div>
@@ -339,16 +339,15 @@ const SpecialRequestPage = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Location</label>
-                  <input
-                    type="text"
+                  <LocationAutocomplete
+                    label="Location"
                     value={fields.location || ''}
-                    onChange={e => handleFieldChange('location', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    onChange={(value) => handleFieldChange('location', value)}
                     placeholder="Address where items need to be removed from"
                     required
+                    error={errors.location}
+                    countryCode="nl"
                   />
-                  {errors.location && <p className="text-red-500 text-sm">{errors.location}</p>}
                 </div>
               </div>
             )}
@@ -359,29 +358,27 @@ const SpecialRequestPage = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Pickup Location</label>
-                    <input
-                      type="text"
+                    <LocationAutocomplete
+                      label="Pickup Location"
                       value={fields.pickupAddress || ''}
-                      onChange={e => handleFieldChange('pickupAddress', e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                      onChange={(value) => handleFieldChange('pickupAddress', value)}
                       placeholder="Current address/city/country"
                       required
+                      error={errors.pickupAddress}
+                      countryCode="nl"
                     />
-                    {errors.pickupAddress && <p className="text-red-500 text-sm">{errors.pickupAddress}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Drop-off Location</label>
-                    <input
-                      type="text"
+                    <LocationAutocomplete
+                      label="Drop-off Location"
                       value={fields.dropoffAddress || ''}
-                      onChange={e => handleFieldChange('dropoffAddress', e.target.value)}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                      onChange={(value) => handleFieldChange('dropoffAddress', value)}
                       placeholder="Destination address/city/country"
                       required
+                      error={errors.dropoffAddress}
+                      countryCode=""
                     />
-                    {errors.dropoffAddress && <p className="text-red-500 text-sm">{errors.dropoffAddress}</p>}
                   </div>
                 </div>
 

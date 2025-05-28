@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTranslation } from 'react-i18next';
 import { FaCheckCircle, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 
 const ItemDonationPage = () => {
   const { t } = useTranslation();
@@ -407,17 +408,13 @@ const ItemDonationPage = () => {
                 <h3 className="text-xl font-medium text-gray-800">Pickup Location</h3>
                 
                 <div>
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                    Address
-                  </label>
-                  <input
-                    type="text"
-                    id="address"
+                  <LocationAutocomplete
+                    label="Address"
                     value={address}
-                    onChange={e => setAddress(e.target.value)}
-                    className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                    onChange={(value) => setAddress(value)}
                     placeholder="Street, City, Postal Code"
                     required
+                    countryCode="nl"
                   />
                 </div>
                 
