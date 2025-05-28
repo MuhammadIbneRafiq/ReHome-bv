@@ -30,26 +30,7 @@ interface PriceSummaryProps {
     isStudent: boolean;
 }
 
-interface LocationStepProps {
-    firstLocation: string;
-    setFirstLocation: (value: string) => void;
-    secondLocation: string;
-    setSecondLocation: (value: string) => void;
-    floorPickup: string;
-    setFloorPickup: (value: string) => void;
-    floorDropoff: string;
-    setFloorDropoff: (value: string) => void;
-    elevatorPickup: boolean;
-    setElevatorPickup: (value: boolean) => void;
-    elevatorDropoff: boolean;
-    setElevatorDropoff: (value: boolean) => void;
-}
 
-interface ElevatorToggleProps {
-    label: string;
-    checked: boolean;
-    onChange: (checked: boolean) => void;
-}
 
 const itemCategories = [
     { name: "Bathroom Furniture", items: ["Cabinet", "Mirror", "Sink"] },
@@ -409,112 +390,7 @@ const HouseMovingPage = () => {
         );
     };
 
-    // Location step component
-    const LocationStep: React.FC<LocationStepProps> = ({ 
-        firstLocation, 
-        setFirstLocation, 
-        secondLocation, 
-        setSecondLocation,
-        floorPickup,
-        setFloorPickup,
-        floorDropoff,
-        setFloorDropoff,
-        elevatorPickup,
-        setElevatorPickup,
-        elevatorDropoff,
-        setElevatorDropoff
-    }) => {
-        const LocElevatorToggle: React.FC<ElevatorToggleProps> = ({ label, checked, onChange }) => (
-            <Switch.Group as="div" className="flex items-center">
-                <Switch
-                    checked={checked}
-                    onChange={onChange}
-                    className={`${
-                        checked ? 'bg-orange-600' : 'bg-gray-200'
-                    } relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
-                >
-                    <span
-                        className={`${
-                            checked ? 'translate-x-6' : 'translate-x-1'
-                        } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                    />
-                </Switch>
-                <Switch.Label as="span" className="ml-3 text-sm">
-                    {label}
-                </Switch.Label>
-            </Switch.Group>
-        );
 
-        return (
-            <div className="space-y-6">
-                <div>
-                    <LocationAutocomplete
-                        label="Pickup Address"
-                        value={firstLocation}
-                        onChange={(value) => setFirstLocation(value)}
-                        placeholder="Enter pickup address"
-                        required
-                        countryCode="nl"
-                    />
-                    
-                    <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700">
-                            Floor (Enter 0 for ground floor)
-                        </label>
-                        <input
-                            type="number"
-                            min="0"
-                            value={floorPickup}
-                            onChange={(e) => setFloorPickup(e.target.value)}
-                            placeholder="Floor number"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                        />
-                    </div>
-                    
-                    <div className="mt-2">
-                        <LocElevatorToggle
-                            label="Elevator available at pickup location"
-                            checked={elevatorPickup}
-                            onChange={setElevatorPickup}
-                        />
-                    </div>
-                </div>
-
-                <div>
-                    <LocationAutocomplete
-                        label="Dropoff Address"
-                        value={secondLocation}
-                        onChange={(value) => setSecondLocation(value)}
-                        placeholder="Enter dropoff address"
-                        required
-                        countryCode="nl"
-                    />
-                    
-                    <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700">
-                            Floor (Enter 0 for ground floor)
-                        </label>
-                        <input
-                            type="number"
-                            min="0"
-                            value={floorDropoff}
-                            onChange={(e) => setFloorDropoff(e.target.value)}
-                            placeholder="Floor number"
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                        />
-                    </div>
-                    
-                    <div className="mt-2">
-                        <LocElevatorToggle
-                            label="Elevator available at dropoff location"
-                            checked={elevatorDropoff}
-                            onChange={setElevatorDropoff}
-                        />
-                    </div>
-                </div>
-            </div>
-        );
-    };
 
     return (
         <div className="min-h-screen bg-orange-50 pt-24 pb-12">
@@ -558,20 +434,83 @@ const HouseMovingPage = () => {
 
                             {/* Step 1: Locations */}
                             {step === 1 && (
-                                <LocationStep 
-                                    firstLocation={firstLocation}
-                                    setFirstLocation={setFirstLocation}
-                                    secondLocation={secondLocation}
-                                    setSecondLocation={setSecondLocation}
-                                    floorPickup={floorPickup}
-                                    setFloorPickup={setFloorPickup}
-                                    floorDropoff={floorDropoff}
-                                    setFloorDropoff={setFloorDropoff}
-                                    elevatorPickup={elevatorPickup}
-                                    setElevatorPickup={setElevatorPickup}
-                                    elevatorDropoff={elevatorDropoff}
-                                    setElevatorDropoff={setElevatorDropoff}
-                                />
+                                <div className="space-y-6">
+                                    <div>
+                                        <LocationAutocomplete
+                                            label="Pickup Address"
+                                            value={firstLocation}
+                                            onChange={(value) => setFirstLocation(value)}
+                                            placeholder="Enter pickup address"
+                                            required
+                                            countryCode="nl"
+                                        />
+                                        
+                                        <div className="mt-3">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                Floor (Enter 0 for ground floor)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={floorPickup}
+                                                onChange={(e) => setFloorPickup(e.target.value)}
+                                                placeholder="Floor number"
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        
+                                        <div className="mt-2">
+                                            <div className="flex items-center">
+                                                <Switch
+                                                    checked={elevatorPickup}
+                                                    onChange={setElevatorPickup}
+                                                    className={`${elevatorPickup ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+                                                >
+                                                    <span className={`${elevatorPickup ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                </Switch>
+                                                <span className="ml-2 text-sm text-gray-700">Elevator available at pickup location</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <LocationAutocomplete
+                                            label="Dropoff Address"
+                                            value={secondLocation}
+                                            onChange={(value) => setSecondLocation(value)}
+                                            placeholder="Enter dropoff address"
+                                            required
+                                            countryCode="nl"
+                                        />
+                                        
+                                        <div className="mt-3">
+                                            <label className="block text-sm font-medium text-gray-700">
+                                                Floor (Enter 0 for ground floor)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={floorDropoff}
+                                                onChange={(e) => setFloorDropoff(e.target.value)}
+                                                placeholder="Floor number"
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            />
+                                        </div>
+                                        
+                                        <div className="mt-2">
+                                            <div className="flex items-center">
+                                                <Switch
+                                                    checked={elevatorDropoff}
+                                                    onChange={setElevatorDropoff}
+                                                    className={`${elevatorDropoff ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+                                                >
+                                                    <span className={`${elevatorDropoff ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                </Switch>
+                                                <span className="ml-2 text-sm text-gray-700">Elevator available at dropoff location</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             )}
 
                             {/* Step 2: Date & Time Selection */}

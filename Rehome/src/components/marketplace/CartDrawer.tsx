@@ -10,7 +10,7 @@ interface CartDrawerProps {
 }
 
 const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
-  const { items, removeItem, updateQuantity, clearCart, totalPrice, itemCount } = useCart();
+  const { items, removeItem, updateQuantity, clearCart } = useCart();
   const cartRef = useRef<HTMLDivElement>(null);
   const [showCheckoutConfirmation, setShowCheckoutConfirmation] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');

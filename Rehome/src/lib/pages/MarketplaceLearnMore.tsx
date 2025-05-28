@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaStar, FaArrowLeft, FaRecycle, FaTag, FaTools, FaSeedling, FaHeart, FaHandHoldingHeart } from 'react-icons/fa';
+import { FaStar, FaArrowLeft, FaRecycle, FaTag, FaSeedling, FaHeart, FaHandHoldingHeart } from 'react-icons/fa';
 import Footer from '../../components/Footer';
 
 const MarketplaceLearnMore: React.FC = () => {

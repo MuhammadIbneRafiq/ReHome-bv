@@ -208,7 +208,7 @@ const ChatDashboard: React.FC = () => {
     
     return () => {
       if (subscription) {
-        subscription.unsubscribe();
+        subscription();
       }
     };
   }, [user, activeConversation]);

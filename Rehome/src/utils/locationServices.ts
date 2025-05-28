@@ -137,14 +137,15 @@ export const searchWithHere = async (
 // ✅ Alternative to Nominatim
 export const searchWithPhoton = async (
   query: string, 
-  countryCode: string = 'NL'
+  countryCode: string = 'NL' // Default country code for Netherlands
 ): Promise<LocationSuggestion[]> => {
   try {
     const response = await fetch(
       `https://photon.komoot.io/api/?` +
       `q=${encodeURIComponent(query)}&` +
       `osm_tag=place:city,place:town,place:village,highway:*&` +
-      `limit=5`
+      `limit=5&` +
+      `lang=${countryCode.toLowerCase()}`
     );
     
     if (response.ok) {

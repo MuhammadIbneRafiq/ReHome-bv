@@ -26,7 +26,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   // const { t } = useTranslation();
   
   // Extract unique cities from items (keeping for potential future use)
-  const [cities, setCities] = useState<string[]>([]);
+  const [_, setCities] = useState<string[]>([]);
   // Track min and max prices
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   // Track selected filters
