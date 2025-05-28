@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FaMapMarkerAlt, FaSearch } from 'react-icons/fa';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { FaMapMarkerAlt } from 'react-icons/fa';
 
 interface LocationSuggestion {
   display_name: string;
@@ -43,9 +43,10 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<NodeJS.Timeout>();
+  const [isSelecting, setIsSelecting] = useState(false);
 
   // Debounced search function
-  const searchLocations = async (query: string) => {
+  const searchLocations = useCallback(async (query: string) => {
     if (query.length < 3) {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -69,7 +70,7 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
       if (response.ok) {
         const data: LocationSuggestion[] = await response.json();
         setSuggestions(data);
-        setShowSuggestions(data.length > 0);
+        setShowSuggestions(data.length > 0 && !isSelecting);
       }
     } catch (error) {
       console.error('Error fetching location suggestions:', error);
@@ -78,12 +79,17 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [countryCode, isSelecting]);
 
   useEffect(() => {
     // Clear previous timeout
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
+    }
+
+    // Don't search if we're in the middle of selecting
+    if (isSelecting) {
+      return;
     }
 
     // Set new timeout for debounced search
@@ -101,19 +107,25 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [value, countryCode]);
+  }, [value, searchLocations, isSelecting]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
+    setIsSelecting(false); // Reset selecting state when typing
     onChange(newValue);
     setActiveSuggestion(-1);
   };
 
   const handleSuggestionClick = (suggestion: LocationSuggestion) => {
+    setIsSelecting(true);
     onChange(suggestion.display_name, suggestion);
     setShowSuggestions(false);
     setActiveSuggestion(-1);
-    inputRef.current?.focus();
+    
+    // Reset selecting state after a short delay
+    setTimeout(() => {
+      setIsSelecting(false);
+    }, 100);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -143,14 +155,20 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
     }
   };
 
-  const handleBlur = (e: React.FocusEvent) => {
-    // Delay hiding suggestions to allow for clicks
+  const handleBlur = () => {
+    // Only hide suggestions if we're not clicking on a suggestion
     setTimeout(() => {
-      if (!suggestionsRef.current?.contains(e.relatedTarget as Node)) {
+      if (!suggestionsRef.current?.contains(document.activeElement as Node)) {
         setShowSuggestions(false);
         setActiveSuggestion(-1);
       }
-    }, 150);
+    }, 200);
+  };
+
+  const handleFocus = () => {
+    if (suggestions.length > 0 && value.length >= 3) {
+      setShowSuggestions(true);
+    }
   };
 
   const formatSuggestion = (suggestion: LocationSuggestion) => {
@@ -194,6 +212,7 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           onBlur={handleBlur}
+          onFocus={handleFocus}
           placeholder={placeholder}
           required={required}
           className={`
@@ -221,7 +240,8 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
       {showSuggestions && suggestions.length > 0 && (
         <div 
           ref={suggestionsRef}
-          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto"
+          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-[9999] max-h-60 overflow-y-auto"
+          style={{ zIndex: 9999 }}
         >
           {suggestions.map((suggestion, index) => (
             <div
@@ -229,7 +249,10 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
               className={`px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0 ${
                 index === activeSuggestion ? 'bg-orange-100' : ''
               }`}
-              onClick={() => handleSuggestionClick(suggestion)}
+              onMouseDown={(e) => {
+                e.preventDefault(); // Prevent blur from firing
+                handleSuggestionClick(suggestion);
+              }}
               onMouseEnter={() => setActiveSuggestion(index)}
             >
               <div className="flex items-start">

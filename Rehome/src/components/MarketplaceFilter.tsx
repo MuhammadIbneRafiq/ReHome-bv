@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import LocationAutocomplete from './ui/LocationAutocomplete';
 // import { useTranslation } from 'react-i18next';
 // import { FaFilter } from 'react-icons/fa';
 
@@ -7,10 +8,24 @@ interface FilterProps {
   onFilterChange: (filteredItems: any[]) => void;
 }
 
+interface LocationSuggestion {
+  display_name: string;
+  lat: string;
+  lon: string;
+  place_id: string;
+  address?: {
+    house_number?: string;
+    road?: string;
+    city?: string;
+    postcode?: string;
+    country?: string;
+  };
+}
+
 const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => {
   // const { t } = useTranslation();
   
-  // Extract unique cities from items
+  // Extract unique cities from items (keeping for potential future use)
   const [cities, setCities] = useState<string[]>([]);
   // Track min and max prices
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
@@ -25,7 +40,9 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
   // Condition filter
   const [selectedCondition, setSelectedCondition] = useState<string>('');
-  // Distance filter
+  // Distance filter with location autocomplete
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  const [selectedLocationCoords, setSelectedLocationCoords] = useState<{lat: number, lon: number} | null>(null);
   const [distance, setDistance] = useState<number>(0);
   
   // Main categories and subcategories based on requirements
@@ -118,6 +135,59 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     { value: '5', label: 'Poor/Broken - Significant damage or functional issues, may require major repairs' }
   ];
 
+  // Calculate distance between two coordinates using Haversine formula
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371; // Radius of the Earth in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c; // Distance in kilometers
+    return distance;
+  };
+
+  // Get coordinates for a city/location using OpenStreetMap Nominatim
+  const getLocationCoordinates = async (locationName: string): Promise<{lat: number, lon: number} | null> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?` +
+        `q=${encodeURIComponent(locationName)}&` +
+        `countrycodes=nl&` +
+        `format=json&` +
+        `limit=1`
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          return {
+            lat: parseFloat(data[0].lat),
+            lon: parseFloat(data[0].lon)
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching coordinates:', error);
+    }
+    return null;
+  };
+
+  // Handle location selection from autocomplete
+  const handleLocationChange = (value: string, suggestion?: LocationSuggestion) => {
+    setSelectedLocation(value);
+    if (suggestion) {
+      setSelectedLocationCoords({
+        lat: parseFloat(suggestion.lat),
+        lon: parseFloat(suggestion.lon)
+      });
+    } else if (value === '') {
+      setSelectedLocationCoords(null);
+    }
+  };
+
   // Analyze data to set up filter options
   useEffect(() => {
     if (items && items.length > 0) {
@@ -135,7 +205,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   }, [items]);
 
   // Apply filters
-  const applyFilters = () => {
+  const applyFilters = async () => {
     let filteredItems = [...items];
     
     // Filter by city if any selected
@@ -176,6 +246,30 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
       filteredItems = filteredItems.filter(item => item.isrehome === true);
     }
     
+    // Filter by distance if location and distance are selected
+    if (selectedLocationCoords && distance > 0) {
+      const itemsWithDistance = await Promise.all(
+        filteredItems.map(async (item) => {
+          if (item.city_name) {
+            // Try to get coordinates for the item's location
+            const itemCoords = await getLocationCoordinates(item.city_name);
+            if (itemCoords) {
+              const itemDistance = calculateDistance(
+                selectedLocationCoords.lat,
+                selectedLocationCoords.lon,
+                itemCoords.lat,
+                itemCoords.lon
+              );
+              return { ...item, distance: itemDistance };
+            }
+          }
+          return { ...item, distance: Infinity };
+        })
+      );
+      
+      filteredItems = itemsWithDistance.filter(item => item.distance <= distance);
+    }
+    
     onFilterChange(filteredItems);
   };
 
@@ -187,6 +281,8 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     setSelectedCategory('');
     setSelectedSubCategory('');
     setSelectedCondition('');
+    setSelectedLocation('');
+    setSelectedLocationCoords(null);
     setDistance(0);
     onFilterChange(items); // Reset to original items
   };
@@ -211,16 +307,16 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   useEffect(() => {
     applyFilters();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCities, selectedPriceRange, selectedCategory, selectedSubCategory, selectedCondition, showRehomeOnly]);
+  }, [selectedCities, selectedPriceRange, selectedCategory, selectedSubCategory, selectedCondition, showRehomeOnly, selectedLocationCoords, distance]);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 mt-4">
+    <div className="bg-white rounded-lg shadow-md p-4 mt-4 relative">
       <h2 className="text-lg font-semibold mb-2">Filters</h2>
       
       {/* Filters Content */}
-      <div className="space-y-4">
+      <div className="space-y-4 relative">
         {/* Category Selection */}
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Category selection
           </label>
@@ -229,6 +325,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
               value={selectedCategory}
               onChange={handleCategoryChange}
+              style={{ position: 'relative', zIndex: 5 }}
             >
               <option value="">All Categories</option>
               {categories.map(category => (
@@ -243,6 +340,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                 value={selectedSubCategory}
                 onChange={(e) => setSelectedSubCategory(e.target.value)}
+                style={{ position: 'relative', zIndex: 5 }}
               >
                 <option value="">All {selectedCategory}</option>
                 {categories
@@ -258,7 +356,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
         </div>
         
         {/* Price Range Filter */}
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Price filter
           </label>
@@ -284,40 +382,48 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
           </div>
         </div>
         
-        {/* Distance Filter */}
-        <div>
+        {/* Distance Filter with Location Autocomplete */}
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Distance filter (Select location and range from that location to check for items closeby)
+            Distance filter
           </label>
-          <div className="flex space-x-2">
+          <p className="text-xs text-gray-500 mb-2">
+            Enter a city or address and select the range to find items nearby
+          </p>
+          <div className="space-y-2">
+            <div className="relative z-20">
+              <LocationAutocomplete
+                value={selectedLocation}
+                onChange={handleLocationChange}
+                placeholder="Enter city or address"
+                countryCode="nl"
+                className="w-full"
+              />
+            </div>
             <select
-              className="mt-1 block w-2/3 rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-              value={selectedCities[0] || ''}
-              onChange={(e) => setSelectedCities(e.target.value ? [e.target.value] : [])}
-            >
-              <option value="">Select location</option>
-              {cities.map(city => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-            <select
-              className="mt-1 block w-1/3 rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border relative z-10"
               value={distance}
               onChange={(e) => setDistance(Number(e.target.value))}
+              disabled={!selectedLocationCoords}
+              style={{ position: 'relative', zIndex: 10 }}
             >
-              <option value="0">Any</option>
-              <option value="5">5 km</option>
-              <option value="10">10 km</option>
-              <option value="25">25 km</option>
-              <option value="50">50 km</option>
+              <option value="0">Select range</option>
+              <option value="5">Within 5 km</option>
+              <option value="10">Within 10 km</option>
+              <option value="25">Within 25 km</option>
+              <option value="50">Within 50 km</option>
+              <option value="100">Within 100 km</option>
             </select>
           </div>
+          {selectedLocationCoords && distance > 0 && (
+            <p className="text-xs text-green-600 mt-1">
+              ✓ Showing items within {distance}km of {selectedLocation}
+            </p>
+          )}
         </div>
         
         {/* Condition Filter */}
-        <div>
+        <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Condition filter
           </label>
@@ -325,6 +431,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
             value={selectedCondition}
             onChange={(e) => setSelectedCondition(e.target.value)}
+            style={{ position: 'relative', zIndex: 5 }}
           >
             <option value="">Any condition</option>
             {conditions.map(condition => (
@@ -336,7 +443,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
         </div>
         
         {/* ReHome Listings Only */}
-        <div>
+        <div className="relative">
           <div className="flex items-center">
             <input
               type="checkbox"

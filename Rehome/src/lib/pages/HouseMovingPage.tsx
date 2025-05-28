@@ -162,7 +162,18 @@ const HouseMovingPage = () => {
 
     useEffect(() => {
         calculatePrice();
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper, elevatorPickup, elevatorDropoff]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, selectedDate, extraHelper, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems]);
+
+    // Calculate price when locations change, but only if both are set
+    useEffect(() => {
+        if (firstLocation && secondLocation) {
+            // Use a small delay to avoid interfering with typing
+            const timer = setTimeout(() => {
+                calculatePrice();
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [firstLocation, secondLocation]);
 
     const nextStep = () => {
         // Validate date selection in step 4
