@@ -1,27 +1,28 @@
 import React, { useState } from 'react';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import axios from 'axios'; // Import axios for making HTTP requests
+// import { useTranslation } from 'react-i18next';
+import { FaWarehouse, FaBroom, FaGlobe } from 'react-icons/fa';
 
 type ServiceFieldsType = {
   [key: string]: string[];
 };
+
 const serviceFields: ServiceFieldsType = {
-  fullHouseMove: [
-    'pickupAddress', 'dropoffAddress', 'itemSelection', 'addons', 'date', 'preferredTimeSpan', 'contactInfo', 'photos'
-  ],
-  internationalMove: [
-    'pickupAddress', 'dropoffAddress', 'itemSelection', 'addons', 'date', 'preferredTimeSpan', 'contactInfo', 'photos'
-  ],
-  temporaryItemStorage: [
-    'storageDate', 'itemSelection', 'pickupAddress', 'dropoffAddress', 'contactInfo', 'photos'
+  storage: [
+    'itemList', 'duration', 'pickupAddress', 'dropoffPreference', 'contactInfo'
   ],
   junkRemoval: [
-    'address', 'itemDescription', 'removalDate', 'contactInfo', 'photos'
+    'itemDescription', 'location', 'contactInfo'
+  ],
+  fullInternationalMove: [
+    'pickupAddress', 'dropoffAddress', 'itemList', 'services', 'contactInfo'
   ]
 };
 
 const SpecialRequestPage = () => {
-  const [selectedServices, setSelectedServices] = useState<{ [key: string]: boolean }>({});
+  // const { t } = useTranslation();
+  const [selectedService, setSelectedService] = useState<string>('');
   const [fields, setFields] = useState<any>({});
   const [photos, setPhotos] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,10 +30,7 @@ const SpecialRequestPage = () => {
   const [confirmation, setConfirmation] = useState('');
 
   const handleServiceChange = (serviceId: string) => {
-    setSelectedServices({
-      ...selectedServices,
-      [serviceId]: !selectedServices[serviceId],
-    });
+    setSelectedService(serviceId);
     setFields({});
     setPhotos([]);
     setErrors({});
@@ -52,20 +50,22 @@ const SpecialRequestPage = () => {
   const validateForm = () => {
     let isValid = true;
     const newErrors: { [key: string]: string } = {};
-    const selected = Object.keys(selectedServices).filter((k) => selectedServices[k]);
-    if (selected.length === 0) {
-      newErrors.selectedServices = 'Please select at least one service.';
+    
+    if (!selectedService) {
+      newErrors.selectedService = 'Please select a service.';
       isValid = false;
     }
-    selected.forEach((service) => {
-      serviceFields[service].forEach((field) => {
+
+    if (selectedService) {
+      serviceFields[selectedService].forEach((field) => {
         if (!fields[field] && field !== 'photos') {
           newErrors[field] = 'This field is required.';
           isValid = false;
         }
       });
-    });
-    // Phone/email validation
+    }
+
+    // Contact info validation
     if (fields.contactInfo) {
       const phoneRegex = /^\+?[1-9]\d{1,14}$/;
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -74,6 +74,7 @@ const SpecialRequestPage = () => {
         isValid = false;
       }
     }
+
     setErrors(newErrors);
     return isValid;
   };
@@ -81,278 +82,369 @@ const SpecialRequestPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
+    
     setIsLoading(true);
-    const requestData = {
-      selectedServices,
-      fields,
-      photos: photos.map((file) => file.name), // For now, just send file names
-    };
+    // const requestData = {
+    //   service: selectedService,
+    //   fields,
+    //   photos: photos.map((file) => file.name),
+    // };
+
     try {
-      await axios.post('https://rehome-backend.vercel.app/api/special-request', requestData);
-      setConfirmation('We will review your request and be in touch. Please check your email.');
-      setSelectedServices({});
+      // Mock API call - replace with actual endpoint
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      toast.success("Your special request has been submitted! We'll get back to you within 24 hours.", {
+        position: "top-right",
+        autoClose: 5000,
+      });
+      
+      setConfirmation('Thank you for your request! We will review your requirements and be in touch within 24 hours with a custom quote.');
+      
+      // Reset form
+      setSelectedService('');
       setFields({});
       setPhotos([]);
       setErrors({});
     } catch (error: any) {
-      setConfirmation('Failed to submit request. Please try again.');
+      toast.error('Failed to submit request. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const services = [
-    { id: 'fullHouseMove', name: 'Full house move' },
-    { id: 'internationalMove', name: 'International move/ transport' },
-    { id: 'temporaryItemStorage', name: 'Temporary Item storage' },
-    { id: 'junkRemoval', name: 'Junk removal' },
+    { 
+      id: 'storage', 
+      name: 'Storage Services',
+      icon: FaWarehouse,
+      description: 'Short- and long-term secure storage solutions'
+    },
+    { 
+      id: 'junkRemoval', 
+      name: 'Junk Removal',
+      icon: FaBroom,
+      description: 'Responsible disposal and removal services'
+    },
+    { 
+      id: 'fullInternationalMove', 
+      name: 'Full & International Moves',
+      icon: FaGlobe,
+      description: 'Complete relocation services across borders'
+    },
   ];
 
-  // Helper to show fields for selected service(s)
-  const selected = Object.keys(selectedServices).filter((k) => selectedServices[k]);
-  const showField = (field: string) => selected.some((service) => serviceFields[service].includes(field));
-
   return (
-    <div className="min-h-screen bg-gradient-to-r from-blue-600 to-purple-600 py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden transition-transform transform hover:scale-105">
-        <div className="px-6 py-8">
-          <h1 className="text-3xl font-extrabold text-gray-900 text-center mb-6 animate-pulse">
-            Special Request
-          </h1>
-          {confirmation && <div className="mb-4 text-green-700 font-semibold text-center">{confirmation}</div>}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Services */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Select the Services You Need
-              </label>
-              {errors.selectedServices && (
-                <p className="text-red-500 text-sm">{errors.selectedServices}</p>
-              )}
-              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-                {services.map((service) => (
-                  <div key={service.id} className="relative flex items-start">
-                    <div className="flex items-center h-5">
-                      <input
-                        id={service.id}
-                        type="checkbox"
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        checked={selectedServices[service.id] || false}
-                        onChange={() => handleServiceChange(service.id)}
-                      />
-                    </div>
-                    <div className="ml-3 text-sm">
-                      <label htmlFor={service.id} className="font-medium text-gray-700">
-                        {service.name}
-                      </label>
-                    </div>
-                  </div>
-                ))}
+    <div className="min-h-screen bg-orange-50 pt-24 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Special Requests</h1>
+        <p className="text-lg text-gray-600 mb-6">Tailored Services for Storage, Junk Removal, and International or Large-Scale Moves</p>
+        
+        <div className="bg-white shadow-md rounded-lg p-6 mb-8">
+          {/* Introduction Section */}
+          <div className="mb-8">
+            <p className="text-gray-700 mb-6">
+              ReHome's Special Request section covers services that go beyond standard moving or transport jobs. 
+              These include short- and long-term item storage, junk removal, and full or international relocations — 
+              all tailored to your specific situation and handled with care and efficiency.
+            </p>
+
+            {/* Service Details */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              {/* Storage Services */}
+              <div className="bg-orange-50 p-6 rounded-lg">
+                <div className="flex items-center mb-4">
+                  <FaWarehouse className="h-8 w-8 text-orange-600 mr-3" />
+                  <h3 className="text-xl font-semibold text-gray-800">Storage Services</h3>
+                </div>
+                <p className="text-gray-700 mb-4">
+                  Need to store furniture or appliances for a few weeks or months? We offer secure short- and 
+                  long-term storage within the Netherlands. You decide whether you drop off the items yourself 
+                  or request pickup from your home. We also offer redelivery when your storage period ends. 
+                  Storage is charged on a daily basis (minimum two weeks).
+                </p>
+                <p className="text-sm text-orange-600 font-medium">
+                  📩 Just send us a list of items to store and the intended duration — we'll reply with a tailored quote.
+                </p>
+              </div>
+
+              {/* Junk Removal */}
+              <div className="bg-orange-50 p-6 rounded-lg">
+                <div className="flex items-center mb-4">
+                  <FaBroom className="h-8 w-8 text-orange-600 mr-3" />
+                  <h3 className="text-xl font-semibold text-gray-800">Junk Removal</h3>
+                </div>
+                <p className="text-gray-700 mb-4">
+                  From broken furniture to leftover clutter after a move, we offer affordable and responsible 
+                  junk removal. Our team handles collection and disposal, with a focus on sustainability whenever possible.
+                  You'll receive a quote based on the volume and type of items. Whether it's a single heavy piece 
+                  or a full room clearance, we'll take care of it.
+                </p>
+                <p className="text-sm text-orange-600 font-medium">
+                  📩 Provide a list or photos of what needs removing, along with the location, and we'll respond within 24 hours with a quote.
+                </p>
+              </div>
+
+              {/* Full & International Moves */}
+              <div className="bg-orange-50 p-6 rounded-lg">
+                <div className="flex items-center mb-4">
+                  <FaGlobe className="h-8 w-8 text-orange-600 mr-3" />
+                  <h3 className="text-xl font-semibold text-gray-800">Full & International Moves</h3>
+                </div>
+                <p className="text-gray-700 mb-4">
+                  For more complex moves — across the Netherlands or abroad — we provide flexible, end-to-end 
+                  relocation services. This includes packing, carrying, disassembly/reassembly, floor delivery, 
+                  and logistics planning for international or long-distance jobs. Whether you're moving an entire 
+                  household to another city or relocating abroad, we'll coordinate every step. All services are modular — you choose what to include.
+                </p>
+                <p className="text-sm text-orange-600 font-medium">
+                  📩 Tell us your pickup and drop-off locations, your item list, and any services you need — we'll build a custom plan and quote for you.
+                </p>
               </div>
             </div>
 
-            {/* Dynamic Fields */}
-            {showField('pickupAddress') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Pickup Address</label>
-                <input
-                  type="text"
-                  value={fields.pickupAddress || ''}
-                  onChange={e => handleFieldChange('pickupAddress', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Street, City, Postal Code"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Start typing and select your street from the list (auto-complete coming soon).</p>
-                {errors.pickupAddress && <p className="text-red-500 text-sm">{errors.pickupAddress}</p>}
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-blue-800 font-medium text-center">
+                Fill out the form for the specific service you need under Special Request, and we'll get back to you shortly with your custom quote.
+              </p>
+            </div>
+          </div>
+
+          {confirmation && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md text-green-800">
+              {confirmation}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Service Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-4">
+                Select the Service You Need
+              </label>
+              {errors.selectedService && (
+                <p className="text-red-500 text-sm mb-2">{errors.selectedService}</p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {services.map((service) => {
+                  const IconComponent = service.icon;
+                  return (
+                    <div 
+                      key={service.id} 
+                      className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        selectedService === service.id 
+                          ? 'border-orange-500 bg-orange-50' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => handleServiceChange(service.id)}
+                    >
+                      <div className="flex items-center mb-2">
+                        <IconComponent className={`h-6 w-6 mr-3 ${
+                          selectedService === service.id ? 'text-orange-600' : 'text-gray-400'
+                        }`} />
+                        <h3 className="font-medium text-gray-900">{service.name}</h3>
+                      </div>
+                      <p className="text-sm text-gray-600">{service.description}</p>
+                      <input
+                        type="radio"
+                        name="service"
+                        value={service.id}
+                        checked={selectedService === service.id}
+                        onChange={() => handleServiceChange(service.id)}
+                        className="absolute top-4 right-4"
+                      />
+                    </div>
+                  );
+                })}
               </div>
-            )}
-            {showField('dropoffAddress') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Dropoff Address</label>
-                <input
-                  type="text"
-                  value={fields.dropoffAddress || ''}
-                  onChange={e => handleFieldChange('dropoffAddress', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Street, City, Postal Code"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Start typing and select your street from the list (auto-complete coming soon).</p>
-                {errors.dropoffAddress && <p className="text-red-500 text-sm">{errors.dropoffAddress}</p>}
-              </div>
-            )}
-            {showField('itemSelection') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Item Selection</label>
-                <textarea
-                  value={fields.itemSelection || ''}
-                  onChange={e => handleFieldChange('itemSelection', e.target.value)}
-                  rows={2}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="List or describe the items (categories/headings coming soon)"
-                  required
-                />
-                {errors.itemSelection && <p className="text-red-500 text-sm">{errors.itemSelection}</p>}
-              </div>
-            )}
-            {showField('addons') && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            </div>
+
+            {/* Dynamic Fields Based on Selected Service */}
+            {selectedService === 'storage' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-800">Storage Service Details</h3>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Pickup Floor</label>
-                  <input
-                    type="text"
-                    value={fields.pickupFloor || ''}
-                    onChange={e => handleFieldChange('pickupFloor', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="e.g. 2 (2nd Floor)"
+                  <label className="block text-sm font-medium text-gray-700">List of Items to Store</label>
+                  <textarea
+                    value={fields.itemList || ''}
+                    onChange={e => handleFieldChange('itemList', e.target.value)}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    placeholder="Describe the items you need to store (furniture, appliances, etc.)"
                     required
                   />
+                  {errors.itemList && <p className="text-red-500 text-sm">{errors.itemList}</p>}
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Dropoff Floor</label>
+                  <label className="block text-sm font-medium text-gray-700">Storage Duration</label>
                   <input
                     type="text"
-                    value={fields.dropoffFloor || ''}
-                    onChange={e => handleFieldChange('dropoffFloor', e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    placeholder="e.g. 1 (Ground Floor)"
+                    value={fields.duration || ''}
+                    onChange={e => handleFieldChange('duration', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    placeholder="e.g., 2 weeks, 3 months, or specific dates"
                     required
                   />
+                  {errors.duration && <p className="text-red-500 text-sm">{errors.duration}</p>}
                 </div>
-                <div className="col-span-2 flex flex-col gap-2 mt-2">
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" checked={fields.elevatorPickup || false} onChange={e => handleFieldChange('elevatorPickup', e.target.checked)} className="form-checkbox text-indigo-600" />
-                    <span className="ml-2">Elevator available at Pickup?</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" checked={fields.elevatorDropoff || false} onChange={e => handleFieldChange('elevatorDropoff', e.target.checked)} className="form-checkbox text-indigo-600" />
-                    <span className="ml-2">Elevator available at Dropoff?</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" checked={fields.disassembly || false} onChange={e => handleFieldChange('disassembly', e.target.checked)} className="form-checkbox text-indigo-600" />
-                    <span className="ml-2">Require disassembly?</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" checked={fields.carrying || false} onChange={e => handleFieldChange('carrying', e.target.checked)} className="form-checkbox text-indigo-600" />
-                    <span className="ml-2">Require carrying assistance?</span>
-                  </label>
-                  <label className="inline-flex items-center">
-                    <input type="checkbox" checked={fields.extraHelper || false} onChange={e => handleFieldChange('extraHelper', e.target.checked)} className="form-checkbox text-indigo-600" />
-                    <span className="ml-2">Require extra helper?</span>
-                  </label>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Pickup Address</label>
+                  <input
+                    type="text"
+                    value={fields.pickupAddress || ''}
+                    onChange={e => handleFieldChange('pickupAddress', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    placeholder="Where should we pick up your items?"
+                    required
+                  />
+                  {errors.pickupAddress && <p className="text-red-500 text-sm">{errors.pickupAddress}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Delivery Preference</label>
+                  <select
+                    value={fields.dropoffPreference || ''}
+                    onChange={e => handleFieldChange('dropoffPreference', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    required
+                  >
+                    <option value="">Select delivery preference</option>
+                    <option value="pickup">I'll pick up items myself</option>
+                    <option value="delivery">Please deliver items back to me</option>
+                    <option value="undecided">I'll decide later</option>
+                  </select>
+                  {errors.dropoffPreference && <p className="text-red-500 text-sm">{errors.dropoffPreference}</p>}
                 </div>
               </div>
             )}
-            {showField('date') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Preferred Date</label>
-                <input
-                  type="date"
-                  value={fields.date || ''}
-                  onChange={e => handleFieldChange('date', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  required
-                />
-                {errors.date && <p className="text-red-500 text-sm">{errors.date}</p>}
+
+            {selectedService === 'junkRemoval' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-800">Junk Removal Details</h3>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Items to Remove</label>
+                  <textarea
+                    value={fields.itemDescription || ''}
+                    onChange={e => handleFieldChange('itemDescription', e.target.value)}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    placeholder="Describe what needs to be removed (broken furniture, clutter, etc.)"
+                    required
+                  />
+                  {errors.itemDescription && <p className="text-red-500 text-sm">{errors.itemDescription}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Location</label>
+                  <input
+                    type="text"
+                    value={fields.location || ''}
+                    onChange={e => handleFieldChange('location', e.target.value)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    placeholder="Address where items need to be removed from"
+                    required
+                  />
+                  {errors.location && <p className="text-red-500 text-sm">{errors.location}</p>}
+                </div>
               </div>
             )}
-            {showField('preferredTimeSpan') && (
-              <div className="mt-2">
-                <label htmlFor="preferredTimeSpan" className="block text-sm font-medium text-gray-700">Preferred Time Span</label>
-                <select
-                  id="preferredTimeSpan"
-                  value={fields.preferredTimeSpan || ''}
-                  onChange={e => handleFieldChange('preferredTimeSpan', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  required
-                >
-                  <option value="">Select a time span</option>
-                  <option value="8-12">8-12</option>
-                  <option value="12-16">12-16</option>
-                  <option value="16-20">16-20</option>
-                </select>
-                {errors.preferredTimeSpan && <p className="text-red-500 text-sm">{errors.preferredTimeSpan}</p>}
+
+            {selectedService === 'fullInternationalMove' && (
+              <div className="space-y-6">
+                <h3 className="text-lg font-medium text-gray-800">Full & International Move Details</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Pickup Location</label>
+                    <input
+                      type="text"
+                      value={fields.pickupAddress || ''}
+                      onChange={e => handleFieldChange('pickupAddress', e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                      placeholder="Current address/city/country"
+                      required
+                    />
+                    {errors.pickupAddress && <p className="text-red-500 text-sm">{errors.pickupAddress}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Drop-off Location</label>
+                    <input
+                      type="text"
+                      value={fields.dropoffAddress || ''}
+                      onChange={e => handleFieldChange('dropoffAddress', e.target.value)}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                      placeholder="Destination address/city/country"
+                      required
+                    />
+                    {errors.dropoffAddress && <p className="text-red-500 text-sm">{errors.dropoffAddress}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Item List</label>
+                  <textarea
+                    value={fields.itemList || ''}
+                    onChange={e => handleFieldChange('itemList', e.target.value)}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
+                    placeholder="List all items to be moved (furniture, appliances, boxes, etc.)"
+                    required
+                  />
+                  {errors.itemList && <p className="text-red-500 text-sm">{errors.itemList}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Services Needed</label>
+                  <div className="mt-2 space-y-2">
+                    {['Packing', 'Disassembly/Reassembly', 'Floor Delivery', 'Logistics Planning', 'Customs Handling'].map((service) => (
+                      <label key={service} className="inline-flex items-center mr-6">
+                        <input 
+                          type="checkbox" 
+                          checked={fields.services?.includes(service) || false}
+                          onChange={e => {
+                            const currentServices = fields.services || [];
+                            if (e.target.checked) {
+                              handleFieldChange('services', [...currentServices, service]);
+                            } else {
+                              handleFieldChange('services', currentServices.filter((s: string) => s !== service));
+                            }
+                          }}
+                          className="form-checkbox text-orange-600" 
+                        />
+                        <span className="ml-2 text-sm">{service}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
-            {showField('storageDate') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Date & Duration of Storage</label>
-                <input
-                  type="text"
-                  value={fields.storageDate || ''}
-                  onChange={e => handleFieldChange('storageDate', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Enter start and end date or estimated duration"
-                  required
-                />
-                {errors.storageDate && <p className="text-red-500 text-sm">{errors.storageDate}</p>}
-              </div>
-            )}
-            {showField('address') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Address / Location</label>
-                <input
-                  type="text"
-                  value={fields.address || ''}
-                  onChange={e => handleFieldChange('address', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Street, City, Postal Code"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Start typing and select your street from the list (auto-complete coming soon).</p>
-                {errors.address && <p className="text-red-500 text-sm">{errors.address}</p>}
-              </div>
-            )}
-            {showField('itemDescription') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Describe/List Items</label>
-                <textarea
-                  value={fields.itemDescription || ''}
-                  onChange={e => handleFieldChange('itemDescription', e.target.value)}
-                  rows={2}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Describe or list the items to be removed"
-                  required
-                />
-                {errors.itemDescription && <p className="text-red-500 text-sm">{errors.itemDescription}</p>}
-              </div>
-            )}
-            {showField('removalDate') && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Latest Removal Date</label>
-                <input
-                  type="date"
-                  value={fields.removalDate || ''}
-                  onChange={e => handleFieldChange('removalDate', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  required
-                />
-                {errors.removalDate && <p className="text-red-500 text-sm">{errors.removalDate}</p>}
-              </div>
-            )}
-            {/* Contact Info */}
-            {showField('contactInfo') && (
+
+            {/* Contact Info - Show for all services */}
+            {selectedService && (
               <div>
                 <label htmlFor="contactInfo" className="block text-sm font-medium text-gray-700">
                   Contact Information
                 </label>
-                {errors.contactInfo && (
-                  <p className="text-red-500 text-sm">{errors.contactInfo}</p>
-                )}
                 <input
                   type="text"
                   id="contactInfo"
                   value={fields.contactInfo || ''}
                   onChange={e => handleFieldChange('contactInfo', e.target.value)}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm"
                   placeholder="Phone number or email"
                   required
                 />
+                {errors.contactInfo && <p className="text-red-500 text-sm">{errors.contactInfo}</p>}
               </div>
             )}
-            {/* Attach Photos */}
-            {showField('photos') && (
+
+            {/* Photo Upload */}
+            {selectedService && (
               <div>
                 <label className="block text-sm font-medium text-gray-700">Attach Photos (optional)</label>
                 <input
@@ -360,7 +452,7 @@ const SpecialRequestPage = () => {
                   multiple
                   accept="image/*"
                   onChange={handlePhotoChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                 />
                 {photos.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -371,15 +463,18 @@ const SpecialRequestPage = () => {
                 )}
               </div>
             )}
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className={`rehome-button ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {isLoading ? 'Submitting...' : 'Submit Request'}
-              </button>
-            </div>
+
+            {selectedService && (
+              <div>
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`w-full rehome-button ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {isLoading ? 'Submitting Request...' : 'Submit Special Request'}
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>

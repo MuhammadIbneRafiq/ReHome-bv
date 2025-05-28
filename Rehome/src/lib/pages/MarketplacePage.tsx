@@ -3,7 +3,6 @@ import MarketplaceSearch from '../../components/MarketplaceSearch';
 import { motion } from "framer-motion";
 import {FurnitureItem} from '../../types/furniture'; // Import the type
 import ItemDetailsModal from '@/components/ItemDetailModal'; // Import the modal
-import tickLogo from '../../assets/logo_marketplace.png'
 import logoImage from '../../assets/logorehome.jpg'
 import { useTranslation } from "react-i18next";
 import MarketplaceFilter from "../../components/MarketplaceFilter";
@@ -249,7 +248,7 @@ const MarketplacePage = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {/* Filter and Search on Left */}
                             <div className="md:col-span-1">
-                                <MarketplaceSearch onSearch={handleSearch} />
+                                <MarketplaceSearch onSearch={handleSearch} items={furnitureItems} />
                                 <MarketplaceFilter 
                                     items={furnitureItems} 
                                     onFilterChange={handleFilterChange} 
