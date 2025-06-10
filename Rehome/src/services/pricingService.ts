@@ -3,7 +3,8 @@ import {
   cityBaseCharges, 
   cityDayData, 
   getItemPoints, 
-  getCityFromPostalCode 
+  getCityFromPostalCode,
+  isCityDay
 } from '../lib/constants';
 
 export interface PricingBreakdown {
@@ -362,10 +363,10 @@ class PricingService {
   private checkCityDay(location: string, date: string): boolean {
     if (!location || !date) return false;
     const city = getCityFromPostalCode(location);
-    if (!city || !cityDayData[city]) return false;
+    if (!city) return false;
     
-    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-    return cityDayData[city].includes(dayOfWeek);
+    const dateObj = new Date(date);
+    return isCityDay(city, dateObj);
   }
 
   private calculateDistance(pickup: string, dropoff: string): number {

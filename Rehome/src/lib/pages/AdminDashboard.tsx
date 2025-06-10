@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit } from 'react-icons/fa';
+import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave } from 'react-icons/fa';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-toastify';
+import { cityBaseCharges, furnitureItems } from '../constants';
 // import { useNavigate } from 'react-router-dom';
 // import useUserStore from '../../services/state/useUserSessionStore';
 
@@ -42,6 +43,36 @@ interface CitySchedule {
   }[];
 }
 
+// Pricing config interface
+interface PricingConfigData {
+  cityBaseCharges: { [key: string]: { normal: number, cityDay: number, dayOfWeek: number } };
+  furnitureItems: { id: string, name: string, category: string, points: number }[];
+  pricingSettings: {
+    houseMovingItemMultiplier: number;
+    itemTransportMultiplier: number;
+    addonMultiplier: number;
+    distancePricing: {
+      smallDistance: { threshold: number; rate: number };
+      mediumDistance: { threshold: number; rate: number };
+      longDistance: { rate: number };
+    };
+    carryingMultipliers: {
+      lowValue: { threshold: number; multiplier: number };
+      highValue: { multiplier: number };
+    };
+    assemblyMultipliers: {
+      lowValue: { threshold: number; multiplier: number };
+      highValue: { multiplier: number };
+    };
+    extraHelperPricing: {
+      smallMove: { threshold: number; price: number };
+      bigMove: { price: number };
+    };
+    earlyBookingDiscount: number;
+    studentDiscount: number;
+  };
+}
+
 // // List of admin email addresses - keep in sync with AdminRoute.tsx
 // const ADMIN_EMAILS = [
 //   'muhammadibnerafiq@gmail.com',
@@ -50,7 +81,7 @@ interface CitySchedule {
 
 const AdminDashboard = () => {
 //   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'furniture' | 'transport' | 'schedule'>('furniture');
+  const [activeTab, setActiveTab] = useState<'furniture' | 'transport' | 'schedule' | 'pricing'>('furniture');
   const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]);
   const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,6 +92,11 @@ const AdminDashboard = () => {
   const [newTimeSlot, setNewTimeSlot] = useState({ start: '08:00', end: '15:00', city: 'Rotterdam' });
   const [editingItem, setEditingItem] = useState<FurnitureItem | null>(null);
   const [editedPrice, setEditedPrice] = useState<number>(0);
+  const [pricingConfig, setPricingConfig] = useState<PricingConfigData | null>(null);
+  const [editingCityPricing, setEditingCityPricing] = useState<string | null>(null);
+  const [editedCityPricing, setEditedCityPricing] = useState<{ normal: number, cityDay: number, dayOfWeek: number }>({ normal: 0, cityDay: 0, dayOfWeek: 1 });
+  const [editingFurniturePoints, setEditingFurniturePoints] = useState<string | null>(null);
+  const [editedFurniturePoints, setEditedFurniturePoints] = useState<number>(0);
     
   // Load data on initial render - AdminRoute handles access control
   useEffect(() => {
@@ -283,6 +319,92 @@ const AdminDashboard = () => {
   // List of cities
   const cities = ['Amsterdam', 'Rotterdam', 'Utrecht', 'Delft', 'Den Haag', 'Eindhoven', 'Groningen'];
   
+  // Initialize pricing config
+  useEffect(() => {
+    initializePricingConfig();
+  }, []);
+
+  const initializePricingConfig = () => {
+    setPricingConfig({
+      cityBaseCharges: { ...cityBaseCharges },
+      furnitureItems: [...furnitureItems],
+      pricingSettings: {
+        houseMovingItemMultiplier: 2,
+        itemTransportMultiplier: 1,
+        addonMultiplier: 3,
+        distancePricing: {
+          smallDistance: { threshold: 10, rate: 0 },
+          mediumDistance: { threshold: 50, rate: 0.7 },
+          longDistance: { rate: 0.5 }
+        },
+        carryingMultipliers: {
+          lowValue: { threshold: 6, multiplier: 0.2 },
+          highValue: { multiplier: 0.4 }
+        },
+        assemblyMultipliers: {
+          lowValue: { threshold: 6, multiplier: 0.5 },
+          highValue: { multiplier: 0.7 }
+        },
+        extraHelperPricing: {
+          smallMove: { threshold: 30, price: 45 },
+          bigMove: { price: 60 }
+        },
+        earlyBookingDiscount: 0.5,
+        studentDiscount: 0.1
+      }
+    });
+  };
+
+  // Update city base charge
+  const updateCityBaseCharge = async (cityName: string, normal: number, cityDay: number, dayOfWeek: number) => {
+    try {
+      if (!pricingConfig) return;
+      
+      const updatedConfig = { ...pricingConfig };
+      updatedConfig.cityBaseCharges[cityName] = { normal, cityDay, dayOfWeek };
+      setPricingConfig(updatedConfig);
+      
+      // In production, this would update the backend
+      toast.success(`Pricing for ${cityName} updated successfully`);
+      setEditingCityPricing(null);
+    } catch (err) {
+      toast.error('Failed to update city pricing');
+      console.error(err);
+    }
+  };
+
+  // Update furniture item points
+  const updateFurnitureItemPoints = async (itemId: string, newPoints: number) => {
+    try {
+      if (!pricingConfig) return;
+      
+      const updatedConfig = { ...pricingConfig };
+      const itemIndex = updatedConfig.furnitureItems.findIndex(item => item.id === itemId);
+      if (itemIndex >= 0) {
+        updatedConfig.furnitureItems[itemIndex].points = newPoints;
+        setPricingConfig(updatedConfig);
+        
+        // In production, this would update the backend
+        toast.success('Item points updated successfully');
+        setEditingFurniturePoints(null);
+      }
+    } catch (err) {
+      toast.error('Failed to update item points');
+      console.error(err);
+    }
+  };
+
+  // Save all pricing configuration
+  const savePricingConfiguration = async () => {
+    try {
+      // In production, this would send the entire config to the backend
+      toast.success('Pricing configuration saved successfully');
+    } catch (err) {
+      toast.error('Failed to save pricing configuration');
+      console.error(err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-orange-50 pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -333,6 +455,17 @@ const AdminDashboard = () => {
               >
                 <FaCalendarAlt className="inline-block mr-2" />
                 Schedule Management
+              </button>
+              <button
+                onClick={() => setActiveTab('pricing')}
+                className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                  activeTab === 'pricing'
+                    ? 'border-orange-500 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FaCog className="inline-block mr-2" />
+                Pricing Config
               </button>
             </nav>
           </div>
@@ -649,6 +782,265 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 )}
+                
+                                 {/* Pricing Configuration Tab */}
+                 {activeTab === 'pricing' && pricingConfig && (
+                   <div className="space-y-8">
+                     {/* Save Button */}
+                     <div className="flex justify-end">
+                       <button
+                         onClick={savePricingConfiguration}
+                         className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded flex items-center"
+                       >
+                         <FaSave className="mr-2" />
+                         Save Configuration
+                       </button>
+                     </div>
+
+                     {/* City Base Charges */}
+                     <div className="bg-white p-6 rounded-lg shadow-md">
+                       <h3 className="text-lg font-semibold mb-4">City Base Charges</h3>
+                       <div className="overflow-x-auto">
+                         <table className="min-w-full divide-y divide-gray-200">
+                           <thead className="bg-gray-50">
+                             <tr>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Normal Base Charge</th>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City Day Charge</th>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day of Week</th>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                             </tr>
+                           </thead>
+                           <tbody className="bg-white divide-y divide-gray-200">
+                             {Object.entries(pricingConfig.cityBaseCharges).map(([cityName, charges]) => (
+                               <tr key={cityName}>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{cityName}</td>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                   {editingCityPricing === cityName ? (
+                                     <input
+                                       type="number"
+                                       value={editedCityPricing.normal}
+                                       onChange={(e) => setEditedCityPricing({...editedCityPricing, normal: Number(e.target.value)})}
+                                       className="w-20 border border-gray-300 rounded-md p-1"
+                                     />
+                                   ) : (
+                                     `€${charges.normal}`
+                                   )}
+                                 </td>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                   {editingCityPricing === cityName ? (
+                                     <input
+                                       type="number"
+                                       value={editedCityPricing.cityDay}
+                                       onChange={(e) => setEditedCityPricing({...editedCityPricing, cityDay: Number(e.target.value)})}
+                                       className="w-20 border border-gray-300 rounded-md p-1"
+                                     />
+                                   ) : (
+                                     `€${charges.cityDay}`
+                                   )}
+                                 </td>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                   {editingCityPricing === cityName ? (
+                                     <select
+                                       value={editedCityPricing.dayOfWeek}
+                                       onChange={(e) => setEditedCityPricing({...editedCityPricing, dayOfWeek: Number(e.target.value)})}
+                                       className="border border-gray-300 rounded-md p-1"
+                                     >
+                                       <option value={1}>1 (Monday)</option>
+                                       <option value={2}>2 (Tuesday)</option>
+                                       <option value={3}>3 (Wednesday)</option>
+                                       <option value={4}>4 (Thursday)</option>
+                                       <option value={5}>5 (Friday)</option>
+                                       <option value={6}>6 (Saturday)</option>
+                                       <option value={7}>7 (Sunday)</option>
+                                     </select>
+                                   ) : (
+                                     `${charges.dayOfWeek} (${['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][charges.dayOfWeek]})`
+                                   )}
+                                 </td>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                   {editingCityPricing === cityName ? (
+                                     <div className="flex space-x-2">
+                                       <button
+                                         onClick={() => updateCityBaseCharge(cityName, editedCityPricing.normal, editedCityPricing.cityDay, editedCityPricing.dayOfWeek)}
+                                         className="text-green-600 hover:text-green-900"
+                                       >
+                                         Save
+                                       </button>
+                                       <button
+                                         onClick={() => setEditingCityPricing(null)}
+                                         className="text-red-600 hover:text-red-900"
+                                       >
+                                         Cancel
+                                       </button>
+                                     </div>
+                                   ) : (
+                                     <button
+                                       onClick={() => {
+                                         setEditingCityPricing(cityName);
+                                         setEditedCityPricing(charges);
+                                       }}
+                                       className="text-indigo-600 hover:text-indigo-900"
+                                     >
+                                       <FaEdit className="inline mr-1" /> Edit
+                                     </button>
+                                   )}
+                                 </td>
+                               </tr>
+                             ))}
+                           </tbody>
+                         </table>
+                       </div>
+                     </div>
+
+                     {/* Furniture Item Points */}
+                     <div className="bg-white p-6 rounded-lg shadow-md">
+                       <h3 className="text-lg font-semibold mb-4">Furniture Item Points</h3>
+                       <div className="overflow-x-auto">
+                         <table className="min-w-full divide-y divide-gray-200">
+                           <thead className="bg-gray-50">
+                             <tr>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                             </tr>
+                           </thead>
+                           <tbody className="bg-white divide-y divide-gray-200">
+                             {pricingConfig.furnitureItems.map((item) => (
+                               <tr key={item.id}>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                   {editingFurniturePoints === item.id ? (
+                                     <input
+                                       type="number"
+                                       step="0.1"
+                                       value={editedFurniturePoints}
+                                       onChange={(e) => setEditedFurniturePoints(Number(e.target.value))}
+                                       className="w-20 border border-gray-300 rounded-md p-1"
+                                     />
+                                   ) : (
+                                     item.points
+                                   )}
+                                 </td>
+                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                   {editingFurniturePoints === item.id ? (
+                                     <div className="flex space-x-2">
+                                       <button
+                                         onClick={() => updateFurnitureItemPoints(item.id, editedFurniturePoints)}
+                                         className="text-green-600 hover:text-green-900"
+                                       >
+                                         Save
+                                       </button>
+                                       <button
+                                         onClick={() => setEditingFurniturePoints(null)}
+                                         className="text-red-600 hover:text-red-900"
+                                       >
+                                         Cancel
+                                       </button>
+                                     </div>
+                                   ) : (
+                                     <button
+                                       onClick={() => {
+                                         setEditingFurniturePoints(item.id);
+                                         setEditedFurniturePoints(item.points);
+                                       }}
+                                       className="text-indigo-600 hover:text-indigo-900"
+                                     >
+                                       <FaEdit className="inline mr-1" /> Edit
+                                     </button>
+                                   )}
+                                 </td>
+                               </tr>
+                             ))}
+                           </tbody>
+                         </table>
+                       </div>
+                     </div>
+
+                     {/* Pricing Settings */}
+                     <div className="bg-white p-6 rounded-lg shadow-md">
+                       <h3 className="text-lg font-semibold mb-4">Pricing Settings</h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">House Moving Multiplier</label>
+                           <input
+                             type="number"
+                             step="0.1"
+                             value={pricingConfig.pricingSettings.houseMovingItemMultiplier}
+                             onChange={(e) => {
+                               const updatedConfig = { ...pricingConfig };
+                               updatedConfig.pricingSettings.houseMovingItemMultiplier = Number(e.target.value);
+                               setPricingConfig(updatedConfig);
+                             }}
+                             className="w-full border border-gray-300 rounded-md p-2"
+                           />
+                         </div>
+                         <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">Item Transport Multiplier</label>
+                           <input
+                             type="number"
+                             step="0.1"
+                             value={pricingConfig.pricingSettings.itemTransportMultiplier}
+                             onChange={(e) => {
+                               const updatedConfig = { ...pricingConfig };
+                               updatedConfig.pricingSettings.itemTransportMultiplier = Number(e.target.value);
+                               setPricingConfig(updatedConfig);
+                             }}
+                             className="w-full border border-gray-300 rounded-md p-2"
+                           />
+                         </div>
+                         <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">Add-on Multiplier</label>
+                           <input
+                             type="number"
+                             step="0.1"
+                             value={pricingConfig.pricingSettings.addonMultiplier}
+                             onChange={(e) => {
+                               const updatedConfig = { ...pricingConfig };
+                               updatedConfig.pricingSettings.addonMultiplier = Number(e.target.value);
+                               setPricingConfig(updatedConfig);
+                             }}
+                             className="w-full border border-gray-300 rounded-md p-2"
+                           />
+                         </div>
+                         <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">Early Booking Discount</label>
+                           <input
+                             type="number"
+                             step="0.01"
+                             min="0"
+                             max="1"
+                             value={pricingConfig.pricingSettings.earlyBookingDiscount}
+                             onChange={(e) => {
+                               const updatedConfig = { ...pricingConfig };
+                               updatedConfig.pricingSettings.earlyBookingDiscount = Number(e.target.value);
+                               setPricingConfig(updatedConfig);
+                             }}
+                             className="w-full border border-gray-300 rounded-md p-2"
+                           />
+                         </div>
+                         <div>
+                           <label className="block text-sm font-medium text-gray-700 mb-2">Student Discount</label>
+                           <input
+                             type="number"
+                             step="0.01"
+                             min="0"
+                             max="1"
+                             value={pricingConfig.pricingSettings.studentDiscount}
+                             onChange={(e) => {
+                               const updatedConfig = { ...pricingConfig };
+                               updatedConfig.pricingSettings.studentDiscount = Number(e.target.value);
+                               setPricingConfig(updatedConfig);
+                             }}
+                             className="w-full border border-gray-300 rounded-md p-2"
+                           />
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
               </>
             )}
           </div>

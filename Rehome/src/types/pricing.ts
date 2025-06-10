@@ -43,6 +43,7 @@ export interface CityBaseCharge {
   cityName: string;
   normal: number;
   cityDay: number;
+  dayOfWeek: number; // 1=Monday, 2=Tuesday, ..., 7=Sunday
   createdAt?: string;
   updatedAt?: string;
 }
@@ -73,12 +74,14 @@ export interface CreateCityBaseChargeRequest {
   cityName: string;
   normal: number;
   cityDay: number;
+  dayOfWeek: number;
 }
 
 export interface UpdateCityBaseChargeRequest {
   cityName: string;
   normal?: number;
   cityDay?: number;
+  dayOfWeek?: number;
 }
 
 export interface CreateCityDayDataRequest {
@@ -130,6 +133,7 @@ export interface CityBaseChargeDB {
   city_name: string;
   normal: number;
   city_day: number;
+  day_of_week: number;
   created_at: string;
   updated_at: string;
 }

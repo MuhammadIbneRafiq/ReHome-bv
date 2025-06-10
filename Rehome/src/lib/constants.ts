@@ -123,61 +123,63 @@ export const itemCategories = [
 ];
 
 // City base charges - These should be controlled from backend/admin panel
-export const cityBaseCharges: { [key: string]: { normal: number, cityDay: number } } = {
-  Amsterdam: { normal: 119, cityDay: 35 },
-  Rotterdam: { normal: 109, cityDay: 35 },
-  TheHague: { normal: 115, cityDay: 35 },
-  Utrecht: { normal: 125, cityDay: 35 },
-  Almere: { normal: 130, cityDay: 35 },
-  Haarlem: { normal: 120, cityDay: 35 },
-  Zaanstad: { normal: 125, cityDay: 35 },
-  Amersfoort: { normal: 135, cityDay: 35 },
-  "s-Hertogenbosch": { normal: 140, cityDay: 35 },
-  Hoofddorp: { normal: 125, cityDay: 35 },
-  Breda: { normal: 135, cityDay: 35 },
-  Leiden: { normal: 120, cityDay: 35 },
-  Dordrecht: { normal: 130, cityDay: 35 },
-  Zoetermeer: { normal: 120, cityDay: 35 },
-  Delft: { normal: 115, cityDay: 35 },
-  Eindhoven: { normal: 145, cityDay: 35 },
-  Maastricht: { normal: 149, cityDay: 35 },
-  Tilburg: { normal: 140, cityDay: 35 },
-  Groningen: { normal: 155, cityDay: 35 },
-  Nijmegen: { normal: 140, cityDay: 35 },
-  Enschede: { normal: 150, cityDay: 35 },
-  Arnhem: { normal: 135, cityDay: 35 },
-  Apeldoorn: { normal: 140, cityDay: 35 },
-  Deventer: { normal: 145, cityDay: 35 },
-  Zwolle: { normal: 145, cityDay: 35 },
+// Based on the pricing document - exact values from the table
+export const cityBaseCharges: { [key: string]: { normal: number, cityDay: number, dayOfWeek: number } } = {
+  Amsterdam: { normal: 119, cityDay: 39, dayOfWeek: 1 },
+  Utrecht: { normal: 119, cityDay: 35, dayOfWeek: 1 },
+  Almere: { normal: 129, cityDay: 44, dayOfWeek: 1 },
+  Haarlem: { normal: 119, cityDay: 44, dayOfWeek: 1 },
+  Zaanstad: { normal: 119, cityDay: 39, dayOfWeek: 1 },
+  Amersfoort: { normal: 129, cityDay: 49, dayOfWeek: 1 },
+  "s-Hertogenbosch": { normal: 89, cityDay: 39, dayOfWeek: 1 },
+  Hoofddorp: { normal: 119, cityDay: 39, dayOfWeek: 1 },
+  Rotterdam: { normal: 119, cityDay: 35, dayOfWeek: 2 },
+  "The Hague": { normal: 119, cityDay: 35, dayOfWeek: 2 },
+  Breda: { normal: 79, cityDay: 35, dayOfWeek: 2 },
+  Leiden: { normal: 129, cityDay: 39, dayOfWeek: 2 },
+  Dordrecht: { normal: 109, cityDay: 35, dayOfWeek: 2 },
+  Zoetermeer: { normal: 119, cityDay: 35, dayOfWeek: 2 },
+  Delft: { normal: 119, cityDay: 35, dayOfWeek: 2 },
+  Eindhoven: { normal: 89, cityDay: 34, dayOfWeek: 3 },
+  Maastricht: { normal: 149, cityDay: 34, dayOfWeek: 3 },
+  Tilburg: { normal: 29, cityDay: 29, dayOfWeek: 4 },
+  Groningen: { normal: 219, cityDay: 69, dayOfWeek: 5 },
+  Nijmegen: { normal: 149, cityDay: 59, dayOfWeek: 6 },
+  Enschede: { normal: 159, cityDay: 69, dayOfWeek: 6 },
+  Arnhem: { normal: 159, cityDay: 59, dayOfWeek: 6 },
+  Apeldoorn: { normal: 159, cityDay: 49, dayOfWeek: 6 },
+  Deventer: { normal: 159, cityDay: 99, dayOfWeek: 6 },
+  Zwolle: { normal: 179, cityDay: 119, dayOfWeek: 7 },
 };
 
 // City Day Data - Days when cities are included in tours
-export const cityDayData: { [key: string]: string[] } = {
-  Amsterdam: ["Monday", "Wednesday", "Friday"],
-  Rotterdam: ["Tuesday", "Thursday"],
-  TheHague: ["Saturday", "Sunday"],
-  Utrecht: ["Monday"],
-  Almere: ["Tuesday"],
-  Haarlem: ["Wednesday"],
-  Zaanstad: ["Thursday"],
-  Amersfoort: ["Friday"],
-  "s-Hertogenbosch": ["Saturday"],
-  Hoofddorp: ["Sunday"],
-  Breda: ["Monday", "Wednesday"],
-  Leiden: ["Tuesday", "Thursday"],
-  Dordrecht: ["Friday", "Sunday"],
-  Zoetermeer: ["Saturday"],
-  Delft: ["Monday", "Wednesday"],
-  Eindhoven: ["Tuesday", "Thursday"],
-  Maastricht: ["Friday", "Sunday"],
-  Tilburg: ["Saturday"],
-  Groningen: ["Monday", "Wednesday"],
-  Nijmegen: ["Tuesday", "Thursday"],
-  Enschede: ["Friday", "Sunday"],
-  Arnhem: ["Saturday"],
-  Apeldoorn: ["Monday", "Wednesday"],
-  Deventer: ["Tuesday", "Thursday"],
-  Zwolle: ["Friday", "Sunday"],
+// Numbers represent day of week: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
+export const cityDayData: { [key: string]: number[] } = {
+  Amsterdam: [1], // Monday
+  Utrecht: [1], // Monday
+  Almere: [1], // Monday
+  Haarlem: [1], // Monday
+  Zaanstad: [1], // Monday
+  Amersfoort: [1], // Monday
+  "s-Hertogenbosch": [1], // Monday
+  Hoofddorp: [1], // Monday
+  Rotterdam: [2], // Tuesday
+  "The Hague": [2], // Tuesday
+  Breda: [2], // Tuesday
+  Leiden: [2], // Tuesday
+  Dordrecht: [2], // Tuesday
+  Zoetermeer: [2], // Tuesday
+  Delft: [2], // Tuesday
+  Eindhoven: [3], // Wednesday
+  Maastricht: [3], // Wednesday
+  Tilburg: [4], // Thursday
+  Groningen: [5], // Friday
+  Nijmegen: [6], // Saturday
+  Enschede: [6], // Saturday
+  Arnhem: [6], // Saturday
+  Apeldoorn: [6], // Saturday
+  Deventer: [6], // Saturday
+  Zwolle: [7], // Sunday
 };
 
 // Helper function to get item by ID
@@ -202,7 +204,7 @@ export const getCityFromPostalCode = (postalCode: string): string | null => {
   if (code >= '3000' && code <= '3999') return 'Rotterdam';
   
   // The Hague area (2500-2799)
-  if (code >= '2500' && code <= '2799') return 'TheHague';
+  if (code >= '2500' && code <= '2799') return 'The Hague';
   
   // Utrecht area (3500-3599)
   if (code >= '3500' && code <= '3599') return 'Utrecht';
@@ -212,4 +214,16 @@ export const getCityFromPostalCode = (postalCode: string): string | null => {
   
   // Add more postal code mappings as needed
   return null;
+};
+
+// Helper function to check if a date is a city day
+export const isCityDay = (city: string, date: Date): boolean => {
+  if (!cityDayData[city]) return false;
+  
+  // JavaScript Date.getDay(): 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
+  // Our system: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
+  const jsDay = date.getDay();
+  const ourDay = jsDay === 0 ? 7 : jsDay; // Convert Sunday from 0 to 7
+  
+  return cityDayData[city].includes(ourDay);
 };
