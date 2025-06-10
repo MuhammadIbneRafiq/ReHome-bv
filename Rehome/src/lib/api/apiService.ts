@@ -48,6 +48,8 @@ class ApiService {
 
   // Authentication methods
   async login(email: string, password: string) {
+    console.log('🔐 Attempting login with:', { email, password: '***' });
+    console.log('🌐 Login URL:', API_ENDPOINTS.AUTH.LOGIN);
     return this.request<{ accessToken: string }>('POST', API_ENDPOINTS.AUTH.LOGIN, {
       email,
       password,
