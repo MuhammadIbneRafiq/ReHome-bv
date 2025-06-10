@@ -17,8 +17,10 @@ import MessageNotifications from './MessageNotifications';
 // List of admin email addresses - keep in sync with AdminRoute.tsx
 const ADMIN_EMAILS = [
   'muhammadibnerafiq@gmail.com',
-  // Add other admin emails here
+  'testnewuser12345@gmail.com', // Test account with admin access
+  'egzmanagement@gmail.com',
   'samuel.stroehle8@gmail.com',
+  'info@rehomebv.com'
 ];
 
 export default function Navbar() {
