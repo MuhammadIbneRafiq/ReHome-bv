@@ -3,10 +3,11 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaMinus, FaPlus, FaToolbox, F
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { cityDayData, furnitureItems } from '../../lib/constants';
+import { itemCategories as constantsItemCategories } from '../../lib/constants';
 import fetchCheckoutUrl from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
+import pricingService, { PricingBreakdown } from '../../services/pricingService';
 
 // Define interfaces for component props
 interface ContactInfo {
@@ -21,25 +22,8 @@ interface ItemQuantities {
 }
 
 interface PriceSummaryProps {
-    basePrice: number;
-    itemPoints: number;
-    carryingCost: number;
-    disassemblyCost: number;
-    distanceCost: number;
-    extraHelperCost: number;
-    isStudent: boolean;
+    pricingBreakdown: PricingBreakdown | null;
 }
-
-
-
-const itemCategories = [
-    { name: "Bathroom Furniture", items: ["Cabinet", "Mirror", "Sink"] },
-    { name: "Sofa's and Chairs", items: ["Sofa", "Armchair", "Office Chair", "Chair"] },
-    { name: "Tables", items: ["Dining Table", "Coffee Table", "Side Table", "TV Table"] },
-    { name: "Appliances", items: ["Washing Machine", "Fridge", "Freezer", "Oven"] },
-    { name: "Bedroom", items: ["Bed", "Wardrobe", "Closet", "Drawer"] },
-    { name: "Others", items: ["Lamp", "Curtain", "Carpet", "Plant", "Vase", "Kitchen Equipment"] }
-];
 
 const HouseMovingPage = () => {
     const { t } = useTranslation();
@@ -55,48 +39,19 @@ const HouseMovingPage = () => {
         email: '',
         phone: '',
     });
-    const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
     const [selectedDate, setSelectedDate] = useState('');
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<ItemQuantities>({});
-    const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
-    const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
-    // const [customItem] = useState(''); // State for custom item input
-    // const navigate = useNavigate();
-    const [basePrice, setBasePrice] = useState(50); // Initialize basePrice in state
-    const [itemPoints, setItemPoints] = useState(0); // Initialize itemPoints in state
-    const [carryingCost, setCarryingCost] = useState(0); // Initialize carryingCost in state
-    const [disassemblyCost, setDisassemblyCost] = useState(0); // Initialize disassemblyCost in state
-    const [distanceCost, setDistanceCost] = useState(0); // Initialize distanceCost in state
-    // const [extraHelperCost] = useState(0); // Initialize extraHelperCost in state
-    const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
-    const [extraHelperItems, setExtraHelperItems] = useState<{[key: string]: boolean}>({}); // State to track extra helper items
-    const [disassemblyItems, setDisassemblyItems] = useState<{[key: string]: boolean}>({}); // State to track disassembly items
-    const [preferredTimeSpan, setPreferredTimeSpan] = useState(''); // State for preferred time span
-    // const [selectedItems, setSelectedItems] = useState({});
+    const [isStudent, setIsStudent] = useState(false);
+    const [studentId, setStudentId] = useState<File | null>(null);
+    const [isDateFlexible, setIsDateFlexible] = useState(false);
+    const [extraHelperItems, setExtraHelperItems] = useState<{[key: string]: boolean}>({});
+    const [disassemblyItems, setDisassemblyItems] = useState<{[key: string]: boolean}>({});
+    const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
-
-    const checkCityDay = (location: string, date: string): boolean => {
-        if (!location || !date) return false;
-        const city = getCityFromPostalCode(location);
-        if (!city) return false;
-        const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-        return cityDayData[city]?.includes(dayOfWeek);
-    };
-
-    const getItemPoints = (itemId: string): number => {
-        const item = furnitureItems.find(item => item.id === itemId);
-        return item ? item.points : 0;
-    };
-
-    const getCityFromPostalCode = (postalCode: string): string | null => {
-        // Simplified postal code to city mapping - adapt to your data source
-        if (postalCode.startsWith("1")) return "Amsterdam";
-        if (postalCode.startsWith("5")) return "Eindhoven";
-        return null; // Handle unknown postal codes
-    };
+    const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
         const file = event.target.files?.[0];
@@ -104,57 +59,31 @@ const HouseMovingPage = () => {
     };
 
     const calculatePrice = () => {
-        let calculatedBasePrice = 50; // Local variable for calculation
-        const isCityDay = checkCityDay(firstLocation, selectedDate);
-        if (isCityDay) calculatedBasePrice = 40;
+        const pricingInput = {
+            serviceType: 'house-moving' as const,
+            pickupLocation: firstLocation,
+            dropoffLocation: secondLocation,
+            selectedDate,
+            isDateFlexible,
+            itemQuantities,
+            floorPickup: parseInt(floorPickup) || 0,
+            floorDropoff: parseInt(floorDropoff) || 0,
+            elevatorPickup,
+            elevatorDropoff,
+            assemblyItems: disassemblyItems,
+            extraHelperItems,
+            isStudent,
+            hasStudentId: !!studentId,
+            isEarlyBooking: false // This would be determined by checking calendar availability
+        };
 
-        setBasePrice(calculatedBasePrice); // Update state with calculated base price
-
-        let calculatedItemPoints = 0;
-        for (const itemId in itemQuantities) {
-            if (itemQuantities[itemId] > 0) {
-                const points = getItemPoints(itemId);
-                calculatedItemPoints += points * itemQuantities[itemId];
-            }
-        }
-        setItemPoints(calculatedItemPoints); // Update state with calculated item points
-
-        const pickupFloor = elevatorPickup ? 1 : Math.max(1, parseInt(floorPickup, 10) || 1);
-        const dropoffFloor = elevatorDropoff ? 1 : Math.max(1, parseInt(floorDropoff, 10) || 1);
-        const calculatedCarryingCost = (Math.max(0, pickupFloor - 1) + Math.max(0, dropoffFloor - 1)) * 10;
-        setCarryingCost(calculatedCarryingCost); // Update state with calculated carrying cost
-
-        // Count disassembly items
-        const disassemblyItemsCount = disassembly ? Object.values(disassemblyItems).filter(Boolean).length : 0;
-        const calculatedDisassemblyCost = disassembly ? Math.max(20, disassemblyItemsCount * 5) : 0;
-        setDisassemblyCost(calculatedDisassemblyCost); // Update state with calculated disassembly cost
-
-        const distance = firstLocation && secondLocation ? 50 : 0;
-        const calculatedDistanceCost = distance * 0.5;
-        setDistanceCost(calculatedDistanceCost); // Update state with calculated distance cost
-
-        // Count extra helper items
-        const extraHelperItemsCount = extraHelper ? Object.values(extraHelperItems).filter(Boolean).length : 0;
-        const extraHelperCost = extraHelper ? Math.max(15, extraHelperItemsCount * 3) : 0;
-
-        const totalPrice = calculatedBasePrice + calculatedItemPoints * 3 + calculatedCarryingCost + calculatedDisassemblyCost + calculatedDistanceCost + extraHelperCost;
-        setEstimatedPrice(totalPrice); // Update estimated price
+        const breakdown = pricingService.calculatePricing(pricingInput);
+        setPricingBreakdown(breakdown);
     };
 
     useEffect(() => {
         calculatePrice();
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, selectedDate, extraHelper, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems]);
-
-    // Calculate price when locations change, but only if both are set
-    useEffect(() => {
-        if (firstLocation && secondLocation) {
-            // Use a small delay to avoid interfering with typing
-            const timer = setTimeout(() => {
-                calculatePrice();
-            }, 500);
-            return () => clearTimeout(timer);
-        }
-    }, [firstLocation, secondLocation]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, selectedDate, extraHelper, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, firstLocation, secondLocation, isDateFlexible, isStudent, studentId]);
 
     const nextStep = () => {
         // Validate date selection in step 4
@@ -254,9 +183,10 @@ const HouseMovingPage = () => {
             floorDropoff,
             disassembly,
             contactInfo,
-            estimatedPrice,
+            estimatedPrice: pricingBreakdown?.total || 0,
             selectedDate,
             isDateFlexible,
+            pricingBreakdown,
         };
 
         try {
@@ -308,9 +238,10 @@ const HouseMovingPage = () => {
             });
 
             // Redirect to payment after successful submission
-            if (estimatedPrice !== null) {
+            const finalPrice = pricingBreakdown?.total || 0;
+            if (finalPrice > 0) {
                 try {
-                    await fetchCheckoutUrl(estimatedPrice);
+                    await fetchCheckoutUrl(finalPrice);
                 } catch (error) {
                     console.error("Error redirecting to payment:", error);
                     toast.error("Failed to redirect to payment page. Please try again.");
@@ -325,17 +256,15 @@ const HouseMovingPage = () => {
     };
 
     // Add a real-time pricing display component that will be shown throughout the process
-    const PriceSummary: React.FC<PriceSummaryProps> = ({ 
-        basePrice, 
-        itemPoints, 
-        carryingCost, 
-        disassemblyCost, 
-        distanceCost, 
-        extraHelperCost, 
-        isStudent 
-    }) => {
-        const total = basePrice + (itemPoints * 3) + carryingCost + disassemblyCost + distanceCost + extraHelperCost;
-        const discountedTotal = isStudent && studentId ? total * 0.9 : total; // 10% discount for students
+    const PriceSummary: React.FC<PriceSummaryProps> = ({ pricingBreakdown }) => {
+        if (!pricingBreakdown) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">Add items to see pricing</p>
+                </div>
+            );
+        }
         
         return (
             <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
@@ -343,47 +272,51 @@ const HouseMovingPage = () => {
                 <div className="space-y-2">
                     <div className="flex justify-between">
                         <span>Base Price:</span>
-                        <span>€{basePrice.toFixed(2)}</span>
+                        <span>€{pricingBreakdown.basePrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>Items:</span>
-                        <span>€{(itemPoints * 3).toFixed(2)}</span>
+                        <span>€{pricingBreakdown.itemValue.toFixed(2)}</span>
                     </div>
-                    {carryingCost > 0 && (
+                    {pricingBreakdown.carryingCost > 0 && (
                         <div className="flex justify-between">
                             <span>Carrying:</span>
-                            <span>€{carryingCost.toFixed(2)}</span>
+                            <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
                         </div>
                     )}
-                    {disassemblyCost > 0 && (
+                    {pricingBreakdown.assemblyCost > 0 && (
                         <div className="flex justify-between">
-                            <span>Disassembly:</span>
-                            <span>€{disassemblyCost.toFixed(2)}</span>
+                            <span>Assembly:</span>
+                            <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
                         </div>
                     )}
-                    {distanceCost > 0 && (
+                    {pricingBreakdown.distanceCost > 0 && (
                         <div className="flex justify-between">
                             <span>Distance:</span>
-                            <span>€{distanceCost.toFixed(2)}</span>
+                            <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
                         </div>
                     )}
-                    {extraHelperCost > 0 && (
+                    {pricingBreakdown.extraHelperCost > 0 && (
                         <div className="flex justify-between">
                             <span>Extra Helper:</span>
-                            <span>€{extraHelperCost.toFixed(2)}</span>
+                            <span>€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
                         </div>
                     )}
                     <div className="border-t pt-2 mt-2">
                         <div className="flex justify-between font-semibold">
-                            <span>Total Estimate:</span>
-                            <span>€{total.toFixed(2)}</span>
+                            <span>Subtotal:</span>
+                            <span>€{pricingBreakdown.subtotal.toFixed(2)}</span>
                         </div>
-                        {isStudent && studentId && (
-                            <div className="flex justify-between text-green-600 font-semibold">
+                        {pricingBreakdown.studentDiscount > 0 && (
+                            <div className="flex justify-between text-green-600">
                                 <span>Student Discount (10%):</span>
-                                <span>€{discountedTotal.toFixed(2)}</span>
+                                <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
                             </div>
                         )}
+                        <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                            <span>Total:</span>
+                            <span>€{pricingBreakdown.total.toFixed(2)}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -580,7 +513,7 @@ const HouseMovingPage = () => {
                                         Select the items you need to move. This helps us estimate the size of vehicle and resources needed.
                                     </p>
                                     
-                                    {itemCategories.map((category) => (
+                                    {constantsItemCategories.map((category) => (
                                         <div key={category.name} className="mb-6">
                                             <h3 className="text-lg font-medium text-gray-900 mb-3">{category.name}</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1068,13 +1001,7 @@ const HouseMovingPage = () => {
                     {/* Pricing Display - Right 1/3 */}
                     <div className="md:col-span-1">
                         <PriceSummary 
-                            basePrice={basePrice} 
-                            itemPoints={itemPoints} 
-                            carryingCost={carryingCost} 
-                            disassemblyCost={disassemblyCost} 
-                            distanceCost={distanceCost} 
-                            extraHelperCost={extraHelper ? Math.max(15, Object.values(extraHelperItems).filter(Boolean).length * 3) : 0}
-                            isStudent={isStudent}
+                            pricingBreakdown={pricingBreakdown}
                         />
                     </div>
                 </div>

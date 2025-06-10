@@ -10,7 +10,6 @@ import {
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Loader } from "lucide-react";
-import axios from "axios";
 import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
@@ -22,6 +21,7 @@ import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { FaEnvelope, FaLock } from "react-icons/fa";
+import { apiService } from "../api/apiService";
 
 const formSchema = z.object({
   email: z.string().min(1, { message: "Email is required" }).email({ message: "Invalid email format" }),
@@ -53,12 +53,9 @@ export default function LoginPage() {
     setErrorMessage(null);
     
     try {
-      const response = await axios.post(
-        "https://rehome-backend.vercel.app/auth/login",
-        values
-      );
+      const response = await apiService.login(values.email, values.password);
       
-      const { accessToken } = response.data;
+      const { accessToken } = response;
       localStorage.setItem("accessToken", accessToken);
       
       toast({
@@ -69,10 +66,10 @@ export default function LoginPage() {
       
       navigate("/sell-dash");
     } catch (error: any) {
-      console.error(error);
+      console.error("Login error details:", error);
       
-      // Extract error message from response if available
-      const errorMsg = error.response?.data?.error || t('auth.loginError');
+      // Extract error message from the API service error
+      const errorMsg = error.message || t('auth.loginError');
       setErrorMessage(errorMsg);
       
       toast({

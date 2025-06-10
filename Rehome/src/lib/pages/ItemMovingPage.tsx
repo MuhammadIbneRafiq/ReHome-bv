@@ -6,30 +6,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import fetchCheckoutUrl from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
-
-// // Dummy data for demonstration
-const cityDayData = {
-    "Amsterdam": ["Monday", "Tuesday", "Wednesday"],
-    "Rotterdam": ["Thursday", "Friday"]
-};
-const furnitureItems = [
-    { id: "sofa", name: "Sofa", points: 5 },
-    { id: "bed", name: "Bed", points: 8 },
-    { id: "table", name: "Table", points: 3 }
-];
-
-
-// Define a type for the valid city keys
-type City = 'Amsterdam' | 'Rotterdam';  
-
-const itemCategories = [
-  { name: "Bathroom Furniture", items: ["Cabinet", "Mirror", "Sink"] },
-  { name: "Sofa's and Chairs", items: ["Sofa", "Armchair", "Office Chair", "Chair"] },
-  { name: "Tables", items: ["Dining Table", "Coffee Table", "Side Table", "TV Table"] },
-  { name: "Appliances", items: ["Washing Machine", "Fridge", "Freezer", "Oven"] },
-  { name: "Bedroom", items: ["Bed", "Wardrobe", "Closet", "Drawer"] },
-  { name: "Others", items: ["Lamp", "Curtain", "Carpet", "Plant", "Vase", "Kitchen Equipment"] }
-];
+import { itemCategories } from '../../lib/constants';
+import pricingService, { PricingBreakdown } from '../../services/pricingService';
 
 const ItemMovingPage = () => {
     const { t } = useTranslation();
@@ -46,88 +24,53 @@ const ItemMovingPage = () => {
     const [floorPickup, setFloorPickup] = useState('');
     const [floorDropoff, setFloorDropoff] = useState('');
 
-    const [estimatedPrice, setEstimatedPrice] = useState<number | null>(null);
     const [selectedDate, setSelectedDate] = useState('');
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
     const [pickupType, setPickupType] = useState<'private' | 'store' | null>(null);
-    const [customItem, setCustomItem] = useState(''); // State for custom item input
-    const [basePrice, setBasePrice] = useState<number>(50); // Initialize basePrice in state
-    const [itemPoints, setItemPoints] = useState<number>(0); // Initialize itemPoints in state
-    const [carryingCost, setCarryingCost] = useState<number>(0); // Initialize carryingCost in state
-    const [disassemblyCost, setDisassemblyCost] = useState<number>(0); // Initialize disassemblyCost in state
-    const [distanceCost, setDistanceCost] = useState<number>(0); // Initialize distanceCost in state
-    const [extraHelperCost] = useState<number>(0); // Initialize extraHelperCost in state
-    const [isStudent, setIsStudent] = useState(false); // State to track if student ID is required
-    const [studentId, setStudentId] = useState<File | null>(null); // State for student ID file
-    const [isDateFlexible, setIsDateFlexible] = useState(false); // State for flexible date
-    const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({}); // State to track disassembly items
-    const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({}); // State to track extra helper items
-    const [preferredTimeSpan, setPreferredTimeSpan] = useState(''); // State for preferred time span
-    const [paymentLoading] = useState(false); // State for payment loading
-
-    // Update the function to use the City type
-    const checkCityDay = (location: string, date: string): boolean => {
-        if (!location || !date) return false;
-        const city = getCityFromPostalCode(location) as City; // Type assertion
-        if (!city) return false;
-        const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
-        return cityDayData[city]?.includes(dayOfWeek) || false; // Use the city as a key
-    };
+    const [customItem, setCustomItem] = useState('');
+    const [isStudent, setIsStudent] = useState(false);
+    const [studentId, setStudentId] = useState<File | null>(null);
+    const [isDateFlexible, setIsDateFlexible] = useState(false);
+    const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({});
+    const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
+    const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
+    const [paymentLoading] = useState(false);
+    const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    setStudentId(file || null);
-    };
-    const getItemPoints = (itemId: string): number => {
-        const item = furnitureItems.find(item => item.id === itemId);
-        return item ? item.points : 0;
-    };
-
-    const getCityFromPostalCode = (postalCode: string): string | null => {
-        // Simplified postal code to city mapping - adapt to your data source
-        if (postalCode.startsWith("1")) return "Amsterdam";
-        if (postalCode.startsWith("5")) return "Eindhoven";
-        return null; // Handle unknown postal codes
+        const file = event.target.files?.[0];
+        setStudentId(file || null);
     };
 
     const calculatePrice = () => {
-        let calculatedBasePrice = 50; // Local variable for calculation
-        const isCityDay = checkCityDay(firstLocation, selectedDate);
-        if (isCityDay) calculatedBasePrice = 40;
+        const pricingInput = {
+            serviceType: 'item-transport' as const,
+            pickupLocation: firstLocation,
+            dropoffLocation: secondLocation,
+            selectedDate,
+            isDateFlexible,
+            itemQuantities,
+            floorPickup: parseInt(floorPickup) || 0,
+            floorDropoff: parseInt(floorDropoff) || 0,
+            elevatorPickup,
+            elevatorDropoff,
+            assemblyItems: disassemblyItems,
+            extraHelperItems,
+            isStudent,
+            hasStudentId: !!studentId,
+            isEarlyBooking: false
+        };
 
-        setBasePrice(calculatedBasePrice); // Update state with calculated base price
-
-        let calculatedItemPoints = 0;
-        for (const itemId in itemQuantities) {
-            if (itemQuantities[itemId] > 0) {
-                const points = getItemPoints(itemId);
-                calculatedItemPoints += points * itemQuantities[itemId];
-            }
-        }
-        setItemPoints(calculatedItemPoints); // Update state with calculated item points
-
-        const pickupFloor = elevatorPickup ? 1 : Math.max(1, parseInt(floorPickup, 10) || 1);
-        const dropoffFloor = elevatorDropoff ? 1 : Math.max(1, parseInt(floorDropoff, 10) || 1);
-        const calculatedCarryingCost = (Math.max(0, pickupFloor - 1) + Math.max(0, dropoffFloor - 1)) * 10;
-        setCarryingCost(calculatedCarryingCost); // Update state with calculated carrying cost
-
-        const calculatedDisassemblyCost = disassembly ? 20 : 0;
-        setDisassemblyCost(calculatedDisassemblyCost); // Update state with calculated disassembly cost
-
-        const distance = firstLocation && secondLocation ? 50 : 0;
-        const calculatedDistanceCost = distance * 0.5;
-        setDistanceCost(calculatedDistanceCost); // Update state with calculated distance cost
-
-        const totalPrice = calculatedBasePrice + calculatedItemPoints * 3 + calculatedCarryingCost + calculatedDisassemblyCost + calculatedDistanceCost + (extraHelper ? 15 : 0);
-        setEstimatedPrice(totalPrice); // Update estimated price
+        const breakdown = pricingService.calculateItemTransportPricing(pricingInput);
+        setPricingBreakdown(breakdown);
     };
 
     useEffect(() => {
         calculatePrice();
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper, elevatorPickup, elevatorDropoff]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, isDateFlexible, isStudent, studentId]);
 
     const nextStep = () => {
         // Validate date selection in step 4
@@ -228,7 +171,7 @@ const ItemMovingPage = () => {
             floorDropoff,
             disassembly,
             contactInfo,
-            estimatedPrice,
+            estimatedPrice: pricingBreakdown?.total || 0,
             selectedDate,
             isDateFlexible,
             elevatorPickup,
@@ -237,12 +180,7 @@ const ItemMovingPage = () => {
             disassemblyItems,
             extraHelperItems,
             isStudent,
-            basePrice,
-            itemPoints,
-            carryingCost,
-            disassemblyCost,
-            distanceCost,
-            extraHelperCost
+            pricingBreakdown
         };
 
         try {
@@ -294,9 +232,10 @@ const ItemMovingPage = () => {
             });
 
             // Redirect to payment after successful submission
-            if (estimatedPrice !== null) {
+            const finalPrice = pricingBreakdown?.total || 0;
+            if (finalPrice > 0) {
                 try {
-                    await fetchCheckoutUrl(estimatedPrice);
+                    await fetchCheckoutUrl(finalPrice);
                 } catch (error) {
                     console.error("Error redirecting to payment:", error);
                     toast.error("Failed to redirect to payment page. Please try again.");
@@ -328,25 +267,15 @@ const ItemMovingPage = () => {
     );
 
     // Add a real-time pricing display component that will be shown throughout the process
-    const PriceSummary = ({ 
-        basePrice, 
-        itemPoints, 
-        carryingCost, 
-        disassemblyCost, 
-        distanceCost, 
-        extraHelperCost, 
-        isStudent 
-    }: {
-        basePrice: number;
-        itemPoints: number;
-        carryingCost: number;
-        disassemblyCost: number;
-        distanceCost: number;
-        extraHelperCost: number;
-        isStudent: boolean;
-    }) => {
-        const total = basePrice + (itemPoints * 3) + carryingCost + disassemblyCost + distanceCost + extraHelperCost;
-        const discountedTotal = isStudent && studentId ? total * 0.9 : total; // 10% discount for students
+    const PriceSummary = ({ pricingBreakdown }: { pricingBreakdown: PricingBreakdown | null }) => {
+        if (!pricingBreakdown) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">Add items to see pricing</p>
+                </div>
+            );
+        }
         
         return (
             <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
@@ -354,47 +283,51 @@ const ItemMovingPage = () => {
                 <div className="space-y-2">
                     <div className="flex justify-between">
                         <span>Base Price:</span>
-                        <span>€{basePrice.toFixed(2)}</span>
+                        <span>€{pricingBreakdown.basePrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                         <span>Items:</span>
-                        <span>€{(itemPoints * 3).toFixed(2)}</span>
+                        <span>€{pricingBreakdown.itemValue.toFixed(2)}</span>
                     </div>
-                    {carryingCost > 0 && (
+                    {pricingBreakdown.carryingCost > 0 && (
                         <div className="flex justify-between">
                             <span>Carrying:</span>
-                            <span>€{carryingCost.toFixed(2)}</span>
+                            <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
                         </div>
                     )}
-                    {disassemblyCost > 0 && (
+                    {pricingBreakdown.assemblyCost > 0 && (
                         <div className="flex justify-between">
-                            <span>Disassembly:</span>
-                            <span>€{disassemblyCost.toFixed(2)}</span>
+                            <span>Assembly:</span>
+                            <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
                         </div>
                     )}
-                    {distanceCost > 0 && (
+                    {pricingBreakdown.distanceCost > 0 && (
                         <div className="flex justify-between">
                             <span>Distance:</span>
-                            <span>€{distanceCost.toFixed(2)}</span>
+                            <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
                         </div>
                     )}
-                    {extraHelperCost > 0 && (
+                    {pricingBreakdown.extraHelperCost > 0 && (
                         <div className="flex justify-between">
                             <span>Extra Helper:</span>
-                            <span>€{extraHelperCost.toFixed(2)}</span>
+                            <span>€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
                         </div>
                     )}
                     <div className="border-t pt-2 mt-2">
                         <div className="flex justify-between font-semibold">
-                            <span>Total Estimate:</span>
-                            <span>€{total.toFixed(2)}</span>
+                            <span>Subtotal:</span>
+                            <span>€{pricingBreakdown.subtotal.toFixed(2)}</span>
                         </div>
-                        {isStudent && studentId && (
-                            <div className="flex justify-between text-green-600 font-semibold">
+                        {pricingBreakdown.studentDiscount > 0 && (
+                            <div className="flex justify-between text-green-600">
                                 <span>Student Discount (10%):</span>
-                                <span>€{discountedTotal.toFixed(2)}</span>
+                                <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
                             </div>
                         )}
+                        <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                            <span>Total:</span>
+                            <span>€{pricingBreakdown.total.toFixed(2)}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -969,28 +902,28 @@ const ItemMovingPage = () => {
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
                                         <h4 className="text-md font-medium text-gray-800 mb-3">Additional Services</h4>
                                         <ul className="space-y-2 text-sm">
-                                            {disassembly && (
+                                            {pricingBreakdown?.assemblyCost && pricingBreakdown.assemblyCost > 0 && (
                                                 <li className="flex justify-between">
-                                                    <span>Disassembly & Reassembly</span>
-                                                    <span className="font-medium">€{disassemblyCost.toFixed(2)}</span>
+                                                    <span>Assembly & Disassembly</span>
+                                                    <span className="font-medium">€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
                                                 </li>
                                             )}
-                                            {extraHelper && (
+                                            {pricingBreakdown?.extraHelperCost && pricingBreakdown.extraHelperCost > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>Extra Helper</span>
-                                                    <span className="font-medium">€15.00</span>
+                                                    <span className="font-medium">€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
                                                 </li>
                                             )}
-                                            {carryingCost > 0 && (
+                                            {pricingBreakdown?.carryingCost && pricingBreakdown.carryingCost > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>Floor Carrying Cost</span>
-                                                    <span className="font-medium">€{carryingCost.toFixed(2)}</span>
+                                                    <span className="font-medium">€{pricingBreakdown.carryingCost.toFixed(2)}</span>
                                                 </li>
                                             )}
-                                            {isStudent && studentId && (
+                                            {pricingBreakdown?.studentDiscount && pricingBreakdown.studentDiscount > 0 && (
                                                 <li className="flex justify-between text-green-600">
                                                     <span>Student Discount (10%)</span>
-                                                    <span className="font-medium">-€{((estimatedPrice || 0) * 0.1).toFixed(2)}</span>
+                                                    <span className="font-medium">-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
                                                 </li>
                                             )}
                                         </ul>
@@ -1018,7 +951,7 @@ const ItemMovingPage = () => {
                                         <div className="flex justify-between items-center">
                                             <h4 className="text-lg font-bold text-gray-900">Total Price:</h4>
                                             <p className="text-xl font-bold text-orange-600">
-                                                €{isStudent && studentId ? ((estimatedPrice || 0) * 0.9).toFixed(2) : (estimatedPrice || 0).toFixed(2)}
+                                                €{(pricingBreakdown?.total || 0).toFixed(2)}
                                             </p>
                                         </div>
                                     </div>
@@ -1076,13 +1009,7 @@ const ItemMovingPage = () => {
                     {/* Pricing Display - Right 1/3 */}
                     <div className="md:col-span-1">
                         <PriceSummary 
-                            basePrice={basePrice} 
-                            itemPoints={itemPoints} 
-                            carryingCost={carryingCost} 
-                            disassemblyCost={disassemblyCost} 
-                            distanceCost={distanceCost} 
-                            extraHelperCost={extraHelper ? 15 : 0}
-                            isStudent={isStudent}
+                            pricingBreakdown={pricingBreakdown}
                         />
                     </div>
                 </div>
