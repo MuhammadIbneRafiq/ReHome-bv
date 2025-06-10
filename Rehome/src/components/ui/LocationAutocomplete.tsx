@@ -70,7 +70,10 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
       if (response.ok) {
         const data: LocationSuggestion[] = await response.json();
         setSuggestions(data);
-        setShowSuggestions(data.length > 0 && !isSelecting);
+        // Only show suggestions if we're not in the middle of selecting and input is focused
+        if (data.length > 0 && !isSelecting && document.activeElement === inputRef.current) {
+          setShowSuggestions(true);
+        }
       }
     } catch (error) {
       console.error('Error fetching location suggestions:', error);
@@ -114,18 +117,30 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
     setIsSelecting(false); // Reset selecting state when typing
     onChange(newValue);
     setActiveSuggestion(-1);
+    
+    // If user is typing and we have suggestions, show them
+    if (newValue.length >= 3 && suggestions.length > 0) {
+      setShowSuggestions(true);
+    }
   };
 
   const handleSuggestionClick = (suggestion: LocationSuggestion) => {
-    setIsSelecting(true);
+    // Immediately update the input value and close dropdown
     onChange(suggestion.display_name, suggestion);
     setShowSuggestions(false);
     setActiveSuggestion(-1);
+    setSuggestions([]);
+    setIsSelecting(true);
     
-    // Reset selecting state after a short delay
+    // Reset selecting state quickly to allow new searches
     setTimeout(() => {
       setIsSelecting(false);
     }, 100);
+    
+    // Remove focus from input to prevent immediate reopening
+    if (inputRef.current) {
+      inputRef.current.blur();
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -156,17 +171,20 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   };
 
   const handleBlur = () => {
-    // Only hide suggestions if we're not clicking on a suggestion
+    // Delay hiding suggestions to allow for click events
     setTimeout(() => {
-      if (!suggestionsRef.current?.contains(document.activeElement as Node)) {
-        setShowSuggestions(false);
-        setActiveSuggestion(-1);
-      }
-    }, 200);
+      setShowSuggestions(false);
+      setActiveSuggestion(-1);
+      setIsSelecting(false);
+    }, 150);
   };
 
   const handleFocus = () => {
-    if (suggestions.length > 0 && value.length >= 3) {
+    setIsSelecting(false); // Reset selecting state when focusing
+    setActiveSuggestion(-1); // Reset active suggestion
+    
+    // Only show suggestions if we have a value and recent suggestions
+    if (value.length >= 3 && suggestions.length > 0) {
       setShowSuggestions(true);
     }
   };
@@ -249,9 +267,12 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
               className={`px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0 ${
                 index === activeSuggestion ? 'bg-orange-100' : ''
               }`}
-              onMouseDown={(e) => {
-                e.preventDefault(); // Prevent blur from firing
+              onClick={(e) => {
+                e.preventDefault();
                 handleSuggestionClick(suggestion);
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault(); // Prevent input blur when clicking suggestion
               }}
               onMouseEnter={() => setActiveSuggestion(index)}
             >
