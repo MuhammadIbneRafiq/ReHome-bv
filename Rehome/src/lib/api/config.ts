@@ -2,11 +2,13 @@
 // This file centralizes all API endpoint configurations
 
 // Use Vercel backend by default, can be overridden with VITE_API_URL environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rehome-backend.vercel.app';
+// In development, use relative URLs to work with Vite proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.MODE === 'development' ? '' : 'https://rehome-backend.vercel.app');
 
 // Debug: Log the API base URL in development
 if (import.meta.env.MODE === 'development') {
-  console.log('🚀 API Base URL:', API_BASE_URL);
+  console.log('🚀 API Base URL:', API_BASE_URL || 'Using relative URLs (proxy)');
 }
 
 // API Endpoints Configuration
