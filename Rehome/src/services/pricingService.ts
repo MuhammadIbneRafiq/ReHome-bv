@@ -532,15 +532,6 @@ class PricingService {
     }
   }
 
-  private async checkCityDay(location: string, date: string): Promise<boolean> {
-    if (!location || !date) return false;
-    const city = getCityFromPostalCode(location);
-    if (!city) return false;
-    
-    const dateObj = new Date(date);
-    return await this.isCityDay(city, dateObj);
-  }
-
   /**
    * Calculate pricing for item transport with special base charge logic
    * Handles split base charges for cross-city transport

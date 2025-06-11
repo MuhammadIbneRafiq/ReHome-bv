@@ -1,9 +1,5 @@
 import React, { useState } from 'react';
-import { FaCamera, FaTrash, FaArrowLeft } from 'react-icons/fa';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
-import { toast } from 'react-toastify';
-import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import API_ENDPOINTS from '../api/config';
 
 const SellPage = ({ onClose }: { onClose: () => void }) => {
@@ -20,7 +16,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
     const navigate = useNavigate(); // Initialize navigate
 
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        setUploadError(null); // Clear any previous upload errors
+        setUploadError(null); 
         if (e.target.files) {
           setPhotos(Array.from(e.target.files));
         }

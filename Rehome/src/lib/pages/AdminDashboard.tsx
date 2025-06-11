@@ -4,7 +4,7 @@ import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-toastify';
 import { cityBaseCharges } from '../constants';
-import { PricingConfig, CityBasePrice, PricingMultiplier, CreatePricingConfigRequest } from '../../types/pricing';
+import { PricingConfig, CityBasePrice, CreatePricingConfigRequest } from '../../types/pricing';
 import { pricingAdminService } from '../../services/pricingAdminService';
 
 // Furniture item interface
@@ -58,10 +58,10 @@ const AdminDashboard = () => {
   // Pricing management state
   const [pricingConfigs, setPricingConfigs] = useState<PricingConfig[]>([]);
   const [cityPrices, setCityPrices] = useState<CityBasePrice[]>([]);
-  const [pricingMultipliers, setPricingMultipliers] = useState<PricingMultiplier[]>([]);
+  // const [setPricingMultipliers] = useState<PricingMultiplier[]>([]);
   const [editingPricingConfig, setEditingPricingConfig] = useState<string | null>(null);
   const [editingCityPrice, setEditingCityPrice] = useState<string | null>(null);
-  const [editingMultiplier, setEditingMultiplier] = useState<string | null>(null);
+  // const [editingMultiplier, setEditingMultiplier] = useState<string | null>(null);
   const [newPricingConfig, setNewPricingConfig] = useState<CreatePricingConfigRequest>({
     type: 'base_price',
     category: 'house_moving',
@@ -180,7 +180,7 @@ const AdminDashboard = () => {
   // Fetch pricing data
   const fetchPricingData = async () => {
     try {
-      const [configs, cities, multipliers] = await Promise.all([
+      const [configs, cities] = await Promise.all([
         pricingAdminService.getPricingConfigs(),
         pricingAdminService.getCityBasePrices(),
         pricingAdminService.getPricingMultipliers()
@@ -188,7 +188,7 @@ const AdminDashboard = () => {
       
       setPricingConfigs(configs);
       setCityPrices(cities);
-      setPricingMultipliers(multipliers);
+      // setPricingMultipliers(multipliers);
     } catch (error) {
       console.error('Error fetching pricing data:', error);
     }
@@ -385,26 +385,26 @@ const AdminDashboard = () => {
     }
   };
 
-  // Update multiplier
-  const updateMultiplier = async (id: string, updates: Partial<PricingMultiplier>) => {
-    try {
-      const result = await pricingAdminService.updatePricingMultiplier(id, updates);
-      if (result.success) {
-        setPricingMultipliers(multipliers => 
-          multipliers.map(multiplier => 
-            multiplier.id === id ? { ...multiplier, ...updates } : multiplier
-          )
-        );
-        setEditingMultiplier(null);
-        toast.success('Multiplier updated successfully!');
-      } else {
-        toast.error(result.error || 'Failed to update multiplier');
-      }
-    } catch (error) {
-      toast.error('Error updating multiplier');
-      console.error(error);
-    }
-  };
+  // // Update multiplier
+  // const updateMultiplier = async (id: string, updates: Partial<PricingMultiplier>) => {
+  //   try {
+  //     const result = await pricingAdminService.updatePricingMultiplier(id, updates);
+  //     if (result.success) {
+  //       setPricingMultipliers(multipliers => 
+  //         multipliers.map(multiplier => 
+  //           multiplier.id === id ? { ...multiplier, ...updates } : multiplier
+  //         )
+  //       );
+  //       setEditingMultiplier(null);
+  //       toast.success('Multiplier updated successfully!');
+  //     } else {
+  //       toast.error(result.error || 'Failed to update multiplier');
+  //     }
+  //   } catch (error) {
+  //     toast.error('Error updating multiplier');
+  //     console.error(error);
+  //   }
+  // };
 
   // Create new pricing config
   const createPricingConfig = async () => {

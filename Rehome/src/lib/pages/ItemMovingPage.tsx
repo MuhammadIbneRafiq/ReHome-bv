@@ -36,7 +36,7 @@ const ItemMovingPage = () => {
     const [studentId, setStudentId] = useState<File | null>(null);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({});
-    const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
+    const [extraHelperItems] = useState<{ [key: string]: boolean }>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);

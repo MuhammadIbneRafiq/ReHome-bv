@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaTruck, FaMinus, FaPlus, FaInfoCircle, FaToolbox } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaMinus, FaPlus, FaInfoCircle, FaToolbox } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';

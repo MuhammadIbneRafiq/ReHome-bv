@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { toast } from 'react-toastify';
 import API_ENDPOINTS from '../api/config';
 
