@@ -19,7 +19,7 @@ import { Input } from "../../components/ui/input";
 import { Loader } from "lucide-react";
 import axios from "axios";
 import { useForm } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
@@ -29,6 +29,7 @@ import { motion } from "framer-motion";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import { AxiosResponse } from "axios";
 import { useTranslation } from "react-i18next";
+import API_ENDPOINTS from '../api/config';
 
 const formSchema = z.object({
   email: z.string().min(1, { message: "Email is required" }).email({ message: "Invalid email format" }),
@@ -78,7 +79,7 @@ export default function SignupPage() {
     
     try {
       const response = await axiosWithRetry(
-        'https://rehome-backend.vercel.app/auth/signup',
+                    API_ENDPOINTS.AUTH.SIGNUP,
         {
           email: values.email,
           password: values.password,

@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ChatDashboard from '../../components/ChatDashboard';
+import API_ENDPOINTS from '../api/config';
 
 // Mock Analytics Data (replace with your API calls)
 const mockAnalytics = {
@@ -81,7 +82,7 @@ const SellerDashboard = () => {
 
     const deleteListing = async (id: number) => {
         try {
-            await axios.delete(`https://rehome-backend.vercel.app/api/furniture/${id}`, {
+            await axios.delete(API_ENDPOINTS.FURNITURE.DELETE(id.toString()), {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 }
@@ -102,7 +103,7 @@ const SellerDashboard = () => {
         setError(null);
 
         try {
-            const response = await fetch('https://rehome-backend.vercel.app/api/furniture', {
+            const response = await fetch(API_ENDPOINTS.FURNITURE.LIST, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

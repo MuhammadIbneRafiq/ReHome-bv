@@ -6,8 +6,9 @@ import 'react-toastify/dist/ReactToastify.css';
 import fetchCheckoutUrl from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
-import { itemCategories } from '../../lib/constants';
+import { itemCategories, getItemPoints } from '../../lib/constants';
 import pricingService, { PricingBreakdown } from '../../services/pricingService';
+import API_ENDPOINTS from '../api/config';
 
 const ItemMovingPage = () => {
     const { t } = useTranslation();
@@ -45,7 +46,7 @@ const ItemMovingPage = () => {
         setStudentId(file || null);
     };
 
-    const calculatePrice = () => {
+    const calculatePrice = async () => {
         const pricingInput = {
             serviceType: 'item-transport' as const,
             pickupLocation: firstLocation,
@@ -64,13 +65,39 @@ const ItemMovingPage = () => {
             isEarlyBooking: false
         };
 
-        const breakdown = pricingService.calculateItemTransportPricing(pricingInput);
-        setPricingBreakdown(breakdown);
+        try {
+            const breakdown = await pricingService.calculateItemTransportPricing(pricingInput);
+            setPricingBreakdown(breakdown);
+        } catch (error) {
+            console.error('Error calculating pricing:', error);
+            setPricingBreakdown(null);
+        }
     };
 
+    // Debounced price calculation to avoid excessive API calls while typing
     useEffect(() => {
-        calculatePrice();
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, firstLocation, secondLocation, selectedDate, extraHelper, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, isDateFlexible, isStudent, studentId]);
+        const debounceTimer = setTimeout(() => {
+            // Only calculate price if we have both complete locations
+            if (firstLocation && secondLocation && 
+                firstLocation.trim().length > 3 && secondLocation.trim().length > 3) {
+                console.log('💰 Calculating price for:', firstLocation, '→', secondLocation);
+                calculatePrice();
+            } else {
+                // Clear price if locations are incomplete
+                setPricingBreakdown(null);
+                console.log('⏳ Waiting for complete locations...');
+            }
+        }, 400); // 400ms debounce - faster pricing updates
+
+        return () => clearTimeout(debounceTimer);
+    }, [firstLocation, secondLocation, selectedDate, isDateFlexible]);
+
+    // Immediate price calculation for non-location changes
+    useEffect(() => {
+        if (firstLocation && secondLocation) {
+            calculatePrice();
+        }
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, isStudent, studentId]);
 
     const nextStep = () => {
         // Validate date selection in step 4
@@ -185,7 +212,7 @@ const ItemMovingPage = () => {
 
         try {
             // Submit the moving request
-            const response = await fetch("https://rehome-backend.vercel.app/api/item-moving-requests", {
+            const response = await fetch(API_ENDPOINTS.MOVING.ITEM_REQUEST, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -200,7 +227,7 @@ const ItemMovingPage = () => {
 
             // Send confirmation email
             try {
-                const emailResponse = await fetch("https://rehome-backend.vercel.app/api/send-email", {
+                const emailResponse = await fetch(API_ENDPOINTS.EMAIL.SEND, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -268,66 +295,177 @@ const ItemMovingPage = () => {
 
     // Add a real-time pricing display component that will be shown throughout the process
     const PriceSummary = ({ pricingBreakdown }: { pricingBreakdown: PricingBreakdown | null }) => {
+        // Step 1: Don't show any pricing estimate yet - only after locations AND date
+        if (step === 1) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">Complete pickup type and location details to continue</p>
+                </div>
+            );
+        }
+
+        // Step 2+: Show pricing only if we have both locations and date
         if (!pricingBreakdown) {
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
-                    <p className="text-gray-500">Add items to see pricing</p>
+                    <p className="text-gray-500">Select a date to see base pricing</p>
                 </div>
             );
         }
+
+        // Check if we have valid base pricing (location + date provided)
+        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && selectedDate;
+        
+        if (!hasValidBasePricing) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">
+                        {!selectedDate ? "Select a date to see base pricing" : "Enter both pickup and dropoff locations"}
+                    </p>
+                </div>
+            );
+        }
+
+        // Calculate real-time item details for display
+        const selectedItems = Object.entries(itemQuantities)
+            .filter(([_, quantity]) => quantity > 0)
+            .map(([itemId, quantity]) => {
+                const points = getItemPoints(itemId);
+                const itemValue = points * quantity * 1; // €1 per point for item transport
+                return {
+                    name: itemId.replace(/-/g, ' - '),
+                    quantity,
+                    points: points * quantity,
+                    value: itemValue
+                };
+            });
+
+        const totalItemPoints = selectedItems.reduce((sum, item) => sum + item.points, 0);
+        const totalItemValue = selectedItems.reduce((sum, item) => sum + item.value, 0);
         
         return (
             <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
                 <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
+                    {/* Base Price */}
                     <div className="flex justify-between">
                         <span>Base Price:</span>
                         <span>€{pricingBreakdown.basePrice.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between">
-                        <span>Items:</span>
-                        <span>€{pricingBreakdown.itemValue.toFixed(2)}</span>
-                    </div>
-                    {pricingBreakdown.carryingCost > 0 && (
-                        <div className="flex justify-between">
-                            <span>Carrying:</span>
-                            <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
+                    {pricingBreakdown.breakdown.baseCharge.city && (
+                        <div className="text-xs text-gray-500 ml-4">
+                            {pricingBreakdown.breakdown.baseCharge.city} - {
+                                pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
+                                pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
+                            }
                         </div>
                     )}
-                    {pricingBreakdown.assemblyCost > 0 && (
-                        <div className="flex justify-between">
-                            <span>Assembly:</span>
-                            <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
+
+                    {/* Items Section - Show detailed breakdown */}
+                    <div className="border-t pt-3">
+                        <div className="flex justify-between font-medium">
+                            <span>Items ({totalItemPoints} points):</span>
+                            <span>€{totalItemValue.toFixed(2)}</span>
                         </div>
-                    )}
-                    {pricingBreakdown.distanceCost > 0 && (
-                        <div className="flex justify-between">
-                            <span>Distance:</span>
-                            <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
-                        </div>
-                    )}
-                    {pricingBreakdown.extraHelperCost > 0 && (
-                        <div className="flex justify-between">
-                            <span>Extra Helper:</span>
-                            <span>€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
-                        </div>
-                    )}
-                    <div className="border-t pt-2 mt-2">
-                        <div className="flex justify-between font-semibold">
-                            <span>Subtotal:</span>
-                            <span>€{pricingBreakdown.subtotal.toFixed(2)}</span>
-                        </div>
-                        {pricingBreakdown.studentDiscount > 0 && (
-                            <div className="flex justify-between text-green-600">
-                                <span>Student Discount (10%):</span>
-                                <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
+                        {selectedItems.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                                {selectedItems.map((item, index) => (
+                                    <div key={index} className="flex justify-between text-xs text-gray-600 ml-4">
+                                        <span>{item.name} ({item.quantity}x)</span>
+                                        <span>{item.points} pts → €{item.value.toFixed(2)}</span>
+                                    </div>
+                                ))}
+                                <div className="text-xs text-gray-500 ml-4 mt-1">
+                                    Total item value = {totalItemPoints} points × €1
+                                </div>
                             </div>
                         )}
-                        <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
-                            <span>Total:</span>
-                            <span>€{pricingBreakdown.total.toFixed(2)}</span>
+                        {selectedItems.length === 0 && (
+                            <div className="text-xs text-gray-500 ml-4">No items selected</div>
+                        )}
+                    </div>
+
+                    {/* Distance */}
+                    {pricingBreakdown.distanceCost > 0 ? (
+                        <div className="flex justify-between">
+                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                            <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
                         </div>
+                    ) : (
+                        <div className="flex justify-between text-green-600">
+                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                            <span>Free</span>
+                        </div>
+                    )}
+
+                    {/* Add-ons Section */}
+                    {(pricingBreakdown.carryingCost > 0 || pricingBreakdown.assemblyCost > 0 || pricingBreakdown.extraHelperCost > 0) && (
+                        <div className="border-t pt-3">
+                            <div className="font-medium mb-2">Add-ons:</div>
+                            
+                            {/* Assembly */}
+                            {pricingBreakdown.assemblyCost > 0 && (
+                                <div className="space-y-1">
+                                    <div className="flex justify-between">
+                                        <span className="ml-2">Assembly/Disassembly:</span>
+                                        <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
+                                    </div>
+                                    {pricingBreakdown.breakdown.assembly.itemBreakdown.map((item, index) => (
+                                        <div key={index} className="flex justify-between text-xs text-gray-600 ml-6">
+                                            <span>{item.itemId.replace(/-/g, ' - ')}</span>
+                                            <span>{item.points} pts × {item.multiplier} × €3 = €{item.cost.toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Carrying */}
+                            {pricingBreakdown.carryingCost > 0 && (
+                                <div className="space-y-1">
+                                    <div className="flex justify-between">
+                                        <span className="ml-2">Carrying ({pricingBreakdown.breakdown.carrying.floors} floors):</span>
+                                        <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
+                                    </div>
+                                    {pricingBreakdown.breakdown.carrying.itemBreakdown.map((item, index) => (
+                                        <div key={index} className="flex justify-between text-xs text-gray-600 ml-6">
+                                            <span>{item.itemId.replace(/-/g, ' - ')}</span>
+                                            <span>{item.points} pts × {item.multiplier} × €3 = €{item.cost.toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Extra Helper */}
+                            {pricingBreakdown.extraHelperCost > 0 && (
+                                <div className="flex justify-between">
+                                    <span className="ml-2">Extra Helper ({pricingBreakdown.breakdown.extraHelper.category} move):</span>
+                                    <span>€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    
+                    {/* Subtotal */}
+                    <div className="flex justify-between font-semibold border-t pt-2">
+                        <span>Subtotal:</span>
+                        <span>€{pricingBreakdown.subtotal.toFixed(2)}</span>
+                    </div>
+
+                    {/* Student Discount */}
+                    {pricingBreakdown.studentDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Student Discount (10%):</span>
+                            <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                        <span>Total:</span>
+                        <span>€{pricingBreakdown.total.toFixed(2)}</span>
                     </div>
                 </div>
             </div>
@@ -567,35 +705,52 @@ const ItemMovingPage = () => {
                                             <div key={index} className="border border-gray-200 rounded-lg p-4">
                                                 <h3 className="text-md font-medium text-gray-800 mb-3">{category.name}</h3>
                                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                                    {category.items.map((item, itemIndex) => (
-                                                        <div key={itemIndex} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-md">
-                                                            <span className="text-sm text-gray-700">{item}</span>
-                                                            <div className="flex items-center space-x-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => decrementItem(`${category.name}-${item}`)}
-                                                                    className={`w-8 h-8 flex items-center justify-center rounded-full border ${
-                                                                        (itemQuantities[`${category.name}-${item}`] || 0) > 0
-                                                                            ? 'border-orange-500 text-orange-500 hover:bg-orange-50'
-                                                                            : 'border-gray-300 text-gray-300 cursor-not-allowed'
-                                                                    }`}
-                                                                    disabled={(itemQuantities[`${category.name}-${item}`] || 0) === 0}
-                                                                >
-                                                                    <FaMinus className="h-3 w-3" />
-                                                                </button>
-                                                                <span className="text-sm w-6 text-center">
-                                                                    {itemQuantities[`${category.name}-${item}`] || 0}
-                                                                </span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => incrementItem(`${category.name}-${item}`)}
-                                                                    className="w-8 h-8 flex items-center justify-center rounded-full border border-orange-500 text-orange-500 hover:bg-orange-50"
-                                                                >
-                                                                    <FaPlus className="h-3 w-3" />
-                                                                </button>
+                                                    {category.items.map((item, itemIndex) => {
+                                                        const itemKey = item.id;
+                                                        const points = getItemPoints(itemKey);
+                                                        const quantity = itemQuantities[itemKey] || 0;
+                                                        const itemValue = points * quantity * 1; // €1 per point for item transport
+                                                        
+                                                        return (
+                                                            <div key={itemIndex} className="flex items-center justify-between py-3 px-3 bg-gray-50 rounded-md">
+                                                                <div className="flex-1">
+                                                                    <div className="text-sm text-gray-700">{item.name}</div>
+                                                                    <div className="text-xs text-gray-500">
+                                                                        {points} points = €{points.toFixed(2)} each
+                                                                        {quantity > 0 && (
+                                                                            <span className="ml-2 text-orange-600 font-medium">
+                                                                                ({quantity}x = €{itemValue.toFixed(2)})
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center space-x-2 ml-4">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => decrementItem(itemKey)}
+                                                                        className={`w-8 h-8 flex items-center justify-center rounded-full border ${
+                                                                            quantity > 0
+                                                                                ? 'border-orange-500 text-orange-500 hover:bg-orange-50'
+                                                                                : 'border-gray-300 text-gray-300 cursor-not-allowed'
+                                                                        }`}
+                                                                        disabled={quantity === 0}
+                                                                    >
+                                                                        <FaMinus className="h-3 w-3" />
+                                                                    </button>
+                                                                    <span className="text-sm w-6 text-center">
+                                                                        {quantity}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => incrementItem(itemKey)}
+                                                                        className="w-8 h-8 flex items-center justify-center rounded-full border border-orange-500 text-orange-500 hover:bg-orange-50"
+                                                                    >
+                                                                        <FaPlus className="h-3 w-3" />
+                                                                    </button>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             </div>
                                         ))}
@@ -659,66 +814,84 @@ const ItemMovingPage = () => {
                                                 <p className="text-sm text-gray-600">
                                                     Select which items need disassembly/reassembly:
                                                 </p>
-                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((item, index) => (
-                                                    <div key={index} className="flex items-center">
-                                                        <input
-                                                            id={`disassembly-${item}`}
-                                                            type="checkbox"
-                                                            checked={disassemblyItems[item] || false}
-                                                            onChange={(e) => setDisassemblyItems({
-                                                                ...disassemblyItems,
-                                                                [item]: e.target.checked
-                                                            })}
-                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                        />
-                                                        <label htmlFor={`disassembly-${item}`} className="ml-2 block text-sm text-gray-700">
-                                                            {item.replace(/-/g, ' - ')} ({itemQuantities[item]})
-                                                        </label>
-                                                    </div>
-                                                ))}
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
+                                                    const points = getItemPoints(itemId);
+                                                    const quantity = itemQuantities[itemId];
+                                                    const multiplier = points <= 6 ? 0.5 : 0.7; // Assembly multiplier based on item value
+                                                    const assemblyPoints = points * multiplier * quantity;
+                                                    const assemblyCost = assemblyPoints * 3; // €3 per point for add-ons
+                                                    
+                                                    // Find the item data to get the proper name
+                                                    const itemData = itemCategories
+                                                        .flatMap(category => category.items)
+                                                        .find(item => item.id === itemId);
+                                                    const itemName = itemData ? itemData.name : itemId;
+                                                    
+                                                    return (
+                                                        <div key={index} className="flex items-center justify-between">
+                                                            <div className="flex items-center">
+                                                                <input
+                                                                    id={`disassembly-${itemId}`}
+                                                                    type="checkbox"
+                                                                    checked={disassemblyItems[itemId] || false}
+                                                                    onChange={(e) => setDisassemblyItems({
+                                                                        ...disassemblyItems,
+                                                                        [itemId]: e.target.checked
+                                                                    })}
+                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                    {itemName} ({quantity}x)
+                                                                </label>
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                {points} pts × {multiplier} × {quantity} × €3 = €{assemblyCost.toFixed(2)}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="text-md font-medium text-gray-800 mb-3">Extra Helper</h3>
-                                        <div className="flex items-center mb-4">
-                                            <input
-                                                id="extra-helper"
-                                                type="checkbox"
-                                                checked={extraHelper}
-                                                onChange={(e) => setExtraHelper(e.target.checked)}
-                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="extra-helper" className="ml-2 block text-sm text-gray-700">
-                                                I need an extra helper for my move (+€15)
-                                            </label>
-                                        </div>
-                                        
-                                        {extraHelper && (
-                                            <div className="ml-6 space-y-3">
-                                                <p className="text-sm text-gray-600">
-                                                    Select which items need an extra helper:
-                                                </p>
-                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((item, index) => (
-                                                    <div key={index} className="flex items-center">
+                                        {(() => {
+                                            // Calculate total item points for dynamic pricing
+                                            const totalItemPoints = Object.entries(itemQuantities)
+                                                .reduce((sum, [itemId, quantity]) => {
+                                                    return sum + (getItemPoints(itemId) * quantity);
+                                                }, 0);
+                                            
+                                            const isSmallMove = totalItemPoints <= 30;
+                                            const helperPrice = isSmallMove ? 45 : 60;
+                                            const moveSize = isSmallMove ? 'small' : 'big';
+                                            
+                                            return (
+                                                <>
+                                                    <div className="flex items-center mb-4">
                                                         <input
-                                                            id={`helper-${item}`}
+                                                            id="extra-helper"
                                                             type="checkbox"
-                                                            checked={extraHelperItems[item] || false}
-                                                            onChange={(e) => setExtraHelperItems({
-                                                                ...extraHelperItems,
-                                                                [item]: e.target.checked
-                                                            })}
+                                                            checked={extraHelper}
+                                                            onChange={(e) => setExtraHelper(e.target.checked)}
                                                             className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                                         />
-                                                        <label htmlFor={`helper-${item}`} className="ml-2 block text-sm text-gray-700">
-                                                            {item.replace(/-/g, ' - ')} ({itemQuantities[item]})
+                                                        <label htmlFor="extra-helper" className="ml-2 block text-sm text-gray-700">
+                                                            I need an extra helper for my move (+€{helperPrice})
                                                         </label>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        )}
+                                                    
+                                                    {totalItemPoints > 0 && (
+                                                        <div className="ml-6 mb-4">
+                                                            <p className="text-xs text-gray-500">
+                                                                {moveSize.charAt(0).toUpperCase() + moveSize.slice(1)} move ({totalItemPoints} total points) = €{helperPrice}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">

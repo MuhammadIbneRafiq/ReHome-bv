@@ -56,27 +56,141 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
     setIsLoading(true);
     
     try {
-      // Using Nominatim API (OpenStreetMap) - completely free
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?` +
-        `q=${encodeURIComponent(query)}&` +
-        `countrycodes=${countryCode}&` +
-        `format=json&` +
-        `addressdetails=1&` +
-        `limit=5&` +
-        `dedupe=1`
-      );
+      let data: LocationSuggestion[] = [];
       
-      if (response.ok) {
-        const data: LocationSuggestion[] = await response.json();
-        setSuggestions(data);
-        // Only show suggestions if we're not in the middle of selecting and input is focused
-        if (data.length > 0 && !isSelecting && document.activeElement === inputRef.current) {
-          setShowSuggestions(true);
+      // 1. Primary option: Hardcoded Dutch cities (most reliable for Netherlands)
+          const dutchCities = [
+            'Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven', 
+            'Tilburg', 'Groningen', 'Almere', 'Breda', 'Nijmegen',
+            'Enschede', 'Haarlem', 'Arnhem', 'Zaanstad', 'Amersfoort',
+            'Apeldoorn', 'Hoofddorp', 'Maastricht', 'Leiden', 'Dordrecht',
+            'Zoetermeer', 'Zwolle', 'Deventer', 'Delft', 'Alkmaar',
+            'Leeuwarden', 'Helmond', 'Venlo', 'Oss', 'Roosendaal',
+            'Geldrop', 'Mierlo', 'Emmen', 'Hilversum', 'Kampen',
+            'Gouda', 'Purmerend', 'Vlaardingen', 'Alphen aan den Rijn',
+        'Spijkenisse', 'Hoorn', 'Ede', 'Leidschendam', 'Woerden',
+        'Schiedam', 'Lelystad', 'Tiel', 'Barneveld', 'Veenendaal',
+        'Doetinchem', 'Almelo', 'Nieuwegein', 'Zeist'
+      ];
+      
+      const cityMatches = dutchCities
+        .filter(city => 
+          city.toLowerCase().startsWith(query.toLowerCase()) ||
+          city.toLowerCase().includes(query.toLowerCase())
+        )
+        .sort((a, b) => {
+          // Prioritize starts-with matches
+          const aStarts = a.toLowerCase().startsWith(query.toLowerCase());
+          const bStarts = b.toLowerCase().startsWith(query.toLowerCase());
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
+          return a.length - b.length; // Then sort by length
+        })
+            .slice(0, 5)
+            .map(city => ({
+              display_name: `${city}, Netherlands`,
+              lat: '52.0', // Approximate center of Netherlands
+              lon: '5.0',
+              place_id: city.toLowerCase(),
+              address: {
+                city: city,
+                country: 'Netherlands'
+              }
+            }));
+          
+      if (cityMatches.length > 0) {
+        data = cityMatches;
+        console.log('✅ Dutch cities success:', data.length, 'matches');
+      } else {
+        // 2. Try OpenWeather API first
+        const apiKey = import.meta.env.VITE_OPENWEATHER_API_KEY;
+        if (apiKey && apiKey !== 'demo' && apiKey !== '') {
+          try {
+            console.log('🌐 Trying OpenWeather API...');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
+            const response = await fetch(
+              `https://api.openweathermap.org/geo/1.0/direct?` +
+              `q=${encodeURIComponent(query)},${countryCode.toUpperCase()}&` +
+              `limit=5&` +
+              `appid=${apiKey}`,
+              {
+                signal: controller.signal,
+                headers: {
+                  'Accept': 'application/json'
+                }
+              }
+            );
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+              const openWeatherData = await response.json();
+              if (openWeatherData && openWeatherData.length > 0) {
+                // Convert OpenWeather format to our LocationSuggestion format
+                data = openWeatherData.map((item: any) => ({
+                  display_name: `${item.name}${item.state ? `, ${item.state}` : ''}, ${item.country}`,
+                  lat: item.lat.toString(),
+                  lon: item.lon.toString(),
+                  place_id: `openweather_${item.lat}_${item.lon}`,
+                  address: {
+                    city: item.name,
+                    country: item.country
+                  }
+                }));
+                console.log('✅ OpenWeather success:', data.length, 'results');
+              }
+            }
+          } catch (openWeatherError: any) {
+            console.log('⚠️ OpenWeather API failed:', openWeatherError.message);
+          }
+        }
+        
+        // 3. Fallback: Try Nominatim if OpenWeather didn't work
+        if (data.length === 0) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
+            const nominatimUrl = `https://nominatim.openstreetmap.org/search?` +
+              `q=${encodeURIComponent(query)}&` +
+              `countrycodes=${countryCode}&` +
+              `format=json&` +
+              `addressdetails=1&` +
+              `limit=5&` +
+              `dedupe=1`;
+            
+            const response = await fetch(nominatimUrl, {
+              signal: controller.signal,
+              headers: {
+                'User-Agent': 'ReHome-Location-Search/1.0'
+              }
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+              const nominatimData = await response.json();
+              if (nominatimData.length > 0) {
+                data = nominatimData;
+                console.log('✅ Nominatim fallback success:', data.length, 'results');
+              }
+            }
+          } catch (nominatimError: any) {
+            console.log('⚠️ Nominatim fallback failed:', nominatimError.message);
+          }
         }
       }
+      
+      setSuggestions(data);
+      // Only show suggestions if we're not in the middle of selecting and input is focused
+      if (data.length > 0 && !isSelecting && document.activeElement === inputRef.current) {
+        setShowSuggestions(true);
+      }
+      
     } catch (error) {
-      console.error('Error fetching location suggestions:', error);
+      console.error('💥 All location APIs failed:', error);
       setSuggestions([]);
       setShowSuggestions(false);
     } finally {
@@ -103,7 +217,7 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
         setSuggestions([]);
         setShowSuggestions(false);
       }
-    }, 300); // 300ms debounce
+            }, 200); // 200ms debounce - faster response
 
     return () => {
       if (debounceRef.current) {

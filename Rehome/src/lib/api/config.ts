@@ -1,8 +1,7 @@
     // API Configuration for ReHome Backend
 // This file centralizes all API endpoint configurations
 
-// Always use the deployed Vercel backend
-// You can override this with VITE_API_URL environment variable if needed
+// Use Vercel backend by default, can be overridden with VITE_API_URL environment variable
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rehome-backend.vercel.app';
 
 // Debug: Log the API base URL in development
@@ -44,6 +43,11 @@ export const API_ENDPOINTS = {
   // Communication
   EMAIL: {
     SEND: `${API_BASE_URL}/api/send-email`,
+  },
+
+  // Contact
+  CONTACT: {
+    SUBMIT: `${API_BASE_URL}/api/contact`,
   },
 
   // Messages

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Loader } from '@/components/ui/loader';
 import { toast } from '@/components/ui/use-toast';
 import { FaEnvelope, FaPhone, FaMapMarkerAlt } from 'react-icons/fa';
+import API_ENDPOINTS from '../api/config';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Name is required' }),
@@ -35,7 +36,7 @@ export default function ContactUsPage() {
 
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
-      const response = await fetch('https://rehome-backend.vercel.app/api/contact', {
+      const response = await fetch(API_ENDPOINTS.CONTACT.SUBMIT, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

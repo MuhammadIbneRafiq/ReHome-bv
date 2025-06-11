@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave } from 'react-icons/fa';
+import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-toastify';
-import { cityBaseCharges, furnitureItems } from '../constants';
-// import { useNavigate } from 'react-router-dom';
-// import useUserStore from '../../services/state/useUserSessionStore';
+import { cityBaseCharges } from '../constants';
+import { PricingConfig, CityBasePrice, PricingMultiplier, CreatePricingConfigRequest } from '../../types/pricing';
+import { pricingAdminService } from '../../services/pricingAdminService';
 
 // Furniture item interface
 interface FurnitureItem {
@@ -13,7 +13,6 @@ interface FurnitureItem {
   name: string;
   description: string;
   price: number;
-//   image_url: string[];
   created_at: string;
   city_name: string;
   sold: boolean;
@@ -43,45 +42,8 @@ interface CitySchedule {
   }[];
 }
 
-// Pricing config interface
-interface PricingConfigData {
-  cityBaseCharges: { [key: string]: { normal: number, cityDay: number, dayOfWeek: number } };
-  furnitureItems: { id: string, name: string, category: string, points: number }[];
-  pricingSettings: {
-    houseMovingItemMultiplier: number;
-    itemTransportMultiplier: number;
-    addonMultiplier: number;
-    distancePricing: {
-      smallDistance: { threshold: number; rate: number };
-      mediumDistance: { threshold: number; rate: number };
-      longDistance: { rate: number };
-    };
-    carryingMultipliers: {
-      lowValue: { threshold: number; multiplier: number };
-      highValue: { multiplier: number };
-    };
-    assemblyMultipliers: {
-      lowValue: { threshold: number; multiplier: number };
-      highValue: { multiplier: number };
-    };
-    extraHelperPricing: {
-      smallMove: { threshold: number; price: number };
-      bigMove: { price: number };
-    };
-    earlyBookingDiscount: number;
-    studentDiscount: number;
-  };
-}
-
-// // List of admin email addresses - keep in sync with AdminRoute.tsx
-// const ADMIN_EMAILS = [
-//   'muhammadibnerafiq@gmail.com',
-//   // Add other admin emails here
-// ];
-
 const AdminDashboard = () => {
-//   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'furniture' | 'transport' | 'schedule' | 'pricing'>('furniture');
+  const [activeTab, setActiveTab] = useState<'furniture' | 'transport' | 'schedule' | 'pricing' | 'items'>('furniture');
   const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]);
   const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,12 +54,37 @@ const AdminDashboard = () => {
   const [newTimeSlot, setNewTimeSlot] = useState({ start: '08:00', end: '15:00', city: 'Rotterdam' });
   const [editingItem, setEditingItem] = useState<FurnitureItem | null>(null);
   const [editedPrice, setEditedPrice] = useState<number>(0);
-  const [pricingConfig, setPricingConfig] = useState<PricingConfigData | null>(null);
-  const [editingCityPricing, setEditingCityPricing] = useState<string | null>(null);
-  const [editedCityPricing, setEditedCityPricing] = useState<{ normal: number, cityDay: number, dayOfWeek: number }>({ normal: 0, cityDay: 0, dayOfWeek: 1 });
-  const [editingFurniturePoints, setEditingFurniturePoints] = useState<string | null>(null);
-  const [editedFurniturePoints, setEditedFurniturePoints] = useState<number>(0);
-    
+  
+  // Pricing management state
+  const [pricingConfigs, setPricingConfigs] = useState<PricingConfig[]>([]);
+  const [cityPrices, setCityPrices] = useState<CityBasePrice[]>([]);
+  const [pricingMultipliers, setPricingMultipliers] = useState<PricingMultiplier[]>([]);
+  const [editingPricingConfig, setEditingPricingConfig] = useState<string | null>(null);
+  const [editingCityPrice, setEditingCityPrice] = useState<string | null>(null);
+  const [editingMultiplier, setEditingMultiplier] = useState<string | null>(null);
+  const [newPricingConfig, setNewPricingConfig] = useState<CreatePricingConfigRequest>({
+    type: 'base_price',
+    category: 'house_moving',
+    name: '',
+    description: '',
+    value: 0,
+    unit: '€',
+    active: true
+  });
+  const [showAddPricingForm, setShowAddPricingForm] = useState(false);
+  
+  // Furniture items management state
+  const [furnitureItemsData, setFurnitureItemsData] = useState<any[]>([]);
+  const [editingFurnitureItem, setEditingFurnitureItem] = useState<string | null>(null);
+  const [newFurnitureItem, setNewFurnitureItem] = useState({
+    name: '',
+    category: 'Bedroom',
+    points: 0
+  });
+  const [showAddFurnitureForm, setShowAddFurnitureForm] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedPricingCategory, setSelectedPricingCategory] = useState<string>('all');
+  
   // Load data on initial render - AdminRoute handles access control
   useEffect(() => {
     fetchData();
@@ -110,7 +97,9 @@ const AdminDashboard = () => {
       await Promise.all([
         fetchFurnitureItems(),
         fetchTransportRequests(),
-        fetchSchedule()
+        fetchSchedule(),
+        fetchPricingData(),
+        fetchFurnitureItemsData()
       ]);
     } catch (err) {
       setError('Failed to load data. Please try again.');
@@ -129,7 +118,6 @@ const AdminDashboard = () => {
         name: 'Modern Sofa',
         description: 'Comfortable 3-seater sofa in gray',
         price: 599,
-        // image_url: ['/furniture/sofa1.jpg'],
         created_at: '2023-05-15',
         city_name: 'Amsterdam',
         sold: false
@@ -139,7 +127,6 @@ const AdminDashboard = () => {
         name: 'Coffee Table',
         description: 'Wooden coffee table with glass top',
         price: 249,
-        // image_url: ['/furniture/table1.jpg'],
         created_at: '2023-05-20',
         city_name: 'Rotterdam',
         sold: false
@@ -149,7 +136,6 @@ const AdminDashboard = () => {
         name: 'Dining Chair Set',
         description: 'Set of 4 dining chairs',
         price: 399,
-        // image_url: ['/furniture/chairs1.jpg'],
         created_at: '2023-05-25',
         city_name: 'Utrecht',
         sold: true
@@ -191,6 +177,23 @@ const AdminDashboard = () => {
     ]);
   };
   
+  // Fetch pricing data
+  const fetchPricingData = async () => {
+    try {
+      const [configs, cities, multipliers] = await Promise.all([
+        pricingAdminService.getPricingConfigs(),
+        pricingAdminService.getCityBasePrices(),
+        pricingAdminService.getPricingMultipliers()
+      ]);
+      
+      setPricingConfigs(configs);
+      setCityPrices(cities);
+      setPricingMultipliers(multipliers);
+    } catch (error) {
+      console.error('Error fetching pricing data:', error);
+    }
+  };
+  
   // Fetch schedule
   const fetchSchedule = async () => {
     // Simulated data for now - would connect to Supabase in production
@@ -223,187 +226,263 @@ const AdminDashboard = () => {
       }
     ]);
   };
+
+  // Fetch furniture items data for management
+  const fetchFurnitureItemsData = async () => {
+    try {
+      const items = await pricingAdminService.getFurnitureItems();
+      setFurnitureItemsData(items);
+    } catch (error) {
+      console.error('Error fetching furniture items:', error);
+    }
+  };
+
+  // Create new furniture item
+  const createFurnitureItem = async () => {
+    try {
+      const response = await pricingAdminService.createFurnitureItem(newFurnitureItem);
+      if (response.success) {
+        toast.success('Furniture item created successfully!');
+        setNewFurnitureItem({ name: '', category: 'Bedroom', points: 0 });
+        setShowAddFurnitureForm(false);
+        await fetchFurnitureItemsData();
+      } else {
+        toast.error(response.error || 'Failed to create furniture item');
+      }
+    } catch (error) {
+      toast.error('Failed to create furniture item');
+      console.error(error);
+    }
+  };
   
-  // Update furniture item price
+  // Update furniture item
+  const updateFurnitureItem = async (id: string, updates: any) => {
+    try {
+      const response = await pricingAdminService.updateFurnitureItem(id, updates);
+      if (response.success) {
+        toast.success('Furniture item updated successfully!');
+        setEditingFurnitureItem(null);
+        await fetchFurnitureItemsData();
+      } else {
+        toast.error(response.error || 'Failed to update furniture item');
+      }
+    } catch (error) {
+      toast.error('Failed to update furniture item');
+      console.error(error);
+    }
+  };
+  
+  // Delete furniture item
+  const deleteFurnitureItem = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this furniture item?')) {
+      return;
+    }
+    
+    try {
+      const response = await pricingAdminService.deleteFurnitureItem(id);
+      if (response.success) {
+        toast.success('Furniture item deleted successfully!');
+        await fetchFurnitureItemsData();
+      } else {
+        toast.error(response.error || 'Failed to delete furniture item');
+      }
+    } catch (error) {
+      toast.error('Failed to delete furniture item');
+      console.error(error);
+    }
+  };
+
+  // Update furniture price
   const updateFurniturePrice = async (id: string, newPrice: number) => {
     try {
-      // In production, this would be a Supabase update
+      // Update price in database (would be actual API call)
       const updatedItems = furnitureItems.map(item => 
         item.id === id ? { ...item, price: newPrice } : item
       );
       setFurnitureItems(updatedItems);
-      toast.success('Price updated successfully');
+      toast.success('Price updated successfully!');
       setEditingItem(null);
-    } catch (err) {
+    } catch (error) {
       toast.error('Failed to update price');
-      console.error(err);
+      console.error(error);
     }
   };
-  
-  // Add city schedule
+
+  // Add city to schedule
   const addCityToSchedule = async () => {
     try {
-      // In production, this would be a Supabase insert
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const existingScheduleIndex = citySchedule.findIndex(s => s.date === dateStr);
+      const existingSchedule = citySchedule.find(schedule => schedule.date === dateStr);
       
-      if (existingScheduleIndex >= 0) {
-        // Add to existing date
-        const updatedSchedule = [...citySchedule];
-        updatedSchedule[existingScheduleIndex].timeSlots.push({
-          ...newTimeSlot
-        });
+      if (existingSchedule) {
+        // Add to existing schedule
+        const updatedSchedule = citySchedule.map(schedule => 
+          schedule.date === dateStr 
+            ? { ...schedule, timeSlots: [...schedule.timeSlots, newTimeSlot] }
+            : schedule
+        );
         setCitySchedule(updatedSchedule);
       } else {
-        // Create new date entry
-        setCitySchedule([
-          ...citySchedule,
-          {
-            id: `new-${Date.now()}`,
-            date: dateStr,
-            city: newTimeSlot.city,
-            timeSlots: [{ ...newTimeSlot }]
-          }
-        ]);
+        // Create new schedule for the date
+        const newSchedule: CitySchedule = {
+          id: `schedule-${Date.now()}`,
+          date: dateStr,
+          city: newTimeSlot.city,
+          timeSlots: [newTimeSlot]
+        };
+        setCitySchedule([...citySchedule, newSchedule]);
       }
       
-      toast.success('Schedule updated successfully');
-      
-      // Reset the form
+      toast.success(`${newTimeSlot.city} scheduled for ${dateStr}`);
       setNewTimeSlot({ start: '08:00', end: '15:00', city: 'Rotterdam' });
-    } catch (err) {
-      toast.error('Failed to update schedule');
-      console.error(err);
+    } catch (error) {
+      toast.error('Failed to add schedule');
+      console.error(error);
     }
   };
-  
-  // Remove time slot from schedule
-  const removeTimeSlot = (dateStr: string, index: number) => {
+
+  // ================== PRICING MANAGEMENT FUNCTIONS ==================
+
+  // Update pricing config
+  const updatePricingConfig = async (id: string, updates: Partial<PricingConfig>) => {
     try {
-      const scheduleIndex = citySchedule.findIndex(s => s.date === dateStr);
-      if (scheduleIndex >= 0) {
-        const updatedSchedule = [...citySchedule];
-        updatedSchedule[scheduleIndex].timeSlots.splice(index, 1);
-        
-        // If no more time slots, remove the entire day
-        if (updatedSchedule[scheduleIndex].timeSlots.length === 0) {
-          updatedSchedule.splice(scheduleIndex, 1);
-        }
-        
-        setCitySchedule(updatedSchedule);
-        toast.success('Schedule updated successfully');
+      const result = await pricingAdminService.updatePricingConfig(id, updates);
+      if (result.success) {
+        setPricingConfigs(configs => 
+          configs.map(config => 
+            config.id === id ? { ...config, ...updates } : config
+          )
+        );
+        setEditingPricingConfig(null);
+        toast.success('Pricing configuration updated successfully!');
+      } else {
+        toast.error(result.error || 'Failed to update pricing configuration');
       }
-    } catch (err) {
-      toast.error('Failed to update schedule');
-      console.error(err);
+    } catch (error) {
+      toast.error('Error updating pricing configuration');
+      console.error(error);
     }
   };
-  
-  // Filter furniture items based on search
-  const filteredFurnitureItems = furnitureItems.filter(item => 
+
+  // Update city price
+  const updateCityPrice = async (id: string, updates: Partial<CityBasePrice>) => {
+    try {
+      const result = await pricingAdminService.updateCityBasePrice(id, updates);
+      if (result.success) {
+        setCityPrices(cities => 
+          cities.map(city => 
+            city.id === id ? { ...city, ...updates } : city
+          )
+        );
+        setEditingCityPrice(null);
+        toast.success('City price updated successfully!');
+      } else {
+        toast.error(result.error || 'Failed to update city price');
+      }
+    } catch (error) {
+      toast.error('Error updating city price');
+      console.error(error);
+    }
+  };
+
+  // Update multiplier
+  const updateMultiplier = async (id: string, updates: Partial<PricingMultiplier>) => {
+    try {
+      const result = await pricingAdminService.updatePricingMultiplier(id, updates);
+      if (result.success) {
+        setPricingMultipliers(multipliers => 
+          multipliers.map(multiplier => 
+            multiplier.id === id ? { ...multiplier, ...updates } : multiplier
+          )
+        );
+        setEditingMultiplier(null);
+        toast.success('Multiplier updated successfully!');
+      } else {
+        toast.error(result.error || 'Failed to update multiplier');
+      }
+    } catch (error) {
+      toast.error('Error updating multiplier');
+      console.error(error);
+    }
+  };
+
+  // Create new pricing config
+  const createPricingConfig = async () => {
+    try {
+      const result = await pricingAdminService.createPricingConfig(newPricingConfig);
+      if (result.success) {
+        await fetchPricingData(); // Refresh data
+        setNewPricingConfig({
+          type: 'base_price',
+          category: 'house_moving',
+          name: '',
+          description: '',
+          value: 0,
+          unit: '€',
+          active: true
+        });
+        setShowAddPricingForm(false);
+        toast.success('New pricing configuration created successfully!');
+      } else {
+        toast.error(result.error || 'Failed to create pricing configuration');
+      }
+    } catch (error) {
+      toast.error('Error creating pricing configuration');
+      console.error(error);
+    }
+  };
+
+  // Delete pricing config
+  const deletePricingConfig = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this pricing configuration?')) return;
+    
+    try {
+      const result = await pricingAdminService.deletePricingConfig(id);
+      if (result.success) {
+        setPricingConfigs(configs => configs.filter(config => config.id !== id));
+        toast.success('Pricing configuration deleted successfully!');
+      } else {
+        toast.error(result.error || 'Failed to delete pricing configuration');
+      }
+    } catch (error) {
+      toast.error('Error deleting pricing configuration');
+      console.error(error);
+    }
+  };
+
+  // Remove time slot
+  const removeTimeSlot = (dateStr: string, index: number) => {
+    const updatedSchedule = citySchedule.map(schedule => {
+      if (schedule.date === dateStr) {
+        const updatedTimeSlots = schedule.timeSlots.filter((_, i) => i !== index);
+        return { ...schedule, timeSlots: updatedTimeSlots };
+      }
+      return schedule;
+    }).filter(schedule => schedule.timeSlots.length > 0); // Remove empty schedules
+    
+    setCitySchedule(updatedSchedule);
+    toast.success('Time slot removed');
+  };
+
+  // Filter functions
+  const filteredFurnitureItems = furnitureItems.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.city_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
-  // Filter transport requests based on search
-  const filteredTransportRequests = transportRequests.filter(request => 
+
+  const filteredTransportRequests = transportRequests.filter(request =>
     request.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     request.customer_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     request.city.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
-  // Get schedule for selected date
-  const selectedDateSchedule = citySchedule.find(s => s.date === format(selectedDate, 'yyyy-MM-dd'));
 
-  // List of cities
-  const cities = ['Amsterdam', 'Rotterdam', 'Utrecht', 'Delft', 'Den Haag', 'Eindhoven', 'Groningen'];
-  
-  // Initialize pricing config
-  useEffect(() => {
-    initializePricingConfig();
-  }, []);
-
-  const initializePricingConfig = () => {
-    setPricingConfig({
-      cityBaseCharges: { ...cityBaseCharges },
-      furnitureItems: [...furnitureItems],
-      pricingSettings: {
-        houseMovingItemMultiplier: 2,
-        itemTransportMultiplier: 1,
-        addonMultiplier: 3,
-        distancePricing: {
-          smallDistance: { threshold: 10, rate: 0 },
-          mediumDistance: { threshold: 50, rate: 0.7 },
-          longDistance: { rate: 0.5 }
-        },
-        carryingMultipliers: {
-          lowValue: { threshold: 6, multiplier: 0.2 },
-          highValue: { multiplier: 0.4 }
-        },
-        assemblyMultipliers: {
-          lowValue: { threshold: 6, multiplier: 0.5 },
-          highValue: { multiplier: 0.7 }
-        },
-        extraHelperPricing: {
-          smallMove: { threshold: 30, price: 45 },
-          bigMove: { price: 60 }
-        },
-        earlyBookingDiscount: 0.5,
-        studentDiscount: 0.1
-      }
-    });
-  };
-
-  // Update city base charge
-  const updateCityBaseCharge = async (cityName: string, normal: number, cityDay: number, dayOfWeek: number) => {
-    try {
-      if (!pricingConfig) return;
-      
-      const updatedConfig = { ...pricingConfig };
-      updatedConfig.cityBaseCharges[cityName] = { normal, cityDay, dayOfWeek };
-      setPricingConfig(updatedConfig);
-      
-      // In production, this would update the backend
-      toast.success(`Pricing for ${cityName} updated successfully`);
-      setEditingCityPricing(null);
-    } catch (err) {
-      toast.error('Failed to update city pricing');
-      console.error(err);
-    }
-  };
-
-  // Update furniture item points
-  const updateFurnitureItemPoints = async (itemId: string, newPoints: number) => {
-    try {
-      if (!pricingConfig) return;
-      
-      const updatedConfig = { ...pricingConfig };
-      const itemIndex = updatedConfig.furnitureItems.findIndex(item => item.id === itemId);
-      if (itemIndex >= 0) {
-        updatedConfig.furnitureItems[itemIndex].points = newPoints;
-        setPricingConfig(updatedConfig);
-        
-        // In production, this would update the backend
-        toast.success('Item points updated successfully');
-        setEditingFurniturePoints(null);
-      }
-    } catch (err) {
-      toast.error('Failed to update item points');
-      console.error(err);
-    }
-  };
-
-  // Save all pricing configuration
-  const savePricingConfiguration = async () => {
-    try {
-      // In production, this would send the entire config to the backend
-      toast.success('Pricing configuration saved successfully');
-    } catch (err) {
-      toast.error('Failed to save pricing configuration');
-      console.error(err);
-    }
-  };
+  const filteredPricingConfigs = pricingConfigs.filter(config =>
+    (config.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    config.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    config.category.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (selectedPricingCategory === 'all' || config.category === selectedPricingCategory)
+  );
 
   return (
     <div className="min-h-screen bg-orange-50 pt-24 pb-12">
@@ -416,7 +495,7 @@ const AdminDashboard = () => {
           className="mb-8"
         >
           <h1 className="text-3xl font-extrabold text-gray-900">Admin Dashboard</h1>
-          <p className="mt-2 text-gray-600">Manage furniture inventory and transportation services</p>
+          <p className="mt-2 text-gray-600">Manage furniture inventory, transportation services, and pricing</p>
         </motion.div>
         
         {/* Tabs */}
@@ -465,7 +544,18 @@ const AdminDashboard = () => {
                 }`}
               >
                 <FaCog className="inline-block mr-2" />
-                Pricing Config
+                Pricing Management
+              </button>
+              <button
+                onClick={() => setActiveTab('items')}
+                className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                  activeTab === 'items'
+                    ? 'border-orange-500 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <FaBox className="inline-block mr-2" />
+                Items Management
               </button>
             </nav>
           </div>
@@ -515,73 +605,79 @@ const AdminDashboard = () => {
                           {filteredFurnitureItems.map((item) => (
                             <tr key={item.id}>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <div className="flex items-center">
-                                    {/* <img className="h-10 w-10 rounded-full object-cover" src={item.image_url[0] || '/placeholder.jpg'} alt="" /> */}
-                                  
-                                  <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                                </div>
+                                <div className="text-sm font-medium text-gray-900">{item.name}</div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.description}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <td className="px-6 py-4">
+                                <div className="text-sm text-gray-500 max-w-xs truncate">{item.description}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
                                 {editingItem?.id === item.id ? (
-                                  <div className="flex items-center">
-                                    <input
-                                      type="number"
-                                      value={editedPrice}
-                                      onChange={(e) => setEditedPrice(Number(e.target.value))}
-                                      className="w-24 border border-gray-300 rounded-md p-1 mr-2"
-                                    />
-                                    <button
-                                      onClick={() => updateFurniturePrice(item.id, editedPrice)}
-                                      className="text-green-600 hover:text-green-900 mr-2"
-                                    >
-                                      Save
-                                    </button>
-                                    <button
-                                      onClick={() => setEditingItem(null)}
-                                      className="text-red-600 hover:text-red-900"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
+                                  <input
+                                    type="number"
+                                    value={editedPrice}
+                                    onChange={(e) => setEditedPrice(Number(e.target.value))}
+                                    className="w-20 border border-gray-300 rounded-md p-1"
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        updateFurniturePrice(item.id, editedPrice);
+                                      }
+                                    }}
+                                  />
                                 ) : (
-                                  <>€{item.price.toFixed(2)}</>
+                                  <div className="text-sm text-gray-900">€{item.price}</div>
                                 )}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.city_name}</td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  item.sold
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-yellow-100 text-yellow-800'
+                                <div className="text-sm text-gray-500">{item.city_name}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  item.sold ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                                 }`}>
                                   {item.sold ? 'Sold' : 'Available'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <button
-                                  onClick={() => {
-                                    setEditingItem(item);
-                                    setEditedPrice(item.price);
-                                  }}
-                                  className="text-indigo-600 hover:text-indigo-900 mr-4"
-                                >
-                                  <FaEdit /> Edit Price
-                                </button>
+                                {editingItem?.id === item.id ? (
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => updateFurniturePrice(item.id, editedPrice)}
+                                      className="text-green-600 hover:text-green-900"
+                                    >
+                                      <FaSave />
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingItem(null)}
+                                      className="text-gray-600 hover:text-gray-900"
+                                    >
+                                      <FaTimes />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex space-x-2">
+                                  <button
+                                    onClick={() => {
+                                      setEditingItem(item);
+                                      setEditedPrice(item.price);
+                                    }}
+                                    className="text-indigo-600 hover:text-indigo-900"
+                                  >
+                                      <FaEdit />
+                                    </button>
+                                    <button className="text-red-600 hover:text-red-900">
+                                      <FaTrash />
+                                  </button>
+                                  </div>
+                                )}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    {filteredFurnitureItems.length === 0 && (
-                      <div className="text-center py-4">
-                        <p className="text-gray-500">No furniture items found</p>
-                      </div>
-                    )}
                   </div>
                 )}
-                
+
                 {/* Transportation Requests Tab */}
                 {activeTab === 'transport' && (
                   <div>
@@ -590,10 +686,11 @@ const AdminDashboard = () => {
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -601,446 +698,744 @@ const AdminDashboard = () => {
                             <tr key={request.id}>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-gray-900">{request.customer_name}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm text-gray-500">{request.customer_email}</div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.city}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.date}</td>
                               <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                  request.status === 'completed'
-                                    ? 'bg-green-100 text-green-800'
-                                    : request.status === 'confirmed'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : request.status === 'cancelled'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-yellow-100 text-yellow-800'
+                                <div className="text-sm text-gray-500">{request.city}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-500">{request.date}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  request.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                                  request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  'bg-red-100 text-red-800'
                                 }`}>
-                                  {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                  {request.status}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{request.created_at}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button className="text-indigo-600 hover:text-indigo-900 mr-2">
+                                  <FaEdit className="inline" />
+                                </button>
+                                <button className="text-red-600 hover:text-red-900">
+                                  <FaTrash className="inline" />
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    {filteredTransportRequests.length === 0 && (
-                      <div className="text-center py-4">
-                        <p className="text-gray-500">No transportation requests found</p>
-                      </div>
-                    )}
                   </div>
                 )}
-                
+
                 {/* Schedule Management Tab */}
                 {activeTab === 'schedule' && (
-                  <div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {/* Calendar */}
-                      <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-lg font-semibold mb-4">Schedule Calendar</h3>
-                        
-                        {/* Date Navigation */}
-                        <div className="flex justify-between items-center mb-4">
-                          <button
-                            onClick={() => setSelectedDate(prev => addDays(prev, -1))}
-                            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
-                          >
-                            Previous Day
-                          </button>
-                          <div className="text-lg font-semibold">
-                            {format(selectedDate, 'EEEE, MMMM d, yyyy')}
-                          </div>
-                          <button
-                            onClick={() => setSelectedDate(prev => addDays(prev, 1))}
-                            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
-                          >
-                            Next Day
-                          </button>
+                  <div className="space-y-6">
+                    {/* Add New Schedule */}
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="text-lg font-medium mb-4">Add City to Schedule</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                          <input
+                            type="date"
+                            value={format(selectedDate, 'yyyy-MM-dd')}
+                            onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                            className="w-full border border-gray-300 rounded-md p-2"
+                          />
                         </div>
-                        
-                        {/* Schedule List */}
-                        <div className="mt-6">
-                          <h4 className="text-md font-medium mb-2">Scheduled Cities:</h4>
-                          {selectedDateSchedule ? (
-                            <div>
-                              {selectedDateSchedule.timeSlots.map((slot, index) => (
-                                <div key={index} className="flex items-center justify-between mb-2 p-3 bg-orange-50 rounded-md">
-                                  <div>
-                                    <span className="font-medium">{slot.city}</span>
-                                    <span className="text-gray-600 ml-2">
-                                      {slot.start} - {slot.end}
-                                    </span>
-                                  </div>
-                                  <button
-                                    onClick={() => removeTimeSlot(selectedDateSchedule.date, index)}
-                                    className="text-red-600 hover:text-red-900"
-                                  >
-                                    <FaTrash />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-gray-500 italic">No cities scheduled for this day</div>
-                          )}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                          <select
+                            value={newTimeSlot.city}
+                            onChange={(e) => setNewTimeSlot({ ...newTimeSlot, city: e.target.value })}
+                            className="w-full border border-gray-300 rounded-md p-2"
+                          >
+                            {Object.keys(cityBaseCharges).map(city => (
+                              <option key={city} value={city}>{city}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                          <input
+                            type="time"
+                            value={newTimeSlot.start}
+                            onChange={(e) => setNewTimeSlot({ ...newTimeSlot, start: e.target.value })}
+                            className="w-full border border-gray-300 rounded-md p-2"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                          <input
+                            type="time"
+                            value={newTimeSlot.end}
+                            onChange={(e) => setNewTimeSlot({ ...newTimeSlot, end: e.target.value })}
+                            className="w-full border border-gray-300 rounded-md p-2"
+                          />
                         </div>
                       </div>
-                      
-                      {/* Add Schedule Form */}
-                      <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-lg font-semibold mb-4">Add City to Schedule</h3>
-                        <form onSubmit={(e) => { e.preventDefault(); addCityToSchedule(); }}>
-                          <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                              City
-                            </label>
+                      <button
+                        onClick={addCityToSchedule}
+                        className="mt-4 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded"
+                      >
+                        <FaPlus className="inline mr-2" />
+                        Add to Schedule
+                      </button>
+                    </div>
+
+                    {/* Current Schedule */}
+                    <div>
+                      <h3 className="text-lg font-medium mb-4">Current Schedule</h3>
+                      {citySchedule.length === 0 ? (
+                        <p className="text-gray-500">No schedules found.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {citySchedule.map((schedule) => (
+                            <div key={schedule.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                              <h4 className="font-medium text-gray-900 mb-2">{schedule.date}</h4>
+                              <div className="space-y-2">
+                                {schedule.timeSlots.map((slot, index) => (
+                                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                    <span className="text-sm">
+                                      <strong>{slot.city}</strong>: {slot.start} - {slot.end}
+                                    </span>
+                                    <button
+                                      onClick={() => removeTimeSlot(schedule.date, index)}
+                                      className="text-red-600 hover:text-red-900"
+                                    >
+                                      <FaTrash className="text-xs" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Pricing Management Tab */}
+                {activeTab === 'pricing' && (
+                  <div className="space-y-8">
+                    {/* Header */}
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h2 className="text-2xl font-bold text-gray-900">
+                      <FaCog className="inline mr-2 text-orange-500" />
+                          Pricing Management
+                    </h2>
+                        <p className="text-gray-600 mt-1">Manage base prices, multipliers, and city-specific rates</p>
+                      </div>
+                      <button
+                        onClick={() => setShowAddPricingForm(!showAddPricingForm)}
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg flex items-center"
+                      >
+                        <FaPlus className="mr-2" />
+                        Add New Configuration
+                      </button>
+                    </div>
+
+                    {/* Add New Pricing Config Form */}
+                    {showAddPricingForm && (
+                      <div className="bg-gray-50 p-6 rounded-lg border">
+                        <h3 className="text-lg font-semibold mb-4">Add New Pricing Configuration</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                             <select
-                              value={newTimeSlot.city}
-                              onChange={(e) => setNewTimeSlot({...newTimeSlot, city: e.target.value})}
-                              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                              value={newPricingConfig.type}
+                              onChange={(e) => setNewPricingConfig({...newPricingConfig, type: e.target.value as any})}
+                              className="w-full border border-gray-300 rounded-md p-2"
                             >
-                              {cities.map(city => (
-                                <option key={city} value={city}>{city}</option>
-                              ))}
+                              <option value="base_price">Base Price</option>
+                              <option value="multiplier">Multiplier</option>
+                              <option value="distance_rate">Distance Rate</option>
+                              <option value="addon">Add-on</option>
                             </select>
                           </div>
-                          
-                          <div className="mb-4">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                              Start Time
-                            </label>
-                            <input
-                              type="time"
-                              value={newTimeSlot.start}
-                              onChange={(e) => setNewTimeSlot({...newTimeSlot, start: e.target.value})}
-                              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            />
-                          </div>
-                          
-                          <div className="mb-6">
-                            <label className="block text-gray-700 text-sm font-bold mb-2">
-                              End Time
-                            </label>
-                            <input
-                              type="time"
-                              value={newTimeSlot.end}
-                              onChange={(e) => setNewTimeSlot({...newTimeSlot, end: e.target.value})}
-                              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                            />
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <button
-                              type="submit"
-                              className="bg-orange-500 hover:bg-orange-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                            <select
+                              value={newPricingConfig.category}
+                              onChange={(e) => setNewPricingConfig({...newPricingConfig, category: e.target.value})}
+                              className="w-full border border-gray-300 rounded-md p-2"
                             >
-                              <FaPlus className="inline-block mr-2" />
-                              Add to Schedule
-                            </button>
+                              <option value="house_moving">House Moving</option>
+                              <option value="item_transport">Item Transport</option>
+                              <option value="special_request">Special Request</option>
+                            </select>
                           </div>
-                        </form>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={newPricingConfig.name}
+                              onChange={(e) => setNewPricingConfig({...newPricingConfig, name: e.target.value})}
+                              className="w-full border border-gray-300 rounded-md p-2"
+                              placeholder="Configuration name"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                            <input
+                              type="text"
+                              value={newPricingConfig.description}
+                              onChange={(e) => setNewPricingConfig({...newPricingConfig, description: e.target.value})}
+                              className="w-full border border-gray-300 rounded-md p-2"
+                              placeholder="Description"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Value</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={newPricingConfig.value}
+                              onChange={(e) => setNewPricingConfig({...newPricingConfig, value: parseFloat(e.target.value) || 0})}
+                              className="w-full border border-gray-300 rounded-md p-2"
+                              placeholder="0.00"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                            <input
+                              type="text"
+                              value={newPricingConfig.unit}
+                              onChange={(e) => setNewPricingConfig({...newPricingConfig, unit: e.target.value})}
+                              className="w-full border border-gray-300 rounded-md p-2"
+                              placeholder="€, %, €/km, x"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-4 flex space-x-4">
+                          <button
+                            onClick={createPricingConfig}
+                            className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
+                          >
+                            <FaSave className="inline mr-2" />
+                            Save Configuration
+                          </button>
+                          <button
+                            onClick={() => setShowAddPricingForm(false)}
+                            className="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded"
+                          >
+                            <FaTimes className="inline mr-2" />
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Category Filter Section */}
+                    <div className="bg-white rounded-lg shadow p-4">
+                      <div className="flex flex-wrap gap-4 items-center">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Service Category</label>
+                          <select
+                            value={selectedPricingCategory}
+                            onChange={(e) => setSelectedPricingCategory(e.target.value)}
+                            className="border border-gray-300 rounded-md p-2"
+                          >
+                            <option value="all">All Categories</option>
+                            <option value="house_moving">House Moving</option>
+                            <option value="item_transport">Item Transport</option>
+                            <option value="special_request">Special Request</option>
+                          </select>
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Search Configurations</label>
+                          <div className="relative">
+                            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder="Search by name, description..."
+                              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    
-                    {/* Schedule Overview */}
-                    <div className="mt-8 bg-white p-6 rounded-lg shadow-md">
-                      <h3 className="text-lg font-semibold mb-4">Schedule Overview</h3>
+
+                    {/* Category Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {['house_moving', 'item_transport', 'special_request'].map(category => {
+                        const count = pricingConfigs.filter(config => config.category === category).length;
+                        const activeCount = pricingConfigs.filter(config => config.category === category && config.active).length;
+                        return (
+                          <div key={category} className="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-600 capitalize">
+                                  {category.replace('_', ' ')}
+                                </p>
+                                <p className="text-2xl font-bold text-gray-900">{count}</p>
+                                <p className="text-xs text-gray-500">{activeCount} active</p>
+                              </div>
+                              <div className={`p-3 rounded-full ${
+                                category === 'house_moving' ? 'bg-blue-100' :
+                                category === 'item_transport' ? 'bg-green-100' :
+                                'bg-purple-100'
+                              }`}>
+                                <FaCog className={`h-6 w-6 ${
+                                  category === 'house_moving' ? 'text-blue-600' :
+                                  category === 'item_transport' ? 'text-green-600' :
+                                  'text-purple-600'
+                                }`} />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Pricing Configurations Table */}
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          Pricing Configurations ({filteredPricingConfigs.length} items)
+                        </h3>
+                        {selectedPricingCategory !== 'all' && (
+                          <span className="inline-flex px-3 py-1 text-sm font-medium rounded-full bg-orange-100 text-orange-800">
+                            Showing: {selectedPricingCategory.replace('_', ' ')}
+                          </span>
+                        )}
+                      </div>
                       <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cities</th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time Slots</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="bg-white divide-y divide-gray-200">
-                            {citySchedule.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((schedule) => (
-                              <tr key={schedule.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{schedule.date}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {schedule.timeSlots.map(slot => slot.city).join(', ')}
+                            {filteredPricingConfigs.map((config) => (
+                              <tr key={config.id}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    config.type === 'base_price' ? 'bg-blue-100 text-blue-800' :
+                                    config.type === 'multiplier' ? 'bg-purple-100 text-purple-800' :
+                                    config.type === 'distance_rate' ? 'bg-green-100 text-green-800' :
+                                    'bg-orange-100 text-orange-800'
+                                  }`}>
+                                    {config.type.replace('_', ' ')}
+                                  </span>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-500">
-                                  {schedule.timeSlots.map((slot, index) => (
-                                    <div key={index} className="mb-1">
-                                      {slot.city}: {slot.start} - {slot.end}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {config.category.replace('_', ' ')}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {editingPricingConfig === config.id ? (
+                                    <input
+                                      type="text"
+                                      defaultValue={config.name}
+                                      onBlur={(e) => updatePricingConfig(config.id, { name: e.target.value })}
+                                      className="w-full border border-gray-300 rounded-md p-1 text-sm"
+                                    />
+                                  ) : (
+                                    <div className="text-sm font-medium text-gray-900">{config.name}</div>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4">
+                                  {editingPricingConfig === config.id ? (
+                                    <input
+                                      type="text"
+                                      defaultValue={config.description}
+                                      onBlur={(e) => updatePricingConfig(config.id, { description: e.target.value })}
+                                      className="w-full border border-gray-300 rounded-md p-1 text-sm"
+                                    />
+                                  ) : (
+                                    <div className="text-sm text-gray-500 max-w-xs truncate">{config.description}</div>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {editingPricingConfig === config.id ? (
+                                    <div className="flex items-center space-x-1">
+                                      <input
+                                        type="number"
+                                        step="0.01"
+                                        defaultValue={config.value}
+                                        onBlur={(e) => updatePricingConfig(config.id, { value: parseFloat(e.target.value) || 0 })}
+                                        className="w-20 border border-gray-300 rounded-md p-1 text-sm"
+                                      />
+                                      <span className="text-sm text-gray-500">{config.unit}</span>
                                     </div>
-                                  ))}
+                                  ) : (
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {config.value} {config.unit}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <button
+                                    onClick={() => updatePricingConfig(config.id, { active: !config.active })}
+                                    className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
+                                      config.active 
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                    }`}
+                                  >
+                                    {config.active ? <FaEye className="mr-1" /> : <FaEyeSlash className="mr-1" />}
+                                    {config.active ? 'Active' : 'Inactive'}
+                                  </button>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => setEditingPricingConfig(
+                                        editingPricingConfig === config.id ? null : config.id
+                                      )}
+                                      className="text-indigo-600 hover:text-indigo-900"
+                                    >
+                                      <FaEdit />
+                                    </button>
+                                    <button
+                                      onClick={() => deletePricingConfig(config.id)}
+                                      className="text-red-600 hover:text-red-900"
+                                    >
+                                      <FaTrash />
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
                       </div>
-                      {citySchedule.length === 0 && (
-                        <div className="text-center py-4">
-                          <p className="text-gray-500">No schedules found</p>
-                        </div>
-                      )}
+                    </div>
+                    
+                    {/* City Base Prices */}
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900">City Base Prices ({cityPrices.length} cities)</h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Base Price (€)</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Distance Rate (€/km)</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {cityPrices.map((city) => (
+                              <tr key={city.id}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">{city.city}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {editingCityPrice === city.id ? (
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      defaultValue={city.base_price}
+                                      onBlur={(e) => updateCityPrice(city.id, { base_price: parseFloat(e.target.value) || 0 })}
+                                      className="w-20 border border-gray-300 rounded-md p-1 text-sm"
+                                    />
+                                  ) : (
+                                    <div className="text-sm text-gray-900">€{city.base_price}</div>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {editingCityPrice === city.id ? (
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      defaultValue={city.distance_rate}
+                                      onBlur={(e) => updateCityPrice(city.id, { distance_rate: parseFloat(e.target.value) || 0 })}
+                                      className="w-20 border border-gray-300 rounded-md p-1 text-sm"
+                                    />
+                                  ) : (
+                                    <div className="text-sm text-gray-900">€{city.distance_rate}</div>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <button
+                                    onClick={() => updateCityPrice(city.id, { active: !city.active })}
+                                    className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
+                                      city.active 
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                    }`}
+                                  >
+                                    {city.active ? <FaEye className="mr-1" /> : <FaEyeSlash className="mr-1" />}
+                                    {city.active ? 'Active' : 'Inactive'}
+                                  </button>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  <button
+                                    onClick={() => setEditingCityPrice(
+                                      editingCityPrice === city.id ? null : city.id
+                                    )}
+                                    className="text-indigo-600 hover:text-indigo-900"
+                                    title="Edit city prices"
+                                  >
+                                    <FaEdit />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 )}
-                
-                                 {/* Pricing Configuration Tab */}
-                 {activeTab === 'pricing' && pricingConfig && (
-                   <div className="space-y-8">
-                     {/* Save Button */}
-                     <div className="flex justify-end">
-                       <button
-                         onClick={savePricingConfiguration}
-                         className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded flex items-center"
-                       >
-                         <FaSave className="mr-2" />
-                         Save Configuration
-                       </button>
-                     </div>
 
-                     {/* City Base Charges */}
-                     <div className="bg-white p-6 rounded-lg shadow-md">
-                       <h3 className="text-lg font-semibold mb-4">City Base Charges</h3>
-                       <div className="overflow-x-auto">
-                         <table className="min-w-full divide-y divide-gray-200">
-                           <thead className="bg-gray-50">
-                             <tr>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Normal Base Charge</th>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City Day Charge</th>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day of Week</th>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                             </tr>
-                           </thead>
-                           <tbody className="bg-white divide-y divide-gray-200">
-                             {Object.entries(pricingConfig.cityBaseCharges).map(([cityName, charges]) => (
-                               <tr key={cityName}>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{cityName}</td>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                   {editingCityPricing === cityName ? (
-                                     <input
-                                       type="number"
-                                       value={editedCityPricing.normal}
-                                       onChange={(e) => setEditedCityPricing({...editedCityPricing, normal: Number(e.target.value)})}
-                                       className="w-20 border border-gray-300 rounded-md p-1"
-                                     />
-                                   ) : (
-                                     `€${charges.normal}`
-                                   )}
-                                 </td>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                   {editingCityPricing === cityName ? (
-                                     <input
-                                       type="number"
-                                       value={editedCityPricing.cityDay}
-                                       onChange={(e) => setEditedCityPricing({...editedCityPricing, cityDay: Number(e.target.value)})}
-                                       className="w-20 border border-gray-300 rounded-md p-1"
-                                     />
-                                   ) : (
-                                     `€${charges.cityDay}`
-                                   )}
-                                 </td>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                   {editingCityPricing === cityName ? (
-                                     <select
-                                       value={editedCityPricing.dayOfWeek}
-                                       onChange={(e) => setEditedCityPricing({...editedCityPricing, dayOfWeek: Number(e.target.value)})}
-                                       className="border border-gray-300 rounded-md p-1"
-                                     >
-                                       <option value={1}>1 (Monday)</option>
-                                       <option value={2}>2 (Tuesday)</option>
-                                       <option value={3}>3 (Wednesday)</option>
-                                       <option value={4}>4 (Thursday)</option>
-                                       <option value={5}>5 (Friday)</option>
-                                       <option value={6}>6 (Saturday)</option>
-                                       <option value={7}>7 (Sunday)</option>
-                                     </select>
-                                   ) : (
-                                     `${charges.dayOfWeek} (${['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][charges.dayOfWeek]})`
-                                   )}
-                                 </td>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                   {editingCityPricing === cityName ? (
-                                     <div className="flex space-x-2">
-                                       <button
-                                         onClick={() => updateCityBaseCharge(cityName, editedCityPricing.normal, editedCityPricing.cityDay, editedCityPricing.dayOfWeek)}
-                                         className="text-green-600 hover:text-green-900"
-                                       >
-                                         Save
-                                       </button>
-                                       <button
-                                         onClick={() => setEditingCityPricing(null)}
-                                         className="text-red-600 hover:text-red-900"
-                                       >
-                                         Cancel
-                                       </button>
-                                     </div>
-                                   ) : (
-                                     <button
-                                       onClick={() => {
-                                         setEditingCityPricing(cityName);
-                                         setEditedCityPricing(charges);
-                                       }}
-                                       className="text-indigo-600 hover:text-indigo-900"
-                                     >
-                                       <FaEdit className="inline mr-1" /> Edit
-                                     </button>
-                                   )}
-                                 </td>
-                               </tr>
-                             ))}
-                           </tbody>
-                         </table>
-                       </div>
-                     </div>
+                {/* Items Management Tab */}
+                {activeTab === 'items' && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center">
+                      <h2 className="text-2xl font-bold text-gray-900">Furniture Items Management</h2>
+                      <button
+                        onClick={() => setShowAddFurnitureForm(true)}
+                        className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center"
+                      >
+                        <FaPlus className="mr-2" />
+                        Add New Item
+                      </button>
+                    </div>
 
-                     {/* Furniture Item Points */}
-                     <div className="bg-white p-6 rounded-lg shadow-md">
-                       <h3 className="text-lg font-semibold mb-4">Furniture Item Points</h3>
-                       <div className="overflow-x-auto">
-                         <table className="min-w-full divide-y divide-gray-200">
-                           <thead className="bg-gray-50">
-                             <tr>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
-                               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                             </tr>
-                           </thead>
-                           <tbody className="bg-white divide-y divide-gray-200">
-                             {pricingConfig.furnitureItems.map((item) => (
-                               <tr key={item.id}>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.category}</td>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                   {editingFurniturePoints === item.id ? (
-                                     <input
-                                       type="number"
-                                       step="0.1"
-                                       value={editedFurniturePoints}
-                                       onChange={(e) => setEditedFurniturePoints(Number(e.target.value))}
-                                       className="w-20 border border-gray-300 rounded-md p-1"
-                                     />
-                                   ) : (
-                                     item.points
-                                   )}
-                                 </td>
-                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                   {editingFurniturePoints === item.id ? (
-                                     <div className="flex space-x-2">
-                                       <button
-                                         onClick={() => updateFurnitureItemPoints(item.id, editedFurniturePoints)}
-                                         className="text-green-600 hover:text-green-900"
-                                       >
-                                         Save
-                                       </button>
-                                       <button
-                                         onClick={() => setEditingFurniturePoints(null)}
-                                         className="text-red-600 hover:text-red-900"
-                                       >
-                                         Cancel
-                                       </button>
-                                     </div>
-                                   ) : (
-                                     <button
-                                       onClick={() => {
-                                         setEditingFurniturePoints(item.id);
-                                         setEditedFurniturePoints(item.points);
-                                       }}
-                                       className="text-indigo-600 hover:text-indigo-900"
-                                     >
-                                       <FaEdit className="inline mr-1" /> Edit
-                                     </button>
-                                   )}
-                                 </td>
-                               </tr>
-                             ))}
-                           </tbody>
-                         </table>
-                       </div>
-                     </div>
+                    {/* Add New Furniture Item Form */}
+                    {showAddFurnitureForm && (
+                      <div className="bg-white rounded-lg shadow p-6 border">
+                        <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Furniture Item</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Item Name</label>
+                            <input
+                              type="text"
+                              value={newFurnitureItem.name}
+                              onChange={(e) => setNewFurnitureItem({...newFurnitureItem, name: e.target.value})}
+                              className="w-full border border-gray-300 rounded-md p-2"
+                              placeholder="e.g., Queen Bed"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                            <select
+                              value={newFurnitureItem.category}
+                              onChange={(e) => setNewFurnitureItem({...newFurnitureItem, category: e.target.value})}
+                              className="w-full border border-gray-300 rounded-md p-2"
+                            >
+                              <option value="Bedroom">Bedroom</option>
+                              <option value="Living Room">Living Room</option>
+                              <option value="Dining">Dining</option>
+                              <option value="Kitchen">Kitchen</option>
+                              <option value="Office">Office</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Points</label>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={newFurnitureItem.points}
+                              onChange={(e) => setNewFurnitureItem({...newFurnitureItem, points: parseFloat(e.target.value) || 0})}
+                              className="w-full border border-gray-300 rounded-md p-2"
+                              placeholder="e.g., 5.5"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-end space-x-3 mt-4">
+                          <button
+                            onClick={() => setShowAddFurnitureForm(false)}
+                            className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
+                          >
+                            <FaTimes className="mr-2 inline" />
+                            Cancel
+                          </button>
+                          <button
+                            onClick={createFurnitureItem}
+                            className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
+                          >
+                            <FaSave className="mr-2 inline" />
+                            Add Item
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
-                     {/* Pricing Settings */}
-                     <div className="bg-white p-6 rounded-lg shadow-md">
-                       <h3 className="text-lg font-semibold mb-4">Pricing Settings</h3>
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                         <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-2">House Moving Multiplier</label>
-                           <input
-                             type="number"
-                             step="0.1"
-                             value={pricingConfig.pricingSettings.houseMovingItemMultiplier}
-                             onChange={(e) => {
-                               const updatedConfig = { ...pricingConfig };
-                               updatedConfig.pricingSettings.houseMovingItemMultiplier = Number(e.target.value);
-                               setPricingConfig(updatedConfig);
-                             }}
-                             className="w-full border border-gray-300 rounded-md p-2"
-                           />
-                         </div>
-                         <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-2">Item Transport Multiplier</label>
-                           <input
-                             type="number"
-                             step="0.1"
-                             value={pricingConfig.pricingSettings.itemTransportMultiplier}
-                             onChange={(e) => {
-                               const updatedConfig = { ...pricingConfig };
-                               updatedConfig.pricingSettings.itemTransportMultiplier = Number(e.target.value);
-                               setPricingConfig(updatedConfig);
-                             }}
-                             className="w-full border border-gray-300 rounded-md p-2"
-                           />
-                         </div>
-                         <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-2">Add-on Multiplier</label>
-                           <input
-                             type="number"
-                             step="0.1"
-                             value={pricingConfig.pricingSettings.addonMultiplier}
-                             onChange={(e) => {
-                               const updatedConfig = { ...pricingConfig };
-                               updatedConfig.pricingSettings.addonMultiplier = Number(e.target.value);
-                               setPricingConfig(updatedConfig);
-                             }}
-                             className="w-full border border-gray-300 rounded-md p-2"
-                           />
-                         </div>
-                         <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-2">Early Booking Discount</label>
-                           <input
-                             type="number"
-                             step="0.01"
-                             min="0"
-                             max="1"
-                             value={pricingConfig.pricingSettings.earlyBookingDiscount}
-                             onChange={(e) => {
-                               const updatedConfig = { ...pricingConfig };
-                               updatedConfig.pricingSettings.earlyBookingDiscount = Number(e.target.value);
-                               setPricingConfig(updatedConfig);
-                             }}
-                             className="w-full border border-gray-300 rounded-md p-2"
-                           />
-                         </div>
-                         <div>
-                           <label className="block text-sm font-medium text-gray-700 mb-2">Student Discount</label>
-                           <input
-                             type="number"
-                             step="0.01"
-                             min="0"
-                             max="1"
-                             value={pricingConfig.pricingSettings.studentDiscount}
-                             onChange={(e) => {
-                               const updatedConfig = { ...pricingConfig };
-                               updatedConfig.pricingSettings.studentDiscount = Number(e.target.value);
-                               setPricingConfig(updatedConfig);
-                             }}
-                             className="w-full border border-gray-300 rounded-md p-2"
-                           />
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 )}
+                    {/* Filters */}
+                    <div className="bg-white rounded-lg shadow p-4">
+                      <div className="flex flex-wrap gap-4 items-center">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Filter by Category</label>
+                          <select
+                            value={selectedCategory}
+                            onChange={(e) => setSelectedCategory(e.target.value)}
+                            className="border border-gray-300 rounded-md p-2"
+                          >
+                            <option value="all">All Categories</option>
+                            <option value="Bedroom">Bedroom</option>
+                            <option value="Living Room">Living Room</option>
+                            <option value="Dining">Dining</option>
+                            <option value="Kitchen">Kitchen</option>
+                            <option value="Office">Office</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <div className="flex-1">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Search Items</label>
+                          <div className="relative">
+                            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder="Search by name..."
+                              className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Furniture Items Table */}
+                    <div className="bg-white rounded-lg shadow overflow-hidden">
+                      <div className="px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          Furniture Items ({furnitureItemsData.filter(item => 
+                            (selectedCategory === 'all' || item.category === selectedCategory) &&
+                            item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                          ).length} items)
+                        </h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {furnitureItemsData
+                              .filter(item => 
+                                (selectedCategory === 'all' || item.category === selectedCategory) &&
+                                item.name.toLowerCase().includes(searchQuery.toLowerCase())
+                              )
+                              .map((item) => (
+                                <tr key={item.id}>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    {editingFurnitureItem === item.id ? (
+                                      <input
+                                        type="text"
+                                        defaultValue={item.name}
+                                        onBlur={(e) => updateFurnitureItem(item.id, { name: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-md p-1 text-sm"
+                                      />
+                                    ) : (
+                                      <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    {editingFurnitureItem === item.id ? (
+                                      <select
+                                        defaultValue={item.category}
+                                        onBlur={(e) => updateFurnitureItem(item.id, { category: e.target.value })}
+                                        className="w-full border border-gray-300 rounded-md p-1 text-sm"
+                                      >
+                                        <option value="Bedroom">Bedroom</option>
+                                        <option value="Living Room">Living Room</option>
+                                        <option value="Dining">Dining</option>
+                                        <option value="Kitchen">Kitchen</option>
+                                        <option value="Office">Office</option>
+                                        <option value="Other">Other</option>
+                                      </select>
+                                    ) : (
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        item.category === 'Bedroom' ? 'bg-blue-100 text-blue-800' :
+                                        item.category === 'Living Room' ? 'bg-green-100 text-green-800' :
+                                        item.category === 'Dining' ? 'bg-purple-100 text-purple-800' :
+                                        item.category === 'Kitchen' ? 'bg-red-100 text-red-800' :
+                                        item.category === 'Office' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {item.category}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    {editingFurnitureItem === item.id ? (
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        defaultValue={item.points}
+                                        onBlur={(e) => updateFurnitureItem(item.id, { points: parseFloat(e.target.value) || 0 })}
+                                        className="w-20 border border-gray-300 rounded-md p-1 text-sm"
+                                      />
+                                    ) : (
+                                      <div className="text-sm font-medium text-gray-900">{item.points} pts</div>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => setEditingFurnitureItem(
+                                          editingFurnitureItem === item.id ? null : item.id
+                                        )}
+                                        className="text-indigo-600 hover:text-indigo-900"
+                                        title="Edit item"
+                                      >
+                                        <FaEdit />
+                                      </button>
+                                      <button
+                                        onClick={() => deleteFurnitureItem(item.id)}
+                                        className="text-red-600 hover:text-red-900"
+                                        title="Delete item"
+                                      >
+                                        <FaTrash />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Category Summary */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                      {['Bedroom', 'Living Room', 'Dining', 'Kitchen', 'Office', 'Other'].map(category => {
+                        const count = furnitureItemsData.filter(item => item.category === category).length;
+                        return (
+                          <div key={category} className="bg-white rounded-lg shadow p-4 text-center">
+                            <div className="text-2xl font-bold text-orange-600">{count}</div>
+                            <div className="text-sm text-gray-600">{category}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1050,4 +1445,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;

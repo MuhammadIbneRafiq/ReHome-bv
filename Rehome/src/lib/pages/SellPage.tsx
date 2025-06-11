@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { FaCamera, FaTrash, FaArrowLeft } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
+import API_ENDPOINTS from '../api/config';
 
 const SellPage = ({ onClose }: { onClose: () => void }) => {
     const [photos, setPhotos] = useState<File[]>([]);
@@ -34,7 +39,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                 for (const photo of photos) {
                     const formData = new FormData();
                     formData.append('photos', photo);
-                    const uploadResponse = await fetch('https://rehome-backend.vercel.app/api/upload', {
+                    const uploadResponse = await fetch(API_ENDPOINTS.UPLOAD.PHOTOS, {
                         method: 'POST',
                         body: formData,
                     });
@@ -49,7 +54,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
             }
 
             // 2.  Send the listing data
-            const response = await fetch('https://rehome-backend.vercel.app/api/furniture/new', {
+            const response = await fetch(API_ENDPOINTS.FURNITURE.CREATE, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

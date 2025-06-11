@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
 import { getMessagesByUserId, getMessagesByItemId, markMessagesAsRead, subscribeToUserMessages, sendMessage, MarketplaceMessage } from '../services/marketplaceMessageService';
-import { FaEnvelope, FaEnvelopeOpen, FaExclamationTriangle } from 'react-icons/fa';
+import { FaEnvelope, FaEnvelopeOpen, FaExclamationTriangle, FaUser, FaTimes, FaCheck, FaCheckDouble, FaPaperPlane, FaInfoCircle } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
+import API_ENDPOINTS from '../lib/api/config';
 
 interface Conversation {
   itemId: number;
@@ -48,7 +50,7 @@ const ChatDashboard: React.FC = () => {
       
       for (const id of uniqueIds) {
         try {
-          const response = await axios.get(`https://rehome-backend.vercel.app/api/furniture/${id}`, {
+                      const response = await axios.get(API_ENDPOINTS.FURNITURE.GET_BY_ID(id.toString()), {
             headers: {
               'Authorization': `Bearer ${token}`
             }

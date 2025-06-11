@@ -12,7 +12,6 @@ import 'react-toastify/dist/ReactToastify.css';
 import LandingPage from "./lib/pages/LandingPage";
 import LoginPage from "./lib/pages/LoginPage";
 import SignupPage from "./lib/pages/SignupPage";
-// import Pricing from "./lib/pages/PricingHook";
 import MarketplacePage from "./lib/pages/MarketplacePage";
 import ItemMovingPage from "./lib/pages/ItemMovingPage";
 import HouseMovingPage from "./lib/pages/HouseMovingPage";
@@ -82,7 +81,6 @@ const App = () => {
                   <Route path="/about-us" element={<AboutUsPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<SignupPage />} />
-                  {/* <Route path="/pricing" element={<Pricing />} /> */}
                 </Routes>
               </main>
               <ToastContainer

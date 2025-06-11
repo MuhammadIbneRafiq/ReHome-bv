@@ -44,81 +44,122 @@ export const pricingConfig = {
 };
 
 // Define furniture items with proper categorization and points
+// Updated to match the exact specification provided - Total item value = Total points * €2
 export const furnitureItems = [
   // Sofa's and Chairs (Banken en Stoelen)
-  { id: 'sofa-2p', name: '2-Seater Sofa', category: 'Sofa\'s and Chairs', points: 10 },
-  { id: 'sofa-3p', name: '3-Seater Sofa', category: 'Sofa\'s and Chairs', points: 12 },
-  { id: 'armchair', name: 'Armchair', category: 'Sofa\'s and Chairs', points: 4 },
-  { id: 'office-chair', name: 'Office Chair', category: 'Sofa\'s and Chairs', points: 3 },
-  { id: 'chair', name: 'Chair', category: 'Sofa\'s and Chairs', points: 2 },
+  { id: 'sofa-2p', name: '2-Seater Sofa (2-zitsbank)', category: 'Sofa\'s and Chairs', points: 10 },
+  { id: 'sofa-3p', name: '3-Seater Sofa (3-zitsbank)', category: 'Sofa\'s and Chairs', points: 12 },
+  { id: 'armchair', name: 'Armchair (Fauteuil)', category: 'Sofa\'s and Chairs', points: 4 },
+  { id: 'office-chair', name: 'Office Chair (Bureuaustoel)', category: 'Sofa\'s and Chairs', points: 3 },
+  { id: 'chair', name: 'Chair (Stoel)', category: 'Sofa\'s and Chairs', points: 2 },
   
   // Bed (Bed)
-  { id: 'bed-1p', name: '1-Person Bed', category: 'Bed', points: 4 },
-  { id: 'bed-2p', name: '2-Person Bed', category: 'Bed', points: 8 },
-  { id: 'mattress-1p', name: '1-Person Mattress', category: 'Bed', points: 3 },
-  { id: 'mattress-2p', name: '2-Person Mattress', category: 'Bed', points: 6 },
-  { id: 'bedside-table', name: 'Bedside Table', category: 'Bed', points: 2 },
+  { id: 'bed-1p', name: '1-Person Bed (1-persoons bed)', category: 'Bed', points: 4 },
+  { id: 'bed-2p', name: '2-Person Bed (2-persoons bed)', category: 'Bed', points: 8 },
+  { id: 'mattress-1p', name: '1-person Matress (1-persoons Matras)', category: 'Bed', points: 3 },
+  { id: 'mattress-2p', name: '2-Person Matress (2-persoons Matras)', category: 'Bed', points: 6 },
+  { id: 'bedside-table', name: 'Bedside Table (Nachtkast)', category: 'Bed', points: 2 },
   
   // Storage (Kasten & Opbergen)
-  { id: 'closet-2d', name: '2-Doors Closet', category: 'Storage', points: 8 },
-  { id: 'closet-3d', name: '3-Doors Closet', category: 'Storage', points: 10 },
-  { id: 'cloth-rack', name: 'Cloth Rack', category: 'Storage', points: 3 },
-  { id: 'bookcase', name: 'Bookcase', category: 'Storage', points: 6 },
-  { id: 'dressoir', name: 'Drawer/Dressoir', category: 'Storage', points: 5 },
-  { id: 'tv-table', name: 'TV Table', category: 'Storage', points: 4 },
+  { id: 'closet-2d', name: '2-Doors Closet (2-deurs Kledingkast)', category: 'Storage', points: 8 },
+  { id: 'closet-3d', name: '3-Doors Closet (3-deurs Kledingkast)', category: 'Storage', points: 10 },
+  { id: 'cloth-rack', name: 'Cloth Rack (Kledingrek)', category: 'Storage', points: 3 },
+  { id: 'bookcase', name: 'Bookcase (Boekenkast)', category: 'Storage', points: 6 },
+  { id: 'dressoir', name: 'Drawer/ Dressoir (Dressoir)', category: 'Storage', points: 5 },
+  { id: 'tv-table', name: 'TV Table (TV Tafel)', category: 'Storage', points: 4 },
   
   // Tables (Tafels)
-  { id: 'office-table', name: 'Office Table', category: 'Tables', points: 5 },
-  { id: 'dining-table', name: 'Dining Table', category: 'Tables', points: 6 },
-  { id: 'side-table', name: 'Side Table', category: 'Tables', points: 2 },
-  { id: 'coffee-table', name: 'Coffee Table', category: 'Tables', points: 3 },
+  { id: 'office-table', name: 'Office Table (Bureau)', category: 'Tables', points: 5 },
+  { id: 'dining-table', name: 'Dining Table (Eeettafel)', category: 'Tables', points: 6 },
+  { id: 'side-table', name: 'Sidetable (Bijzettafel)', category: 'Tables', points: 2 },
+  { id: 'coffee-table', name: 'Coffee Table (Salontafel)', category: 'Tables', points: 3 },
   
   // Appliances (Apparaten)
-  { id: 'washing-machine', name: 'Washing Machine', category: 'Appliances', points: 12 },
-  { id: 'dryer', name: 'Dryer', category: 'Appliances', points: 8 },
-  { id: 'fridge-big', name: 'Big Fridge/Freezer', category: 'Appliances', points: 8 },
-  { id: 'fridge-small', name: 'Small Fridge/Freezer', category: 'Appliances', points: 4 },
-  { id: 'microwave', name: 'Microwave', category: 'Appliances', points: 1 },
+  { id: 'washing-machine', name: 'Washing Machine (Wasmachine)', category: 'Appliances', points: 12 },
+  { id: 'dryer', name: 'Dryer (Droger)', category: 'Appliances', points: 8 },
+  { id: 'fridge-big', name: 'Big Fridge/ Freezer (Grote Koelkast/ Vriezer)', category: 'Appliances', points: 8 },
+  { id: 'fridge-small', name: 'Small Fridge/ Freezer (Kleine Koelkast/ Vriezer)', category: 'Appliances', points: 4 },
   
   // Others (Overige Items)
-  { id: 'box', name: 'Box', category: 'Others', points: 0.3 },
-  { id: 'luggage', name: 'Luggage', category: 'Others', points: 0.5 },
-  { id: 'bike', name: 'Bike', category: 'Others', points: 6 },
-  { id: 'mirror', name: 'Mirror', category: 'Others', points: 2 },
-  { id: 'tv', name: 'TV', category: 'Others', points: 2 },
-  { id: 'computer', name: 'Computer', category: 'Others', points: 2 },
-  { id: 'standing-lamp', name: 'Standing Lamp', category: 'Others', points: 2 },
-  { id: 'small-appliance', name: 'Small Appliance', category: 'Others', points: 1 },
-  { id: 'small-household', name: 'Small Household Items', category: 'Others', points: 1 },
-  { id: 'small-furniture', name: 'Small Furniture', category: 'Others', points: 3 },
-  { id: 'big-furniture', name: 'Big Furniture', category: 'Others', points: 8 },
+  { id: 'box', name: 'Box (Doos)', category: 'Others', points: 0.3 },
+  { id: 'luggage', name: 'Luggage (Koffer)', category: 'Others', points: 0.5 },
+  { id: 'bike', name: 'Bike (Fiets)', category: 'Others', points: 6 },
+  { id: 'mirror', name: 'Mirror (Spiegel)', category: 'Others', points: 2 },
+  { id: 'tv', name: 'TV (Televisie)', category: 'Others', points: 2 },
+  { id: 'computer', name: 'Computer (Computer)', category: 'Others', points: 2 },
+  { id: 'standing-lamp', name: '(Standing) Lamp (Staande lamp)', category: 'Others', points: 2 },
+  { id: 'small-appliance', name: 'Small appliance (Klein Apparat)', category: 'Others', points: 1 },
+  { id: 'small-household', name: 'Small household items', category: 'Others', points: 1 },
+  { id: 'small-furniture', name: 'Small Furniture (Meubel klein)', category: 'Others', points: 3 },
+  { id: 'big-furniture', name: 'Big Furniture (Meubel groot)', category: 'Others', points: 8 },
 ];
 
-// Item categories for UI organization
+// Item categories for UI organization - now properly structured with item objects
 export const itemCategories = [
   { 
     name: "Sofa's and Chairs", 
-    items: ["2-Seater Sofa", "3-Seater Sofa", "Armchair", "Office Chair", "Chair"] 
+    items: [
+      { id: 'sofa-2p', name: '2-Seater Sofa (2-zitsbank)' },
+      { id: 'sofa-3p', name: '3-Seater Sofa (3-zitsbank)' },
+      { id: 'armchair', name: 'Armchair (Fauteuil)' },
+      { id: 'office-chair', name: 'Office Chair (Bureuaustoel)' },
+      { id: 'chair', name: 'Chair (Stoel)' }
+    ]
   },
   { 
     name: "Bed", 
-    items: ["1-Person Bed", "2-Person Bed", "1-Person Mattress", "2-Person Mattress", "Bedside Table"] 
+    items: [
+      { id: 'bed-1p', name: '1-Person Bed (1-persoons bed)' },
+      { id: 'bed-2p', name: '2-Person Bed (2-persoons bed)' },
+      { id: 'mattress-1p', name: '1-person Matress (1-persoons Matras)' },
+      { id: 'mattress-2p', name: '2-Person Matress (2-persoons Matras)' },
+      { id: 'bedside-table', name: 'Bedside Table (Nachtkast)' }
+    ]
   },
   { 
     name: "Storage", 
-    items: ["2-Doors Closet", "3-Doors Closet", "Cloth Rack", "Bookcase", "Drawer/Dressoir", "TV Table"] 
+    items: [
+      { id: 'closet-2d', name: '2-Doors Closet (2-deurs Kledingkast)' },
+      { id: 'closet-3d', name: '3-Doors Closet (3-deurs Kledingkast)' },
+      { id: 'cloth-rack', name: 'Cloth Rack (Kledingrek)' },
+      { id: 'bookcase', name: 'Bookcase (Boekenkast)' },
+      { id: 'dressoir', name: 'Drawer/ Dressoir (Dressoir)' },
+      { id: 'tv-table', name: 'TV Table (TV Tafel)' }
+    ]
   },
   { 
     name: "Tables", 
-    items: ["Office Table", "Dining Table", "Side Table", "Coffee Table"] 
+    items: [
+      { id: 'office-table', name: 'Office Table (Bureau)' },
+      { id: 'dining-table', name: 'Dining Table (Eeettafel)' },
+      { id: 'side-table', name: 'Sidetable (Bijzettafel)' },
+      { id: 'coffee-table', name: 'Coffee Table (Salontafel)' }
+    ]
   },
   { 
     name: "Appliances", 
-    items: ["Washing Machine", "Dryer", "Big Fridge/Freezer", "Small Fridge/Freezer", "Microwave"] 
+    items: [
+      { id: 'washing-machine', name: 'Washing Machine (Wasmachine)' },
+      { id: 'dryer', name: 'Dryer (Droger)' },
+      { id: 'fridge-big', name: 'Big Fridge/ Freezer (Grote Koelkast/ Vriezer)' },
+      { id: 'fridge-small', name: 'Small Fridge/ Freezer (Kleine Koelkast/ Vriezer)' }
+    ]
   },
   { 
     name: "Others", 
-    items: ["Box", "Luggage", "Bike", "Mirror", "TV", "Computer", "Standing Lamp", "Small Appliance", "Small Household Items", "Small Furniture", "Big Furniture"] 
+    items: [
+      { id: 'box', name: 'Box (Doos)' },
+      { id: 'luggage', name: 'Luggage (Koffer)' },
+      { id: 'bike', name: 'Bike (Fiets)' },
+      { id: 'mirror', name: 'Mirror (Spiegel)' },
+      { id: 'tv', name: 'TV (Televisie)' },
+      { id: 'computer', name: 'Computer (Computer)' },
+      { id: 'standing-lamp', name: '(Standing) Lamp (Staande lamp)' },
+      { id: 'small-appliance', name: 'Small appliance (Klein Apparat)' },
+      { id: 'small-household', name: 'Small household items' },
+      { id: 'small-furniture', name: 'Small Furniture (Meubel klein)' },
+      { id: 'big-furniture', name: 'Big Furniture (Meubel groot)' }
+    ]
   }
 ];
 

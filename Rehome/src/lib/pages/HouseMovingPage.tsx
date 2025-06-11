@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaMinus, FaPlus, FaToolbox, FaInfoCircle } from "react-icons/fa";
+import React, { useState, useEffect } from 'react';
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaTruck, FaMinus, FaPlus, FaInfoCircle, FaToolbox } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -7,7 +7,8 @@ import { itemCategories as constantsItemCategories } from '../../lib/constants';
 import fetchCheckoutUrl from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
-import pricingService, { PricingBreakdown } from '../../services/pricingService';
+import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
+import API_ENDPOINTS from '../api/config';
 
 // Define interfaces for component props
 interface ContactInfo {
@@ -58,32 +59,64 @@ const HouseMovingPage = () => {
         setStudentId(file || null);
     };
 
-    const calculatePrice = () => {
-        const pricingInput = {
-            serviceType: 'house-moving' as const,
-            pickupLocation: firstLocation,
-            dropoffLocation: secondLocation,
-            selectedDate,
-            isDateFlexible,
-            itemQuantities,
-            floorPickup: parseInt(floorPickup) || 0,
-            floorDropoff: parseInt(floorDropoff) || 0,
-            elevatorPickup,
-            elevatorDropoff,
-            assemblyItems: disassemblyItems,
-            extraHelperItems,
-            isStudent,
-            hasStudentId: !!studentId,
-            isEarlyBooking: false // This would be determined by checking calendar availability
-        };
+    const calculatePrice = async () => {
+        if (!firstLocation || !secondLocation) {
+            setPricingBreakdown(null);
+            return;
+        }
 
-        const breakdown = pricingService.calculatePricing(pricingInput);
-        setPricingBreakdown(breakdown);
+        try {
+            const input: PricingInput = {
+                serviceType: 'house-moving',
+                pickupLocation: firstLocation,
+                dropoffLocation: secondLocation,
+                selectedDate: selectedDate || '',
+                isDateFlexible: isDateFlexible,
+                itemQuantities: itemQuantities,
+                floorPickup: parseInt(floorPickup) || 0,
+                floorDropoff: parseInt(floorDropoff) || 0,
+                elevatorPickup,
+                elevatorDropoff,
+                assemblyItems: disassemblyItems,
+                extraHelperItems,
+                isStudent,
+                hasStudentId: !!studentId,
+                isEarlyBooking: false // This would be determined by checking calendar availability
+            };
+
+            // Use async pricing calculation
+            const result = await pricingService.calculatePricing(input);
+            setPricingBreakdown(result);
+        } catch (error) {
+            console.error('Error calculating pricing:', error);
+            setPricingBreakdown(null);
+        }
     };
 
+    // Debounced price calculation to avoid excessive API calls while typing
     useEffect(() => {
-        calculatePrice();
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, selectedDate, extraHelper, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, firstLocation, secondLocation, isDateFlexible, isStudent, studentId]);
+        const debounceTimer = setTimeout(() => {
+            // Only calculate price if we have both complete locations
+            if (firstLocation && secondLocation && 
+                firstLocation.trim().length > 3 && secondLocation.trim().length > 3) {
+                console.log('💰 Calculating price for:', firstLocation, '→', secondLocation);
+                calculatePrice();
+            } else {
+                // Clear price if locations are incomplete
+                setPricingBreakdown(null);
+                console.log('⏳ Waiting for complete locations...');
+            }
+        }, 400); // 400ms debounce - faster pricing updates
+
+        return () => clearTimeout(debounceTimer);
+    }, [firstLocation, secondLocation, selectedDate, isDateFlexible]);
+
+    // Immediate price calculation for non-location changes
+    useEffect(() => {
+        if (firstLocation && secondLocation) {
+            calculatePrice();
+        }
+    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, isStudent, studentId]);
 
     const nextStep = () => {
         // Validate date selection in step 4
@@ -191,7 +224,7 @@ const HouseMovingPage = () => {
 
         try {
             // Submit the house moving request
-            const response = await fetch("https://rehome-backend.vercel.app/api/house-moving-requests", {
+            const response = await fetch(API_ENDPOINTS.MOVING.HOUSE_REQUEST, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -206,7 +239,7 @@ const HouseMovingPage = () => {
 
             // Send confirmation email
             try {
-                const emailResponse = await fetch("https://rehome-backend.vercel.app/api/send-email", {
+                const emailResponse = await fetch(API_ENDPOINTS.EMAIL.SEND, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
@@ -257,11 +290,36 @@ const HouseMovingPage = () => {
 
     // Add a real-time pricing display component that will be shown throughout the process
     const PriceSummary: React.FC<PriceSummaryProps> = ({ pricingBreakdown }) => {
+        // Step 1: Don't show any pricing estimate yet - only after locations AND date
+        if (step === 1) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">Complete location details to continue</p>
+                </div>
+            );
+        }
+
+        // Step 2+: Show pricing only if we have both locations and date
         if (!pricingBreakdown) {
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
-                    <p className="text-gray-500">Add items to see pricing</p>
+                    <p className="text-gray-500">Select a date to see base pricing</p>
+                </div>
+            );
+        }
+
+        // Check if we have valid base pricing (location + date provided)
+        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && selectedDate;
+        
+        if (!hasValidBasePricing) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">
+                        {!selectedDate ? "Select a date to see base pricing" : "Enter both pickup and dropoff locations"}
+                    </p>
                 </div>
             );
         }
@@ -274,10 +332,30 @@ const HouseMovingPage = () => {
                         <span>Base Price:</span>
                         <span>€{pricingBreakdown.basePrice.toFixed(2)}</span>
                     </div>
+                    {pricingBreakdown.breakdown.baseCharge.city && (
+                        <div className="text-xs text-gray-500 ml-4">
+                            {pricingBreakdown.breakdown.baseCharge.city} - {
+                                pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
+                                pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
+                            }
+                        </div>
+                    )}
                     <div className="flex justify-between">
                         <span>Items:</span>
                         <span>€{pricingBreakdown.itemValue.toFixed(2)}</span>
                     </div>
+                    {pricingBreakdown.distanceCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                            <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {pricingBreakdown.distanceCost === 0 && pricingBreakdown.breakdown.distance.distanceKm > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                            <span>Free</span>
+                        </div>
+                    )}
                     {pricingBreakdown.carryingCost > 0 && (
                         <div className="flex justify-between">
                             <span>Carrying:</span>
@@ -288,12 +366,6 @@ const HouseMovingPage = () => {
                         <div className="flex justify-between">
                             <span>Assembly:</span>
                             <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
-                        </div>
-                    )}
-                    {pricingBreakdown.distanceCost > 0 && (
-                        <div className="flex justify-between">
-                            <span>Distance:</span>
-                            <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
                         </div>
                     )}
                     {pricingBreakdown.extraHelperCost > 0 && (
@@ -518,10 +590,10 @@ const HouseMovingPage = () => {
                                             <h3 className="text-lg font-medium text-gray-900 mb-3">{category.name}</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 {category.items.map((item) => {
-                                                    const itemId = `${category.name}-${item}`;
+                                                    const itemId = item.id;
                                                     return (
                                                         <div key={itemId} className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
-                                                            <span className="text-gray-800">{item}</span>
+                                                            <span className="text-gray-800">{item.name}</span>
                                                             <div className="flex items-center">
                                                                 <button
                                                                     type="button"
@@ -603,23 +675,30 @@ const HouseMovingPage = () => {
                                                         <p className="text-sm text-gray-600">
                                                             Select which items need disassembly/reassembly:
                                                         </p>
-                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((item, index) => (
-                                                            <div key={index} className="flex items-center">
-                                                                <input
-                                                                    id={`disassembly-${item}`}
-                                                                    type="checkbox"
-                                                                    checked={disassemblyItems[item] || false}
-                                                                    onChange={(e) => setDisassemblyItems({
-                                                                        ...disassemblyItems,
-                                                                        [item]: e.target.checked
-                                                                    })}
-                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                />
-                                                                <label htmlFor={`disassembly-${item}`} className="ml-2 block text-sm text-gray-700">
-                                                                    {item.split('-')[1]} ({itemQuantities[item]})
-                                                                </label>
-                                                            </div>
-                                                        ))}
+                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
+                                                            const itemData = constantsItemCategories
+                                                                .flatMap(category => category.items)
+                                                                .find(item => item.id === itemId);
+                                                            const itemName = itemData ? itemData.name : itemId;
+                                                            
+                                                            return (
+                                                                <div key={index} className="flex items-center">
+                                                                    <input
+                                                                        id={`disassembly-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={disassemblyItems[itemId] || false}
+                                                                        onChange={(e) => setDisassemblyItems({
+                                                                            ...disassemblyItems,
+                                                                            [itemId]: e.target.checked
+                                                                        })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({itemQuantities[itemId]})
+                                                                    </label>
+                                                                </div>
+                                                            );
+                                                        })}
                                                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
                                                             <p className="text-sm text-gray-500 italic">No items selected yet. Please add items in the previous step.</p>
                                                         )}
@@ -663,23 +742,30 @@ const HouseMovingPage = () => {
                                                         <p className="text-sm text-gray-600">
                                                             Select which items need an extra helper:
                                                         </p>
-                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((item, index) => (
-                                                            <div key={index} className="flex items-center">
-                                                                <input
-                                                                    id={`helper-${item}`}
-                                                                    type="checkbox"
-                                                                    checked={extraHelperItems[item] || false}
-                                                                    onChange={(e) => setExtraHelperItems({
-                                                                        ...extraHelperItems,
-                                                                        [item]: e.target.checked
-                                                                    })}
-                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                />
-                                                                <label htmlFor={`helper-${item}`} className="ml-2 block text-sm text-gray-700">
-                                                                    {item.split('-')[1]} ({itemQuantities[item]})
-                                                                </label>
-                                                            </div>
-                                                        ))}
+                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
+                                                            const itemData = constantsItemCategories
+                                                                .flatMap(category => category.items)
+                                                                .find(item => item.id === itemId);
+                                                            const itemName = itemData ? itemData.name : itemId;
+                                                            
+                                                            return (
+                                                                <div key={index} className="flex items-center">
+                                                                    <input
+                                                                        id={`helper-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={extraHelperItems[itemId] || false}
+                                                                        onChange={(e) => setExtraHelperItems({
+                                                                            ...extraHelperItems,
+                                                                            [itemId]: e.target.checked
+                                                                        })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`helper-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({itemQuantities[itemId]})
+                                                                    </label>
+                                                                </div>
+                                                            );
+                                                        })}
                                                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
                                                             <p className="text-sm text-gray-500 italic">No items selected yet. Please add items in the previous step.</p>
                                                         )}
@@ -882,16 +968,23 @@ const HouseMovingPage = () => {
                                             <h4 className="font-medium text-gray-900">Items</h4>
                                             {Object.keys(itemQuantities).length > 0 ? (
                                                 <ul className="mt-2 space-y-1">
-                                                    {Object.entries(itemQuantities).map(([itemId, quantity]) => (
-                                                        <li key={itemId} className="flex justify-between text-sm">
-                                                            <span className="text-gray-600">
-                                                                {itemId.split('-')[1]} 
-                                                                {disassemblyItems[itemId] && <span className="ml-1 text-orange-600">(Disassembly)</span>}
-                                                                {extraHelperItems[itemId] && <span className="ml-1 text-orange-600">(Extra Helper)</span>}
-                                                            </span>
-                                                            <span className="text-gray-900">{quantity}x</span>
-                                                        </li>
-                                                    ))}
+                                                    {Object.entries(itemQuantities).map(([itemId, quantity]) => {
+                                                        const itemData = constantsItemCategories
+                                                            .flatMap(category => category.items)
+                                                            .find(item => item.id === itemId);
+                                                        const itemName = itemData ? itemData.name : itemId;
+                                                        
+                                                        return (
+                                                            <li key={itemId} className="flex justify-between text-sm">
+                                                                <span className="text-gray-600">
+                                                                    {itemName}
+                                                                    {disassemblyItems[itemId] && <span className="ml-1 text-orange-600">(Disassembly)</span>}
+                                                                    {extraHelperItems[itemId] && <span className="ml-1 text-orange-600">(Extra Helper)</span>}
+                                                                </span>
+                                                                <span className="text-gray-900">{quantity}x</span>
+                                                            </li>
+                                                        );
+                                                    })}
                                                 </ul>
                                             ) : (
                                                 <p className="text-gray-600 text-sm">No items selected</p>

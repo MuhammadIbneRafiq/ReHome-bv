@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-toastify';
 import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
+import API_ENDPOINTS from '../api/config';
 
 const MarketplacePage = () => {
     const { t } = useTranslation();
@@ -32,7 +33,7 @@ const MarketplacePage = () => {
             setError(null);
 
             try {
-                const response = await fetch('https://rehome-backend.vercel.app/api/furniture'); // Use Vercel backend
+                const response = await fetch(API_ENDPOINTS.FURNITURE.LIST);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -131,7 +132,7 @@ const MarketplacePage = () => {
             });
 
             // Create Mollie payment
-            const response = await fetch('https://rehome-backend.vercel.app/mollie', {
+            const response = await fetch(API_ENDPOINTS.PAYMENT.MOLLIE, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
