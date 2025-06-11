@@ -547,7 +547,6 @@ class PricingService {
     // Now handle special item transport base charge logic
     if (pickupCity && dropoffCity) {
       let finalBaseCharge: number;
-      let chargeDescription: string;
       
       if (pickupCity === dropoffCity) {
         // Transport within same city
@@ -558,15 +557,12 @@ class PricingService {
           // Early booking discount: 50% off normal rate
           const normalRate = cityBaseCharges[pickupCity]?.normal || 119;
           finalBaseCharge = Math.round(normalRate * 0.5);
-          chargeDescription = `${pickupCity} early booking (50% off)`;
         } else if (isCityScheduled) {
           // City day rate
           finalBaseCharge = cityBaseCharges[pickupCity]?.cityDay || 35;
-          chargeDescription = `${pickupCity} city day rate`;
         } else {
           // Normal rate
           finalBaseCharge = cityBaseCharges[pickupCity]?.normal || 119;
-          chargeDescription = `${pickupCity} normal rate`;
         }
       } else {
         // Transport between different cities - Split base charge logic
@@ -613,7 +609,6 @@ class PricingService {
         
         // Split the base charge (average of pickup and dropoff)
         finalBaseCharge = Math.round((pickupCharge + dropoffCharge) / 2);
-        chargeDescription = `Split base charge: ${pickupCity} (€${pickupCharge}) + ${dropoffCity} (€${dropoffCharge}) / 2`;
       }
       
       // Update the breakdown with the calculated base charge
