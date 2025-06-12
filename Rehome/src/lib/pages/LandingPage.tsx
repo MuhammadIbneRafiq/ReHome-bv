@@ -1,16 +1,10 @@
 import Footer from "../../components/Footer";
-// Import Images - Assuming you have these files in assets
-// import sofaImage from "../../assets/IMG-20250208-WA0001.jpg";
-// import tableImage from "../../assets/IMG-20250208-WA0010.jpg";
-// import chairImage from "../../assets/IMG-20250208-WA0013.jpg";
-import logoImage from "../../assets/logorehome.jpg"; // Import the ReHome logo
+import truckImage from "../../assets/final_landing_logo-removebg-preview.png"; // Import the truck image
 import { motion } from "framer-motion"; // Import Framer Motion
 import { FaHandshake, FaStar, FaHome, FaTruck } from "react-icons/fa"; // Import Icons
 import { Link } from "react-router-dom";
 import { MdCheckCircle, } from "react-icons/md";
-// import { FurnitureItem } from "../../types/furniture";
 import { useTranslation } from "react-i18next";
-// import { translateFurnitureItem } from "../utils/dynamicTranslation";
 import { useState } from "react";
 import FeaturedItems from "../../components/marketplace/FeaturedItems";
 
@@ -114,9 +108,9 @@ const LandingPage = () => {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
                 />
-                {/* Road markings - infinite animation */}
+                {/* Road markings - infinite animation - positioned for natural truck placement */}
                 <motion.div
-                  className="absolute bottom-[14px] w-full flex justify-center"
+                  className="absolute bottom-[50px] w-full flex justify-center"
                   initial={{ x: "100%" }}
                   animate={{ x: "-100%" }}
                   transition={{
@@ -132,7 +126,7 @@ const LandingPage = () => {
                     ))}
                   </div>
                 </motion.div>
-                {/* Truck with orange box and logo overlay */}
+                {/* Truck with ReHome logo overlay - positioned lower on the road */}
                 <motion.div
                   animate={{
                     y: [-2, 2],
@@ -152,24 +146,19 @@ const LandingPage = () => {
                       ease: "easeInOut"
                     }
                   }}
-                  className="absolute bottom-12 left-[30%] transform -translate-x-1/2"
+                  className="absolute bottom left-[10%] transform -translate-x-1/2"
                 >
-                  <div className="relative flex items-center">
-                    {/* Truck base image (hide original box) */}
+                  <div className="relative">
+                    {/* Truck base image */}
                     <img 
-                      src="https://static.vecteezy.com/system/resources/previews/024/800/829/non_2x/a-delivery-truck-flat-design-home-delivery-service-concept-with-a-delivery-van-delivery-van-on-a-highway-flat-illustration-free-png.png" 
-                      alt="Moving Truck" 
-                      className="w-80 h-auto"
-                      style={{ filter: 'brightness(0.85)' }}
+                      src={truckImage}
+                      alt="ReHome Moving Truck" 
+                      className="h-auto max-w-full"
+                      style={{ 
+                        filter: 'brightness(0.85)',
+                        width: '480px' // 2x the original w-60 (240px)
+                      }}
                     />
-                    {/* Orange box overlay */}
-                    <div className="absolute top-[0%] left-[0%] w-[209px] h-[119px] bg-[#F97535] rounded-md flex items-center justify-center z-10">
-                      <img 
-                        src={logoImage} 
-                        alt="ReHome Logo" 
-                        className="w-14 h-14 object-contain" 
-                      />
-                    </div>
                   </div>
                 </motion.div>
               </div>
