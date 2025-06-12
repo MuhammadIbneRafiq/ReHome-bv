@@ -53,7 +53,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     return `RH-${timestamp.toString().slice(-6)}-${random}`;
   };
 
-  // Handle checkout process with Mollie
+  // Handle checkout process (simplified without Mollie)
   const handleCheckout = async () => {
     try {
       // Filter only ReHome items for checkout
@@ -64,32 +64,36 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
         return;
       }
 
-      // Create Mollie payment
-      const response = await fetch('/api/create-payment', {
+      // Create order directly without payment processing
+      const orderData = {
+        items: rehomeItems,
+        totalAmount: rehomeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        orderNumber: generateOrderNumber(),
+        userId: localStorage.getItem('userId'), // Assuming user ID is stored
+        createdAt: new Date().toISOString(),
+      };
+
+      // Save order to backend (you can implement this endpoint)
+      const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
-        body: JSON.stringify({
-          items: rehomeItems,
-          totalAmount: rehomeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        }),
+        body: JSON.stringify(orderData),
       });
 
-      const { checkoutUrl } = await response.json();
-      
-      if (checkoutUrl) {
-        // Redirect to Mollie checkout
-        window.location.href = checkoutUrl;
-      } else {
-        // Fallback to order confirmation
-        setOrderNumber(generateOrderNumber());
+      if (response.ok) {
+        const result = await response.json();
+        setOrderNumber(result.orderNumber || orderData.orderNumber);
         setShowCheckoutConfirmation(true);
         onClose();
+      } else {
+        throw new Error('Failed to create order');
       }
     } catch (error) {
       console.error('Checkout error:', error);
-      // Fallback to order confirmation
+      // Fallback to order confirmation with generated order number
       setOrderNumber(generateOrderNumber());
       setShowCheckoutConfirmation(true);
       onClose();

@@ -70,6 +70,11 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
     const [cityName, setCityName] = useState(''); // Added city name.
     const [locationCoords, setLocationCoords] = useState<{lat: number, lon: number} | null>(null);
     const [isLocationLoading, setIsLocationLoading] = useState(false);
+    
+    // Terms and Conditions agreement state
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [termsAccepted, setTermsAccepted] = useState(false);
+    
     const navigate = useNavigate(); // Initialize navigate
 
     // Categories and subcategories (same as in MarketplaceFilter)
@@ -201,6 +206,53 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         }
     };
 
+    // Handle Terms of Service viewing
+    const handleViewTerms = async () => {
+        try {
+            window.open(API_ENDPOINTS.LEGAL.TERMS_OF_SERVICE, '_blank');
+        } catch (error) {
+            console.error('Error opening Terms of Service:', error);
+        }
+    };
+
+    // Handle Privacy Policy viewing
+    const handleViewPrivacy = async () => {
+        try {
+            window.open(API_ENDPOINTS.LEGAL.PRIVACY_POLICY, '_blank');
+        } catch (error) {
+            console.error('Error opening Privacy Policy:', error);
+        }
+    };
+
+    // Handle terms acceptance and track progress
+    const handleTermsAcceptance = async (checked: boolean) => {
+        setAgreedToTerms(checked);
+        
+        if (checked && user) {
+            try {
+                // Send acceptance to backend to track progress
+                await fetch(API_ENDPOINTS.LEGAL.ACCEPT_TERMS, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                    },
+                    body: JSON.stringify({
+                        userId: user.sub, // Use 'sub' field from UserData
+                        acceptedAt: new Date().toISOString(),
+                        termsVersion: '1.0', // You can version your terms
+                        privacyVersion: '1.0'
+                    }),
+                });
+                setTermsAccepted(true);
+                console.log('Terms acceptance recorded successfully');
+            } catch (error) {
+                console.error('Error recording terms acceptance:', error);
+                // Don't prevent the user from continuing if logging fails
+            }
+        }
+    };
+
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         setUploadError(null); 
         if (e.target.files) {
@@ -212,6 +264,13 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         e.preventDefault();
         setSubmitError(null); // Clear any previous submit errors
         setSubmitting(true);
+
+        // Check if terms are agreed to
+        if (!agreedToTerms) {
+            setSubmitError('You must agree to the Terms of Service and Privacy Policy before submitting.');
+            setSubmitting(false);
+            return;
+        }
 
         // Safety check: prevent non-admin users from submitting ReHome listings
         if (isRehome && !isAdmin) {
@@ -277,6 +336,10 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     flexibleDateStart: hasFlexibleDates && flexibleDateStart ? flexibleDateStart : null,
                     flexibleDateEnd: hasFlexibleDates && flexibleDateEnd ? flexibleDateEnd : null,
                     preferredDate: hasFlexibleDates && preferredDate ? preferredDate : null,
+                    
+                    // Terms acceptance
+                    termsAccepted: true,
+                    termsAcceptedAt: new Date().toISOString(),
                 }),
             });
 
@@ -606,6 +669,49 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     />
                 </div>
 
+                {/* Terms and Conditions agreement */}
+                <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-start space-x-3">
+                        <input
+                            type="checkbox"
+                            id="terms"
+                            checked={agreedToTerms}
+                            onChange={(e) => handleTermsAcceptance(e.target.checked)}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mt-1"
+                            required
+                        />
+                        <div className="flex-1">
+                            <label htmlFor="terms" className="block text-sm font-medium text-gray-700 mb-2">
+                                Agreement to Terms and Conditions *
+                            </label>
+                            <p className="text-sm text-gray-600 mb-3">
+                                By proceeding, you agree to our Terms of Service and Privacy Policy.
+                            </p>
+                            <div className="flex space-x-4">
+                                <button
+                                    type="button"
+                                    onClick={handleViewTerms}
+                                    className="text-indigo-600 hover:text-indigo-800 text-sm font-medium underline focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded"
+                                >
+                                    📄 View Terms of Service
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleViewPrivacy}
+                                    className="text-indigo-600 hover:text-indigo-800 text-sm font-medium underline focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 rounded"
+                                >
+                                    🔒 View Privacy Policy
+                                </button>
+                            </div>
+                            {termsAccepted && (
+                                <div className="mt-2 flex items-center text-sm text-green-600">
+                                    <span className="mr-1">✓</span>
+                                    Terms acceptance recorded successfully
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
 
                 {submitError && <p className="text-red-500">{submitError}</p>}
                 <div>

@@ -154,22 +154,47 @@ const LandingPage = () => {
                   }}
                   className="absolute bottom-12 left-[30%] transform -translate-x-1/2"
                 >
-                  <div className="relative flex items-center">
-                    {/* Truck base image (hide original box) */}
+                  <div className="relative">
+                    {/* Truck base image */}
                     <img 
                       src="https://static.vecteezy.com/system/resources/previews/024/800/829/non_2x/a-delivery-truck-flat-design-home-delivery-service-concept-with-a-delivery-van-delivery-van-on-a-highway-flat-illustration-free-png.png" 
                       alt="Moving Truck" 
-                      className="w-80 h-auto"
+                      className="w-80 h-auto max-w-full"
                       style={{ filter: 'brightness(0.85)' }}
                     />
-                    {/* Orange box overlay */}
-                    <div className="absolute top-[0%] left-[0%] w-[209px] h-[119px] bg-[#F97535] rounded-md flex items-center justify-center z-10">
+                    {/* Responsive orange box overlay using percentage positioning */}
+                    <div 
+                      className="absolute bg-[#F97535] rounded-md flex items-center justify-center shadow-lg"
+                      style={{
+                        top: '6%',
+                        left: '12%',
+                        width: '52%',
+                        height: '45%',
+                        transform: 'translateZ(0)', // Hardware acceleration
+                      }}
+                    >
                       <img 
                         src={logoImage} 
                         alt="ReHome Logo" 
-                        className="w-14 h-14 object-contain" 
+                        className="w-[35%] h-[35%] object-contain filter drop-shadow-sm" 
+                        style={{
+                          maxWidth: '60px',
+                          maxHeight: '60px',
+                          minWidth: '20px',
+                          minHeight: '20px'
+                        }}
                       />
                     </div>
+                    {/* Optional: Add a subtle border to the box for better definition */}
+                    <div 
+                      className="absolute border-2 border-orange-600 rounded-md pointer-events-none opacity-20"
+                      style={{
+                        top: '6%',
+                        left: '12%',
+                        width: '52%',
+                        height: '45%',
+                      }}
+                    />
                   </div>
                 </motion.div>
               </div>

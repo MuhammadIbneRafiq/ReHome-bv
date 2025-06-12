@@ -106,9 +106,14 @@ class ApiService {
     return this.request<{ success: boolean }>('POST', API_ENDPOINTS.EMAIL.SEND, emailData);
   }
 
-  // Payment methods
-  async createMolliePayment(amount: number) {
-    return this.request<{ checkoutUrl: string }>('POST', API_ENDPOINTS.PAYMENT.MOLLIE, { amount });
+  // Legal document methods
+  async acceptTerms(acceptanceData: {
+    userId: string;
+    acceptedAt: string;
+    termsVersion: string;
+    privacyVersion: string;
+  }) {
+    return this.request<{ success: boolean }>('POST', API_ENDPOINTS.LEGAL.ACCEPT_TERMS, acceptanceData, true);
   }
 
   // Pricing methods

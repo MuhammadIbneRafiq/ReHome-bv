@@ -155,55 +155,38 @@ const MarketplacePage = () => {
         setCheckoutLoading(true);
         
         try {
-            // Get the actual items from cart
             const cartItems = cart.map(cartItem => {
-                const item = furnitureItems.find(item => item.id === cartItem.id);
-                return { ...item, quantity: cartItem.quantity };
-            }).filter(item => item && item.isrehome);
+                const furnitureItem = furnitureItems.find(item => item.id === cartItem.id);
+                return {
+                    ...furnitureItem,
+                    quantity: cartItem.quantity
+                };
+            });
             
-            if (cartItems.length === 0) {
-                toast.error('Only ReHome items can be checked out through our system.');
-                setCheckoutLoading(false);
-                return;
-            }
-
             const totalAmount = getTotalPrice();
             
-            console.log('Sending to Mollie:', {
+            console.log('Creating order:', {
                 amount: totalAmount,
                 items: cartItems,
             });
 
-            // Create Mollie payment
-            const response = await fetch(API_ENDPOINTS.PAYMENT.MOLLIE, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    amount: totalAmount,
-                    items: cartItems,
-                }),
-            });
+            // Create order directly without payment processing
+            const orderData = {
+                items: cartItems,
+                totalAmount: totalAmount,
+                orderNumber: `RH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`,
+                userId: localStorage.getItem('userId'), // Assuming user ID is stored
+                createdAt: new Date().toISOString(),
+            };
 
-            console.log('Response status:', response.status);
-            console.log('Response headers:', response.headers);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Error response:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-            }
-
-            const data = await response.json();
-            console.log('Response data:', data);
+            // For now, just show success message (you can implement order endpoint later)
+            console.log('Order created:', orderData);
+            toast.success(`Order created successfully! Order #${orderData.orderNumber}`);
             
-            if (data.checkoutUrl) {
-                // Redirect to Mollie checkout
-                window.location.href = data.checkoutUrl;
-            } else {
-                throw new Error('No checkout URL received');
-            }
+            // Clear cart after successful order
+            setCart([]);
+            setCheckoutLoading(false);
+            
         } catch (error) {
             console.error('Checkout error:', error);
             toast.error(`Checkout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

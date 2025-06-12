@@ -60,10 +60,11 @@ export const API_ENDPOINTS = {
     MARK_READ: `${API_BASE_URL}/api/messages/read`,
   },
 
-  // Payment
-  PAYMENT: {
-    MOLLIE: `${API_BASE_URL}/api/mollie`,
-    MOLLIE_WEBHOOK: `${API_BASE_URL}/api/mollie-webhook`,
+  // Legal Documents
+  LEGAL: {
+    TERMS_OF_SERVICE: `${API_BASE_URL}/api/legal/terms-of-service`,
+    PRIVACY_POLICY: `${API_BASE_URL}/api/legal/privacy-policy`,
+    ACCEPT_TERMS: `${API_BASE_URL}/api/legal/accept-terms`,
   },
 
   // Pricing

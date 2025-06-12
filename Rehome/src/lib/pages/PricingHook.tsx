@@ -1,35 +1,37 @@
 import { toast } from 'react-toastify';
-import API_ENDPOINTS from '../api/config';
 
-const fetchCheckoutUrl = async (amount: number): Promise<string | null> => {
+const createOrder = async (orderData: {
+    items: any[];
+    totalAmount: number;
+    userId?: string;
+}): Promise<{ success: boolean; orderNumber?: string; error?: string }> => {
     try {
+        const orderNumber = `RH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
+        
         const response = await fetch(
-            API_ENDPOINTS.PAYMENT.MOLLIE, // Update this to your backend URL
+            '/api/orders', // You can implement this endpoint later
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
                 },
-                body: JSON.stringify({ amount }),
+                body: JSON.stringify({
+                    ...orderData,
+                    orderNumber,
+                    createdAt: new Date().toISOString(),
+                }),
             }
         );
         
-        console.log("Response:", response);
+        console.log("Order creation response:", response);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
-        const data = await response.json();
         
-        if (data.checkoutUrl) {
-            return data.checkoutUrl;
-        } else {
-            console.error("No checkout URL in response:", data);
-            return null;
-        }
-    } catch (error) {
-        toast.error('There was an error. Please try again.', {
+        toast.success(`Order created successfully! Order #${orderNumber}`, {
             position: "top-right",
             autoClose: 3000,
             hideProgressBar: false,
@@ -38,9 +40,22 @@ const fetchCheckoutUrl = async (amount: number): Promise<string | null> => {
             draggable: true,
             progress: undefined,
         });
-        console.error("Error fetching checkout URL:", error);
-        return null;
+        
+        return { success: true, orderNumber };
+        
+    } catch (error) {
+        toast.error('There was an error creating your order. Please try again.', {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+        });
+        console.error("Error creating order:", error);
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
 };
 
-export default fetchCheckoutUrl;
+export default createOrder;
