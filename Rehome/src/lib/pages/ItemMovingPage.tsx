@@ -3,7 +3,7 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import fetchCheckoutUrl from './PricingHook.tsx';
+import createOrder from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { itemCategories, getItemPoints } from '../../lib/constants';
@@ -258,17 +258,34 @@ const ItemMovingPage = () => {
                 progress: undefined,
             });
 
-            // Redirect to payment after successful submission
+            // Redirect to order creation after successful submission
             const finalPrice = pricingBreakdown?.total || 0;
             if (finalPrice > 0) {
                 try {
-                    await fetchCheckoutUrl(finalPrice);
+                    const orderResult = await createOrder({
+                        items: Object.entries(itemQuantities)
+                            .filter(([_, quantity]) => quantity > 0)
+                            .map(([itemId, quantity]) => ({
+                                itemId,
+                                quantity,
+                                name: itemId.replace(/-/g, ' - '),
+                                points: getItemPoints(itemId) * quantity
+                            })),
+                        totalAmount: finalPrice,
+                        userId: localStorage.getItem('userId') || undefined
+                    });
+                    
+                    if (orderResult.success) {
+                        toast.success(`Order created successfully! Order #${orderResult.orderNumber}`);
+                    } else {
+                        throw new Error(orderResult.error || 'Failed to create order');
+                    }
                 } catch (error) {
-                    console.error("Error redirecting to payment:", error);
-                    toast.error("Failed to redirect to payment page. Please try again.");
+                    console.error("Error creating order:", error);
+                    toast.error("Failed to create order. Please try again.");
                 }
             } else {
-                toast.error("Could not process payment: invalid price");
+                toast.error("Could not process order: invalid price");
             }
         } catch (error) {
             console.error("Error submitting the moving request:", error);

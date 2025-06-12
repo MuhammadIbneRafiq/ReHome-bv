@@ -3,8 +3,8 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaMinus, FaPlus, FaInfoCircle
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { itemCategories as constantsItemCategories } from '../../lib/constants';
-import fetchCheckoutUrl from './PricingHook.tsx';
+import { itemCategories, getItemPoints } from '../../lib/constants';
+import createOrder from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
@@ -270,17 +270,34 @@ const HouseMovingPage = () => {
                 progress: undefined,
             });
 
-            // Redirect to payment after successful submission
+            // Redirect to order creation after successful submission
             const finalPrice = pricingBreakdown?.total || 0;
             if (finalPrice > 0) {
                 try {
-                    await fetchCheckoutUrl(finalPrice);
+                    const orderResult = await createOrder({
+                        items: Object.entries(itemQuantities)
+                            .filter(([_, quantity]) => quantity > 0)
+                            .map(([itemId, quantity]) => ({
+                                itemId,
+                                quantity,
+                                name: itemId.replace(/-/g, ' - '),
+                                points: getItemPoints(itemId) * quantity
+                            })),
+                        totalAmount: finalPrice,
+                        userId: localStorage.getItem('userId') || undefined
+                    });
+                    
+                    if (orderResult.success) {
+                        toast.success(`Order created successfully! Order #${orderResult.orderNumber}`);
+                    } else {
+                        throw new Error(orderResult.error || 'Failed to create order');
+                    }
                 } catch (error) {
-                    console.error("Error redirecting to payment:", error);
-                    toast.error("Failed to redirect to payment page. Please try again.");
+                    console.error("Error creating order:", error);
+                    toast.error("Failed to create order. Please try again.");
                 }
             } else {
-                toast.error("Could not process payment: invalid price");
+                toast.error("Could not process order: invalid price");
             }
         } catch (error) {
             console.error("Error submitting house moving request:", error);
@@ -585,7 +602,7 @@ const HouseMovingPage = () => {
                                         Select the items you need to move. This helps us estimate the size of vehicle and resources needed.
                                     </p>
                                     
-                                    {constantsItemCategories.map((category) => (
+                                    {itemCategories.map((category) => (
                                         <div key={category.name} className="mb-6">
                                             <h3 className="text-lg font-medium text-gray-900 mb-3">{category.name}</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -676,10 +693,9 @@ const HouseMovingPage = () => {
                                                             Select which items need disassembly & reassembly:
                                                         </p>
                                                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
-                                                            const itemData = constantsItemCategories
-                                                                .flatMap(category => category.items)
-                                                                .find(item => item.id === itemId);
-                                                            const itemName = itemData ? itemData.name : itemId;
+                                                            const itemData = itemCategories
+                                                                .find(category => category.items.some(i => i.id === itemId));
+                                                            const itemName = itemData ? itemData.items.find(i => i.id === itemId)?.name : itemId;
                                                             
                                                             return (
                                                                 <div key={index} className="flex items-center">
@@ -933,10 +949,9 @@ const HouseMovingPage = () => {
                                             {Object.keys(itemQuantities).length > 0 ? (
                                                 <ul className="mt-2 space-y-1">
                                                     {Object.entries(itemQuantities).map(([itemId, quantity]) => {
-                                                        const itemData = constantsItemCategories
-                                                            .flatMap(category => category.items)
-                                                            .find(item => item.id === itemId);
-                                                        const itemName = itemData ? itemData.name : itemId;
+                                                        const itemData = itemCategories
+                                                            .find(category => category.items.some(i => i.id === itemId));
+                                                        const itemName = itemData ? itemData.items.find(i => i.id === itemId)?.name : itemId;
                                                         
                                                         return (
                                                             <li key={itemId} className="flex justify-between text-sm">
