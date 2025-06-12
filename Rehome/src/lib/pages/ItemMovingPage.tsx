@@ -675,9 +675,9 @@ const ItemMovingPage = () => {
                                             className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
                                         >
                                             <option value="">Select a time slot...</option>
-                                            <option value="morning">Morning (9:00 - 12:00)</option>
-                                            <option value="afternoon">Afternoon (12:00 - 17:00)</option>
-                                            <option value="evening">Evening (17:00 - 20:00)</option>
+                                            <option value="morning">Morning (8:00 - 12:00)</option>
+                                            <option value="afternoon">Afternoon (12:00 - 16:00)</option>
+                                            <option value="evening">Evening (16:00 - 20:00)</option>
                                             <option value="anytime">Anytime</option>
                                         </select>
                                     </div>
@@ -1028,9 +1028,9 @@ const ItemMovingPage = () => {
                                             )}
                                             {preferredTimeSpan && (
                                                 <p className="mt-1"><span className="text-gray-500">Time:</span> <span className="font-medium">
-                                                    {preferredTimeSpan === 'morning' ? 'Morning (9:00 - 12:00)' : 
-                                                     preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 17:00)' : 
-                                                     preferredTimeSpan === 'evening' ? 'Evening (17:00 - 20:00)' : 'Anytime'}
+                                                    {preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
+                                                     preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
+                                                     preferredTimeSpan === 'evening' ? 'Evening (16:00 - 20:00)' : 'Anytime'}
                                                 </span></p>
                                             )}
                                         </div>

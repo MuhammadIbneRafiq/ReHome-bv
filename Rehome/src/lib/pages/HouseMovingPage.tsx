@@ -556,9 +556,9 @@ const HouseMovingPage = () => {
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                         >
                                             <option value="">Select preferred time...</option>
-                                            <option value="morning">Morning (8AM - 12PM)</option>
-                                            <option value="afternoon">Afternoon (12PM - 5PM)</option>
-                                            <option value="evening">Evening (5PM - 8PM)</option>
+                                            <option value="morning">Morning (8:00 - 12:00)</option>
+                                            <option value="afternoon">Afternoon (12:00 - 16:00)</option>
+                                            <option value="evening">Evening (16:00 - 20:00)</option>
                                             <option value="flexible">Flexible (Any time)</option>
                                         </select>
                                     </div>
@@ -917,11 +917,11 @@ const HouseMovingPage = () => {
                                             <p className="text-gray-600 text-sm">
                                                 {preferredTimeSpan 
                                                     ? preferredTimeSpan === "morning" 
-                                                        ? "Morning (8AM - 12PM)"
+                                                        ? "Morning (8:00 - 12:00)"
                                                         : preferredTimeSpan === "afternoon"
-                                                            ? "Afternoon (12PM - 5PM)"
+                                                            ? "Afternoon (12:00 - 16:00)"
                                                             : preferredTimeSpan === "evening"
-                                                                ? "Evening (5PM - 8PM)"
+                                                                ? "Evening (16:00 - 20:00)"
                                                                 : "Flexible (Any time)"
                                                     : "No preferred time specified"
                                                 }
