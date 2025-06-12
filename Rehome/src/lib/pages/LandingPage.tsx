@@ -162,14 +162,14 @@ const LandingPage = () => {
                       className="w-80 h-auto"
                       style={{ filter: 'brightness(0.85)' }}
                     />
-                    {/* Orange box overlay
+                    {/* Orange box overlay */}
                     <div className="absolute top-[0%] left-[0%] w-[209px] h-[119px] bg-[#F97535] rounded-md flex items-center justify-center z-10">
                       <img 
                         src={logoImage} 
                         alt="ReHome Logo" 
                         className="w-14 h-14 object-contain" 
                       />
-                    </div> */}
+                    </div>
                   </div>
                 </motion.div>
               </div>
