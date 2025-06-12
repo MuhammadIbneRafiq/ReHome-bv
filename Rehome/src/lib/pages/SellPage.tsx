@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import API_ENDPOINTS from '../api/config';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PRICING_TYPES, REHOME_PRICING_TYPES } from '../../types/marketplace';
+import useUserStore from '../../services/state/useUserSessionStore';
 
 // Location suggestion interface (same as in LocationAutocomplete)
 interface LocationSuggestion {
@@ -19,7 +20,22 @@ interface LocationSuggestion {
     };
 }
 
+// List of admin email addresses - keep in sync with AdminRoute.tsx and Navbar.tsx
+const ADMIN_EMAILS = [
+    'muhammadibnerafiq@gmail.com',
+    'testnewuser12345@gmail.com', // Test account with admin access
+    'egzmanagement@gmail.com',
+    'samuel.stroehle8@gmail.com',
+    'info@rehomebv.com'
+];
+
 const SellPage = ({ onClose }: { onClose: () => void }) => {
+    // Get current user from the store
+    const user = useUserStore((state) => state.user);
+    
+    // Check if current user is admin
+    const isAdmin = user && ADMIN_EMAILS.includes(user.email);
+
     const [photos, setPhotos] = useState<File[]>([]);
     const [price, setPrice] = useState('');
     const [description, setDescription] = useState('');
@@ -37,14 +53,14 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
     const [pricingType, setPricingType] = useState<'fixed' | 'bidding' | 'negotiable'>('fixed');
     const [startingBid, setStartingBid] = useState('');
     
-    // ReHome listing flag
-    const [isRehome, setIsRehome] = useState(false);
+    // ReHome listing flag - automatically set to true for admin users
+    const [isRehome, setIsRehome] = useState(isAdmin || false);
     
     // Flexible date options
-    const [hasFlexibleDates, setHasFlexibleDates] = useState(false);
-    const [flexibleDateStart, setFlexibleDateStart] = useState('');
-    const [flexibleDateEnd, setFlexibleDateEnd] = useState('');
-    const [preferredDate, setPreferredDate] = useState('');
+    const [hasFlexibleDates] = useState(false);
+    const [flexibleDateStart] = useState('');
+    const [flexibleDateEnd] = useState('');
+    const [preferredDate] = useState('');
     
     const [imageUrls] = useState<string[]>([]); // State for the image URLS, array.
     const [uploading, setUploading] = useState(false); // Loading state for upload
@@ -169,24 +185,19 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         setIsLocationLoading(false);
     };
 
-    // Handle ReHome checkbox change
+    // Handle ReHome checkbox change - only allowed for admin users
     const handleRehomeChange = (checked: boolean) => {
+        // Only allow admin users to change ReHome status
+        if (!isAdmin) {
+            console.warn('ReHome listings can only be created by admin users');
+            return;
+        }
+        
         setIsRehome(checked);
         // If switching to ReHome and bidding is selected, reset to fixed price
         if (checked && pricingType === 'bidding') {
             setPricingType('fixed');
             setStartingBid('');
-        }
-    };
-
-    // Handle flexible dates checkbox change
-    const handleFlexibleDatesChange = (checked: boolean) => {
-        setHasFlexibleDates(checked);
-        if (!checked) {
-            // Clear date fields when disabling flexible dates
-            setFlexibleDateStart('');
-            setFlexibleDateEnd('');
-            setPreferredDate('');
         }
     };
 
@@ -201,6 +212,13 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         e.preventDefault();
         setSubmitError(null); // Clear any previous submit errors
         setSubmitting(true);
+
+        // Safety check: prevent non-admin users from submitting ReHome listings
+        if (isRehome && !isAdmin) {
+            setSubmitError('Only admin users can create ReHome listings. Please contact support if you believe this is an error.');
+            setSubmitting(false);
+            return;
+        }
 
         try {
             // 1. Upload all the images
@@ -466,24 +484,29 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     )}
                 </div>
 
-                {/* ReHome Listing Checkbox */}
-                <div>
-                    <div className="flex items-center">
-                        <input
-                            type="checkbox"
-                            id="is-rehome"
-                            checked={isRehome}
-                            onChange={(e) => handleRehomeChange(e.target.checked)}
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="is-rehome" className="ml-2 block text-sm text-gray-700">
-                            This is a ReHome listing
-                        </label>
+                {/* ReHome Listing Checkbox - Only visible for admin users */}
+                {isAdmin && (
+                    <div>
+                        <div className="flex items-center">
+                            <input
+                                type="checkbox"
+                                id="is-rehome"
+                                checked={isRehome}
+                                onChange={(e) => handleRehomeChange(e.target.checked)}
+                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                            />
+                            <label htmlFor="is-rehome" className="ml-2 block text-sm text-gray-700">
+                                This is a ReHome listing
+                            </label>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                            ReHome listings have special pricing options and cannot use bidding
+                        </p>
+                        <p className="text-xs text-orange-600 mt-1">
+                            ⚡ Admin only: You can create ReHome listings with special features
+                        </p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                        ReHome listings have special pricing options and cannot use bidding
-                    </p>
-                </div>
+                )}
 
                 {/* Pricing Options */}
                 <div>
@@ -511,7 +534,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                         ))}
                     </div>
 
-                    {isRehome && (
+                    {isRehome && isAdmin && (
                         <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-md">
                             <p className="text-sm text-orange-800">
                                 🏠 <strong>ReHome Listing:</strong> Bidding is not available for ReHome listings. Choose between fixed price or negotiable pricing.
@@ -564,80 +587,6 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                             <p className="text-sm text-blue-800">
                                 💬 Buyers will contact you to negotiate the price. Make sure to include any price expectations in the description.
                             </p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Flexible Dates Section */}
-                <div>
-                    <div className="flex items-center mb-3">
-                        <input
-                            type="checkbox"
-                            id="has-flexible-dates"
-                            checked={hasFlexibleDates}
-                            onChange={(e) => handleFlexibleDatesChange(e.target.checked)}
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="has-flexible-dates" className="ml-2 block text-sm font-medium text-gray-700">
-                            I have flexible pickup/delivery dates
-                        </label>
-                    </div>
-                    
-                    {hasFlexibleDates && (
-                        <div className="ml-6 space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                            <p className="text-sm text-blue-800 mb-3">
-                                📅 <strong>Flexible dates can help reduce costs</strong> and make your item more attractive to buyers who need specific timing.
-                            </p>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="flexible-start" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Earliest pickup/delivery date *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        id="flexible-start"
-                                        value={flexibleDateStart}
-                                        onChange={(e) => setFlexibleDateStart(e.target.value)}
-                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        min={new Date().toISOString().split('T')[0]}
-                                        required={hasFlexibleDates}
-                                    />
-                                </div>
-                                
-                                <div>
-                                    <label htmlFor="flexible-end" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Latest pickup/delivery date *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        id="flexible-end"
-                                        value={flexibleDateEnd}
-                                        onChange={(e) => setFlexibleDateEnd(e.target.value)}
-                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        min={flexibleDateStart || new Date().toISOString().split('T')[0]}
-                                        required={hasFlexibleDates}
-                                    />
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label htmlFor="preferred-date" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Preferred date (optional)
-                                </label>
-                                <input
-                                    type="date"
-                                    id="preferred-date"
-                                    value={preferredDate}
-                                    onChange={(e) => setPreferredDate(e.target.value)}
-                                    className="w-full md:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                    min={flexibleDateStart || new Date().toISOString().split('T')[0]}
-                                    max={flexibleDateEnd || ''}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Your ideal pickup/delivery date within the flexible range
-                                </p>
-                            </div>
                         </div>
                     )}
                 </div>
