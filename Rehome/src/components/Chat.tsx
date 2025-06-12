@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
 import { Chat as ChatType, Message, getMessages, sendMessage, subscribeToChat } from '../services/chatService';
 import { FaPaperPlane, FaSpinner } from 'react-icons/fa';
-import { supabase } from '../lib/supabaseClient';
 
 interface ChatProps {
     chat?: ChatType;

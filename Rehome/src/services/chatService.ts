@@ -47,8 +47,9 @@ export interface Project {
 // Chat functions
 export const getChats = async (): Promise<Chat[]> => {
     try {
+        const { data: { user } } = await supabase.auth.getUser();
         const { data, error } = await supabase
-            .rpc('get_user_chats_with_latest_message', { user_uuid: supabase.auth.user()?.id });
+            .rpc('get_user_chats_with_latest_message', { user_uuid: user?.id });
 
         if (error) throw error;
         return data || [];
@@ -61,11 +62,12 @@ export const getChats = async (): Promise<Chat[]> => {
 
 export const createChat = async (title: string): Promise<Chat | null> => {
     try {
+        const { data: { user } } = await supabase.auth.getUser();
         const { data, error } = await supabase
             .from('chats')
             .insert([{
                 title,
-                user_id: supabase.auth.user()?.id,
+                user_id: user?.id,
                 chat_id: `chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
             }])
             .select()
@@ -100,11 +102,12 @@ export const getMessages = async (chatId: string): Promise<Message[]> => {
 
 export const sendMessage = async (chatId: string, content: string, sender: 'user' | 'assistant' = 'user'): Promise<Message | null> => {
     try {
+        const { data: { user } } = await supabase.auth.getUser();
         const { data, error } = await supabase
             .from('messages')
             .insert([{
                 chat_id: chatId,
-                user_id: supabase.auth.user()?.id,
+                user_id: user?.id,
                 content,
                 sender,
                 message_type: 'text',
@@ -125,10 +128,11 @@ export const sendMessage = async (chatId: string, content: string, sender: 'user
 // Project functions
 export const getProjects = async (): Promise<Project[]> => {
     try {
+        const { data: { user } } = await supabase.auth.getUser();
         const { data, error } = await supabase
             .from('projects_with_chat_view')
             .select('*')
-            .eq('user_id', supabase.auth.user()?.id)
+            .eq('user_id', user?.id)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -142,11 +146,12 @@ export const getProjects = async (): Promise<Project[]> => {
 
 export const createProject = async (chatId: string, title: string, description: string): Promise<Project | null> => {
     try {
+        const { data: { user } } = await supabase.auth.getUser();
         const { data, error } = await supabase
             .from('projects')
             .insert([{
                 chat_id: chatId,
-                user_id: supabase.auth.user()?.id,
+                user_id: user?.id,
                 title,
                 description,
                 status: 'active'
@@ -165,6 +170,7 @@ export const createProject = async (chatId: string, title: string, description: 
 
 export const updateProjectStatus = async (projectId: string, status: Project['status']): Promise<Project | null> => {
     try {
+        const { data: { user } } = await supabase.auth.getUser();
         const { data, error } = await supabase
             .from('projects')
             .update({ 
@@ -172,7 +178,7 @@ export const updateProjectStatus = async (projectId: string, status: Project['st
                 ...(status === 'completed' ? { completed_at: new Date().toISOString() } : {})
             })
             .eq('id', projectId)
-            .eq('user_id', supabase.auth.user()?.id)
+            .eq('user_id', user?.id)
             .select()
             .single();
 
@@ -204,14 +210,15 @@ export const subscribeToChat = (chatId: string, onMessage: (message: Message) =>
     };
 };
 
-export const subscribeToProjects = (onUpdate: (project: Project) => void): (() => void) => {
+export const subscribeToProjects = async (onUpdate: (project: Project) => void): Promise<(() => void)> => {
+    const { data: { user } } = await supabase.auth.getUser();
     const subscription = supabase
         .channel('projects')
         .on('postgres_changes', {
             event: '*',
             schema: 'public',
             table: 'projects',
-            filter: `user_id=eq.${supabase.auth.user()?.id}`
+            filter: `user_id=eq.${user?.id}`
         }, (payload) => {
             onUpdate(payload.new as Project);
         })

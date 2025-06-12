@@ -95,7 +95,7 @@ export type FurnitureCondition = typeof FURNITURE_CONDITIONS[number]['value'];
 // Helper functions
 export const getCategorySubcategories = (categoryName: FurnitureCategory): string[] => {
     const category = FURNITURE_CATEGORIES.find(cat => cat.name === categoryName);
-    return category?.subcategories || [];
+    return [...(category?.subcategories || [])];
 };
 
 export const getConditionLabel = (conditionValue: FurnitureCondition): string => {

@@ -48,7 +48,7 @@ const HouseMovingPage = () => {
     const [isStudent, setIsStudent] = useState(false);
     const [studentId, setStudentId] = useState<File | null>(null);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
-    const [extraHelperItems, setExtraHelperItems] = useState<{[key: string]: boolean}>({});
+    const [extraHelperItems] = useState<{[key: string]: boolean}>({});
     const [disassemblyItems, setDisassemblyItems] = useState<{[key: string]: boolean}>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
