@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
 import { getMessagesByUserId, getMessagesByItemId, markMessagesAsRead, subscribeToUserMessages, sendMessage, MarketplaceMessage } from '../services/marketplaceMessageService';
@@ -31,6 +31,7 @@ const ChatDashboard: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [itemsDetails, setItemsDetails] = useState<{[key: number]: ItemDetails}>({});
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useUserStore((state) => state.user);
   const location = useLocation();
 
@@ -74,6 +75,11 @@ const ChatDashboard: React.FC = () => {
       console.error('Error fetching item details:', err);
     }
   };
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // Check for activeItemId in location state to set active conversation
   useEffect(() => {
@@ -198,7 +204,8 @@ const ChatDashboard: React.FC = () => {
       });
       
       // If this message belongs to the active conversation, add it to the messages list
-      if (activeConversation === newMsg.item_id) {
+      // Only add if it's not from the current user (to avoid duplicates since we add sent messages immediately)
+      if (activeConversation === newMsg.item_id && newMsg.sender_id !== user.email) {
         setMessages(prev => [...prev, newMsg]);
         
         // Mark the message as read if it's for the current user
@@ -259,7 +266,37 @@ const ChatDashboard: React.FC = () => {
     };
     
     try {
-      await sendMessage(msg);
+      const sentMessage = await sendMessage(msg);
+      
+      // Immediately add the sent message to the local messages state
+      if (sentMessage) {
+        setMessages(prevMessages => [...prevMessages, sentMessage]);
+        
+        // Update the conversation list to show this as the latest message
+        setConversations(prevConversations => {
+          const updatedConversations = prevConversations.map(conv => {
+            if (conv.itemId === activeConversation) {
+              return {
+                ...conv,
+                lastMessage: newMessage,
+                lastMessageTime: sentMessage.created_at || new Date().toISOString()
+              };
+            }
+            return conv;
+          });
+          
+          // Move the active conversation to the top
+          const activeConvIndex = updatedConversations.findIndex(c => c.itemId === activeConversation);
+          if (activeConvIndex > 0) {
+            const activeConv = updatedConversations[activeConvIndex];
+            updatedConversations.splice(activeConvIndex, 1);
+            updatedConversations.unshift(activeConv);
+          }
+          
+          return updatedConversations;
+        });
+      }
+      
       setNewMessage('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -376,6 +413,7 @@ const ChatDashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
             
             <div className="p-4 border-t border-gray-200">

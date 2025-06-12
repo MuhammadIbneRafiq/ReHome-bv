@@ -315,17 +315,19 @@ const LandingPage = () => {
                     Browse our selection of quality second-hand furniture for your home
                   </dd>
                 </div>
-                <div className="mt-5 flex flex-col gap-2">
+                <div className="mt-5">
                   <Link to="/marketplace/learn-more" className="text-orange-600 hover:text-orange-700">
                     Learn More &rarr;
                   </Link>
-                  <Link to="/marketplace" className="rehome-button-sm text-center">
-                    Explore Marketplace
-                  </Link>
-                  <Link to="/special-request" className="rehome-button-sm text-center bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
-                    Special Requests
-                  </Link>
                 </div>
+              </div>
+              <div className="px-4 pb-5">
+                <Link to="/marketplace" className="rehome-button-sm text-center block">
+                  Explore Marketplace
+                </Link>
+                {/* <Link to="/special-request" className="rehome-button-sm text-center bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
+                  Special Requests
+                </Link> */}
               </div>
             </div>
           </div>

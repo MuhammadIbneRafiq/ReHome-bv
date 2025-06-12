@@ -6,11 +6,17 @@ import useUserSessionStore from "@/services/state/useUserSessionStore";
 
 export const useAuth = () => {
   const setUser = useUserSessionStore((state) => state.setUser);
+  const user = useUserSessionStore((state) => state.user);
   // return true or false if user is authenticated
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const location = useLocation();
+
+  // Check if user is admin - you can modify this logic based on your needs
+  const isAdmin = user?.email === 'admin@rehome.com' || 
+                  user?.email?.includes('admin') || 
+                  user?.role === 'admin';
 
   const logout = () => {
     localStorage.removeItem("accessToken");
@@ -63,5 +69,5 @@ export const useAuth = () => {
     };
   }, [location.pathname]);
 
-  return { isAuthenticated, loading, logout };
+  return { isAuthenticated, loading, logout, isAdmin, user };
 };

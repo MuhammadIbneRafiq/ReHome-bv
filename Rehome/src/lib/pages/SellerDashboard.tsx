@@ -1,9 +1,10 @@
 // src/pages/SellerDashboard.tsx
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag, FaComments } from "react-icons/fa";
+import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag, FaComments, FaEdit } from "react-icons/fa";
 import { MdOutlineInventory2, MdSell } from "react-icons/md";
 import SellPage from "./SellPage";
+import EditPage from "./EditPage";
 import ItemDetailsModal from '../../components/ItemDetailModal'
 import useUserStore from "@/services/state/useUserSessionStore"; // Import the user store
 import axios from 'axios'; // Import axios for API calls
@@ -12,6 +13,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ChatDashboard from '../../components/ChatDashboard';
 import API_ENDPOINTS from '../api/config';
+import { useAuth } from '../../hooks/useAuth';
 
 // Mock Analytics Data (replace with your API calls)
 const mockAnalytics = {
@@ -38,6 +40,8 @@ interface FurnitureItem {
 const SellerDashboard = () => {
     const { t } = useTranslation();
     const [isSellModalOpen, setIsSellModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<FurnitureItem | null>(null);
     const [activeTab, setActiveTab] = useState('listings'); // Add a state for active tab
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
@@ -49,6 +53,7 @@ const SellerDashboard = () => {
     const navigate = useNavigate();
     const location = useLocation(); // Get location to check for state
     const [dropdownOpen, setDropdownOpen] = useState<number | null>(null); // Track which dropdown is open
+    const { isAdmin } = useAuth();
 
     // Check if user is authenticated
     useEffect(() => {
@@ -80,7 +85,16 @@ const SellerDashboard = () => {
         setSelectedItem(null);
     };
 
-    const deleteListing = async (id: number) => {
+    const deleteListing = async (id: number, item?: FurnitureItem) => {
+        // Add confirmation with additional info for admin deletions
+        const confirmMessage = isAdmin && item?.seller_email !== user?.email 
+            ? `Are you sure you want to delete "${item?.name}" by ${item?.seller_email}? This action cannot be undone.`
+            : `Are you sure you want to delete this listing? This action cannot be undone.`;
+            
+        if (!window.confirm(confirmMessage)) {
+            return;
+        }
+
         try {
             await axios.delete(API_ENDPOINTS.FURNITURE.DELETE(id.toString()), {
                 headers: {
@@ -90,12 +104,38 @@ const SellerDashboard = () => {
             // Remove the deleted listing from the state
             setListings(listings.filter(item => item.id !== id));
             setSoldListings(soldListings.filter(item => item.id !== id));
-            toast.success(t('common.success'));
+            
+            const successMessage = isAdmin && item?.seller_email !== user?.email 
+                ? `Listing "${item?.name}" by ${item?.seller_email} has been deleted.`
+                : 'Listing deleted successfully.';
+            toast.success(successMessage);
         } catch (err) {
             console.error('Error deleting listing:', err);
             setError('Failed to delete listing.');
             toast.error(t('common.error'));
         }
+    };
+
+    const editListing = (item: FurnitureItem) => {
+        setEditingItem(item);
+        setIsEditModalOpen(true);
+        setDropdownOpen(null); // Close dropdown
+    };
+
+    const handleEditSave = (updatedItem: FurnitureItem) => {
+        // Update the item in both listings arrays
+        setListings(prev => prev.map(item => 
+            item.id === updatedItem.id ? updatedItem : item
+        ));
+        setSoldListings(prev => prev.map(item => 
+            item.id === updatedItem.id ? updatedItem : item
+        ));
+        toast.success('Listing updated successfully!');
+    };
+
+    const handleEditModalClose = () => {
+        setIsEditModalOpen(false);
+        setEditingItem(null);
     };
 
     const fetchListings = async () => {
@@ -117,15 +157,27 @@ const SellerDashboard = () => {
             const data: FurnitureItem[] = await response.json();
             console.log('Fetched listings:', data);
 
-            // Separate active and sold listings based on the signed-in user's email
-            const active = data.filter(item => item.seller_email === user?.email && !item.sold);
-            const sold = data.filter(item => item.seller_email === user?.email && item.sold);
+            if (isAdmin) {
+                // Admin sees all listings
+                const active = data.filter(item => !item.sold);
+                const sold = data.filter(item => item.sold);
+                
+                console.log('Admin view - Active listings:', active);
+                console.log('Admin view - Sold listings:', sold);
 
-            console.log('Active listings:', active);
-            console.log('Sold listings:', sold);
+                setListings(active);
+                setSoldListings(sold);
+            } else {
+                // Separate active and sold listings based on the signed-in user's email
+                const active = data.filter(item => item.seller_email === user?.email && !item.sold);
+                const sold = data.filter(item => item.seller_email === user?.email && item.sold);
 
-            setListings(active);
-            setSoldListings(sold);
+                console.log('User view - Active listings:', active);
+                console.log('User view - Sold listings:', sold);
+
+                setListings(active);
+                setSoldListings(sold);
+            }
 
         } catch (err: any) {
             console.error('Error fetching listings:', err);
@@ -177,8 +229,34 @@ const SellerDashboard = () => {
                     transition={{ duration: 0.5 }}
                     className="text-3xl font-extrabold text-gray-900 mb-6"
                 >
-                    Welcome back, {user?.email}!
+                    {isAdmin ? `Admin Dashboard - Welcome, ${user?.email}!` : `Welcome back, ${user?.email}!`}
                 </motion.h1>
+
+                {/* Admin notice */}
+                {isAdmin && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                        className="bg-red-50 border border-red-200 rounded-md p-4 mb-6"
+                    >
+                        <div className="flex">
+                            <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-red-800">
+                                    Administrator Access
+                                </h3>
+                                <div className="mt-2 text-sm text-red-700">
+                                    <p>You are viewing all marketplace listings. You can edit and delete any listing as an administrator.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
 
                 {/* Analytics Section */}
                 <motion.div
@@ -193,7 +271,7 @@ const SellerDashboard = () => {
                             <FaBoxOpen className="text-orange-500 text-2xl" />
                             <span className="text-2xl font-semibold">{listings.length}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">Active Listings</p>
+                        <p className="text-gray-500 mt-2">{isAdmin ? 'Total Active Listings' : 'Active Listings'}</p>
                     </div>
 
                     {/* Analytics Card - Earnings */}
@@ -202,16 +280,16 @@ const SellerDashboard = () => {
                             <FaMoneyBillWave className="text-green-500 text-2xl" />
                             <span className="text-2xl font-semibold">€{mockAnalytics.earnings}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">Total Earnings</p>
+                        <p className="text-gray-500 mt-2">{isAdmin ? 'Platform Earnings' : 'Your Earnings'}</p>
                     </div>
 
-                    {/* Analytics Card - Sold Listings */}
+                    {/* Analytics Card - Views */}
                     <div className="bg-white rounded-lg shadow-md p-6">
                         <div className="flex items-center justify-between">
                             <FaCheckCircle className="text-blue-500 text-2xl" />
                             <span className="text-2xl font-semibold">{soldListings.length}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">Sold Items</p>
+                        <p className="text-gray-500 mt-2">{isAdmin ? 'Total Sold Items' : 'Items Sold'}</p>
                     </div>
                 </motion.div>
 
@@ -250,7 +328,7 @@ const SellerDashboard = () => {
                             <div>
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-2xl font-semibold text-gray-800">
-                                        Your Listings
+                                        {isAdmin ? 'All Marketplace Listings' : 'Your Listings'}
                                     </h2>
                                     <button
                                         onClick={() => setIsSellModalOpen(true)}
@@ -263,7 +341,7 @@ const SellerDashboard = () => {
                                 {/* Active Listings Section */}
                                 <div className="bg-white rounded-lg shadow-md p-6 mb-8">
                                     <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                                        <MdOutlineInventory2 className="mr-2 text-orange-500" /> Active Listings
+                                        <MdOutlineInventory2 className="mr-2 text-orange-500" /> {isAdmin ? 'All Active Listings' : 'Active Listings'}
                                     </h3>
                                     
                                     {/* Check if there are no active listings */}
@@ -301,7 +379,14 @@ const SellerDashboard = () => {
                                                     <h3 className="text-lg font-semibold mb-1 truncate">{listing.name}</h3>
                                                     <p className="text-gray-500 text-sm mb-2 truncate">{listing.description}</p>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-xs text-gray-500">{listing.city_name}</span>
+                                                        <div className="flex-1">
+                                                            <span className="text-xs text-gray-500">{listing.city_name}</span>
+                                                            {isAdmin && (
+                                                                <div className="text-xs text-blue-600 mt-1">
+                                                                    Seller: {listing.seller_email}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <div className="relative">
                                                             <button
                                                                 onClick={(e) => {
@@ -317,13 +402,25 @@ const SellerDashboard = () => {
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation(); // Prevent modal from opening
-                                                                            deleteListing(listing.id);
-                                                                            setDropdownOpen(null); // Close dropdown after deletion
+                                                                            editListing(listing);
                                                                         }}
-                                                                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                                                                        className="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 flex items-center"
                                                                     >
-                                                                        {t('common.delete')}
+                                                                        <FaEdit className="mr-2" /> Edit
                                                                     </button>
+                                                                    {/* Show delete button only for own listings OR if user is admin */}
+                                                                    {(listing.seller_email === user?.email || isAdmin) && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation(); // Prevent modal from opening
+                                                                                deleteListing(listing.id, listing);
+                                                                                setDropdownOpen(null); // Close dropdown after deletion
+                                                                            }}
+                                                                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                                                                        >
+                                                                            {isAdmin && listing.seller_email !== user?.email ? 'Admin Delete' : t('common.delete')}
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -337,7 +434,7 @@ const SellerDashboard = () => {
                                 {/* Sold Listings Section */}
                                 <div className="bg-white rounded-lg shadow-md p-6">
                                     <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
-                                        <MdSell className="mr-2 text-green-500" /> {t('dashboard.soldListing')}
+                                        <MdSell className="mr-2 text-green-500" /> {isAdmin ? 'All Sold Listings' : t('dashboard.soldListing')}
                                     </h3>
                                     
                                     {/* Check if there are no sold listings */}
@@ -384,7 +481,14 @@ const SellerDashboard = () => {
                                                     <h3 className="text-lg font-semibold mb-1 truncate">{listing.name}</h3>
                                                     <p className="text-gray-500 text-sm mb-2 truncate">{listing.description}</p>
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-xs text-gray-500">{listing.city_name}</span>
+                                                        <div className="flex-1">
+                                                            <span className="text-xs text-gray-500">{listing.city_name}</span>
+                                                            {isAdmin && (
+                                                                <div className="text-xs text-blue-600 mt-1">
+                                                                    Seller: {listing.seller_email}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <div className="relative">
                                                             <button
                                                                 onClick={(e) => {
@@ -400,13 +504,25 @@ const SellerDashboard = () => {
                                                                     <button
                                                                         onClick={(e) => {
                                                                             e.stopPropagation(); // Prevent modal from opening
-                                                                            deleteListing(listing.id);
-                                                                            setDropdownOpen(null); // Close dropdown after deletion
+                                                                            editListing(listing);
                                                                         }}
-                                                                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                                                                        className="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 flex items-center"
                                                                     >
-                                                                        {t('common.delete')}
+                                                                        <FaEdit className="mr-2" /> Edit
                                                                     </button>
+                                                                    {/* Show delete button only for own listings OR if user is admin */}
+                                                                    {(listing.seller_email === user?.email || isAdmin) && (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation(); // Prevent modal from opening
+                                                                                deleteListing(listing.id, listing);
+                                                                                setDropdownOpen(null); // Close dropdown after deletion
+                                                                            }}
+                                                                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
+                                                                        >
+                                                                            {isAdmin && listing.seller_email !== user?.email ? 'Admin Delete' : t('common.delete')}
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -447,6 +563,33 @@ const SellerDashboard = () => {
                                     <h2 className="text-2xl font-bold">{t('dashboard.newListing')}</h2>
                                 </div>
                                 <SellPage onClose={handleModalClose} />
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {isEditModalOpen && editingItem && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+                        >
+                            <div className="p-6">
+                                <EditPage 
+                                    item={editingItem}
+                                    onClose={handleEditModalClose} 
+                                    onSave={handleEditSave}
+                                />
                             </div>
                         </motion.div>
                     </motion.div>

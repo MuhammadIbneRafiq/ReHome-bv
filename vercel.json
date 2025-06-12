@@ -1,3 +1,0 @@
-{
-  "buildCommand": "cd Rehome && npm run deploy-build"
-} 

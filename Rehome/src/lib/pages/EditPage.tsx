@@ -1,62 +1,76 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import API_ENDPOINTS from '../api/config';
-import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PRICING_TYPES, REHOME_PRICING_TYPES } from '../../types/marketplace';
 
-// Location suggestion interface (same as in LocationAutocomplete)
-interface LocationSuggestion {
-    display_name: string;
-    lat: string;
-    lon: string;
-    place_id: string;
-    address?: {
-        house_number?: string;
-        road?: string;
-        city?: string;
-        postcode?: string;
-        country?: string;
-    };
+interface FurnitureItem {
+    id: number;
+    name: string;
+    description: string;
+    image_url: string[];
+    price?: number;
+    created_at: string;
+    city_name: string;
+    sold: boolean;
+    seller_email: string;
+    category?: string;
+    subcategory?: string;
+    condition_rating?: number;
+    
+    // New fields
+    height_cm?: number;
+    width_cm?: number;
+    depth_cm?: number;
+    pricing_type?: 'fixed' | 'bidding' | 'negotiable';
+    starting_bid?: number;
+    is_rehome?: boolean;
+    has_flexible_dates?: boolean;
+    flexible_date_start?: string;
+    flexible_date_end?: string;
+    preferred_date?: string;
 }
 
-const SellPage = ({ onClose }: { onClose: () => void }) => {
+interface EditPageProps {
+    item: FurnitureItem;
+    onClose: () => void;
+    onSave: (updatedItem: FurnitureItem) => void;
+}
+
+const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
     const [photos, setPhotos] = useState<File[]>([]);
-    const [price, setPrice] = useState('');
-    const [description, setDescription] = useState('');
-    const [name, setName] = useState(''); // Added name field
-    const [category, setCategory] = useState('');
-    const [subcategory, setSubcategory] = useState('');
-    const [conditionRating, setConditionRating] = useState('');
+    const [price, setPrice] = useState(item.price?.toString() || '');
+    const [description, setDescription] = useState(item.description);
+    const [name, setName] = useState(item.name);
+    const [category, setCategory] = useState(item.category || '');
+    const [subcategory, setSubcategory] = useState(item.subcategory || '');
+    const [conditionRating, setConditionRating] = useState(item.condition_rating?.toString() || '');
     
     // Dimensions (optional)
-    const [height, setHeight] = useState('');
-    const [width, setWidth] = useState('');
-    const [depth, setDepth] = useState('');
+    const [height, setHeight] = useState(item.height_cm?.toString() || '');
+    const [width, setWidth] = useState(item.width_cm?.toString() || '');
+    const [depth, setDepth] = useState(item.depth_cm?.toString() || '');
     
     // Pricing
-    const [pricingType, setPricingType] = useState<'fixed' | 'bidding' | 'negotiable'>('fixed');
-    const [startingBid, setStartingBid] = useState('');
+    const [pricingType, setPricingType] = useState<'fixed' | 'bidding' | 'negotiable'>(item.pricing_type || 'fixed');
+    const [startingBid, setStartingBid] = useState(item.starting_bid?.toString() || '');
     
     // ReHome listing flag
-    const [isRehome, setIsRehome] = useState(false);
+    const [isRehome, setIsRehome] = useState(item.is_rehome || false);
     
     // Flexible date options
-    const [hasFlexibleDates, setHasFlexibleDates] = useState(false);
-    const [flexibleDateStart, setFlexibleDateStart] = useState('');
-    const [flexibleDateEnd, setFlexibleDateEnd] = useState('');
-    const [preferredDate, setPreferredDate] = useState('');
+    // const [hasFlexibleDates, setHasFlexibleDates] = useState(item.has_flexible_dates || false);
+    // const [flexibleDateStart, setFlexibleDateStart] = useState(item.flexible_date_start || '');
+    // const [flexibleDateEnd, setFlexibleDateEnd] = useState(item.flexible_date_end || '');
+    // const [preferredDate, setPreferredDate] = useState(item.preferred_date || '');
     
-    const [imageUrls] = useState<string[]>([]); // State for the image URLS, array.
-    const [uploading, setUploading] = useState(false); // Loading state for upload
-    const [submitting, setSubmitting] = useState(false); // Loading state for submit
-    const [uploadError, setUploadError] = useState<string | null>(null); // Error state for upload
-    const [submitError, setSubmitError] = useState<string | null>(null); // Error state for submit
-    const [cityName, setCityName] = useState(''); // Added city name.
-    const [locationCoords, setLocationCoords] = useState<{lat: number, lon: number} | null>(null);
-    const [isLocationLoading, setIsLocationLoading] = useState(false);
-    const navigate = useNavigate(); // Initialize navigate
+    const [uploading, setUploading] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
+    const [cityName, setCityName] = useState(item.city_name);
+    const [existingImages, setExistingImages] = useState<string[]>(item.image_url);
+    // const navigate = useNavigate();
 
-    // Categories and subcategories (same as in MarketplaceFilter)
+    // Categories and subcategories (same as in SellPage)
     const categories = [
         { 
             name: 'Bathroom Furniture', 
@@ -152,21 +166,15 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         setSubcategory(''); // Reset subcategory when category changes
     };
 
-    // Handle location change with coordinates
-    const handleLocationChange = async (value: string, suggestion?: LocationSuggestion) => {
-        setCityName(value);
-        setIsLocationLoading(true);
-
-        if (suggestion) {
-            setLocationCoords({
-                lat: parseFloat(suggestion.lat),
-                lon: parseFloat(suggestion.lon)
-            });
-        } else if (value === '') {
-            setLocationCoords(null);
+    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        setUploadError(null);
+        if (e.target.files) {
+            setPhotos(Array.from(e.target.files));
         }
-        
-        setIsLocationLoading(false);
+    };
+
+    const removeExistingImage = (indexToRemove: number) => {
+        setExistingImages(prev => prev.filter((_, index) => index !== indexToRemove));
     };
 
     // Handle ReHome checkbox change
@@ -179,31 +187,13 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         }
     };
 
-    // Handle flexible dates checkbox change
-    const handleFlexibleDatesChange = (checked: boolean) => {
-        setHasFlexibleDates(checked);
-        if (!checked) {
-            // Clear date fields when disabling flexible dates
-            setFlexibleDateStart('');
-            setFlexibleDateEnd('');
-            setPreferredDate('');
-        }
-    };
-
-    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        setUploadError(null); 
-        if (e.target.files) {
-          setPhotos(Array.from(e.target.files));
-        }
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSubmitError(null); // Clear any previous submit errors
+        setSubmitError(null);
         setSubmitting(true);
 
         try {
-            // 1. Upload all the images
+            // 1. Upload new images if any
             const uploadedImageUrls: string[] = [];
             if (photos.length > 0) {
                 setUploading(true);
@@ -224,12 +214,15 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                 setUploading(false);
             }
 
-            // 2.  Send the listing data
-            const response = await fetch(API_ENDPOINTS.FURNITURE.CREATE, {
-                method: 'POST',
+            // Combine existing images with newly uploaded images
+            const allImageUrls = [...existingImages, ...uploadedImageUrls];
+
+            // 2. Update the listing data
+            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE(item.id.toString()), {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`, // Include the token
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
                 },
                 body: JSON.stringify({
                     name,
@@ -248,50 +241,65 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     price: pricingType === 'fixed' && price ? parseFloat(price) : null,
                     startingBid: pricingType === 'bidding' && startingBid ? parseFloat(startingBid) : null,
                     
-                    imageUrl: uploadedImageUrls, // Use the image URLs array
-                    cityName, // Include city name
-                    latitude: locationCoords?.lat || null,
-                    longitude: locationCoords?.lon || null,
-                    isRehome, // Include ReHome flag
-                    
-                    // Flexible dates
-                    hasFlexibleDates,
-                    flexibleDateStart: hasFlexibleDates && flexibleDateStart ? flexibleDateStart : null,
-                    flexibleDateEnd: hasFlexibleDates && flexibleDateEnd ? flexibleDateEnd : null,
-                    preferredDate: hasFlexibleDates && preferredDate ? preferredDate : null,
+                    imageUrl: allImageUrls,
+                    cityName,
+                    isRehome,
                 }),
             });
 
             if (!response.ok) {
-                throw new Error(`Oops fill in all the details`);
+                throw new Error(`Failed to update listing`);
             }
 
-            const data = await response.json();
-            console.log('Listing created:', data); // Debug: Check the response
-            // Redirect to the dashboard after successful submission
-            navigate('/sell-dash'); // Use navigate to redirect
-            onClose(); // Close the modal after successful submission
+            // const updatedData = await response.json();
+            
+            // Create updated item object
+            const updatedItem: FurnitureItem = {
+                ...item,
+                name,
+                description,
+                category,
+                subcategory: subcategory || undefined,
+                condition_rating: conditionRating ? parseInt(conditionRating) : undefined,
+                
+                // Dimensions
+                height_cm: height ? parseFloat(height) : undefined,
+                width_cm: width ? parseFloat(width) : undefined,
+                depth_cm: depth ? parseFloat(depth) : undefined,
+                
+                // Pricing
+                pricing_type: pricingType,
+                price: pricingType === 'fixed' && price ? parseFloat(price) : undefined,
+                starting_bid: pricingType === 'bidding' && startingBid ? parseFloat(startingBid) : undefined,
+                
+                image_url: allImageUrls,
+                city_name: cityName,
+            };
+
+            onSave(updatedItem);
+            onClose();
         } catch (err: any) {
-            console.error('Error submitting listing:', err);
-            setSubmitError(err.message || 'Failed to submit listing.');
+            console.error('Error updating listing:', err);
+            setSubmitError(err.message || 'Failed to update listing.');
         } finally {
             setSubmitting(false);
         }
     };
 
     return (
-       <div className="w-full">
+        <div className="w-full">
             <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold">Sell Your Furniture</h1>
+                <h1 className="text-2xl font-bold">Edit Your Listing</h1>
                 <button onClick={onClose} className="text-gray-600 hover:text-gray-800">
-                    × {/* Close Icon (X) */}
+                    ×
                 </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-6">
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Name Input */}
                 <div>
                     <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                        Furniture Name *
+                        Furniture Name
                     </label>
                     <input
                         type="text"
@@ -307,14 +315,13 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                 {/* Category Selection */}
                 <div>
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-                        Category *
+                        Category
                     </label>
                     <select
                         id="category"
                         value={category}
                         onChange={handleCategoryChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                        required
                     >
                         <option value="">Select a category</option>
                         {categories.map(cat => (
@@ -352,14 +359,13 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                 {/* Condition Rating */}
                 <div>
                     <label htmlFor="condition" className="block text-sm font-medium text-gray-700">
-                        Condition *
+                        Condition
                     </label>
                     <select
                         id="condition"
                         value={conditionRating}
                         onChange={(e) => setConditionRating(e.target.value)}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                        required
                     >
                         <option value="">Select condition</option>
                         {conditions.map(condition => (
@@ -419,51 +425,47 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     <p className="text-xs text-gray-500 mt-1">Providing dimensions helps buyers make better decisions</p>
                 </div>
 
+                {/* Existing Images */}
+                {existingImages.length > 0 && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Current Images
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                            {existingImages.map((imageUrl, index) => (
+                                <div key={index} className="relative">
+                                    <img 
+                                        src={imageUrl} 
+                                        alt={`Current ${index}`} 
+                                        className="h-20 w-20 object-cover rounded-md border"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => removeExistingImage(index)}
+                                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Add New Photos */}
                 <div>
                     <label htmlFor="photos" className="block text-sm font-medium text-gray-700">
-                        Photos
+                        Add New Photos (Optional)
                     </label>
                     <input
                         type="file"
                         id="photos"
-                        multiple  // Allow multiple file selection (optional)
+                        multiple
                         onChange={handlePhotoChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                     />
-                    {uploading && <p>Uploading image...</p>}
-                    {uploadError && <p className="text-red-500">{uploadError}</p>}
-                    {imageUrls.length > 0 && ( // Display image preview if imageUrl is available
-                        <div className="mt-2">
-                            {imageUrls.map((url, index) => (
-                                <img key={index} src={url} alt={`Preview ${index}`} className="inline-block h-16 w-16 rounded-md mr-2" />
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* Location */}
-                <div>
-                    <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-                        Location *
-                    </label>
-                    <LocationAutocomplete
-                        value={cityName}
-                        onChange={handleLocationChange}
-                        placeholder="Enter city or address"
-                        countryCode="nl"
-                        className="mt-1"
-                    />
-                    {isLocationLoading && (
-                        <div className="flex items-center mt-1">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-500 mr-2"></div>
-                            <span className="text-sm text-gray-500">Verifying location...</span>
-                        </div>
-                    )}
-                    {locationCoords && (
-                        <p className="text-xs text-green-600 mt-1">
-                            ✓ Location verified with OpenStreetMap
-                        </p>
-                    )}
+                    {uploading && <p className="text-blue-600 text-sm mt-1">Uploading images...</p>}
+                    {uploadError && <p className="text-red-500 text-sm mt-1">{uploadError}</p>}
                 </div>
 
                 {/* ReHome Listing Checkbox */}
@@ -568,83 +570,10 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     )}
                 </div>
 
-                {/* Flexible Dates Section */}
-                <div>
-                    <div className="flex items-center mb-3">
-                        <input
-                            type="checkbox"
-                            id="has-flexible-dates"
-                            checked={hasFlexibleDates}
-                            onChange={(e) => handleFlexibleDatesChange(e.target.checked)}
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="has-flexible-dates" className="ml-2 block text-sm font-medium text-gray-700">
-                            I have flexible pickup/delivery dates
-                        </label>
-                    </div>
-                    
-                    {hasFlexibleDates && (
-                        <div className="ml-6 space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                            <p className="text-sm text-blue-800 mb-3">
-                                📅 <strong>Flexible dates can help reduce costs</strong> and make your item more attractive to buyers who need specific timing.
-                            </p>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label htmlFor="flexible-start" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Earliest pickup/delivery date *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        id="flexible-start"
-                                        value={flexibleDateStart}
-                                        onChange={(e) => setFlexibleDateStart(e.target.value)}
-                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        min={new Date().toISOString().split('T')[0]}
-                                        required={hasFlexibleDates}
-                                    />
-                                </div>
-                                
-                                <div>
-                                    <label htmlFor="flexible-end" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Latest pickup/delivery date *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        id="flexible-end"
-                                        value={flexibleDateEnd}
-                                        onChange={(e) => setFlexibleDateEnd(e.target.value)}
-                                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                        min={flexibleDateStart || new Date().toISOString().split('T')[0]}
-                                        required={hasFlexibleDates}
-                                    />
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label htmlFor="preferred-date" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Preferred date (optional)
-                                </label>
-                                <input
-                                    type="date"
-                                    id="preferred-date"
-                                    value={preferredDate}
-                                    onChange={(e) => setPreferredDate(e.target.value)}
-                                    className="w-full md:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                                    min={flexibleDateStart || new Date().toISOString().split('T')[0]}
-                                    max={flexibleDateEnd || ''}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    Your ideal pickup/delivery date within the flexible range
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
+                {/* Description Input */}
                 <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                        Description *
+                        Description
                     </label>
                     <textarea
                         id="description"
@@ -657,15 +586,41 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     />
                 </div>
 
-
-                {submitError && <p className="text-red-500">{submitError}</p>}
+                {/* City Input */}
                 <div>
+                    <label htmlFor="cityName" className="block text-sm font-medium text-gray-700">
+                        City
+                    </label>
+                    <input
+                        type="text"
+                        id="cityName"
+                        value={cityName}
+                        onChange={(e) => setCityName(e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                        placeholder="e.g., Amsterdam"
+                        required
+                    />
+                </div>
+
+                {submitError && (
+                    <div className="text-red-500 text-sm">{submitError}</div>
+                )}
+
+                {/* Submit Button */}
+                <div className="flex justify-end space-x-3">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                    >
+                        Cancel
+                    </button>
                     <button
                         type="submit"
                         disabled={submitting}
-                        className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 ${submitting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                        className="px-4 py-2 text-sm font-medium text-white bg-orange-600 border border-transparent rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50"
                     >
-                        {submitting ? 'Submitting...' : 'Submit Listing'}
+                        {submitting ? 'Updating...' : 'Update Listing'}
                     </button>
                 </div>
             </form>
@@ -673,4 +628,4 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
     );
 };
 
-export default SellPage;
+export default EditPage; 

@@ -22,6 +22,16 @@ interface LocationSuggestion {
   };
 }
 
+interface LocationCache {
+  [key: string]: {
+    lat: number;
+    lon: number;
+    postcode?: string;
+    city?: string;
+    verified: boolean;
+  };
+}
+
 const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => {
   // const { t } = useTranslation();
   
@@ -44,6 +54,16 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [selectedLocationCoords, setSelectedLocationCoords] = useState<{lat: number, lon: number} | null>(null);
   const [distance, setDistance] = useState<number>(0);
+  // Location cache to avoid repeated API calls
+  const [locationCache, setLocationCache] = useState<LocationCache>({});
+  // Loading state for location operations
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  // Flexible moving date filters
+  const [allowFlexibleDate, setAllowFlexibleDate] = useState(false);
+  const [rehomeSuggestDate, setRehomeSuggestDate] = useState(false);
+  const [dateRange, setDateRange] = useState<{start: string, end: string}>({start: '', end: ''});
+  // Pricing type filter
+  const [selectedPricingType, setSelectedPricingType] = useState<string>('');
   
   // Main categories and subcategories based on requirements
   const categories = [
@@ -149,24 +169,72 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     return distance;
   };
 
-  // Get coordinates for a city/location using OpenStreetMap Nominatim
-  const getLocationCoordinates = async (locationName: string): Promise<{lat: number, lon: number} | null> => {
+  // Enhanced function to get and verify location coordinates with location codes
+  const getVerifiedLocationCoordinates = async (
+    locationName: string, 
+    postcode?: string
+  ): Promise<{lat: number, lon: number, verified: boolean, city?: string, postcode?: string} | null> => {
+    // Check cache first
+    const cacheKey = `${locationName}${postcode ? `_${postcode}` : ''}`;
+    if (locationCache[cacheKey]) {
+      return locationCache[cacheKey];
+    }
+
     try {
+      // Build search query with location name and optional postcode
+      let searchQuery = locationName;
+      if (postcode) {
+        searchQuery = `${postcode} ${locationName}`;
+      }
+
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?` +
-        `q=${encodeURIComponent(locationName)}&` +
+        `q=${encodeURIComponent(searchQuery)}&` +
         `countrycodes=nl&` +
         `format=json&` +
-        `limit=1`
+        `addressdetails=1&` +
+        `limit=3`
       );
       
       if (response.ok) {
         const data = await response.json();
         if (data && data.length > 0) {
-          return {
-            lat: parseFloat(data[0].lat),
-            lon: parseFloat(data[0].lon)
+          // Find the best match
+          let bestMatch = data[0];
+          
+          // If we have a postcode, prioritize results that match it
+          if (postcode) {
+            const postcodeMatch = data.find((result: any) => 
+              result.address?.postcode === postcode
+            );
+            if (postcodeMatch) {
+              bestMatch = postcodeMatch;
+            }
+          }
+
+          // Verify the location by doing a reverse lookup
+          const verifiedResult = await verifyLocationWithReverseLookup(
+            parseFloat(bestMatch.lat),
+            parseFloat(bestMatch.lon),
+            locationName,
+            postcode
+          );
+
+          const result = {
+            lat: parseFloat(bestMatch.lat),
+            lon: parseFloat(bestMatch.lon),
+            verified: verifiedResult.verified,
+            city: bestMatch.address?.city || bestMatch.address?.town || bestMatch.address?.village,
+            postcode: bestMatch.address?.postcode
           };
+
+          // Cache the result
+          setLocationCache(prev => ({
+            ...prev,
+            [cacheKey]: result
+          }));
+
+          return result;
         }
       }
     } catch (error) {
@@ -175,17 +243,89 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     return null;
   };
 
-  // Handle location selection from autocomplete
-  const handleLocationChange = (value: string, suggestion?: LocationSuggestion) => {
+  // Verify location with reverse lookup to double-check accuracy
+  const verifyLocationWithReverseLookup = async (
+    lat: number, 
+    lon: number, 
+    originalLocation: string, 
+    originalPostcode?: string
+  ): Promise<{verified: boolean, confidence: number}> => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?` +
+        `lat=${lat}&` +
+        `lon=${lon}&` +
+        `format=json&` +
+        `addressdetails=1`
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.address) {
+          let confidence = 0;
+          let verified = false;
+
+          // Check city/town match
+          const reversedCity = data.address.city || data.address.town || data.address.village || '';
+          if (reversedCity.toLowerCase().includes(originalLocation.toLowerCase()) ||
+              originalLocation.toLowerCase().includes(reversedCity.toLowerCase())) {
+            confidence += 50;
+          }
+
+          // Check postcode match if provided
+          if (originalPostcode && data.address.postcode) {
+            if (data.address.postcode === originalPostcode) {
+              confidence += 50;
+            } else if (data.address.postcode.substring(0, 4) === originalPostcode.substring(0, 4)) {
+              confidence += 25; // Partial postcode match
+            }
+          }
+
+          // Consider verified if confidence is above threshold
+          verified = confidence >= 50;
+
+          return { verified, confidence };
+        }
+      }
+    } catch (error) {
+      console.error('Error in reverse lookup:', error);
+    }
+
+    return { verified: false, confidence: 0 };
+  };
+
+  // Enhanced location change handler with verification
+  const handleLocationChange = async (value: string, suggestion?: LocationSuggestion) => {
     setSelectedLocation(value);
+    setIsLocationLoading(true);
+
     if (suggestion) {
+      // Verify the suggestion with reverse lookup
+      const verification = await verifyLocationWithReverseLookup(
+        parseFloat(suggestion.lat),
+        parseFloat(suggestion.lon),
+        value,
+        suggestion.address?.postcode
+      );
+
       setSelectedLocationCoords({
         lat: parseFloat(suggestion.lat),
         lon: parseFloat(suggestion.lon)
       });
+
+      console.log(`Location verification: ${verification.verified ? 'Verified' : 'Unverified'} (${verification.confidence}% confidence)`);
     } else if (value === '') {
       setSelectedLocationCoords(null);
+    } else if (value.length > 2) {
+      // Try to get coordinates for manually typed location
+      const coords = await getVerifiedLocationCoordinates(value);
+      if (coords) {
+        setSelectedLocationCoords({ lat: coords.lat, lon: coords.lon });
+        console.log(`Manual location verification: ${coords.verified ? 'Verified' : 'Unverified'}`);
+      }
     }
+
+    setIsLocationLoading(false);
   };
 
   // Analyze data to set up filter options
@@ -204,7 +344,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     }
   }, [items]);
 
-  // Apply filters
+  // Enhanced apply filters with better location handling
   const applyFilters = async () => {
     let filteredItems = [...items];
     
@@ -241,39 +381,104 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
       );
     }
     
+    // Filter by pricing type
+    if (selectedPricingType) {
+      filteredItems = filteredItems.filter(item => 
+        item.pricing_type === selectedPricingType
+      );
+    }
+    
     // Filter by ReHome only
     if (showRehomeOnly) {
       filteredItems = filteredItems.filter(item => item.isrehome === true);
     }
     
-    // Filter by distance if location and distance are selected
+    // Filter by flexible moving date options
+    if (allowFlexibleDate || rehomeSuggestDate || (dateRange.start && dateRange.end)) {
+      filteredItems = filteredItems.map(item => {
+        let updatedItem = { ...item };
+        
+        // If customer is flexible with dates, apply base charge pricing
+        if (rehomeSuggestDate || (dateRange.start && dateRange.end)) {
+          // Use base charge instead of regular price for flexible dates
+          updatedItem.originalPrice = item.price;
+          updatedItem.price = item.baseCharge || item.base_charge || item.price;
+          updatedItem.isFlexiblePricing = true;
+          updatedItem.flexibleDateInfo = rehomeSuggestDate 
+            ? 'ReHome will suggest optimal moving date for best pricing'
+            : `Flexible dates: ${dateRange.start} to ${dateRange.end}`;
+        }
+        
+        return updatedItem;
+      });
+    }
+    
+    // Filter by selected location (city-based filtering)
+    if (selectedLocation && selectedLocation.trim() !== '') {
+      filteredItems = filteredItems.filter(item => {
+        if (!item.city_name) return false;
+        
+        // Check if the item's city matches the selected location
+        const itemCity = item.city_name.toLowerCase().trim();
+        const selectedCity = selectedLocation.toLowerCase().trim();
+        
+        // Match exact city name or if the selected location contains the city name
+        return itemCity.includes(selectedCity) || selectedCity.includes(itemCity);
+      });
+    }
+    
+    // Enhanced distance filtering (only if distance is set)
     if (selectedLocationCoords && distance > 0) {
+      setIsLocationLoading(true);
+      
       const itemsWithDistance = await Promise.all(
         filteredItems.map(async (item) => {
           if (item.city_name) {
-            // Try to get coordinates for the item's location
-            const itemCoords = await getLocationCoordinates(item.city_name);
-            if (itemCoords) {
+            // Try to get verified coordinates for the item's location
+            // Include postcode if available in item data
+            const itemPostcode = item.postcode || item.postal_code || item.zip_code;
+            const itemCoords = await getVerifiedLocationCoordinates(item.city_name, itemPostcode);
+            
+            if (itemCoords && itemCoords.verified) {
               const itemDistance = calculateDistance(
                 selectedLocationCoords.lat,
                 selectedLocationCoords.lon,
                 itemCoords.lat,
                 itemCoords.lon
               );
-              return { ...item, distance: itemDistance };
+              return { ...item, distance: itemDistance, locationVerified: true };
+            } else if (itemCoords) {
+              // Use unverified coordinates but mark as such
+              const itemDistance = calculateDistance(
+                selectedLocationCoords.lat,
+                selectedLocationCoords.lon,
+                itemCoords.lat,
+                itemCoords.lon
+              );
+              return { ...item, distance: itemDistance, locationVerified: false };
             }
           }
-          return { ...item, distance: Infinity };
+          return { ...item, distance: Infinity, locationVerified: false };
         })
       );
       
-      filteredItems = itemsWithDistance.filter(item => item.distance <= distance);
+      // Filter by distance, prioritizing verified locations
+      filteredItems = itemsWithDistance
+        .filter(item => item.distance <= distance)
+        .sort((a, b) => {
+          // Sort by location verification first, then by distance
+          if (a.locationVerified && !b.locationVerified) return -1;
+          if (!a.locationVerified && b.locationVerified) return 1;
+          return a.distance - b.distance;
+        });
+      
+      setIsLocationLoading(false);
     }
     
     onFilterChange(filteredItems);
   };
 
-  // Reset filters
+  // Enhanced reset filters
   const resetFilters = () => {
     setSelectedCities([]);
     setSelectedPriceRange(priceRange);
@@ -284,6 +489,13 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     setSelectedLocation('');
     setSelectedLocationCoords(null);
     setDistance(0);
+    setLocationCache({}); // Clear location cache
+    setIsLocationLoading(false);
+    // Reset flexible date filters
+    setAllowFlexibleDate(false);
+    setRehomeSuggestDate(false);
+    setDateRange({start: '', end: ''});
+    setSelectedPricingType('');
     onFilterChange(items); // Reset to original items
   };
 
@@ -307,7 +519,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   useEffect(() => {
     applyFilters();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCities, selectedPriceRange, selectedCategory, selectedSubCategory, selectedCondition, showRehomeOnly, selectedLocationCoords, distance]);
+  }, [selectedCities, selectedPriceRange, selectedCategory, selectedSubCategory, selectedCondition, selectedPricingType, showRehomeOnly, selectedLocationCoords, selectedLocation, distance, allowFlexibleDate, rehomeSuggestDate, dateRange]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 mt-4 relative">
@@ -382,29 +594,34 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
           </div>
         </div>
         
-        {/* Distance Filter with Location Autocomplete */}
+        {/* Distance Filter with Enhanced Location Autocomplete */}
         <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Distance filter
           </label>
           <p className="text-xs text-gray-500 mb-2">
-            Enter a city or address and select the range to find items nearby
+            Enter a city or address with postal code for better accuracy
           </p>
           <div className="space-y-2">
             <div className="relative z-20">
               <LocationAutocomplete
                 value={selectedLocation}
                 onChange={handleLocationChange}
-                placeholder="Enter city or address"
+                placeholder="Enter city, postal code, or address"
                 countryCode="nl"
                 className="w-full"
               />
+              {isLocationLoading && (
+                <div className="absolute right-2 top-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
+                </div>
+              )}
             </div>
             <select
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border relative z-10"
               value={distance}
               onChange={(e) => setDistance(Number(e.target.value))}
-              disabled={!selectedLocationCoords}
+              disabled={!selectedLocationCoords || isLocationLoading}
               style={{ position: 'relative', zIndex: 10 }}
             >
               <option value="0">Select range</option>
@@ -417,7 +634,12 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
           </div>
           {selectedLocationCoords && distance > 0 && (
             <p className="text-xs text-green-600 mt-1">
-              ✓ Showing items within {distance}km of {selectedLocation}
+              ✓ Showing verified items within {distance}km of {selectedLocation}
+            </p>
+          )}
+          {selectedLocationCoords && distance > 0 && (
+            <p className="text-xs text-blue-500 mt-1">
+              📍 Location coordinates verified with OpenStreetMap
             </p>
           )}
         </div>
@@ -440,6 +662,73 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
               </option>
             ))}
           </select>
+        </div>
+        
+        {/* Pricing Type Filter */}
+        <div className="relative">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Pricing type filter
+          </label>
+          <select
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+            value={selectedPricingType}
+            onChange={(e) => setSelectedPricingType(e.target.value)}
+            style={{ position: 'relative', zIndex: 5 }}
+          >
+            <option value="">All pricing types</option>
+            <option value="fixed">Fixed Price</option>
+            <option value="bidding">Bidding/Auction</option>
+            <option value="negotiable">Price Negotiable</option>
+          </select>
+        </div>
+        
+        {/* Flexible Moving Date Filter */}
+        <div className="relative">
+          
+          <div className="space-y-3">
+            {/* ReHome Suggest Date Option */}
+            
+            
+            {/* Date Range Option */}
+            <div className="space-y-2">
+
+              
+              {allowFlexibleDate && !rehomeSuggestDate && (
+                <div className="ml-6 space-y-2">
+                  <div className="flex space-x-2">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-600 mb-1">From</label>
+                      <input
+                        type="date"
+                        value={dateRange.start}
+                        onChange={(e) => setDateRange(prev => ({...prev, start: e.target.value}))}
+                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm p-2 border"
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-600 mb-1">To</label>
+                      <input
+                        type="date"
+                        value={dateRange.end}
+                        onChange={(e) => setDateRange(prev => ({...prev, end: e.target.value}))}
+                        className="w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 text-sm p-2 border"
+                        min={dateRange.start || new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {(rehomeSuggestDate || (dateRange.start && dateRange.end)) && (
+            <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md">
+              <p className="text-xs text-green-800">
+                💰 <strong>Base charge pricing active!</strong> You'll see reduced prices for items with flexible moving dates.
+              </p>
+            </div>
+          )}
         </div>
         
         {/* ReHome Listings Only */}

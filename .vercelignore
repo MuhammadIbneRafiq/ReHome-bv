@@ -1,0 +1,45 @@
+# Development files
+node_modules
+.git
+.gitignore
+README.md
+*.md
+
+# Frontend development files
+Rehome/node_modules
+Rehome/.env.local
+Rehome/.env.development
+Rehome/src/**/*.test.*
+Rehome/src/**/*.spec.*
+
+# Backend development files
+backend/node_modules
+backend/.env.local
+backend/.env.development
+backend/tests
+backend/**/*.test.*
+backend/**/*.spec.*
+
+# Build artifacts
+dist
+build
+.next
+.nuxt
+
+# IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs
+
+# Other
+.env.example
+.env.sample 

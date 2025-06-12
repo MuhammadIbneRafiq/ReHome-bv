@@ -15,9 +15,9 @@ if (import.meta.env.MODE === 'development') {
 export const API_ENDPOINTS = {
   // Authentication
   AUTH: {
-    SIGNUP: `${API_BASE_URL}/auth/signup`,
-    LOGIN: `${API_BASE_URL}/auth/login`,
-    LOGOUT: `${API_BASE_URL}/auth/logout`,
+    SIGNUP: `${API_BASE_URL}/api/auth/signup`,
+    LOGIN: `${API_BASE_URL}/api/auth/login`,
+    LOGOUT: `${API_BASE_URL}/api/auth/logout`,
   },
 
   // Furniture Management
@@ -62,8 +62,8 @@ export const API_ENDPOINTS = {
 
   // Payment
   PAYMENT: {
-    MOLLIE: `${API_BASE_URL}/mollie`,
-    MOLLIE_WEBHOOK: `${API_BASE_URL}/mollie-webhook`,
+    MOLLIE: `${API_BASE_URL}/api/mollie`,
+    MOLLIE_WEBHOOK: `${API_BASE_URL}/api/mollie-webhook`,
   },
 
   // Pricing

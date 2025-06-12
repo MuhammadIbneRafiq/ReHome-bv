@@ -856,42 +856,18 @@ const ItemMovingPage = () => {
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="text-md font-medium text-gray-800 mb-3">Extra Helper</h3>
-                                        {(() => {
-                                            // Calculate total item points for dynamic pricing
-                                            const totalItemPoints = Object.entries(itemQuantities)
-                                                .reduce((sum, [itemId, quantity]) => {
-                                                    return sum + (getItemPoints(itemId) * quantity);
-                                                }, 0);
-                                            
-                                            const isSmallMove = totalItemPoints <= 30;
-                                            const helperPrice = isSmallMove ? 45 : 60;
-                                            const moveSize = isSmallMove ? 'small' : 'big';
-                                            
-                                            return (
-                                                <>
-                                                    <div className="flex items-center mb-4">
-                                                        <input
-                                                            id="extra-helper"
-                                                            type="checkbox"
-                                                            checked={extraHelper}
-                                                            onChange={(e) => setExtraHelper(e.target.checked)}
-                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                        />
-                                                        <label htmlFor="extra-helper" className="ml-2 block text-sm text-gray-700">
-                                                            I need an extra helper for my move (+€{helperPrice})
-                                                        </label>
-                                                    </div>
-                                                    
-                                                    {totalItemPoints > 0 && (
-                                                        <div className="ml-6 mb-4">
-                                                            <p className="text-xs text-gray-500">
-                                                                {moveSize.charAt(0).toUpperCase() + moveSize.slice(1)} move ({totalItemPoints} total points) = €{helperPrice}
-                                                            </p>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            );
-                                        })()}
+                                        <div className="flex items-center mb-4">
+                                            <input
+                                                id="extra-helper"
+                                                type="checkbox"
+                                                checked={extraHelper}
+                                                onChange={(e) => setExtraHelper(e.target.checked)}
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="extra-helper" className="ml-2 block text-sm text-gray-700">
+                                                I need an extra helper for my move (+€50)
+                                            </label>
+                                        </div>
                                     </div>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">

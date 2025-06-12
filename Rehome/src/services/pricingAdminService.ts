@@ -12,9 +12,7 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rehome-backend.vercel.app';
 
-class PricingAdminService {
-  // ================== PRICING CONFIGS ==================
-  
+class PricingAdminService {  
   /**
    * Get all pricing configurations
    */

@@ -20,9 +20,10 @@ const MarketplaceChat: React.FC<MarketplaceChatProps> = ({ item, onClose }) => {
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<MarketplaceMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useUserStore((state) => state.user);
-  const channelRef = useRef<any>(null);
+  const subscriptionRef = useRef<(() => void) | null>(null);
 
   // Scroll to bottom of messages
   const scrollToBottom = () => {
@@ -36,8 +37,10 @@ const MarketplaceChat: React.FC<MarketplaceChatProps> = ({ item, onClose }) => {
       try {
         const data = await getMessagesByItemId(item.id);
         setMessages(data || []);
+        scrollToBottom();
       } catch (error) {
         console.error('Error fetching messages:', error);
+        setError('Failed to load messages');
       } finally {
         setLoading(false);
       }
@@ -46,59 +49,78 @@ const MarketplaceChat: React.FC<MarketplaceChatProps> = ({ item, onClose }) => {
     fetchMessages();
 
     // Setup real-time subscription
-    const channel = subscribeToItemMessages(item.id, (newMessage) => {
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    if (subscriptionRef.current) {
+      subscriptionRef.current();
+    }
+
+    subscriptionRef.current = subscribeToItemMessages(item.id, (newMessage) => {
+      setMessages(prev => {
+        // Check if message already exists
+        if (prev.some(msg => msg.id === newMessage.id)) {
+          return prev;
+        }
+        return [...prev, newMessage];
+      });
+      scrollToBottom();
     });
 
-    channelRef.current = channel;
-
     return () => {
-      // Clean up subscription when component unmounts
-      if (channelRef.current) {
-        channelRef.current.unsubscribe();
+      if (subscriptionRef.current) {
+        subscriptionRef.current();
+        subscriptionRef.current = null;
       }
     };
   }, [item.id]);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
+  // Handle sending new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!messageText.trim() || !user) return;
 
-    const newMessage: MarketplaceMessage = {
-      content: messageText,
-      item_id: item.id,
-      sender_id: user.email,
-      sender_name: user.email,
-      receiver_id: item.seller_email,
-      created_at: new Date().toISOString(),
-    };
-
     try {
-      await sendMessage(newMessage);
-      
-      // Clear input field
+      const message: MarketplaceMessage = {
+        item_id: item.id,
+        content: messageText.trim(),
+        sender_id: user.email,
+        sender_name: user.email,
+        receiver_id: item.seller_email
+      };
+
+      await sendMessage(message);
       setMessageText('');
+      // No need to manually add message to state as it will come through the subscription
     } catch (error) {
       console.error('Error sending message:', error);
+      setError('Failed to send message');
     }
   };
 
   return (
-    <div className="flex flex-col h-96 border border-gray-200 rounded-lg">
-      <div className="bg-orange-500 text-white p-3 rounded-t-lg flex justify-between items-center">
-        <h3 className="font-medium">Chat with Seller</h3>
-        <button onClick={onClose} className="text-white hover:text-gray-200">
-          ×
-        </button>
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm overflow-hidden">
+      {/* Chat Header */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="font-semibold text-lg">{item.name}</h2>
+            <p className="text-sm text-gray-600">Chat with seller</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            ×
+          </button>
+        </div>
       </div>
-      
+
+      {/* Messages Area */}
       <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
+        {error && (
+          <div className="text-center text-red-500 py-2">
+            {error}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center items-center h-full">
             <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-orange-500"></div>
@@ -108,9 +130,9 @@ const MarketplaceChat: React.FC<MarketplaceChatProps> = ({ item, onClose }) => {
             No messages yet. Start the conversation!
           </div>
         ) : (
-          messages.map((msg, index) => (
+          messages.map((msg) => (
             <div
-              key={index}
+              key={msg.id}
               className={`mb-2 max-w-[75%] p-3 rounded-lg ${
                 msg.sender_id === user?.email
                   ? 'ml-auto bg-orange-500 text-white'
@@ -121,12 +143,19 @@ const MarketplaceChat: React.FC<MarketplaceChatProps> = ({ item, onClose }) => {
                 {msg.sender_name}
               </div>
               <div>{msg.content}</div>
+              <div className="text-xs mt-1 opacity-75 text-right">
+                {new Date(msg.created_at || '').toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </div>
             </div>
           ))
         )}
         <div ref={messagesEndRef} />
       </div>
-      
+
+      {/* Message Input */}
       <form onSubmit={handleSendMessage} className="p-3 border-t border-gray-200 flex">
         <input
           type="text"
@@ -138,13 +167,13 @@ const MarketplaceChat: React.FC<MarketplaceChatProps> = ({ item, onClose }) => {
         />
         <button
           type="submit"
-          className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          className="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
           disabled={!messageText.trim() || !user}
         >
           Send
         </button>
       </form>
-      
+
       {!user && (
         <div className="p-2 bg-gray-100 text-center text-sm text-gray-500">
           You need to log in to send messages.

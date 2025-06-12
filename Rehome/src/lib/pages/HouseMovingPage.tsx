@@ -673,7 +673,7 @@ const HouseMovingPage = () => {
                                                 {disassembly && (
                                                     <div className="mt-4 ml-2 space-y-2">
                                                         <p className="text-sm text-gray-600">
-                                                            Select which items need disassembly/reassembly:
+                                                            Select which items need disassembly & reassembly:
                                                         </p>
                                                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
                                                             const itemData = constantsItemCategories
@@ -717,10 +717,7 @@ const HouseMovingPage = () => {
                                                 <div className="flex justify-between">
                                                     <label htmlFor="extra-helper-toggle" className="font-medium text-gray-900">Extra Helper</label>
                                                     <span className="text-gray-700">
-                                                        {extraHelper && Object.values(extraHelperItems).filter(Boolean).length > 0
-                                                          ? `€${Math.max(15, Object.values(extraHelperItems).filter(Boolean).length * 3)}`
-                                                          : '€15'
-                                                        }
+                                                        €35
                                                     </span>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
@@ -737,40 +734,7 @@ const HouseMovingPage = () => {
                                                     </Switch>
                                                 </div>
                                                 
-                                                {extraHelper && (
-                                                    <div className="mt-4 ml-2 space-y-2">
-                                                        <p className="text-sm text-gray-600">
-                                                            Select which items need an extra helper:
-                                                        </p>
-                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
-                                                            const itemData = constantsItemCategories
-                                                                .flatMap(category => category.items)
-                                                                .find(item => item.id === itemId);
-                                                            const itemName = itemData ? itemData.name : itemId;
-                                                            
-                                                            return (
-                                                                <div key={index} className="flex items-center">
-                                                                    <input
-                                                                        id={`helper-${itemId}`}
-                                                                        type="checkbox"
-                                                                        checked={extraHelperItems[itemId] || false}
-                                                                        onChange={(e) => setExtraHelperItems({
-                                                                            ...extraHelperItems,
-                                                                            [itemId]: e.target.checked
-                                                                        })}
-                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                    />
-                                                                    <label htmlFor={`helper-${itemId}`} className="ml-2 block text-sm text-gray-700">
-                                                                        {itemName} ({itemQuantities[itemId]})
-                                                                    </label>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
-                                                            <p className="text-sm text-gray-500 italic">No items selected yet. Please add items in the previous step.</p>
-                                                        )}
-                                                    </div>
-                                                )}
+
                                             </div>
                                         </div>
                                     </div>
