@@ -29,7 +29,7 @@ interface FurnitureItem {
     name: string;
     description: string;
     image_url: string[]; // Change to image_urls (plural)
-    price: number;
+    price?: number;
     created_at: string;
     city_name: string;
     sold: boolean;

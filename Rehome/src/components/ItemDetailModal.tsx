@@ -15,7 +15,7 @@ interface ItemDetailsModalProps {
     name: string;
     description: string;
     image_url: string[];
-    price: number;
+    price?: number;
     created_at: string;
     city_name: string;
     sold: boolean;
@@ -205,7 +205,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-2xl font-bold text-emerald-600">
-                    €{price.toLocaleString()}
+                    €{price?.toLocaleString() || '0'}
                   </span>
                   <span className={`px-3 py-1 rounded-full ${sold ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {sold ? <FaCheckCircle className="inline mr-2" /> : <FaTimes className="inline mr-2" />}
