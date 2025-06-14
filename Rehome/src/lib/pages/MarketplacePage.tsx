@@ -20,7 +20,7 @@ const MarketplacePage = () => {
     const [filteredItems, setFilteredItems] = useState<FurnitureItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [cart, setCart] = useState<{id: number, quantity: number}[]>([]); // Cart with quantities
+    const [cart, setCart] = useState<{id: number | string, quantity: number}[]>([]); // Cart with quantities
     const [_, setIsAddingToCart] = useState(false);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -42,51 +42,7 @@ const MarketplacePage = () => {
                 setFurnitureItems(data);
                 setFilteredItems(data);
             } catch (err: any) {
-                console.error('Error fetching furniture:', err);
-                
-                // Fallback to mock data if API fails
-                console.log('Using fallback mock data');
-                const mockData: FurnitureItem[] = [
-                    {
-                        id: 1,
-                        name: "Modern Sofa",
-                        description: "Comfortable 3-seater sofa in excellent condition",
-                        image_url: ["https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
-                        price: 299,
-                        created_at: new Date().toISOString(),
-                        seller_email: "seller@example.com",
-                        city_name: "Amsterdam",
-                        sold: false,
-                        isrehome: true
-                    },
-                    {
-                        id: 2,
-                        name: "Dining Table",
-                        description: "Beautiful wooden dining table for 6 people",
-                        image_url: ["https://images.unsplash.com/photo-1449247709967-d4461a6a6103?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
-                        price: 150,
-                        created_at: new Date().toISOString(),
-                        seller_email: "user@example.com",
-                        city_name: "Rotterdam",
-                        sold: false,
-                        isrehome: false
-                    },
-                    {
-                        id: 3,
-                        name: "Office Chair",
-                        description: "Ergonomic office chair with lumbar support",
-                        image_url: ["https://images.unsplash.com/photo-1541558869434-2840d308329a?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"],
-                        price: 75,
-                        created_at: new Date().toISOString(),
-                        seller_email: "office@example.com",
-                        city_name: "Utrecht",
-                        sold: false,
-                        isrehome: true
-                    }
-                ];
-                setFurnitureItems(mockData);
-                setFilteredItems(mockData);
-                setError(null); // Clear error since we have fallback data
+                console.error('Error fetching furniture and not displaying the mock', err);
             } finally {
                 setLoading(false);
             }
@@ -95,7 +51,7 @@ const MarketplacePage = () => {
         fetchFurniture();
     }, []);
 
-    const addToCart = (itemId: number) => {
+    const addToCart = (itemId: number | string) => {
         // Check if item is from ReHome
         const item = furnitureItems.find(item => item.id === itemId);
         if (!item?.isrehome) {
@@ -239,7 +195,7 @@ const MarketplacePage = () => {
             <ItemDetailsModal
                 isOpen={isModalOpen}
                 onClose={closeModal}
-                item={selectedItem}
+                item={selectedItem || null}
                 onAddToCart={addToCart}
             />
             
@@ -307,10 +263,19 @@ const MarketplacePage = () => {
                                                         />
                                                     </div>
                                                 )}
-                                                <img
-                                                    src={item.image_url && item.image_url.length > 0 ? item.image_url[0] : ''}
+                                                                                                <img 
+                                                    src={(item.image_url && item.image_url.length > 0) ? item.image_url[0] : 
+                                                         (item.image_urls && item.image_urls.length > 0) ? item.image_urls[0]
+                                                         : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'}
                                                     alt={item.name}
                                                     className="w-full h-32 object-cover rounded-md mb-1"
+                                                    onError={(e) => {
+                                                        console.error(`Failed to load image for ${item.name}:`, item.image_url?.[0] || item.image_urls?.[0]);
+                                                        e.currentTarget.src = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+                                                    }}
+                                                    onLoad={() => {
+                                                        console.log(`Successfully loaded image for ${item.name}:`, item.image_url?.[0] || item.image_urls?.[0]);
+                                                    }}
                                                 />
                                                 <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
                                                 <p className="text-gray-600 text-xs">{item.description}</p>
@@ -372,16 +337,20 @@ const MarketplacePage = () => {
                                     <div key={item.id} className="border-b border-gray-200 py-4">
                                         <div className="flex mb-2">
                                             <img 
-                                                src={item.image_url[0]} 
+                                                src={(item.image_url && item.image_url[0]) || (item.image_urls && item.image_urls[0]) || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'} 
                                                 alt={item.name} 
                                                 className="w-20 h-20 object-cover rounded"
+                                                onError={(e) => {
+                                                    console.error(`Failed to load cart image for ${item.name}:`, item.image_url?.[0] || item.image_urls?.[0]);
+                                                    e.currentTarget.src = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+                                                }}
                                             />
                                             <div className="ml-4 flex-grow">
                                                 <h3 className="text-sm font-medium">{item.name}</h3>
                                                 <p className="text-orange-600 font-medium">€{item.price}</p>
                                             </div>
                                             <button 
-                                                onClick={() => removeFromCart(item.id)}
+                                                onClick={() => removeFromCart(Number(item.id))}
                                                 className="text-gray-400 hover:text-red-500"
                                             >
                                                 <FaTrash />
@@ -392,14 +361,14 @@ const MarketplacePage = () => {
                                         <div className="flex justify-end items-center">
                                             <div className="flex items-center border rounded-md">
                                                 <button 
-                                                    onClick={() => updateQuantity(item.id, cartItem.quantity - 1)}
+                                                    onClick={() => updateQuantity(Number(item.id), cartItem.quantity - 1)}
                                                     className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
                                                 >
                                                     <FaMinus size={10} />
                                                 </button>
                                                 <span className="px-3 py-1 text-sm">{cartItem.quantity}</span>
                                                 <button 
-                                                    onClick={() => updateQuantity(item.id, cartItem.quantity + 1)}
+                                                    onClick={() => updateQuantity(Number(item.id), cartItem.quantity + 1)}
                                                     className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
                                                 >
                                                     <FaPlus size={10} />

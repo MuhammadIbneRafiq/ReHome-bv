@@ -20,10 +20,10 @@ interface ItemDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: {
-    id: number;
+    id: number | string;
     name: string;
     description: string;
-    image_urls: string[]; // Fixed to match database column name
+    image_urls?: string[]; // Fixed to match database column name
     price?: number;
     created_at: string;
     city_name: string;
@@ -31,8 +31,8 @@ interface ItemDetailsModalProps {
     seller_email: string;
     isrehome?: boolean;
   } | null;
-  onAddToCart?: (itemId: number) => void;
-  onMarkAsSold?: (itemId: number) => void;
+  onAddToCart?: (itemId: number | string) => void;
+  onMarkAsSold?: (itemId: number | string) => void;
 }
 
 const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ 
@@ -47,6 +47,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const user = useUserStore((state) => state.user);
 
   const { id, name, description, image_urls, price, city_name, sold, seller_email, isrehome } = item;
+  // const numericId = typeof id === 'string' ? parseInt(id) : id;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   // Real bidding system state
   const [bids, setBids] = useState<MarketplaceBid[]>([]);
@@ -63,11 +64,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const isUserSeller = user?.email === seller_email;
 
   const goToNextImage = () => {
-    setCurrentImageIndex(prev => (prev + 1) % image_urls.length);
+    setCurrentImageIndex(prev => (prev + 1) % (image_urls?.length || 1));
   };
 
   const goToPrevImage = () => {
-    setCurrentImageIndex(prev => (prev - 1 + image_urls.length) % image_urls.length);
+    setCurrentImageIndex(prev => (prev - 1 + (image_urls?.length || 1)) % (image_urls?.length || 1));
   };
 
   // Load bidding data when modal opens
@@ -76,7 +77,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       loadBiddingData();
       
       // Subscribe to real-time bid updates
-      const unsubscribe = subscribeToBidUpdates(id, (updatedBids) => {
+      const unsubscribe = subscribeToBidUpdates(typeof id === 'string' ? parseInt(id) : id, (updatedBids) => {
         setBids(updatedBids);
         loadBiddingData(); // Reload all data when bids change
       });
@@ -91,11 +92,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     setLoadingBids(true);
     try {
       // Load all data in parallel
+      const itemId = typeof id === 'string' ? parseInt(id) : id;
       const [allBids, usersBid, highest, cartStatus] = await Promise.all([
-        getBidsByItemId(id),
-        getUserBidForItem(id, user.email),
-        getHighestBidForItem(id),
-        canAddToCart(id, user.email)
+        getBidsByItemId(itemId),
+        getUserBidForItem(itemId, user.email),
+        getHighestBidForItem(itemId),
+        canAddToCart(itemId, user.email)
       ]);
 
       setBids(allBids);
@@ -130,7 +132,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     setIsProcessing(true);
     try {
       const bidData = {
-        item_id: id,
+        item_id: typeof id === 'string' ? parseInt(id) : id,
         bidder_email: user.email,
         bidder_name: user.email,
         bid_amount: amount,
@@ -169,7 +171,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     try {
       setIsProcessing(true);
       await sendMessage({
-        item_id: id,
+        item_id: typeof id === 'string' ? parseInt(id) : id,
         content: `Hi, I'm interested in your item: ${name}`,
         sender_id: user.email,
         sender_name: user.email,
@@ -178,7 +180,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       
       // Close the modal and redirect to the chat dashboard
       onClose();
-      navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: id } });
+      navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: typeof id === 'string' ? parseInt(id) : id } });
     } catch (error) {
       console.error('Error initiating chat:', error);
       toast.error("Failed to initiate chat. Please try again later.");

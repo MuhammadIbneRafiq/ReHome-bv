@@ -4,7 +4,8 @@ export type FurnitureItem = {
     id: number | string; // Flexible ID type to support both integer and UUID
     name: string;
     description: string;
-    image_url: string[];
+    image_url?: string[]; // Legacy field name
+    image_urls?: string[]; // New database field name
     price: number;
     created_at: string;
     seller_email: string;

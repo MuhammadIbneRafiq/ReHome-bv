@@ -155,7 +155,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     {/* Item Image */}
                     <div className="relative w-20 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                       <img 
-                        src={item.image_url[0]} 
+                        src={(item.image_url && item.image_url[0]) || (item.image_urls && item.image_urls[0]) || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'} 
                         alt={item.name} 
                         className="w-full h-full object-cover"
                       />
@@ -184,7 +184,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                     {/* Remove Button */}
                     <button 
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => removeItem(typeof item.id === 'string' ? parseInt(item.id) : item.id)}
                       className="text-gray-400 hover:text-red-500 ml-2"
                       aria-label="Remove item"
                     >
@@ -197,7 +197,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     <div className="flex justify-end items-center mt-2">
                       <div className="flex items-center border rounded-md">
                         <button 
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(typeof item.id === 'string' ? parseInt(item.id) : item.id, item.quantity - 1)}
                           className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
                           aria-label="Decrease quantity"
                         >
@@ -205,7 +205,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                         </button>
                         <span className="px-3 py-1 text-sm text-gray-800">{item.quantity}</span>
                         <button 
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => updateQuantity(typeof item.id === 'string' ? parseInt(item.id) : item.id, item.quantity + 1)}
                           className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
                           aria-label="Increase quantity"
                         >

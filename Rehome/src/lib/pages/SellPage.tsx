@@ -376,19 +376,40 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
             
             console.log('Submitting listing data:', listingData);
 
+            // Check if user is authenticated
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                throw new Error('You must be logged in to create a listing. Please log in and try again.');
+            }
+
+            console.log('Using token:', token ? 'Token present' : 'No token');
+
             // 2.  Send the listing data
             const response = await fetch(API_ENDPOINTS.FURNITURE.CREATE, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`, // Include the token
+                    'Authorization': `Bearer ${token}`, // Include the token
                 },
                 body: JSON.stringify(listingData),
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `Failed to create listing (${response.status})`);
+                console.error('Error response:', errorData);
+                
+                // Handle specific error cases
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please log in again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access denied. Please check your permissions.');
+                }
+                
+                throw new Error(errorData.error || errorData.message || `Failed to create listing (${response.status})`);
             }
 
             const data = await response.json();
