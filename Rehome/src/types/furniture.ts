@@ -1,7 +1,7 @@
 // src/types/furniture.ts
 
 export type FurnitureItem = {
-    id: number | string; // Flexible ID type to support both integer and UUID
+    id: string; // Always UUID string now
     name: string;
     description: string;
     image_url?: string[]; // Legacy field name

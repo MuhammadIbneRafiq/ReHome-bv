@@ -1,7 +1,7 @@
 -- Create marketplace_messages table for chat functionality
 CREATE TABLE IF NOT EXISTS public.marketplace_messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    item_id INTEGER NOT NULL,
+    item_id UUID NOT NULL,
     sender_id TEXT NOT NULL,
     sender_name TEXT NOT NULL,
     receiver_id TEXT NOT NULL,
@@ -29,5 +29,11 @@ CREATE INDEX idx_marketplace_messages_item_id ON public.marketplace_messages(ite
 CREATE INDEX idx_marketplace_messages_sender_id ON public.marketplace_messages(sender_id);
 CREATE INDEX idx_marketplace_messages_receiver_id ON public.marketplace_messages(receiver_id);
 
+-- Add foreign key constraint to ensure referential integrity
+ALTER TABLE public.marketplace_messages 
+ADD CONSTRAINT fk_marketplace_messages_item_id 
+FOREIGN KEY (item_id) REFERENCES public.marketplace_furniture(id) ON DELETE CASCADE;
+
 -- Comments
-COMMENT ON TABLE public.marketplace_messages IS 'Messages between buyers and sellers regarding marketplace items'; 
+COMMENT ON TABLE public.marketplace_messages IS 'Messages between buyers and sellers regarding marketplace items';
+COMMENT ON COLUMN public.marketplace_messages.item_id IS 'References marketplace_furniture.id (UUID)'; 

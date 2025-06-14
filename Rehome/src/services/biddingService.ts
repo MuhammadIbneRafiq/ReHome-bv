@@ -39,7 +39,7 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
 // Interfaces for bidding system
 export interface MarketplaceBid {
     id?: string;
-    item_id: number;
+    item_id: number | string;
     bidder_email: string;
     bidder_name: string;
     bid_amount: number;
@@ -95,7 +95,7 @@ export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | '
 };
 
 // Get all bids for a specific item
-export const getBidsByItemId = async (itemId: number): Promise<MarketplaceBid[]> => {
+export const getBidsByItemId = async (itemId: number | string): Promise<MarketplaceBid[]> => {
     try {
         const data = await apiCall(`/api/bids/${itemId}`);
         return data || [];
@@ -106,7 +106,7 @@ export const getBidsByItemId = async (itemId: number): Promise<MarketplaceBid[]>
 };
 
 // Get highest bid for an item
-export const getHighestBidForItem = async (itemId: number): Promise<MarketplaceBid | null> => {
+export const getHighestBidForItem = async (itemId: number | string): Promise<MarketplaceBid | null> => {
     try {
         const data = await apiCall(`/api/bids/${itemId}/highest`);
         return data || null;
@@ -117,7 +117,7 @@ export const getHighestBidForItem = async (itemId: number): Promise<MarketplaceB
 };
 
 // Get user's bid for a specific item
-export const getUserBidForItem = async (itemId: number, userEmail: string): Promise<MarketplaceBid | null> => {
+export const getUserBidForItem = async (itemId: number | string, userEmail: string): Promise<MarketplaceBid | null> => {
     try {
         const data = await apiCall(`/api/bids/${itemId}/user/${encodeURIComponent(userEmail)}`);
         return data || null;
@@ -282,33 +282,42 @@ export const getBidConfirmations = async (): Promise<BidConfirmation[]> => {
     }
 };
 
-// Check if user can add item to cart (must have highest approved bid)
-export const canAddToCart = async (itemId: number, userEmail: string): Promise<{ canAdd: boolean; message: string }> => {
+// Check if user can add item to cart
+export const canAddToCart = async (itemId: number | string, userEmail: string): Promise<{ canAdd: boolean; message: string }> => {
     try {
         const data = await apiCall(`/api/bids/${itemId}/cart-eligibility/${encodeURIComponent(userEmail)}`);
-        return data;
+        return data || { canAdd: false, message: 'Unable to check cart eligibility' };
     } catch (error) {
         console.error('Error checking cart eligibility:', error);
         return { canAdd: false, message: 'Error checking bid status. Please try again.' };
     }
 };
 
-// Subscribe to bid updates for real-time functionality
-export const subscribeToBidUpdates = (itemId: number, callback: (bids: MarketplaceBid[]) => void) => {
+// Subscribe to bid updates - Update to handle both number and string IDs
+export const subscribeToBidUpdates = (itemId: number | string, callback: (bids: MarketplaceBid[]) => void) => {
+    // Convert to string for consistent handling
+    const itemIdStr = String(itemId);
+    
+    // Set up real-time subscription using Supabase
     const subscription = supabase
-        .channel(`bids-${itemId}`)
-        .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'marketplace_bids',
-            filter: `item_id=eq.${itemId}`
-        }, () => {
-            // Refetch all bids for this item
-            getBidsByItemId(itemId).then(callback);
-        })
+        .channel(`marketplace_bids_${itemIdStr}`)
+        .on('postgres_changes', 
+            { 
+                event: '*', 
+                schema: 'public', 
+                table: 'marketplace_bids',
+                filter: `item_id=eq.${itemIdStr}`
+            }, 
+            (payload) => {
+                console.log('Bid change detected:', payload);
+                // Refetch bids when changes occur
+                getBidsByItemId(itemId).then(callback);
+            }
+        )
         .subscribe();
 
+    // Return unsubscribe function
     return () => {
-        supabase.removeChannel(subscription);
+        subscription.unsubscribe();
     };
 }; 

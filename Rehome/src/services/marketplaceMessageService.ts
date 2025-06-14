@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 // Interface for marketplace message
 export interface MarketplaceMessage {
     id?: string;
-    item_id: number;
+    item_id: string; // Always UUID string now, matching marketplace_furniture
     sender_id: string;
     sender_name: string;
     receiver_id: string;
@@ -14,7 +14,7 @@ export interface MarketplaceMessage {
 }
 
 // Fetch messages for a specific item
-export const getMessagesByItemId = async (itemId: number): Promise<MarketplaceMessage[]> => {
+export const getMessagesByItemId = async (itemId: string): Promise<MarketplaceMessage[]> => {
     try {
         const { data, error } = await supabase
             .from('marketplace_messages')
@@ -72,7 +72,7 @@ export const sendMessage = async (message: MarketplaceMessage): Promise<Marketpl
 };
 
 // Mark messages as read
-export const markMessagesAsRead = async (itemId: number, userId: string): Promise<void> => {
+export const markMessagesAsRead = async (itemId: string, userId: string): Promise<void> => {
     try {
         const { error } = await supabase
             .from('marketplace_messages')
@@ -89,7 +89,7 @@ export const markMessagesAsRead = async (itemId: number, userId: string): Promis
 };
 
 // Subscribe to new messages for a specific item
-export const subscribeToItemMessages = (itemId: number, callback: (message: MarketplaceMessage) => void) => {
+export const subscribeToItemMessages = (itemId: string, callback: (message: MarketplaceMessage) => void) => {
     const subscription = supabase
         .channel(`item:${itemId}`)
         .on('postgres_changes', {

@@ -9,7 +9,7 @@ import {
 
 interface MarketplaceChatProps {
   item: {
-    id: number;
+    id: string; // Always UUID string now
     name: string;
     seller_email: string;
   };

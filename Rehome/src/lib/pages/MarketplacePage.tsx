@@ -20,7 +20,7 @@ const MarketplacePage = () => {
     const [filteredItems, setFilteredItems] = useState<FurnitureItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [cart, setCart] = useState<{id: number | string, quantity: number}[]>([]); // Cart with quantities
+    const [cart, setCart] = useState<{id: string, quantity: number}[]>([]); // Cart with string IDs
     const [_, setIsAddingToCart] = useState(false);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,7 +51,7 @@ const MarketplacePage = () => {
         fetchFurniture();
     }, []);
 
-    const addToCart = (itemId: number | string) => {
+    const addToCart = (itemId: string) => {
         // Check if item is from ReHome
         const item = furnitureItems.find(item => item.id === itemId);
         if (!item?.isrehome) {
@@ -78,11 +78,11 @@ const MarketplacePage = () => {
         }, 500); // Simulate a delay
     };
 
-    const removeFromCart = (itemId: number) => {
+    const removeFromCart = (itemId: string) => {
         setCart(prev => prev.filter(item => item.id !== itemId));
     };
 
-    const updateQuantity = (itemId: number, newQuantity: number) => {
+    const updateQuantity = (itemId: string, newQuantity: number) => {
         if (newQuantity <= 0) {
             removeFromCart(itemId);
             return;
@@ -350,7 +350,7 @@ const MarketplacePage = () => {
                                                 <p className="text-orange-600 font-medium">€{item.price}</p>
                                             </div>
                                             <button 
-                                                onClick={() => removeFromCart(Number(item.id))}
+                                                onClick={() => removeFromCart(item.id)}
                                                 className="text-gray-400 hover:text-red-500"
                                             >
                                                 <FaTrash />
@@ -361,14 +361,14 @@ const MarketplacePage = () => {
                                         <div className="flex justify-end items-center">
                                             <div className="flex items-center border rounded-md">
                                                 <button 
-                                                    onClick={() => updateQuantity(Number(item.id), cartItem.quantity - 1)}
+                                                    onClick={() => updateQuantity(item.id, cartItem.quantity - 1)}
                                                     className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
                                                 >
                                                     <FaMinus size={10} />
                                                 </button>
                                                 <span className="px-3 py-1 text-sm">{cartItem.quantity}</span>
                                                 <button 
-                                                    onClick={() => updateQuantity(Number(item.id), cartItem.quantity + 1)}
+                                                    onClick={() => updateQuantity(item.id, cartItem.quantity + 1)}
                                                     className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
                                                 >
                                                     <FaPlus size={10} />

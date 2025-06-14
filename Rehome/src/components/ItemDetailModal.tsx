@@ -20,7 +20,7 @@ interface ItemDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   item: {
-    id: number | string;
+    id: string; // Always UUID string now
     name: string;
     description: string;
     image_urls?: string[]; // Fixed to match database column name
@@ -31,8 +31,8 @@ interface ItemDetailsModalProps {
     seller_email: string;
     isrehome?: boolean;
   } | null;
-  onAddToCart?: (itemId: number | string) => void;
-  onMarkAsSold?: (itemId: number | string) => void;
+  onAddToCart?: (itemId: string) => void;
+  onMarkAsSold?: (itemId: string) => void;
 }
 
 const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ 
@@ -76,8 +76,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     if (isOpen && item && !isrehome) {
       loadBiddingData();
       
-      // Subscribe to real-time bid updates
-      const unsubscribe = subscribeToBidUpdates(typeof id === 'string' ? parseInt(id) : id, (updatedBids) => {
+      // Subscribe to real-time bid updates - Don't convert UUID to integer
+      const unsubscribe = subscribeToBidUpdates(id, (updatedBids) => {
         setBids(updatedBids);
         loadBiddingData(); // Reload all data when bids change
       });
@@ -91,13 +91,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     
     setLoadingBids(true);
     try {
-      // Load all data in parallel
-      const itemId = typeof id === 'string' ? parseInt(id) : id;
+      // Load all data in parallel - Use id directly without conversion
       const [allBids, usersBid, highest, cartStatus] = await Promise.all([
-        getBidsByItemId(itemId),
-        getUserBidForItem(itemId, user.email),
-        getHighestBidForItem(itemId),
-        canAddToCart(itemId, user.email)
+        getBidsByItemId(id),
+        getUserBidForItem(id, user.email),
+        getHighestBidForItem(id),
+        canAddToCart(id, user.email)
       ]);
 
       setBids(allBids);
@@ -132,7 +131,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     setIsProcessing(true);
     try {
       const bidData = {
-        item_id: typeof id === 'string' ? parseInt(id) : id,
+        item_id: id, // Use id directly without conversion
         bidder_email: user.email,
         bidder_name: user.email,
         bid_amount: amount,
@@ -141,9 +140,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
       const result = await placeBid(bidData);
       if (result) {
-    setShowBidModal(false);
-    setBidAmount('');
-    setBidError('');
+        setShowBidModal(false);
+        setBidAmount('');
+        setBidError('');
         await loadBiddingData(); // Reload data after successful bid
       }
     } catch (error) {
@@ -171,7 +170,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     try {
       setIsProcessing(true);
       await sendMessage({
-        item_id: typeof id === 'string' ? parseInt(id) : id,
+        item_id: id, // Use UUID directly for chat
         content: `Hi, I'm interested in your item: ${name}`,
         sender_id: user.email,
         sender_name: user.email,
@@ -180,7 +179,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       
       // Close the modal and redirect to the chat dashboard
       onClose();
-      navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: typeof id === 'string' ? parseInt(id) : id } });
+      navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: id } }); // Use id directly
     } catch (error) {
       console.error('Error initiating chat:', error);
       toast.error("Failed to initiate chat. Please try again later.");
