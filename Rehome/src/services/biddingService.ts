@@ -321,4 +321,31 @@ export const subscribeToBidUpdates = (itemId: number | string, callback: (bids: 
     return () => {
         subscription.unsubscribe();
     };
+};
+
+// Admin function to refresh highest bid status for all items
+export const refreshHighestBidStatus = async (adminEmail: string): Promise<boolean> => {
+    try {
+        // Check if user is admin
+        if (!isAdmin(adminEmail)) {
+            toast.error('Admin access required');
+            return false;
+        }
+
+        const result = await apiCall('/api/admin/bids/refresh-highest', {
+            method: 'POST',
+        });
+
+        if (result.success) {
+            toast.success(result.message || 'Highest bid status refreshed successfully!');
+            return true;
+        } else {
+            toast.error(result.error || 'Failed to refresh highest bid status');
+            return false;
+        }
+    } catch (error) {
+        console.error('Error refreshing highest bid status:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to refresh highest bid status');
+        return false;
+    }
 }; 

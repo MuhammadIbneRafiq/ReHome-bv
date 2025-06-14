@@ -27,6 +27,9 @@ import HouseMovingLearnMore from "./lib/pages/HouseMovingLearnMore";
 import ItemTransportLearnMore from "./lib/pages/ItemTransportLearnMore";
 import SpecialRequestLearnMore from "./lib/pages/SpecialRequestLearnMore";
 import MarketplaceLearnMore from "./lib/pages/MarketplaceLearnMore";
+import TermsPage from "./lib/pages/TermsPage";
+import PrivacyPage from "./lib/pages/PrivacyPage";
+import CookiesPage from "./lib/pages/CookiesPage";
 
 // const usePostData = <T,>(endpoint: string) => {
 //   return useMutation<T, Error, T>(
@@ -79,6 +82,9 @@ const App = () => {
                   <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
                   <Route path="/contact-us" element={<ContactUsPage />} />
                   <Route path="/about-us" element={<AboutUsPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/cookies" element={<CookiesPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<SignupPage />} />
                 </Routes>

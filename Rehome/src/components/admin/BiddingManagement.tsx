@@ -13,6 +13,7 @@ import {
   getAllBidsForAdmin, 
   approveBid, 
   rejectBid,
+  refreshHighestBidStatus,
   BidWithItemDetails
 } from '../../services/biddingService';
 
@@ -102,6 +103,19 @@ const BiddingManagement: React.FC = () => {
     }
   };
 
+  const handleRefreshHighestBids = async () => {
+    if (!user) return;
+    
+    try {
+      const success = await refreshHighestBidStatus(user.email);
+      if (success) {
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Error refreshing highest bids:', error);
+    }
+  };
+
   const filteredBids = bids.filter(bid => {
     const matchesSearch = 
       bid.item_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -168,12 +182,20 @@ const BiddingManagement: React.FC = () => {
             <FaGavel className="mr-3 text-orange-500" />
             Bidding Management
           </h2>
-          <button
-            onClick={loadData}
-            className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
-          >
-            Refresh Data
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={handleRefreshHighestBids}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+            >
+              Fix Highest Bids
+            </button>
+            <button
+              onClick={loadData}
+              className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 transition-colors"
+            >
+              Refresh Data
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
