@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaEye, FaEyeSlash, FaGavel } from 'react-icons/fa';
 import { format, addDays } from 'date-fns';
 import { toast } from 'react-toastify';
 import { cityBaseCharges } from '../constants';
 import { PricingConfig, CityBasePrice, CreatePricingConfigRequest } from '../../types/pricing';
 import { pricingAdminService } from '../../services/pricingAdminService';
+import BiddingManagement from '../../components/admin/BiddingManagement';
+import MarketplaceManagement from '../../components/admin/MarketplaceManagement';
 
 // Furniture item interface
 interface FurnitureItem {
@@ -43,7 +45,7 @@ interface CitySchedule {
 }
 
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState<'furniture' | 'transport' | 'schedule' | 'pricing' | 'items'>('furniture');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'bidding'>('marketplace');
   const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]);
   const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -503,15 +505,15 @@ const AdminDashboard = () => {
           <div className="border-b border-gray-200">
             <nav className="flex -mb-px">
               <button
-                onClick={() => setActiveTab('furniture')}
+                onClick={() => setActiveTab('marketplace')}
                 className={`py-4 px-6 font-medium text-sm border-b-2 ${
-                  activeTab === 'furniture'
+                  activeTab === 'marketplace'
                     ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
                 <FaBox className="inline-block mr-2" />
-                Furniture Management
+                Marketplace Management
               </button>
               <button
                 onClick={() => setActiveTab('transport')}
@@ -557,6 +559,17 @@ const AdminDashboard = () => {
                 <FaBox className="inline-block mr-2" />
                 Items Management
               </button>
+              <button
+                onClick={() => setActiveTab('bidding')}
+                className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                  activeTab === 'bidding'
+                    ? 'border-orange-500 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                              >
+                  <FaGavel className="inline-block mr-2" />
+                  Bidding Management
+                </button>
             </nav>
           </div>
           
@@ -1435,6 +1448,11 @@ const AdminDashboard = () => {
                       })}
                     </div>
                   </div>
+                )}
+
+                {/* Bidding Management Tab */}
+                {activeTab === 'bidding' && (
+                  <BiddingManagement />
                 )}
               </>
             )}

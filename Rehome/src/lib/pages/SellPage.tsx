@@ -279,6 +279,44 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
             return;
         }
 
+        // Frontend validation - check all required fields
+        const validationErrors = [];
+        
+        if (!name.trim()) {
+            validationErrors.push('Furniture name is required');
+        }
+        
+        if (!description.trim()) {
+            validationErrors.push('Description is required');
+        }
+        
+        if (!category.trim()) {
+            validationErrors.push('Category is required');
+        }
+        
+        if (!conditionRating) {
+            validationErrors.push('Condition rating is required');
+        }
+        
+        if (!cityName.trim()) {
+            validationErrors.push('Location is required');
+        }
+        
+        // Pricing validation
+        if (pricingType === 'fixed' && (!price || isNaN(parseFloat(price)) || parseFloat(price) <= 0)) {
+            validationErrors.push('Valid price is required for fixed pricing');
+        }
+        
+        if (pricingType === 'bidding' && (!startingBid || isNaN(parseFloat(startingBid)) || parseFloat(startingBid) <= 0)) {
+            validationErrors.push('Valid starting bid is required for auction pricing');
+        }
+        
+        if (validationErrors.length > 0) {
+            setSubmitError(`Please fix the following issues: ${validationErrors.join(', ')}`);
+            setSubmitting(false);
+            return;
+        }
+
         try {
             // 1. Upload all the images
             const uploadedImageUrls: string[] = [];
@@ -301,6 +339,43 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                 setUploading(false);
             }
 
+            // Debug log the data being sent
+            const listingData = {
+                name,
+                description,
+                category,
+                subcategory: subcategory || null,
+                conditionRating: conditionRating ? parseInt(conditionRating) : null,
+                
+                // Dimensions (optional)
+                height: height ? parseFloat(height) : null,
+                width: width ? parseFloat(width) : null,
+                depth: depth ? parseFloat(depth) : null,
+                
+                // Pricing
+                pricingType,
+                price: pricingType === 'fixed' && price ? parseFloat(price) : null,
+                startingBid: pricingType === 'bidding' && startingBid ? parseFloat(startingBid) : null,
+                
+                imageUrl: uploadedImageUrls, // Use the image URLs array
+                cityName, // Include city name
+                latitude: locationCoords?.lat || null,
+                longitude: locationCoords?.lon || null,
+                isRehome, // Include ReHome flag
+                
+                // Flexible dates
+                hasFlexibleDates,
+                flexibleDateStart: hasFlexibleDates && flexibleDateStart ? flexibleDateStart : null,
+                flexibleDateEnd: hasFlexibleDates && flexibleDateEnd ? flexibleDateEnd : null,
+                preferredDate: hasFlexibleDates && preferredDate ? preferredDate : null,
+                
+                // Terms acceptance
+                termsAccepted: true,
+                termsAcceptedAt: new Date().toISOString(),
+            };
+            
+            console.log('Submitting listing data:', listingData);
+
             // 2.  Send the listing data
             const response = await fetch(API_ENDPOINTS.FURNITURE.CREATE, {
                 method: 'POST',
@@ -308,43 +383,12 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`, // Include the token
                 },
-                body: JSON.stringify({
-                    name,
-                    description,
-                    category,
-                    subcategory: subcategory || null,
-                    conditionRating: conditionRating ? parseInt(conditionRating) : null,
-                    
-                    // Dimensions (optional)
-                    height: height ? parseFloat(height) : null,
-                    width: width ? parseFloat(width) : null,
-                    depth: depth ? parseFloat(depth) : null,
-                    
-                    // Pricing
-                    pricingType,
-                    price: pricingType === 'fixed' && price ? parseFloat(price) : null,
-                    startingBid: pricingType === 'bidding' && startingBid ? parseFloat(startingBid) : null,
-                    
-                    imageUrl: uploadedImageUrls, // Use the image URLs array
-                    cityName, // Include city name
-                    latitude: locationCoords?.lat || null,
-                    longitude: locationCoords?.lon || null,
-                    isRehome, // Include ReHome flag
-                    
-                    // Flexible dates
-                    hasFlexibleDates,
-                    flexibleDateStart: hasFlexibleDates && flexibleDateStart ? flexibleDateStart : null,
-                    flexibleDateEnd: hasFlexibleDates && flexibleDateEnd ? flexibleDateEnd : null,
-                    preferredDate: hasFlexibleDates && preferredDate ? preferredDate : null,
-                    
-                    // Terms acceptance
-                    termsAccepted: true,
-                    termsAcceptedAt: new Date().toISOString(),
-                }),
+                body: JSON.stringify(listingData),
             });
 
             if (!response.ok) {
-                throw new Error(`Oops fill in all the details`);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Failed to create listing (${response.status})`);
             }
 
             const data = await response.json();

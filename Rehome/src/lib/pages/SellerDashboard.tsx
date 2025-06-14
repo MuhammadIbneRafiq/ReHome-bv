@@ -28,7 +28,7 @@ interface FurnitureItem {
     id: number;
     name: string;
     description: string;
-    image_url: string[]; // Change to image_urls (plural)
+    image_urls: string[]; // Fixed to match database column name
     price?: number;
     created_at: string;
     city_name: string;
@@ -368,9 +368,16 @@ const SellerDashboard = () => {
                                                 >
                                                     <div className="relative h-48 mb-3 overflow-hidden rounded-md">
                                                         <img 
-                                                            src={listing.image_url[0]} 
+                                                            src={listing.image_urls && Array.isArray(listing.image_urls) && listing.image_urls.length > 0 
+                                                                ? listing.image_urls[0] 
+                                                                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4='
+                                                            } 
                                                             alt={listing.name} 
                                                             className="w-full h-full object-cover" 
+                                                            onError={(e) => {
+                                                                const target = e.target as HTMLImageElement;
+                                                                target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
+                                                            }}
                                                         />
                                                         <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
                                                             €{listing.price}
@@ -465,9 +472,16 @@ const SellerDashboard = () => {
                                                 >
                                                     <div className="relative h-48 mb-3 overflow-hidden rounded-md">
                                                         <img 
-                                                            src={listing.image_url[0]} 
+                                                            src={listing.image_urls && Array.isArray(listing.image_urls) && listing.image_urls.length > 0 
+                                                                ? listing.image_urls[0] 
+                                                                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSUjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4='
+                                                            } 
                                                             alt={listing.name} 
                                                             className="w-full h-full object-cover opacity-70" 
+                                                            onError={(e) => {
+                                                                const target = e.target as HTMLImageElement;
+                                                                target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
+                                                            }}
                                                         />
                                                         <div className="absolute inset-0 flex items-center justify-center">
                                                             <span className="bg-green-500 text-white text-sm font-bold px-3 py-1 rounded-full">

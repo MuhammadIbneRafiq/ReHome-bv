@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments } from "react-icons/fa";
+import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments, FaGavel } from "react-icons/fa";
 import logo from "../../src/assets/logorehome.jpg";
 import { useNavigate } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
 import { sendMessage } from '../services/marketplaceMessageService';
 import { toast } from 'react-toastify';
+import { 
+  placeBid, 
+  getBidsByItemId, 
+  getHighestBidForItem, 
+  getUserBidForItem, 
+  canAddToCart, 
+  subscribeToBidUpdates,
+  MarketplaceBid 
+} from '../services/biddingService';
 
 interface ItemDetailsModalProps {
   isOpen: boolean;
@@ -14,7 +23,7 @@ interface ItemDetailsModalProps {
     id: number;
     name: string;
     description: string;
-    image_url: string[];
+    image_urls: string[]; // Fixed to match database column name
     price?: number;
     created_at: string;
     city_name: string;
@@ -37,53 +46,110 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const navigate = useNavigate(); // Initialize navigate
   const user = useUserStore((state) => state.user);
 
-  const { id, name, description, image_url, price, city_name, sold, seller_email, isrehome } = item;
+  const { id, name, description, image_urls, price, city_name, sold, seller_email, isrehome } = item;
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  // Bidding system state
-  const [bids, setBids] = useState<{amount: number, user: string, time: string}[]>([]);
-  const [messages, setMessages] = useState<string[]>([]);
+  // Real bidding system state
+  const [bids, setBids] = useState<MarketplaceBid[]>([]);
   const [showBidModal, setShowBidModal] = useState(false);
   const [bidAmount, setBidAmount] = useState('');
   const [bidError, setBidError] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [userBid, setUserBid] = useState<MarketplaceBid | null>(null);
+  const [highestBid, setHighestBid] = useState<MarketplaceBid | null>(null);
+  const [canAddToCartStatus, setCanAddToCartStatus] = useState<{canAdd: boolean; message: string}>({canAdd: false, message: ''});
+  const [loadingBids, setLoadingBids] = useState(false);
   
   // Check if user is the seller
   const isUserSeller = user?.email === seller_email;
 
   const goToNextImage = () => {
-    setCurrentImageIndex(prev => (prev + 1) % image_url.length);
+    setCurrentImageIndex(prev => (prev + 1) % image_urls.length);
   };
 
   const goToPrevImage = () => {
-    setCurrentImageIndex(prev => (prev - 1 + image_url.length) % image_url.length);
+    setCurrentImageIndex(prev => (prev - 1 + image_urls.length) % image_urls.length);
   };
 
-  // Get highest bid
-  const highestBid = bids.length > 0 ? Math.max(...bids.map(b => b.amount)) : null;
+  // Load bidding data when modal opens
+  useEffect(() => {
+    if (isOpen && item && !isrehome) {
+      loadBiddingData();
+      
+      // Subscribe to real-time bid updates
+      const unsubscribe = subscribeToBidUpdates(id, (updatedBids) => {
+        setBids(updatedBids);
+        loadBiddingData(); // Reload all data when bids change
+      });
+
+      return unsubscribe;
+    }
+  }, [isOpen, item, id, user?.email]);
+
+  const loadBiddingData = async () => {
+    if (!user?.email) return;
+    
+    setLoadingBids(true);
+    try {
+      // Load all data in parallel
+      const [allBids, usersBid, highest, cartStatus] = await Promise.all([
+        getBidsByItemId(id),
+        getUserBidForItem(id, user.email),
+        getHighestBidForItem(id),
+        canAddToCart(id, user.email)
+      ]);
+
+      setBids(allBids);
+      setUserBid(usersBid);
+      setHighestBid(highest);
+      setCanAddToCartStatus(cartStatus);
+    } catch (error) {
+      console.error('Error loading bidding data:', error);
+    } finally {
+      setLoadingBids(false);
+    }
+  };
 
   // Handle bid submit
-  const handleBidSubmit = (e: React.FormEvent) => {
+  const handleBidSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(bidAmount);
     if (isNaN(amount) || amount <= 0) {
       setBidError('Please enter a valid bid amount.');
       return;
     }
-    if (highestBid && amount <= highestBid) {
-      setBidError('Your bid must be higher than the current highest bid.');
+    if (highestBid && amount <= highestBid.bid_amount) {
+      setBidError(`Your bid must be higher than the current highest bid of €${highestBid.bid_amount}`);
       return;
     }
-    // Add bid
-    const currentTime = new Date().toISOString();
-    setBids(prev => [...prev, { amount, user: 'You', time: currentTime }]);
-    // Add message
-    setMessages(prev => [
-      ...prev,
-      `Hi, I placed a bid of €${amount} for your item ${name}. Let me know if you're interested!`
-    ]);
+
+    if (!user) {
+      setBidError('You must be logged in to place a bid.');
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const bidData = {
+        item_id: id,
+        bidder_email: user.email,
+        bidder_name: user.email,
+        bid_amount: amount,
+        status: 'pending' as const
+      };
+
+      const result = await placeBid(bidData);
+      if (result) {
     setShowBidModal(false);
     setBidAmount('');
     setBidError('');
+        await loadBiddingData(); // Reload data after successful bid
+      }
+    } catch (error) {
+      console.error('Error placing bid:', error);
+      setBidError('Failed to place bid. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Handle initiating chat from item details
@@ -146,7 +212,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             <div className="relative aspect-square overflow-hidden rounded-xl">
               <motion.img
                 key={currentImageIndex}
-                src={image_url[currentImageIndex]}
+                src={image_urls?.[currentImageIndex] || '/placeholder-image.jpg'}
                 alt={name}
                 className="w-full h-full object-cover"
                 initial={{ opacity: 0 }}
@@ -157,7 +223,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             </div>
 
             {/* Navigation Arrows */}
-            {image_url.length > 1 && (
+            {image_urls && image_urls.length > 1 && (
               <>
                 <button
                   onClick={goToPrevImage}
@@ -176,7 +242,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
             {/* Dots Indicator */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-              {image_url.map((_, index) => (
+              {image_urls?.map((_, index) => (
                 <div
                   key={index}
                   className={`w-2 h-2 rounded-full transition-colors ${
@@ -215,7 +281,10 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 
                 {/* Action buttons */}
                 <div className="grid grid-cols-2 gap-4 mb-4">
+                  {/* ReHome items: Show Add to Cart or bidding-based message */}
                   {!sold && !isUserSeller && isrehome && (
+                    <>
+                      {canAddToCartStatus.canAdd ? (
                     <button
                       onClick={() => onAddToCart && onAddToCart(id)}
                       className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
@@ -223,20 +292,25 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       <FaShoppingCart />
                       Add to Cart
                     </button>
+                      ) : (
+                        <div className="col-span-2 bg-yellow-100 text-yellow-800 py-3 px-4 rounded-lg text-center font-medium">
+                          {canAddToCartStatus.message}
+                        </div>
+                      )}
+                    </>
                   )}
                   
+                  {/* User listings: Show contact seller message and chat button */}
                   {!sold && !isUserSeller && !isrehome && (
+                    <>
                     <div className="col-span-2 bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-center font-medium">
                       Contact seller directly for user listings
                     </div>
-                  )}
-                  
-                  {/* Chat button - disabled for own items */}
-                  {!isUserSeller && (
+                      {/* Chat button for user listings only */}
                     <button
                       onClick={handleInitiateChat}
                       disabled={isProcessing}
-                      className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="col-span-2 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       {isProcessing ? (
                         <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
@@ -245,56 +319,111 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       )}
                       Chat with Seller
                     </button>
+                    </>
+                  )}
+                  
+                  {/* ReHome items: Show special message about bidding system */}
+                  {!sold && !isUserSeller && isrehome && (
+                    <div className="col-span-2 bg-blue-100 text-blue-800 py-3 px-4 rounded-lg text-center font-medium">
+                      <FaGavel className="inline mr-2" />
+                      ReHome Item - Bidding system active. Place your bid below!
+                    </div>
                   )}
                 </div>
                 
-                {/* Bidding Section - hide for own items */}
+                {/* Bidding Section - for both user listings and ReHome items */}
                 {!isUserSeller && (
                   <div className="mb-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <FaGavel className="text-orange-500" />
                       <span className="font-semibold">Bids:</span>
-                      {bids.length === 0 ? (
-                        <span className="text-gray-500">Make the first bid now</span>
+                      {loadingBids ? (
+                        <span className="text-gray-500">Loading bids...</span>
+                      ) : bids.length === 0 ? (
+                        <span className="text-gray-500">No bids yet</span>
                       ) : (
-                        <span className="text-orange-600 font-bold">Highest bid: €{highestBid}</span>
+                        <span className="text-orange-600 font-bold">
+                          Highest bid: €{highestBid?.bid_amount || 0}
+                        </span>
                       )}
                       <button
-                        className="ml-4 px-4 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                        className="ml-4 px-4 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded disabled:opacity-50"
                         onClick={() => setShowBidModal(true)}
+                        disabled={loadingBids || !user}
                       >
                         Bid
                       </button>
                     </div>
+
+                    {/* User's current bid status */}
+                    {userBid && (
+                      <div className={`mb-3 p-2 rounded text-sm ${
+                        userBid.status === 'approved' && userBid.is_highest_bid ? 'bg-green-100 text-green-800' :
+                        userBid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        userBid.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        Your bid: €{userBid.bid_amount} - Status: {userBid.status}
+                        {userBid.status === 'approved' && userBid.is_highest_bid && ' (Highest bid!)'}
                   </div>
                 )}
 
                 {/* Bid/Message Overview */}
-                {(bids.length > 0 || messages.length > 0) && (
-                  <div className="mb-4 bg-orange-50 p-3 rounded">
-                    <h4 className="font-semibold mb-2 text-orange-700">Bid/Message Overview</h4>
-                    {bids.length > 0 && (
-                      <div className="mb-2">
-                        <div className="font-medium text-gray-700 mb-1">Bids:</div>
-                        <ul className="text-sm text-gray-800 space-y-1">
-                          {bids.map((bid, idx) => (
-                            <li key={idx} className="flex justify-between">
-                              <span>€{bid.amount} by {bid.user}</span>
-                              <span className="text-gray-400">{bid.time}</span>
-                            </li>
-                          ))}
-                        </ul>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h4 className="font-semibold mb-3 text-gray-800">Bid/Message Overview</h4>
+                      
+                      {/* Bids Section */}
+                      <div className="mb-4">
+                        <h5 className="font-medium text-gray-700 mb-2">Bids:</h5>
+                        {bids.length === 0 ? (
+                          <p className="text-gray-500 text-sm">No bids yet</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {bids.slice(0, 5).map((bid, idx) => (
+                              <div key={bid.id || idx} className="flex justify-between items-center text-sm">
+                                <span className="font-medium">
+                                  €{bid.bid_amount} by {bid.bidder_email === user?.email ? 'You' : bid.bidder_name || 'Anonymous'}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(bid.created_at || '').toISOString()}
+                                  </span>
+                                  <span className={`text-xs px-2 py-1 rounded ${
+                                    bid.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    bid.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {bid.status}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
                       </div>
                     )}
-                    {messages.length > 0 && (
+                      </div>
+
+                      {/* Messages Section - only for ReHome items (no chat for user listings) */}
+                      {isrehome && (
                       <div>
-                        <div className="font-medium text-gray-700 mb-1">Messages:</div>
-                        <ul className="text-sm text-gray-800 space-y-1">
-                          {messages.map((msg, idx) => (
-                            <li key={idx}>{msg}</li>
+                          <h5 className="font-medium text-gray-700 mb-2">Messages:</h5>
+                          {bids.filter(bid => bid.bidder_email === user?.email).length > 0 ? (
+                            <div className="space-y-2">
+                              {bids
+                                .filter(bid => bid.bidder_email === user?.email)
+                                .slice(0, 3)
+                                .map((bid, idx) => (
+                                  <div key={`msg-${bid.id || idx}`} className="text-sm text-gray-600">
+                                    Hi, I placed a bid of €{bid.bid_amount} for your item {name}. Let me know if you're interested!
+                                  </div>
                           ))}
-                        </ul>
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm">No messages yet</p>
+                          )}
                       </div>
                     )}
+                    </div>
                   </div>
                 )}
 
@@ -335,23 +464,24 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
           <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-xs w-full relative">
               <button className="absolute top-2 right-2 text-gray-400 hover:text-orange-600 text-xl" onClick={() => setShowBidModal(false)}>&times;</button>
-              <h3 className="text-lg font-bold mb-4 text-orange-700">Bids</h3>
+              <h3 className="text-lg font-bold mb-4 text-orange-700">Place Your Bid</h3>
               <form onSubmit={handleBidSubmit}>
                 <label className="block text-gray-700 mb-2 font-medium">Your bid</label>
                 <input
                   type="number"
-                  min={highestBid ? highestBid + 1 : 1}
+                  min={highestBid ? highestBid.bid_amount + 1 : 1}
                   step="0.01"
                   value={bidAmount}
                   onChange={e => setBidAmount(e.target.value)}
                   className="w-full border border-gray-300 rounded px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
                   placeholder="Enter your bid"
                   required
+                  disabled={isProcessing}
                 />
                 {bidError && <div className="text-red-500 text-sm mb-2">{bidError}</div>}
                 <div className="flex justify-between mt-4">
                   <button type="button" className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" onClick={() => setShowBidModal(false)}>Cancel</button>
-                  <button type="submit" className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">Place bid</button>
+                  <button type="submit" className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">Place Bid</button>
                 </div>
               </form>
             </div>

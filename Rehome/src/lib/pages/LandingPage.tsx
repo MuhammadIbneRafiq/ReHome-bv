@@ -12,56 +12,6 @@ const LandingPage = () => {
   const { t } = useTranslation();
   const [showBookingModal, setShowBookingModal] = useState(false);
 
-  // Dummy Furniture Data with Images (You can keep this or fetch from API)
-  // const dummyData: FurnitureItem[] = [
-  //   {
-  //     id: 1,
-  //     name: "Cozy Sofa",
-  //     image_url: [sofaImage],
-  //     description: "A comfortable and stylish sofa for your living room.",
-  //     price: 299,
-  //     created_at: new Date().toISOString(),
-  //     seller_email: "info@rehome.com",
-  //     city_name: "Amsterdam",
-  //     sold: false,
-  //     isrehome: true
-  //   },
-  //   {
-  //     id: 2,
-  //     name: "Wooden Dining Table",
-  //     image_url: [tableImage],
-  //     description: "A sturdy wooden dining table that seats 6 people.",
-  //     price: 399,
-  //     created_at: new Date().toISOString(),
-  //     seller_email: "info@rehome.com",
-  //     city_name: "Amsterdam",
-  //     sold: false,
-  //     isrehome: true
-  //   },
-  //   {
-  //     id: 3,
-  //     name: "Modern Office Chair",
-  //     image_url: [chairImage],
-  //     description: "An ergonomic office chair for maximum comfort.",
-  //     price: 199,
-  //     created_at: new Date().toISOString(),
-  //     seller_email: "info@rehome.com",
-  //     city_name: "Amsterdam",
-  //     sold: false,
-  //     isrehome: true
-  //   },
-  // ];
-
-  // // Translate furniture items
-  // const translatedItems = dummyData.map(item => {
-  //   const translated = translateFurnitureItem(item);
-  //   return {
-  //     ...item,
-  //     name: translated.name,
-  //     description: translated.description
-  //   };
-  // });
-
   return (
     <div className="min-h-screen bg-orange-50 flex flex-col">
       {/* Hero Section */}

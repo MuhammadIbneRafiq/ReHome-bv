@@ -98,7 +98,7 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
                 <p className="mt-2 text-sm text-gray-500 line-clamp-2">{item.description}</p>
                 <div className="mt-4 flex justify-between items-center">
                   <Link
-                    to={`/marketplace/item/${item.id}`}
+                    to={`/marketplace`}
                     className="text-orange-600 hover:text-orange-700 text-sm font-medium"
                   >
                     {t('marketplace.viewDetails')} &rarr;
