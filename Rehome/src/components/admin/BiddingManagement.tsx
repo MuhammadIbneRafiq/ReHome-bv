@@ -4,14 +4,11 @@ import {
   FaGavel, 
   FaCheck, 
   FaTimes, 
-  FaEye, 
   FaUser, 
   FaCalendar, 
   FaMoneyBillWave,
   FaSearch,
-  FaFilter
 } from 'react-icons/fa';
-import { toast } from 'react-toastify';
 import {
   getAllBidsForAdmin,
   approveBid,

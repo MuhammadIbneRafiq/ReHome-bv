@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import MarketplaceSearch from '../../components/MarketplaceSearch';
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {FurnitureItem} from '../../types/furniture'; // Import the type
 import ItemDetailsModal from '@/components/ItemDetailModal'; // Import the modal
 import logoImage from '../../assets/logorehome.jpg'
@@ -192,12 +192,17 @@ const MarketplacePage = () => {
 
     return (
         <div className="min-h-screen bg-orange-50 pt-24 pb-12">
-            <ItemDetailsModal
-                isOpen={isModalOpen}
-                onClose={closeModal}
-                item={selectedItem || null}
-                onAddToCart={addToCart}
-            />
+            <AnimatePresence mode="wait">
+                {isModalOpen && (
+                    <ItemDetailsModal
+                        key="item-details-modal"
+                        isOpen={isModalOpen}
+                        onClose={closeModal}
+                        item={selectedItem || null}
+                        onAddToCart={addToCart}
+                    />
+                )}
+            </AnimatePresence>
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-6">{t('marketplace.title')}</h1>

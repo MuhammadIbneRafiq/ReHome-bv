@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments, FaGavel } from "react-icons/fa";
 import logo from "../../src/assets/logorehome.jpg";
 import { useNavigate } from 'react-router-dom';
@@ -42,14 +42,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   onAddToCart, 
   onMarkAsSold 
 }) => {
-  if (!isOpen || !item) return null;
-  const navigate = useNavigate(); // Initialize navigate
+  // Move ALL hooks to the top, before any conditional logic
+  const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
-
-  const { id, name, description, image_urls, price, city_name, sold, seller_email, isrehome } = item;
-  // const numericId = typeof id === 'string' ? parseInt(id) : id;
+  
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  // Real bidding system state
   const [bids, setBids] = useState<MarketplaceBid[]>([]);
   const [showBidModal, setShowBidModal] = useState(false);
   const [bidAmount, setBidAmount] = useState('');
@@ -59,6 +56,45 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [highestBid, setHighestBid] = useState<MarketplaceBid | null>(null);
   const [canAddToCartStatus, setCanAddToCartStatus] = useState<{canAdd: boolean; message: string}>({canAdd: false, message: ''});
   const [loadingBids, setLoadingBids] = useState(false);
+
+  // Load bidding data when modal opens
+  useEffect(() => {
+    if (isOpen && item && !item.isrehome && user?.email) {
+      loadBiddingData();
+      
+      // Subscribe to real-time bid updates
+      const unsubscribe = subscribeToBidUpdates(item.id, (updatedBids) => {
+        setBids(updatedBids);
+        loadBiddingData(); // Reload all data when bids change
+      });
+
+      return unsubscribe;
+    }
+  }, [isOpen, item?.id, item?.isrehome, user?.email]);
+
+  // Reset state when modal closes or item changes
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentImageIndex(0);
+      setBids([]);
+      setShowBidModal(false);
+      setBidAmount('');
+      setBidError('');
+      setIsProcessing(false);
+      setUserBid(null);
+      setHighestBid(null);
+      setCanAddToCartStatus({canAdd: false, message: ''});
+      setLoadingBids(false);
+    }
+  }, [isOpen]);
+
+  // Since we're using AnimatePresence in parent, we don't need conditional return here
+  // The component should always render when called, but handle null item gracefully
+  if (!item) {
+    return null;
+  }
+
+  const { id, name, description, image_urls, price, city_name, sold, seller_email, isrehome } = item;
   
   // Check if user is the seller
   const isUserSeller = user?.email === seller_email;
@@ -71,42 +107,32 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     setCurrentImageIndex(prev => (prev - 1 + (image_urls?.length || 1)) % (image_urls?.length || 1));
   };
 
-  // Load bidding data when modal opens
-  useEffect(() => {
-    if (isOpen && item && !isrehome) {
-      loadBiddingData();
-      
-      // Subscribe to real-time bid updates - Don't convert UUID to integer
-      const unsubscribe = subscribeToBidUpdates(id, (updatedBids) => {
-        setBids(updatedBids);
-        loadBiddingData(); // Reload all data when bids change
-      });
-
-      return unsubscribe;
-    }
-  }, [isOpen, item, id, user?.email]);
-
   const loadBiddingData = async () => {
-    if (!user?.email) return;
+    if (!user?.email || !item) return;
     
     setLoadingBids(true);
     try {
       // Load all data in parallel - Use id directly without conversion
       const [allBids, usersBid, highest, cartStatus] = await Promise.all([
-        getBidsByItemId(id),
-        getUserBidForItem(id, user.email),
-        getHighestBidForItem(id),
-        canAddToCart(id, user.email)
+        getBidsByItemId(item.id),
+        getUserBidForItem(item.id, user.email),
+        getHighestBidForItem(item.id),
+        canAddToCart(item.id, user.email)
       ]);
 
-      setBids(allBids);
-      setUserBid(usersBid);
-      setHighestBid(highest);
-      setCanAddToCartStatus(cartStatus);
+      // Only update state if component is still mounted and modal is still open
+      if (isOpen && item) {
+        setBids(allBids);
+        setUserBid(usersBid);
+        setHighestBid(highest);
+        setCanAddToCartStatus(cartStatus);
+      }
     } catch (error) {
       console.error('Error loading bidding data:', error);
     } finally {
-      setLoadingBids(false);
+      if (isOpen) {
+        setLoadingBids(false);
+      }
     }
   };
 
@@ -461,8 +487,14 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         </div>
 
         {/* Bid Modal */}
-        {showBidModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+        <AnimatePresence>
+          {showBidModal && (
+            <motion.div 
+              className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
             <div className="bg-white rounded-lg shadow-lg p-8 max-w-xs w-full relative">
               <button className="absolute top-2 right-2 text-gray-400 hover:text-orange-600 text-xl" onClick={() => setShowBidModal(false)}>&times;</button>
               <h3 className="text-lg font-bold mb-4 text-orange-700">Place Your Bid</h3>
@@ -486,8 +518,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 </div>
               </form>
             </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </motion.div>
   );

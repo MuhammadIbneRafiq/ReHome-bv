@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaPlus, FaEdit, FaTrash, FaSave, FaTimes, FaSearch, FaFilter, FaEye, FaCheck, FaGavel, FaClock, FaUser, FaShoppingCart, FaBan } from 'react-icons/fa';
+import { FaTrash, FaSearch, FaFilter, FaEye, FaCheck, FaGavel, FaClock, FaShoppingCart, FaBan } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabaseClient';
 import { 
@@ -9,7 +9,6 @@ import {
   rejectBid, 
   getBidConfirmations, 
   confirmBid,
-  MarketplaceBid,
   BidWithItemDetails,
   BidConfirmation
 } from '../../services/biddingService';
@@ -44,7 +43,7 @@ const MarketplaceManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'rehome' | 'user'>('all');
   const [bidStatusFilter, setBidStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'outbid'>('all');
-  const [editingListing, setEditingListing] = useState<MarketplaceListing | null>(null);
+  const [setEditingListing] = useState<MarketplaceListing | null>(null);
   const [processingBids, setProcessingBids] = useState<Set<string>>(new Set());
 
   useEffect(() => {
