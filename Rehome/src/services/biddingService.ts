@@ -2,7 +2,8 @@ import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.MODE === 'development' ? 'http://localhost:3000' : 'https://rehome-backend.vercel.app');
 
 // List of admin email addresses - keep in sync with other admin files
 const ADMIN_EMAILS = [
