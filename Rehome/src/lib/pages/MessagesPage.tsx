@@ -5,7 +5,7 @@ import { getMessagesByUserId, getMessagesByItemId, markMessagesAsRead, subscribe
 import { FaEnvelope, FaEnvelopeOpen } from 'react-icons/fa';
 
 interface Conversation {
-  itemId: number;
+  itemId: string;
   itemName: string;
   otherUser: string;
   lastMessage: string;
@@ -16,7 +16,7 @@ interface Conversation {
 const MessagesPage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeConversation, setActiveConversation] = useState<number | null>(null);
+  const [activeConversation, setActiveConversation] = useState<string | null>(null);
   const [messages, setMessages] = useState<MarketplaceMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const user = useUserStore((state) => state.user);
