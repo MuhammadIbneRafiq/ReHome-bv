@@ -184,9 +184,8 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
 
                     {/* Remove Button */}
                     <button 
-                      onClick={() => removeItem(typeof item.id === 'string' ? parseInt(item.id) : item.id)}
-                      className="text-gray-400 hover:text-red-500 ml-2"
-                      aria-label="Remove item"
+                      onClick={() => removeItem(String(item.id))}
+                      className="text-red-500 hover:text-red-700"
                     >
                       <FaTrash />
                     </button>
@@ -197,17 +196,15 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     <div className="flex justify-end items-center mt-2">
                       <div className="flex items-center border rounded-md">
                         <button 
-                          onClick={() => updateQuantity(typeof item.id === 'string' ? parseInt(item.id) : item.id, item.quantity - 1)}
                           className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
-                          aria-label="Decrease quantity"
+                          onClick={() => updateQuantity(String(item.id), item.quantity - 1)}
                         >
                           <FaMinus size={10} />
                         </button>
                         <span className="px-3 py-1 text-sm text-gray-800">{item.quantity}</span>
                         <button 
-                          onClick={() => updateQuantity(typeof item.id === 'string' ? parseInt(item.id) : item.id, item.quantity + 1)}
                           className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
-                          aria-label="Increase quantity"
+                          onClick={() => updateQuantity(String(item.id), item.quantity + 1)}
                         >
                           <FaPlus size={10} />
                         </button>

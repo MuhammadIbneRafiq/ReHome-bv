@@ -82,7 +82,7 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
                   </div>
                 )}
                 <img
-                  src={item.image_url[0]}
+                  src={item.image_url?.[0] || ''}
                   alt={item.name}
                   className="w-full h-full object-cover"
                 />

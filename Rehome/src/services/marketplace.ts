@@ -11,7 +11,7 @@ import deskImage from "../assets/IMG-20250208-WA0006.jpg";
 const marketplaceItems: FurnitureItem[] = [
   // Bedroom category
   {
-    id: 1,
+    id: "1",
     name: "Queen Size Bed",
     image_url: [bedImage],
     description: "Comfortable queen size bed with wooden frame.",
@@ -26,7 +26,7 @@ const marketplaceItems: FurnitureItem[] = [
   },
   // Sofas and Chairs category
   {
-    id: 3,
+    id: "3",
     name: "Cozy Sofa",
     image_url: [sofaImage],
     description: "A comfortable and stylish sofa for your living room.",
@@ -40,7 +40,7 @@ const marketplaceItems: FurnitureItem[] = [
     subcategory: "Sofa"
   },
   {
-    id: 4,
+    id: "4",
     name: "Modern Office Chair",
     image_url: [chairImage],
     description: "An ergonomic office chair for maximum comfort.",
@@ -55,7 +55,7 @@ const marketplaceItems: FurnitureItem[] = [
   },
   // Tables category
   {
-    id: 5,
+    id: "5",
     name: "Wooden Dining Table",
     image_url: [tableImage],
     description: "A sturdy wooden dining table that seats 6 people.",
@@ -69,7 +69,7 @@ const marketplaceItems: FurnitureItem[] = [
     subcategory: "Dining Table"
   },
   {
-    id: 6,
+    id: "6",
     name: "Office Desk",
     image_url: [deskImage],
     description: "Modern office desk with drawers for storage.",
@@ -84,7 +84,7 @@ const marketplaceItems: FurnitureItem[] = [
   },
   // Appliances category
   {
-    id: 7,
+    id: "7",
     name: "Refrigerator",
     image_url: [fridgeImage],
     description: "Energy-efficient refrigerator with freezer compartment.",
@@ -99,7 +99,7 @@ const marketplaceItems: FurnitureItem[] = [
   },
   // Others category
   {
-    id: 8,
+    id: "8",
     name: "Table Lamp",
     image_url: [lampImage],
     description: "Elegant table lamp with adjustable brightness.",

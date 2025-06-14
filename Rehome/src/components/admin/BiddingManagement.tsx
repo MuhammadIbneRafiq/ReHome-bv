@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  FaGavel, 
   FaCheck, 
-  FaTimes, 
-  FaUser, 
-  FaCalendar, 
-  FaMoneyBillWave,
+  FaGavel, 
   FaSearch,
+  FaUser,
+  FaMoneyBillWave,
+  FaCalendar,
+  FaTimes
 } from 'react-icons/fa';
-import {
-  getAllBidsForAdmin,
-  approveBid,
+import { 
+  getAllBidsForAdmin, 
+  approveBid, 
   rejectBid,
-  getBidConfirmations,
-  confirmBid,
-  BidWithItemDetails,
-  BidConfirmation
+  BidWithItemDetails
 } from '../../services/biddingService';
+
+// Import bid confirmation types and functions
+import type { BidConfirmation } from '../../services/biddingService';
+import { getBidConfirmations, confirmBid } from '../../services/biddingService';
 import useUserStore from '../../services/state/useUserSessionStore';
 
 const BiddingManagement: React.FC = () => {

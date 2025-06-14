@@ -244,7 +244,7 @@ export const confirmBid = async (confirmationId: string, adminEmail: string): Pr
             toast.error('Admin access required');
             return false;
         }
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('marketplace_bid_confirmations')
             .update({
                 confirmation_status: 'confirmed',

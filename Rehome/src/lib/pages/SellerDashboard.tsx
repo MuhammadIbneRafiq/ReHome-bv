@@ -25,15 +25,17 @@ const mockAnalytics = {
 };
 
 interface FurnitureItem {
-    id: number;
+    id: string;
     name: string;
     description: string;
-    image_urls: string[]; // Fixed to match database column name
+    image_url?: string[]; // Make it optional to match the usage in the code
+    image_urls?: string[]; // Keep both to handle database column name
     price?: number;
     created_at: string;
     city_name: string;
     sold: boolean;
     seller_email: string; // Add seller_email to the interface
+    isrehome?: boolean; // Add this property to match the expected type
 }
 
 
@@ -52,7 +54,7 @@ const SellerDashboard = () => {
     const user = useUserStore((state) => state.user);
     const navigate = useNavigate();
     const location = useLocation(); // Get location to check for state
-    const [dropdownOpen, setDropdownOpen] = useState<number | null>(null); // Track which dropdown is open
+    const [dropdownOpen, setDropdownOpen] = useState<string | null>(null); // Track which dropdown is open
     const { isAdmin } = useAuth();
 
     // Check if user is authenticated
@@ -85,7 +87,7 @@ const SellerDashboard = () => {
         setSelectedItem(null);
     };
 
-    const deleteListing = async (id: number, item?: FurnitureItem) => {
+    const deleteListing = async (id: string, item?: FurnitureItem) => {
         // Add confirmation with additional info for admin deletions
         const confirmMessage = isAdmin && item?.seller_email !== user?.email 
             ? `Are you sure you want to delete "${item?.name}" by ${item?.seller_email}? This action cannot be undone.`
@@ -96,7 +98,7 @@ const SellerDashboard = () => {
         }
 
         try {
-            await axios.delete(API_ENDPOINTS.FURNITURE.DELETE(id.toString()), {
+            await axios.delete(API_ENDPOINTS.FURNITURE.DELETE(id), {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 }

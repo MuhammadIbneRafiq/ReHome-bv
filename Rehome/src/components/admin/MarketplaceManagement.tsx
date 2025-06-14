@@ -43,7 +43,6 @@ const MarketplaceManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'rehome' | 'user'>('all');
   const [bidStatusFilter, setBidStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'outbid'>('all');
-  const [setEditingListing] = useState<MarketplaceListing | null>(null);
   const [processingBids, setProcessingBids] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -274,7 +273,6 @@ const MarketplaceManagement: React.FC = () => {
       }
 
       toast.success('Listing updated successfully');
-      setEditingListing(null);
       fetchListings();
     } catch (error) {
       toast.error('Failed to update listing');

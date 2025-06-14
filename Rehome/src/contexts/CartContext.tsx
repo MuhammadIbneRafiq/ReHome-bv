@@ -10,8 +10,8 @@ export interface CartItem extends FurnitureItem {
 interface CartContextType {
   items: CartItem[];
   addItem: (item: FurnitureItem) => void;
-  removeItem: (itemId: number) => void;
-  updateQuantity: (itemId: number, quantity: number) => void;
+  removeItem: (itemId: string) => void;
+  updateQuantity: (itemId: string, quantity: number) => void;
   clearCart: () => void;
   itemCount: number;
   totalPrice: number;
@@ -82,12 +82,12 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   // Remove item from cart
-  const removeItem = (itemId: number) => {
+  const removeItem = (itemId: string) => {
     setItems(currentItems => currentItems.filter(item => item.id !== itemId));
   };
 
   // Update item quantity
-  const updateQuantity = (itemId: number, quantity: number) => {
+  const updateQuantity = (itemId: string, quantity: number) => {
     if (quantity <= 0) {
       removeItem(itemId);
       return;

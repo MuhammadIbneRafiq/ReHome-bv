@@ -3,10 +3,10 @@ import API_ENDPOINTS from '../api/config';
 import { PRICING_TYPES, REHOME_PRICING_TYPES } from '../../types/marketplace';
 
 interface FurnitureItem {
-    id: number;
+    id: string;
     name: string;
     description: string;
-    image_url: string[];
+    image_url?: string[];
     price?: number;
     created_at: string;
     city_name: string;
@@ -67,7 +67,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [cityName, setCityName] = useState(item.city_name);
-    const [existingImages, setExistingImages] = useState<string[]>(item.image_url);
+    const [existingImages, setExistingImages] = useState<string[]>(item.image_url || []);
     // const navigate = useNavigate();
 
     // Categories and subcategories (same as in SellPage)
@@ -218,7 +218,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
             const allImageUrls = [...existingImages, ...uploadedImageUrls];
 
             // 2. Update the listing data
-            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE(item.id.toString()), {
+            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE(item.id), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

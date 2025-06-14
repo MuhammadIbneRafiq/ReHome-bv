@@ -7,7 +7,6 @@ import { cityBaseCharges } from '../constants';
 import { PricingConfig, CityBasePrice, CreatePricingConfigRequest } from '../../types/pricing';
 import { pricingAdminService } from '../../services/pricingAdminService';
 import BiddingManagement from '../../components/admin/BiddingManagement';
-import MarketplaceManagement from '../../components/admin/MarketplaceManagement';
 
 // Furniture item interface
 interface FurnitureItem {
@@ -600,7 +599,7 @@ const AdminDashboard = () => {
             ) : (
               <>
                 {/* Furniture Management Tab */}
-                {activeTab === 'furniture' && (
+                {activeTab === 'marketplace' && (
                   <div>
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">

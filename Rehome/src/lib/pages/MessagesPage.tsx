@@ -39,22 +39,22 @@ const MessagesPage: React.FC = () => {
         const allMessages = await getMessagesByUserId(user.email);
         
         // Group messages by item_id
-        const groupedMessages: { [key: number]: MarketplaceMessage[] } = {};
-        const itemDetails: { [key: number]: { name: string } } = {};
+        const groupedMessages: { [key: string]: MarketplaceMessage[] } = {};
+        const itemDetails: { [key: string]: { name: string } } = {};
         
         allMessages.forEach(message => {
-          if (!groupedMessages[message.item_id]) {
-            groupedMessages[message.item_id] = [];
+          const itemIdStr = message.item_id.toString();
+          if (!groupedMessages[itemIdStr]) {
+            groupedMessages[itemIdStr] = [];
             // We'll need to fetch item details from the backend in real implementation
-            itemDetails[message.item_id] = { name: `Item #${message.item_id}` };
+            itemDetails[itemIdStr] = { name: `Item #${message.item_id}` };
           }
-          groupedMessages[message.item_id].push(message);
+          groupedMessages[itemIdStr].push(message);
         });
         
         // Create conversation summaries
         const conversationList: Conversation[] = Object.keys(groupedMessages).map(itemIdStr => {
-          const itemId = parseInt(itemIdStr);
-          const msgs = groupedMessages[itemId];
+          const msgs = groupedMessages[itemIdStr];
           const lastMsg = msgs.sort((a, b) => 
             new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime()
           )[0];
@@ -66,8 +66,8 @@ const MessagesPage: React.FC = () => {
           ).length;
           
           return {
-            itemId,
-            itemName: itemDetails[itemId].name,
+            itemId: itemIdStr,
+            itemName: itemDetails[itemIdStr].name,
             otherUser: otherUserName,
             lastMessage: lastMsg.content,
             lastMessageTime: lastMsg.created_at || '',
@@ -95,7 +95,7 @@ const MessagesPage: React.FC = () => {
       // When a new message arrives, update the conversations list
       setConversations(prevConversations => {
         // Find the conversation for this item
-        const existingConvIndex = prevConversations.findIndex(c => c.itemId === newMsg.item_id);
+        const existingConvIndex = prevConversations.findIndex(c => c.itemId === newMsg.item_id.toString());
         
         if (existingConvIndex >= 0) {
           // Update the existing conversation
@@ -117,7 +117,7 @@ const MessagesPage: React.FC = () => {
         } else {
           // Create a new conversation
           const newConversation: Conversation = {
-            itemId: newMsg.item_id,
+            itemId: newMsg.item_id.toString(),
             itemName: `Item #${newMsg.item_id}`, // We'll need to fetch item details
             otherUser: newMsg.sender_id === user.email ? newMsg.receiver_id : newMsg.sender_name,
             lastMessage: newMsg.content,
@@ -130,12 +130,12 @@ const MessagesPage: React.FC = () => {
       });
       
       // If this message belongs to the active conversation, add it to the messages list
-      if (activeConversation === newMsg.item_id) {
+      if (activeConversation === newMsg.item_id.toString()) {
         setMessages(prev => [...prev, newMsg]);
         
         // Mark the message as read if it's for the current user
         if (newMsg.receiver_id === user.email) {
-          markMessagesAsRead(newMsg.item_id, user.email);
+          markMessagesAsRead(newMsg.item_id.toString(), user.email);
         }
       }
     });
