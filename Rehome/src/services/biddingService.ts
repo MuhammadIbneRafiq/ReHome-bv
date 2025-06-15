@@ -21,12 +21,22 @@ const isAdmin = (userEmail: string): boolean => {
 
 // Helper function for API calls
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+    // Get authentication token
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+    
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string>),
+    };
+
+    // Add Authorization header if token exists
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
         ...options,
+        headers,
     });
 
     if (!response.ok) {

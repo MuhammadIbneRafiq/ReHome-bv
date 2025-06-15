@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { FaTrash, FaSearch, FaFilter, FaEye, FaCheck, FaGavel, FaClock, FaShoppingCart, FaBan } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabaseClient';
+import logoImage from '../../assets/logorehome.jpg';
 import { 
   getAllBidsForAdmin, 
   approveBid, 
@@ -22,6 +23,7 @@ interface MarketplaceListing {
   city_name: string;
   seller_email: string;
   sold: boolean;
+  status?: string;
   isrehome?: boolean;
   category?: string;
   subcategory?: string;
@@ -40,7 +42,7 @@ const MarketplaceManagement: React.FC = () => {
   const [filteredBids, setFilteredBids] = useState<BidWithItemDetails[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'sold'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'reserved' | 'sold'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'rehome' | 'user'>('all');
   const [bidStatusFilter, setBidStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'outbid'>('all');
   const [processingBids, setProcessingBids] = useState<Set<string>>(new Set());
@@ -124,7 +126,9 @@ const MarketplaceManagement: React.FC = () => {
 
     if (statusFilter !== 'all') {
       filteredListingsData = filteredListingsData.filter(listing =>
-        statusFilter === 'available' ? !listing.sold : listing.sold
+        statusFilter === 'available' ? (!listing.sold && (!listing.status || listing.status === 'available')) :
+        statusFilter === 'reserved' ? (listing.status === 'reserved') :
+        statusFilter === 'sold' ? (listing.sold || listing.status === 'sold') : true
       );
     }
 
@@ -395,8 +399,9 @@ const MarketplaceManagement: React.FC = () => {
                 className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="all">All Status</option>
-                <option value="available">Available</option>
-                <option value="sold">Sold</option>
+                                    <option value="available">Available</option>
+                    <option value="reserved">Reserved</option>
+                    <option value="sold">Sold</option>
               </select>
 
               <select
@@ -626,11 +631,23 @@ const MarketplaceManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {listing.image_url && listing.image_url[0] && (
-                          <img 
-                            src={listing.image_url[0]} 
-                            alt={listing.name} 
-                            className="w-12 h-12 rounded-lg object-cover mr-3"
-                          />
+                          <div className="relative w-12 h-12 mr-3">
+                            <img 
+                              src={listing.image_url[0]} 
+                              alt={listing.name} 
+                              className="w-12 h-12 rounded-lg object-cover"
+                            />
+                            {/* ReHome logo badge for ReHome items */}
+                            {listing.isrehome && (
+                              <div className="absolute top-0 left-0 bg-white p-0.5 rounded-md shadow-md">
+                                <img 
+                                  src={logoImage} 
+                                  alt="ReHome Verified" 
+                                  className="w-3 h-3 object-contain" 
+                                />
+                              </div>
+                            )}
+                          </div>
                         )}
                         <div>
                           <div className="text-sm font-medium text-gray-900">{listing.name}</div>

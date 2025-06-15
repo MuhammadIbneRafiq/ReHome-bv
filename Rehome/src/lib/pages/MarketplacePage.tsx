@@ -160,6 +160,44 @@ const MarketplacePage = () => {
         setSelectedItem(null);
     };
 
+    // Handle status update
+    const handleStatusUpdate = async (itemId: string, newStatus: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`https://rehome-backend.vercel.app/api/furniture/${itemId}/status`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update status');
+            }
+
+            const result = await response.json();
+            
+            // Update the furniture items list
+            setFurnitureItems(prev => prev.map(item => 
+                item.id === itemId 
+                    ? { ...item, status: newStatus, sold: newStatus === 'sold' }
+                    : item
+            ));
+            
+            // Update the selected item
+            if (selectedItem && selectedItem.id === itemId) {
+                setSelectedItem({ ...selectedItem, status: newStatus, sold: newStatus === 'sold' });
+            }
+
+            toast.success(`Item status updated to ${newStatus}`);
+        } catch (error) {
+            console.error('Error updating status:', error);
+            toast.error('Failed to update item status');
+        }
+    };
+
     // Translate furniture items
     const translatedItems = filteredItems.map(item => {
         const translated = translateFurnitureItem(item);
@@ -200,6 +238,7 @@ const MarketplacePage = () => {
                         onClose={closeModal}
                         item={selectedItem || null}
                         onAddToCart={addToCart}
+                        onUpdateStatus={handleStatusUpdate}
                     />
                 )}
             </AnimatePresence>

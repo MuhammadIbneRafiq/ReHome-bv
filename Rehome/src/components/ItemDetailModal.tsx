@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments, FaGavel } from "react-icons/fa";
+import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments, FaGavel, FaClock, FaExclamationTriangle } from "react-icons/fa";
 import logo from "../../src/assets/logorehome.jpg";
 import { useNavigate } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
@@ -28,11 +28,13 @@ interface ItemDetailsModalProps {
     created_at: string;
     city_name: string;
     sold: boolean;
+    status?: string; // New status field: available, reserved, sold
     seller_email: string;
     isrehome?: boolean;
   } | null;
   onAddToCart?: (itemId: string) => void;
   onMarkAsSold?: (itemId: string) => void;
+  onUpdateStatus?: (itemId: string, status: string) => void;
 }
 
 const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ 
@@ -40,7 +42,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   onClose, 
   item, 
   onAddToCart, 
-  onMarkAsSold 
+  onMarkAsSold,
+  onUpdateStatus 
 }) => {
   // Move ALL hooks to the top, before any conditional logic
   const navigate = useNavigate();
@@ -56,6 +59,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [highestBid, setHighestBid] = useState<MarketplaceBid | null>(null);
   const [canAddToCartStatus, setCanAddToCartStatus] = useState<{canAdd: boolean; message: string}>({canAdd: false, message: ''});
   const [loadingBids, setLoadingBids] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatMessage, setChatMessage] = useState('');
 
   // Load bidding data when modal opens
   useEffect(() => {
@@ -94,7 +99,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     return null;
   }
 
-  const { id, name, description, image_urls, price, city_name, sold, seller_email, isrehome } = item;
+  const { id, name, description, image_urls, price, city_name, sold, status, seller_email, isrehome } = item;
   
   // Check if user is the seller
   const isUserSeller = user?.email === seller_email;
@@ -179,8 +184,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     }
   };
 
-  // Handle initiating chat from item details
-  const handleInitiateChat = async () => {
+  // Handle initiating chat from item details - now shows preview
+  const handleInitiateChat = () => {
     if (!user) {
       navigate('/login?redirect=back');
       return;
@@ -192,25 +197,83 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       return;
     }
 
-    // Send an initial message to start the conversation if this is the first interaction
+    // Set default message and show chat modal
+    setChatMessage(`Hi, I'm interested in your item: ${name}`);
+    setShowChatModal(true);
+  };
+
+  // Handle sending the chat message
+  const handleSendChatMessage = async () => {
+    if (!chatMessage.trim()) {
+      toast.error("Please enter a message");
+      return;
+    }
+
+    if (!user) {
+      toast.error("You must be logged in to send messages");
+      return;
+    }
+
     try {
       setIsProcessing(true);
       await sendMessage({
         item_id: id, // Use UUID directly for chat
-        content: `Hi, I'm interested in your item: ${name}`,
+        content: chatMessage,
         sender_id: user.email,
         sender_name: user.email,
         receiver_id: seller_email
       });
       
-      // Close the modal and redirect to the chat dashboard
+      // Close modals and redirect to the chat dashboard
+      setShowChatModal(false);
       onClose();
-      navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: id } }); // Use id directly
+      navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: id } });
+      toast.success("Message sent successfully!");
     } catch (error) {
-      console.error('Error initiating chat:', error);
-      toast.error("Failed to initiate chat. Please try again later.");
+      console.error('Error sending message:', error);
+      toast.error("Failed to send message. Please try again later.");
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Handle status update
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (onUpdateStatus) {
+      await onUpdateStatus(id, newStatus);
+    }
+  };
+
+  // Get status display properties
+  const getStatusDisplay = (status?: string, sold?: boolean) => {
+    // Fallback to sold field if status not available
+    const actualStatus = status || (sold ? 'sold' : 'available');
+    
+    switch (actualStatus) {
+      case 'available':
+        return {
+          icon: <FaCheckCircle className="inline mr-2" />,
+          text: 'Available',
+          bgColor: 'bg-green-100 text-green-800'
+        };
+      case 'reserved':
+        return {
+          icon: <FaClock className="inline mr-2" />,
+          text: 'Reserved',
+          bgColor: 'bg-yellow-100 text-yellow-800'
+        };
+      case 'sold':
+        return {
+          icon: <FaTimes className="inline mr-2" />,
+          text: 'Sold',
+          bgColor: 'bg-red-100 text-red-800'
+        };
+      default:
+        return {
+          icon: <FaExclamationTriangle className="inline mr-2" />,
+          text: 'Unknown',
+          bgColor: 'bg-gray-100 text-gray-800'
+        };
     }
   };
 
@@ -300,9 +363,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   <span className="text-2xl font-bold text-emerald-600">
                     €{price?.toLocaleString() || '0'}
                   </span>
-                  <span className={`px-3 py-1 rounded-full ${sold ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {sold ? <FaCheckCircle className="inline mr-2" /> : <FaTimes className="inline mr-2" />}
-                    {sold ? 'Sold' : 'Available'}
+                  <span className={`px-3 py-1 rounded-full ${getStatusDisplay(status, sold).bgColor}`}>
+                    {getStatusDisplay(status, sold).icon}
+                    {getStatusDisplay(status, sold).text}
                   </span>
                 </div>
                 
@@ -368,10 +431,18 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                         <span className="text-gray-500">Loading bids...</span>
                       ) : bids.length === 0 ? (
                         <span className="text-gray-500">No bids yet</span>
-                      ) : (
+                      ) : highestBid ? (
                         <span className="text-orange-600 font-bold">
-                          Highest bid: €{highestBid?.bid_amount || 0}
+                          Highest bid: €{highestBid.bid_amount}
+                          {highestBid.status === 'pending' && (
+                            <span className="text-yellow-600 text-sm ml-1">(Pending approval)</span>
+                          )}
+                          {highestBid.status === 'approved' && (
+                            <span className="text-green-600 text-sm ml-1">(Approved)</span>
+                          )}
                         </span>
+                      ) : (
+                        <span className="text-gray-500">No valid bids</span>
                       )}
                       <button
                         className="ml-4 px-4 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded disabled:opacity-50"
@@ -469,11 +540,48 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             </div>
 
             {/* Action Buttons at the Bottom */}
-            <div className="mt-6 flex gap-3">
-              {onMarkAsSold && (
+            <div className="mt-6 space-y-3">
+              {/* Status Update Buttons - for sellers and admins */}
+              {(isUserSeller || user?.email?.includes('@rehome.com')) && onUpdateStatus && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleStatusUpdate('available')}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                      (status || (sold ? 'sold' : 'available')) === 'available' 
+                        ? 'bg-green-500 text-white' 
+                        : 'bg-green-100 text-green-800 hover:bg-green-200'
+                    }`}
+                  >
+                    <FaCheckCircle className="inline mr-1" /> Available
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate('reserved')}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                      (status || (sold ? 'sold' : 'available')) === 'reserved' 
+                        ? 'bg-yellow-500 text-white' 
+                        : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                    }`}
+                  >
+                    <FaClock className="inline mr-1" /> Reserved
+                  </button>
+                  <button
+                    onClick={() => handleStatusUpdate('sold')}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+                      (status || (sold ? 'sold' : 'available')) === 'sold' 
+                        ? 'bg-red-500 text-white' 
+                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                    }`}
+                  >
+                    <FaTimes className="inline mr-1" /> Sold
+                  </button>
+                </div>
+              )}
+              
+              {/* Legacy Mark as Sold button */}
+              {onMarkAsSold && !onUpdateStatus && (
                 <button
                   onClick={() => onMarkAsSold(id)}
-                  className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
+                  className={`w-full py-3 px-6 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${
                     sold ? 'bg-gray-200 text-gray-600 cursor-not-allowed' : 'bg-orange-500 hover:bg-orange-600 text-white'
                   }`}
                   disabled={sold}
@@ -485,6 +593,51 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Chat Message Modal */}
+        <AnimatePresence>
+          {showChatModal && (
+            <motion.div 
+              className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+              <button className="absolute top-2 right-2 text-gray-400 hover:text-blue-600 text-xl" onClick={() => setShowChatModal(false)}>&times;</button>
+              <h3 className="text-lg font-bold mb-4 text-blue-700">Send Message to Seller</h3>
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2 font-medium">Your message</label>
+                <textarea
+                  value={chatMessage}
+                  onChange={e => setChatMessage(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-3 py-2 h-32 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  placeholder="Write your message here..."
+                  disabled={isProcessing}
+                />
+              </div>
+              <div className="flex justify-between">
+                <button 
+                  type="button" 
+                  className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" 
+                  onClick={() => setShowChatModal(false)}
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button" 
+                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50" 
+                  onClick={handleSendChatMessage}
+                  disabled={isProcessing || !chatMessage.trim()}
+                >
+                  {isProcessing ? 'Sending...' : 'Send Message'}
+                </button>
+              </div>
+            </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Bid Modal */}
         <AnimatePresence>

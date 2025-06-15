@@ -110,38 +110,50 @@ const AdminDashboard = () => {
     }
   };
   
-  // Fetch furniture items
+  // Fetch furniture items from marketplace
   const fetchFurnitureItems = async () => {
-    // Simulated data for now - would connect to Supabase in production
-    setFurnitureItems([
-      {
-        id: '1',
-        name: 'Modern Sofa',
-        description: 'Comfortable 3-seater sofa in gray',
-        price: 599,
-        created_at: '2023-05-15',
-        city_name: 'Amsterdam',
-        sold: false
-      },
-      {
-        id: '2',
-        name: 'Coffee Table',
-        description: 'Wooden coffee table with glass top',
-        price: 249,
-        created_at: '2023-05-20',
-        city_name: 'Rotterdam',
-        sold: false
-      },
-      {
-        id: '3',
-        name: 'Dining Chair Set',
-        description: 'Set of 4 dining chairs',
-        price: 399,
-        created_at: '2023-05-25',
-        city_name: 'Utrecht',
-        sold: true
+    try {
+      // Get authentication token
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      
+      const response = await fetch('https://rehome-backend.vercel.app/api/admin/marketplace-furniture', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    ]);
+
+      const data = await response.json();
+      setFurnitureItems(data || []);
+    } catch (error) {
+      console.error('Error fetching marketplace furniture:', error);
+      // Fallback to sample data if API fails
+      setFurnitureItems([
+        {
+          id: '1',
+          name: 'Modern Sofa',
+          description: 'Comfortable 3-seater sofa in gray',
+          price: 599,
+          created_at: '2023-05-15',
+          city_name: 'Amsterdam',
+          sold: false
+        },
+        {
+          id: '2',
+          name: 'Coffee Table',
+          description: 'Wooden coffee table with glass top',
+          price: 249,
+          created_at: '2023-05-20',
+          city_name: 'Rotterdam',
+          sold: false
+        }
+      ]);
+    }
   };
   
   // Fetch transport requests
@@ -296,15 +308,65 @@ const AdminDashboard = () => {
   // Update furniture price
   const updateFurniturePrice = async (id: string, newPrice: number) => {
     try {
-      // Update price in database (would be actual API call)
-      const updatedItems = furnitureItems.map(item => 
-        item.id === id ? { ...item, price: newPrice } : item
-      );
-      setFurnitureItems(updatedItems);
-      toast.success('Price updated successfully!');
-      setEditingItem(null);
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      
+      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/marketplace-furniture/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ price: newPrice }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success('Price updated successfully!');
+        setEditingItem(null);
+        await fetchFurnitureItems(); // Refresh the list
+      } else {
+        toast.error(result.error || 'Failed to update price');
+      }
     } catch (error) {
       toast.error('Failed to update price');
+      console.error(error);
+    }
+  };
+
+  // Delete marketplace furniture item
+  const deleteMarketplaceFurnitureItem = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this marketplace item?')) {
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      
+      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/marketplace-furniture/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        toast.success('Marketplace item deleted successfully!');
+        await fetchFurnitureItems(); // Refresh the list
+      } else {
+        toast.error(result.error || 'Failed to delete item');
+      }
+    } catch (error) {
+      toast.error('Failed to delete item');
       console.error(error);
     }
   };
@@ -673,10 +735,15 @@ const AdminDashboard = () => {
                                       setEditedPrice(item.price);
                                     }}
                                     className="text-indigo-600 hover:text-indigo-900"
+                                    title="Edit item"
                                   >
                                       <FaEdit />
                                     </button>
-                                    <button className="text-red-600 hover:text-red-900">
+                                    <button 
+                                      onClick={() => deleteMarketplaceFurnitureItem(item.id)}
+                                      className="text-red-600 hover:text-red-900"
+                                      title="Delete item"
+                                    >
                                       <FaTrash />
                                   </button>
                                   </div>

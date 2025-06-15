@@ -11,6 +11,7 @@ export type FurnitureItem = {
     seller_email: string;
     city_name: string;
     sold: boolean;
+    status?: string; // New status field: available, reserved, sold
     isrehome: boolean;
     condition?: string; // Condition rating (1-5)
     category?: string; // Main category (Furniture, Electronics, etc.)
