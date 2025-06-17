@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaTrash, FaSearch, FaFilter, FaEye, FaCheck, FaGavel, FaClock, FaShoppingCart, FaBan } from 'react-icons/fa';
+import { FaTrash, FaSearch, FaFilter, FaEye, FaCheck, FaGavel, FaClock, FaShoppingCart, FaBan, FaEdit, FaPlus, FaCheckSquare, FaSquare } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabaseClient';
 import logoImage from '../../assets/logorehome.jpg';
@@ -13,25 +13,8 @@ import {
   BidWithItemDetails,
   BidConfirmation
 } from '../../services/biddingService';
-
-interface MarketplaceListing {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url: string[];
-  city_name: string;
-  seller_email: string;
-  sold: boolean;
-  status?: string;
-  isrehome?: boolean;
-  category?: string;
-  subcategory?: string;
-  condition_rating?: number;
-  created_at: string;
-  updated_at?: string;
-  views_count?: number;
-}
+import { adminMarketplaceService, MarketplaceListing } from '../../services/adminMarketplaceService';
+import EditListingModal from './EditListingModal';
 
 const MarketplaceManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'listings' | 'bids' | 'confirmations'>('bids');
@@ -46,6 +29,14 @@ const MarketplaceManagement: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<'all' | 'rehome' | 'user'>('all');
   const [bidStatusFilter, setBidStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'outbid'>('all');
   const [processingBids, setProcessingBids] = useState<Set<string>>(new Set());
+  
+  // New state for enhanced functionality
+  const [selectedListings, setSelectedListings] = useState<Set<string>>(new Set());
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingListing, setEditingListing] = useState<MarketplaceListing | null>(null);
+  const [isCreatingListing, setIsCreatingListing] = useState(false);
+  const [bulkAction, setBulkAction] = useState<'none' | 'delete' | 'update_status'>('none');
+  const [bulkStatus, setBulkStatus] = useState<'available' | 'reserved' | 'sold'>('available');
 
   useEffect(() => {
     if (activeTab === 'bids') {
@@ -64,22 +55,44 @@ const MarketplaceManagement: React.FC = () => {
   const fetchListings = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('marketplace_furniture')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching listings:', error);
-        toast.error('Failed to fetch listings');
-        return;
+      const response = await adminMarketplaceService.getMarketplaceFurniture({
+        search: searchQuery,
+        status: statusFilter,
+        type: typeFilter,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+        limit: 100
+      });
+      
+      if (response.success) {
+        // Ensure proper field mapping for isrehome
+        const mappedListings = response.data.map(item => ({
+          ...item,
+          // Ensure isrehome field is properly set from either field name
+          isrehome: item.isrehome ?? (item as any).is_rehome ?? false
+        }));
+        
+        console.log('Admin - Debug checking isrehome field:');
+        mappedListings.forEach((item, index) => {
+          if (item.isrehome) {
+            console.log(`Admin Item ${index + 1} with isrehome=true:`, {
+              id: item.id,
+              name: item.name,
+              isrehome: item.isrehome,
+              originalIsRehome: (response.data[index] as any).is_rehome,
+              mappedCorrectly: item.isrehome === true
+            });
+          }
+        });
+        
+        setListings(mappedListings);
+        console.log('Fetched listings:', mappedListings.length, 'items');
+      } else {
+        throw new Error('Failed to fetch listings');
       }
-
-      console.log('Fetched listings:', data?.length || 0, 'items');
-      setListings(data || []);
     } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to fetch listings');
+      console.error('Error fetching listings:', error);
+      toast.error('Failed to fetch listings - Make sure backend is running');
     } finally {
       setLoading(false);
     }
@@ -237,55 +250,128 @@ const MarketplaceManagement: React.FC = () => {
     }
   };
 
+  // Enhanced admin functions using the admin API
   const deleteListing = async (id: string) => {
     if (!confirm('Are you sure you want to delete this listing?')) return;
 
     try {
-      const { error } = await supabase
-        .from('marketplace_furniture')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        toast.error('Failed to delete listing');
-        console.error('Error deleting listing:', error);
-        return;
-      }
-
+      await adminMarketplaceService.deleteFurnitureItem(id);
       toast.success('Listing deleted successfully');
       fetchListings();
     } catch (error) {
-      toast.error('Failed to delete listing');
-      console.error('Error:', error);
+      console.error('Error deleting listing:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete listing');
     }
   };
 
   const updateListing = async (id: string, updates: Partial<MarketplaceListing>) => {
     try {
-      const { error } = await supabase
-        .from('marketplace_furniture')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id);
-
-      if (error) {
-        toast.error('Failed to update listing');
-        console.error('Error updating listing:', error);
-        return;
-      }
-
+      await adminMarketplaceService.updateFurnitureItem(id, updates);
       toast.success('Listing updated successfully');
       fetchListings();
     } catch (error) {
-      toast.error('Failed to update listing');
-      console.error('Error:', error);
+      console.error('Error updating listing:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update listing');
+    }
+  };
+
+  const createListing = async (listing: Partial<MarketplaceListing>) => {
+    try {
+      await adminMarketplaceService.createFurnitureItem(listing);
+      toast.success('Listing created successfully');
+      fetchListings();
+    } catch (error) {
+      console.error('Error creating listing:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create listing');
     }
   };
 
   const toggleSoldStatus = async (listing: MarketplaceListing) => {
-    await updateListing(listing.id, { sold: !listing.sold });
+    const newStatus = listing.sold ? 'available' : 'sold';
+    await updateListing(listing.id, { status: newStatus, sold: !listing.sold });
+  };
+
+  // Selection functions
+  const toggleListingSelection = (id: string) => {
+    const newSelected = new Set(selectedListings);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedListings(newSelected);
+  };
+
+  const selectAllListings = () => {
+    if (selectedListings.size === filteredListings.length) {
+      setSelectedListings(new Set());
+    } else {
+      setSelectedListings(new Set(filteredListings.map(listing => listing.id)));
+    }
+  };
+
+  // Bulk action functions
+  const handleBulkAction = async () => {
+    if (selectedListings.size === 0) {
+      toast.error('Please select listings first');
+      return;
+    }
+
+    if (bulkAction === 'none') {
+      toast.error('Please select an action');
+      return;
+    }
+
+    const confirmMessage = bulkAction === 'delete' 
+      ? `Are you sure you want to delete ${selectedListings.size} listings?`
+      : `Are you sure you want to update status of ${selectedListings.size} listings to ${bulkStatus}?`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      const ids = Array.from(selectedListings);
+      
+      if (bulkAction === 'delete') {
+        await adminMarketplaceService.bulkAction({
+          action: 'delete',
+          ids
+        });
+        toast.success(`${ids.length} listings deleted successfully`);
+      } else if (bulkAction === 'update_status') {
+        await adminMarketplaceService.bulkAction({
+          action: 'update_status',
+          ids,
+          updates: { status: bulkStatus }
+        });
+        toast.success(`${ids.length} listings status updated to ${bulkStatus}`);
+      }
+
+      setSelectedListings(new Set());
+      setBulkAction('none');
+      fetchListings();
+    } catch (error) {
+      console.error('Error performing bulk action:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to perform bulk action');
+    }
+  };
+
+  // Modal functions
+  const openEditModal = (listing: MarketplaceListing) => {
+    setEditingListing(listing);
+    setIsCreatingListing(false);
+    setEditModalOpen(true);
+  };
+
+  const openCreateModal = () => {
+    setEditingListing(null);
+    setIsCreatingListing(true);
+    setEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEditingListing(null);
+    setIsCreatingListing(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -322,6 +408,15 @@ const MarketplaceManagement: React.FC = () => {
     >
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900">Marketplace Management</h2>
+        {activeTab === 'listings' && (
+          <button
+            onClick={openCreateModal}
+            className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors flex items-center space-x-2"
+          >
+            <FaPlus />
+            <span>Add New Listing</span>
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -423,6 +518,52 @@ const MarketplaceManagement: React.FC = () => {
             {activeTab === 'confirmations' && `${confirmations.length} confirmations`}
           </div>
         </div>
+
+        {/* Bulk Actions for Listings */}
+        {activeTab === 'listings' && selectedListings.size > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <span className="text-sm font-medium text-blue-800">
+                  {selectedListings.size} listings selected
+                </span>
+                <select
+                  value={bulkAction}
+                  onChange={(e) => setBulkAction(e.target.value as any)}
+                  className="px-3 py-1 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="none">Choose Action</option>
+                  <option value="delete">Delete Selected</option>
+                  <option value="update_status">Update Status</option>
+                </select>
+                {bulkAction === 'update_status' && (
+                  <select
+                    value={bulkStatus}
+                    onChange={(e) => setBulkStatus(e.target.value as any)}
+                    className="px-3 py-1 border border-blue-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="available">Available</option>
+                    <option value="reserved">Reserved</option>
+                    <option value="sold">Sold</option>
+                  </select>
+                )}
+                <button
+                  onClick={handleBulkAction}
+                  disabled={bulkAction === 'none'}
+                  className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  Execute
+                </button>
+              </div>
+              <button
+                onClick={() => setSelectedListings(new Set())}
+                className="text-blue-600 hover:text-blue-800 text-sm"
+              >
+                Clear Selection
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Loading State */}
@@ -617,6 +758,19 @@ const MarketplaceManagement: React.FC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <button
+                      onClick={selectAllListings}
+                      className="flex items-center space-x-1"
+                    >
+                      {selectedListings.size === filteredListings.length && filteredListings.length > 0 ? (
+                        <FaCheckSquare className="text-blue-600" />
+                      ) : (
+                        <FaSquare className="text-gray-400" />
+                      )}
+                      <span>Select</span>
+                    </button>
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Seller</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
@@ -627,7 +781,19 @@ const MarketplaceManagement: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredListings.map((listing) => (
-                  <tr key={listing.id}>
+                  <tr key={listing.id} className={selectedListings.has(listing.id) ? 'bg-blue-50' : ''}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => toggleListingSelection(listing.id)}
+                        className="flex items-center"
+                      >
+                        {selectedListings.has(listing.id) ? (
+                          <FaCheckSquare className="text-blue-600" />
+                        ) : (
+                          <FaSquare className="text-gray-400" />
+                        )}
+                      </button>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {listing.image_url && listing.image_url[0] && (
@@ -638,7 +804,15 @@ const MarketplaceManagement: React.FC = () => {
                               className="w-12 h-12 rounded-lg object-cover"
                             />
                             {/* ReHome logo badge for ReHome items */}
-                            {listing.isrehome && (
+                            {(() => {
+                              console.log(`Admin - Item ${listing.name} - isrehome check:`, {
+                                isrehome: listing.isrehome,
+                                type: typeof listing.isrehome,
+                                truthyCheck: !!listing.isrehome,
+                                showIcon: !!listing.isrehome
+                              });
+                              return listing.isrehome;
+                            })() && (
                               <div className="absolute top-0 left-0 bg-white p-0.5 rounded-md shadow-md">
                                 <img 
                                   src={logoImage} 
@@ -652,6 +826,9 @@ const MarketplaceManagement: React.FC = () => {
                         <div>
                           <div className="text-sm font-medium text-gray-900">{listing.name}</div>
                           <div className="text-sm text-gray-500">{listing.city_name}</div>
+                          {listing.category && (
+                            <div className="text-xs text-gray-400">{listing.category}</div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -663,9 +840,12 @@ const MarketplaceManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        listing.sold ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                        listing.status === 'sold' || listing.sold ? 'bg-red-100 text-red-800' : 
+                        listing.status === 'reserved' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
                       }`}>
-                        {listing.sold ? 'Sold' : 'Available'}
+                        {listing.status === 'sold' || listing.sold ? 'Sold' : 
+                         listing.status === 'reserved' ? 'Reserved' : 'Available'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -675,21 +855,32 @@ const MarketplaceManagement: React.FC = () => {
                         {listing.isrehome ? 'ReHome' : 'User'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <button
-                        onClick={() => toggleSoldStatus(listing)}
-                        className={`${
-                          listing.sold ? 'text-green-600 hover:text-green-900' : 'text-red-600 hover:text-red-900'
-                        }`}
-                      >
-                        {listing.sold ? 'Mark Available' : 'Mark Sold'}
-                      </button>
-                      <button
-                        onClick={() => deleteListing(listing.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <FaTrash />
-                      </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => openEditModal(listing)}
+                          className="text-blue-600 hover:text-blue-900"
+                          title="Edit"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={() => toggleSoldStatus(listing)}
+                          className={`${
+                            listing.sold ? 'text-green-600 hover:text-green-900' : 'text-yellow-600 hover:text-yellow-900'
+                          }`}
+                          title={listing.sold ? 'Mark Available' : 'Mark Sold'}
+                        >
+                          {listing.sold ? 'Restore' : 'Sold'}
+                        </button>
+                        <button
+                          onClick={() => deleteListing(listing.id)}
+                          className="text-red-600 hover:text-red-900"
+                          title="Delete"
+                        >
+                          <FaTrash />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -698,6 +889,16 @@ const MarketplaceManagement: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <EditListingModal
+        isOpen={editModalOpen}
+        onClose={closeEditModal}
+        listing={editingListing}
+        onSave={updateListing}
+        onCreate={createListing}
+        isCreating={isCreatingListing}
+      />
     </motion.div>
   );
 };

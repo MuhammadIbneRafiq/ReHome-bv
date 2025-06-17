@@ -39,8 +39,29 @@ const MarketplacePage = () => {
                 }
                 const data: FurnitureItem[] = await response.json();
                 console.log('Fetched furniture data:', data); // Log the fetched data
-                setFurnitureItems(data);
-                setFilteredItems(data);
+                console.log('Debug - checking isrehome field for each item:');
+                
+                // Ensure proper field mapping for isrehome
+                const mappedData = data.map(item => ({
+                    ...item,
+                    // Ensure isrehome field is properly set from either field name
+                    isrehome: item.isrehome ?? (item as any).is_rehome ?? false
+                }));
+                
+                mappedData.forEach((item, index) => {
+                    console.log(`Item ${index + 1}:`, {
+                        id: item.id,
+                        name: item.name,
+                        isrehome: item.isrehome,
+                        is_rehome: (item as any).is_rehome, // Check if the underscore version exists
+                        hasIsRehomeField: 'isrehome' in item,
+                        hasIsRehomeUnderscore: 'is_rehome' in item,
+                        finalIsRehomeValue: item.isrehome
+                    });
+                });
+                
+                setFurnitureItems(mappedData);
+                setFilteredItems(mappedData);
             } catch (err: any) {
                 console.error('Error fetching furniture and not displaying the mock', err);
             } finally {
@@ -201,11 +222,22 @@ const MarketplacePage = () => {
     // Translate furniture items
     const translatedItems = filteredItems.map(item => {
         const translated = translateFurnitureItem(item);
-        return {
+        const result = {
             ...item,
             name: translated.name,
             description: translated.description
         };
+        
+        // Debug: Check if isrehome field is preserved
+        if (item.isrehome) {
+            console.log('Item with isrehome=true:', {
+                originalItem: item,
+                translatedResult: result,
+                isrehomePreserved: result.isrehome
+            });
+        }
+        
+        return result;
     });
 
     // Handle filter changes
@@ -298,7 +330,15 @@ const MarketplacePage = () => {
                                                 onClick={() => openModal(item)}
                                             >
                                                 {/* ReHome logo badge for ReHome items */}
-                                                {item.isrehome && (
+                                                {(() => {
+                                                    console.log(`Item ${item.name} - isrehome check:`, {
+                                                        isrehome: item.isrehome,
+                                                        type: typeof item.isrehome,
+                                                        truthyCheck: !!item.isrehome,
+                                                        showIcon: !!item.isrehome
+                                                    });
+                                                    return item.isrehome;
+                                                })() && (
                                                     <div className="absolute top-2 left-2 z-10 bg-white p-1 rounded-md shadow-md">
                                                         <img 
                                                             src={logoImage} 
@@ -307,7 +347,7 @@ const MarketplacePage = () => {
                                                         />
                                                     </div>
                                                 )}
-                                                                                                <img 
+                                                <img 
                                                     src={(item.image_url && item.image_url.length > 0) ? item.image_url[0] : 
                                                          (item.image_urls && item.image_urls.length > 0) ? item.image_urls[0]
                                                          : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'}

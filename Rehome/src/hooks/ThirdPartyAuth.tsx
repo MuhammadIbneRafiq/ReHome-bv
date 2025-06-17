@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 import React from "react";
+import { useGoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
 
 const formSchema = z.object({
     email: z.string().min(1, "Email is required").email("Invalid email"),
@@ -28,31 +30,132 @@ export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ text }) => {
         },
     });
 
-    async function googleAuth() {
+    // Primary Supabase OAuth method (since you have it already configured)
+    async function supabaseGoogleAuth() {
         try {
+            console.log('🔑 Using Supabase Google OAuth (Primary method)...');
+            
+            // Get current origin for dynamic redirect URL
+            const currentOrigin = window.location.origin;
+            const redirectUrl = `${currentOrigin}/auth/callback`;
+            
+            console.log('🔗 Redirect URL:', redirectUrl);
+            
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: "https://rehome-bv.vercel.app/auth/callback",
+                    redirectTo: redirectUrl,
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'consent'
+                    }
                 }
             });
+            
             if (error) {
+                console.error('❌ Supabase Google OAuth error:', error);
                 throw error;
             }
+            
+            console.log('✅ Supabase OAuth request initiated successfully');
         } catch (error: any) {
+            console.error('❌ Error in supabaseGoogleAuth:', error);
+            
+            // Try fallback method if available
+            if (import.meta.env.VITE_GOOGLE_CLIENT_ID && import.meta.env.VITE_GOOGLE_CLIENT_ID !== 'your_google_client_id_here.apps.googleusercontent.com') {
+                console.log('🔄 Trying fallback method...');
+                directGoogleAuth();
+                return;
+            }
+            
             form.setError("root", {
-                message: error.response.data.error,
+                message: error.message || "Authentication failed",
             });
+            
             toast({
-                title: "Error",
-                description: "An error occurred. Please try again.",
+                title: "Authentication Error",
+                description: error.message || "Failed to authenticate with Google. Please try again.",
                 variant: "destructive",
             });
         }
     }
 
+    // Fallback: Direct Google OAuth (only if Client ID is configured)
+    const googleLogin = useGoogleLogin({
+        onSuccess: async (codeResponse) => {
+            try {
+                console.log('🔑 Direct Google login success:', codeResponse);
+                
+                // Get user info using access token
+                const userInfoResponse = await axios.get(
+                    `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${codeResponse.access_token}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${codeResponse.access_token}`,
+                            Accept: "application/json",
+                        },
+                    }
+                );
+
+                const userInfo = userInfoResponse.data;
+                console.log('👤 User info from Google:', userInfo);
+
+                // Store token and user info
+                localStorage.setItem('accessToken', codeResponse.access_token);
+                localStorage.setItem('google_user_info', JSON.stringify(userInfo));
+                
+                toast({
+                    title: "Success!",
+                    description: `Welcome, ${userInfo.name || userInfo.email}!`,
+                    className: "bg-green-50 border-green-200",
+                });
+
+                // Redirect to marketplace
+                window.location.href = '/marketplace';
+
+            } catch (error: any) {
+                console.error('❌ Direct Google auth error:', error);
+                toast({
+                    title: "Authentication Error",
+                    description: error.message || "Failed to authenticate with Google. Please try again.",
+                    variant: "destructive",
+                });
+            }
+        },
+        onError: (error) => {
+            console.error('❌ Google OAuth error:', error);
+            // Fallback to Supabase method
+            supabaseGoogleAuth();
+        }
+    });
+
+    const directGoogleAuth = () => {
+        try {
+            console.log('🔑 Attempting direct Google OAuth...');
+            googleLogin();
+        } catch (error) {
+            console.log('❌ Direct Google auth not available, using Supabase OAuth');
+            supabaseGoogleAuth();
+        }
+    };
+
+    // Main authentication handler - Use local OAuth to avoid Google Cloud Console setup
+    const handleGoogleAuth = () => {
+        // Check if we have a Google Client ID configured
+        const hasGoogleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID && 
+                                 import.meta.env.VITE_GOOGLE_CLIENT_ID !== 'your_google_client_id_here.apps.googleusercontent.com';
+        
+        if (hasGoogleClientId) {
+            console.log('🔑 Using direct Google OAuth (no Google Cloud Console setup needed)...');
+            directGoogleAuth();
+        } else {
+            console.log('🔑 No Google Client ID found, using Supabase OAuth (requires Google Cloud Console setup)...');
+            supabaseGoogleAuth();
+        }
+    };
+
     return (
-        <div onClick={() => googleAuth()}>
+        <div onClick={handleGoogleAuth}>
             <GoogleSignInButton googleMessage={text} />
         </div>
     );

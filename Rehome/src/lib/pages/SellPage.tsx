@@ -22,7 +22,7 @@ interface LocationSuggestion {
 
 // List of admin email addresses - keep in sync with AdminRoute.tsx and Navbar.tsx
 const ADMIN_EMAILS = [
-    'muhammadibnerafiq@gmail.com',
+    'muhammadibnerafiq123@gmail.com',
     'testnewuser12345@gmail.com', // Test account with admin access
     'egzmanagement@gmail.com',
     'samuel.stroehle8@gmail.com',
