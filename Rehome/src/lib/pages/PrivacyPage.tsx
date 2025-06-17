@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import { FaLock, FaUserShield, FaCookie, FaDatabase } from 'react-icons/fa';
 
 export default function PrivacyPage() {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
 
   const sections = [
     {

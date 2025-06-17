@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import { FaGavel, FaShieldAlt, FaHandshake, FaFileContract } from 'react-icons/fa';
 
 export default function TermsPage() {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
 
   const sections = [
     {

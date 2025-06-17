@@ -198,7 +198,7 @@ const MarketplacePage = () => {
                 throw new Error('Failed to update status');
             }
 
-            const result = await response.json();
+            // const result = await response.json();
             
             // Update the furniture items list
             setFurnitureItems(prev => prev.map(item => 

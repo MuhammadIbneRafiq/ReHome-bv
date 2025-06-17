@@ -33,7 +33,9 @@ function AuthCallback() {
                     if (user) {
                         setUser({
                             email: user.email!,
-                            id: user.id,
+                            sub: user.id,
+                            email_verified: user.email_confirmed_at ? true : false,
+                            phone_verified: user.phone_confirmed_at ? true : false,
                             role: 'user' // Default role
                         });
                     }

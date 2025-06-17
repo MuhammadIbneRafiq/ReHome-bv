@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
+// import { useTranslation } from 'react-i18next';
 import { FaCookie, FaChartBar, FaCog, FaShieldAlt } from 'react-icons/fa';
 
 export default function CookiesPage() {
-  const { t } = useTranslation();
+  // const { t } = useTranslation();
 
   const cookieTypes = [
     {
