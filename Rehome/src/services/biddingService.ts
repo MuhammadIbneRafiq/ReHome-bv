@@ -54,11 +54,12 @@ export interface MarketplaceBid {
     bidder_email: string;
     bidder_name: string;
     bid_amount: number;
-    status: 'active' | 'outbid'; // Simplified: no pending approval needed
+    status: 'active' | 'outbid' | 'pending' | 'approved' | 'rejected'; // Extended to support admin approval workflow
     created_at?: string;
     updated_at?: string;
     is_highest_bid?: boolean;
     admin_notes?: string;
+    approved_by?: string; // Add approved_by field for admin tracking
 }
 
 export interface BidConfirmation {
@@ -79,6 +80,7 @@ export interface BidWithItemDetails extends MarketplaceBid {
     item_image_url?: string;
     item_price?: number;
     seller_email?: string;
+    approved_by?: string; // Ensure this field is available in detailed bid view
 }
 
 // Place a new bid and automatically send chat message

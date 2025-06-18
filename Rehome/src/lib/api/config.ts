@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `${API_BASE_URL}/api/furniture/${id}`,
     MARK_SOLD: (id: string) => `${API_BASE_URL}/api/furniture/sold/${id}`,
     GET_BY_ID: (id: string) => `${API_BASE_URL}/api/furniture/${id}`,
+    UPDATE_STATUS: (id: string) => `${API_BASE_URL}/api/furniture/${id}/status`,
   },
 
   // Moving Services

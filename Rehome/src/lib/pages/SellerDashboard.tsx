@@ -146,16 +146,15 @@ const SellerDashboard = () => {
 
     const handleStatusUpdate = async (itemId: string, newStatus: string) => {
         try {
-            // Update the item status via API
-            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE(itemId), {
+            // Update the item status via API using the dedicated status endpoint
+            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE_STATUS(itemId), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 },
                 body: JSON.stringify({ 
-                    status: newStatus,
-                    sold: newStatus === 'sold' // Also update sold field for backward compatibility
+                    status: newStatus
                 })
             });
 

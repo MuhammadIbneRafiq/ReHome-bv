@@ -235,7 +235,7 @@ const MarketplacePage = () => {
             const requestBody = { status: newStatus };
             console.log('📋 Request body:', requestBody);
             
-            const response = await fetch(`https://rehome-backend.vercel.app/api/furniture/${itemId}/status`, {
+            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE_STATUS(itemId), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
