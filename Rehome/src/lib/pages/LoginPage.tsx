@@ -18,7 +18,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
 import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
-import TestAuth from "../../components/TestAuth";
+// import TestAuth from "../../components/TestAuth";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { FaEnvelope, FaLock } from "react-icons/fa";
@@ -192,7 +192,7 @@ export default function LoginPage() {
               </div>
               <div className="mt-6 space-y-4">
                 <ThirdPartyAuth text={googleMessage} />
-                <TestAuth />
+                {/* <TestAuth /> */}
               </div>
             </div>
           </CardContent>
