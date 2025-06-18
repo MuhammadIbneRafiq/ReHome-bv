@@ -146,20 +146,35 @@ const SellerDashboard = () => {
 
     const handleStatusUpdate = async (itemId: string, newStatus: string) => {
         try {
+            const token = localStorage.getItem('accessToken');
+            const endpoint = API_ENDPOINTS.FURNITURE.UPDATE_STATUS(itemId);
+            
+            console.log('=== STATUS UPDATE DEBUG ===');
+            console.log('📋 Item ID:', itemId);
+            console.log('📋 New Status:', newStatus);
+            console.log('📋 Endpoint:', endpoint);
+            console.log('📋 Has Token:', !!token);
+            console.log('📋 Token preview:', token?.substring(0, 20) + '...');
+            
             // Update the item status via API using the dedicated status endpoint
-            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE_STATUS(itemId), {
+            const response = await fetch(endpoint, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                    'Authorization': `Bearer ${token}`
                 },
                 body: JSON.stringify({ 
                     status: newStatus
                 })
             });
 
+            console.log('📋 Response Status:', response.status);
+            console.log('📋 Response OK:', response.ok);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.log('❌ Error Response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
             }
 
             // Update local state

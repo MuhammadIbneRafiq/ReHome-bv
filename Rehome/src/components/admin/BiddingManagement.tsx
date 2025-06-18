@@ -6,13 +6,10 @@ import {
   FaSearch,
   FaUser,
   FaMoneyBillWave,
-  FaCalendar,
-  FaTimes
+  FaCalendar
 } from 'react-icons/fa';
 import { 
   getAllBidsForAdmin, 
-  approveBid, 
-  rejectBid,
   refreshHighestBidStatus,
   BidWithItemDetails
 } from '../../services/biddingService';
@@ -30,8 +27,7 @@ const BiddingManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'bids' | 'confirmations'>('bids');
-  const [processingBidId, setProcessingBidId] = useState<string | null>(null);
-  const [adminNotes, setAdminNotes] = useState<{[key: string]: string}>({});
+
   const user = useUserStore((state) => state.user);
 
   useEffect(() => {
@@ -56,39 +52,7 @@ const BiddingManagement: React.FC = () => {
     }
   };
 
-  const handleApproveBid = async (bidId: string) => {
-    if (!user) return;
-    
-    setProcessingBidId(bidId);
-    try {
-      const success = await approveBid(bidId, user.email, adminNotes[bidId] || '');
-      if (success) {
-        await loadData();
-        setAdminNotes(prev => ({ ...prev, [bidId]: '' }));
-      }
-    } catch (error) {
-      console.error('Error approving bid:', error);
-    } finally {
-      setProcessingBidId(null);
-    }
-  };
 
-  const handleRejectBid = async (bidId: string) => {
-    if (!user) return;
-    
-    setProcessingBidId(bidId);
-    try {
-      const success = await rejectBid(bidId, user.email, adminNotes[bidId] || '');
-      if (success) {
-        await loadData();
-        setAdminNotes(prev => ({ ...prev, [bidId]: '' }));
-      }
-    } catch (error) {
-      console.error('Error rejecting bid:', error);
-    } finally {
-      setProcessingBidId(null);
-    }
-  };
 
   const handleConfirmBid = async (confirmationId: string) => {
     if (!user) return;
@@ -121,7 +85,7 @@ const BiddingManagement: React.FC = () => {
       bid.item_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       bid.bidder_email.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || bid.status === statusFilter;
+    const matchesStatus = statusFilter === 'all'; // No status filtering in simple chat-style bidding
     
     return matchesSearch && matchesStatus;
   });
@@ -321,7 +285,7 @@ const BiddingManagement: React.FC = () => {
                           <div className="text-sm font-medium text-gray-900">
                             €{bid.bid_amount}
                           </div>
-                          {bid.is_highest_bid && (
+                          {bid.is_highest && (
                             <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
                               Highest
                             </span>
@@ -329,8 +293,8 @@ const BiddingManagement: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(bid.status)}`}>
-                          {bid.status}
+                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          Active
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -340,40 +304,17 @@ const BiddingManagement: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {bid.status === 'pending' && (
-                          <div className="flex flex-col space-y-2">
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => handleApproveBid(bid.id!)}
-                                disabled={processingBidId === bid.id}
-                                className="flex items-center px-3 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-50"
-                              >
-                                <FaCheck className="mr-1" />
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => handleRejectBid(bid.id!)}
-                                disabled={processingBidId === bid.id}
-                                className="flex items-center px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 disabled:opacity-50"
-                              >
-                                <FaTimes className="mr-1" />
-                                Reject
-                              </button>
-                            </div>
-                            <textarea
-                              value={adminNotes[bid.id!] || ''}
-                              onChange={(e) => setAdminNotes(prev => ({ ...prev, [bid.id!]: e.target.value }))}
-                              placeholder="Admin notes (optional)"
-                              className="text-xs border border-gray-300 rounded p-1 w-full"
-                              rows={2}
-                            />
-                          </div>
-                        )}
-                        {bid.status !== 'pending' && bid.admin_notes && (
-                          <div className="text-xs text-gray-500 max-w-xs">
-                            <strong>Notes:</strong> {bid.admin_notes}
-                          </div>
-                        )}
+                        <div className="text-sm text-gray-900">
+                          {bid.is_highest ? (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                              Highest Bid
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
+                              Bid Placed
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

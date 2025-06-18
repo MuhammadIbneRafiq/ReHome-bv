@@ -439,12 +439,9 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       ) : highestBid ? (
                         <span className="text-orange-600 font-bold">
                           Highest bid: €{highestBid.bid_amount}
-                          {highestBid.is_highest_bid && (
-                            <span className="text-green-600 text-sm ml-1">(Current highest)</span>
-                          )}
                         </span>
                       ) : (
-                        <span className="text-gray-500">No valid bids</span>
+                        <span className="text-gray-500">No bids yet</span>
                       )}
                       <button
                         className="ml-4 px-4 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded disabled:opacity-50"
@@ -458,13 +455,17 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     {/* User's current bid status */}
                     {userBid && (
                       <div className={`mb-3 p-2 rounded text-sm ${
-                        userBid.is_highest_bid ? 'bg-green-100 text-green-800' :
-                        userBid.status === 'outbid' ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
+                        userBid.bidder_email === user?.email && highestBid?.bidder_email === user?.email 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-blue-100 text-blue-800'
                       }`}>
-                        Your bid: €{userBid.bid_amount} - {userBid.is_highest_bid ? 'Current highest bid!' : userBid.status === 'outbid' ? 'Outbid' : 'Active'}
-                  </div>
-                )}
+                        Your bid: €{userBid.bid_amount} - {
+                          userBid.bidder_email === user?.email && highestBid?.bidder_email === user?.email 
+                            ? 'You have the highest bid!' 
+                            : 'Bid placed'
+                        }
+                      </div>
+                    )}
 
                 {/* Bid/Message Overview */}
                     <div className="bg-gray-50 p-4 rounded-lg">
@@ -484,15 +485,13 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                                 </span>
                                 <div className="flex items-center gap-2">
                                   <span className="text-xs text-gray-500">
-                                    {new Date(bid.created_at || '').toISOString()}
+                                    {new Date(bid.created_at || '').toLocaleDateString()}
                                   </span>
-                                  <span className={`text-xs px-2 py-1 rounded ${
-                                    bid.is_highest_bid ? 'bg-green-100 text-green-800' :
-                                    bid.status === 'outbid' ? 'bg-red-100 text-red-800' :
-                                    'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {bid.is_highest_bid ? 'Highest' : bid.status === 'outbid' ? 'Outbid' : 'Active'}
-                                  </span>
+                                  {bid.is_highest && (
+                                    <span className="text-xs px-2 py-1 rounded bg-green-100 text-green-800">
+                                      Highest
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             ))}

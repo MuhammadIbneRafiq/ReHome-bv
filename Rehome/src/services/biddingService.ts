@@ -21,6 +21,13 @@ const isAdmin = (userEmail: string): boolean => {
 
 // Helper function for API calls
 const apiCall = async (endpoint: string, options: RequestInit = {}) => {
+    console.log('🔗 API Call Debug:', {
+        endpoint: `${API_BASE_URL}${endpoint}`,
+        method: options.method || 'GET',
+        hasToken: !!(localStorage.getItem('accessToken') || localStorage.getItem('token')),
+        body: options.body
+    });
+
     // Get authentication token
     const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
     
@@ -39,12 +46,30 @@ const apiCall = async (endpoint: string, options: RequestInit = {}) => {
         headers,
     });
 
+    console.log('📡 API Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+    });
+
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Network error' }));
+        const errorText = await response.text();
+        console.log('❌ API Error Response Text:', errorText);
+        
+        let errorData;
+        try {
+            errorData = JSON.parse(errorText);
+        } catch {
+            errorData = { error: `HTTP ${response.status}: ${errorText || 'Network error'}` };
+        }
+        
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
     }
 
-    return response.json();
+    const responseData = await response.json();
+    console.log('✅ API Success Response:', responseData);
+    return responseData;
 };
 
 // Interfaces for bidding system
@@ -54,12 +79,9 @@ export interface MarketplaceBid {
     bidder_email: string;
     bidder_name: string;
     bid_amount: number;
-    status: 'active' | 'outbid' | 'pending' | 'approved' | 'rejected'; // Extended to support admin approval workflow
     created_at?: string;
     updated_at?: string;
-    is_highest_bid?: boolean;
-    admin_notes?: string;
-    approved_by?: string; // Add approved_by field for admin tracking
+    is_highest?: boolean; // Simple flag to indicate if this is the highest bid
 }
 
 export interface BidConfirmation {
@@ -80,40 +102,53 @@ export interface BidWithItemDetails extends MarketplaceBid {
     item_image_url?: string;
     item_price?: number;
     seller_email?: string;
-    approved_by?: string; // Ensure this field is available in detailed bid view
 }
 
 // Place a new bid and automatically send chat message
 export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | 'updated_at'>, itemName?: string): Promise<MarketplaceBid | null> => {
     try {
-        // Set status to 'active' by default (no pending approval)
+        console.log('=== PLACING BID DEBUG ===');
+        console.log('📋 Bid data:', bid);
+        console.log('📋 Item name:', itemName);
+        
+        // Simple bid data - no status needed, works like chat
         const bidData = {
-            ...bid,
-            status: 'active' as const
+            item_id: bid.item_id,
+            bidder_email: bid.bidder_email,
+            bidder_name: bid.bidder_name,
+            bid_amount: bid.bid_amount
         };
 
+        console.log('📋 Final bid data:', bidData);
+        
         const result = await apiCall('/api/bids', {
             method: 'POST',
             body: JSON.stringify(bidData),
         });
 
+        console.log('📋 API response:', result);
+
         if (result.success) {
+            console.log('✅ Bid placed successfully, sending chat message...');
+            
             // Automatically send a chat message about the bid
             try {
                 await sendBidChatMessage(bid.item_id, bid.bidder_email, bid.bid_amount, itemName || 'this item');
+                console.log('✅ Bid chat message sent successfully');
             } catch (chatError) {
-                console.warn('Failed to send bid chat message:', chatError);
+                console.warn('❌ Failed to send bid chat message:', chatError);
                 // Don't fail the entire bid if chat message fails
             }
 
             toast.success(result.message || 'Bid placed successfully!');
             return result.data;
         } else {
+            console.log('❌ Bid placement failed:', result.error);
             toast.error(result.error || 'Failed to place bid');
             return null;
         }
     } catch (error) {
-        console.error('Error placing bid:', error);
+        console.error('❌ Error placing bid:', error);
         toast.error(error instanceof Error ? error.message : 'Failed to place bid');
         throw error;
     }
@@ -122,7 +157,15 @@ export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | '
 // Helper function to send chat message when bid is placed
 const sendBidChatMessage = async (itemId: number | string, bidderEmail: string, bidAmount: number, itemName: string): Promise<void> => {
     try {
+        console.log('=== SENDING BID CHAT MESSAGE ===');
+        console.log('📋 Item ID:', itemId);
+        console.log('📋 Bidder Email:', bidderEmail);
+        console.log('📋 Bid Amount:', bidAmount);
+        console.log('📋 Item Name:', itemName);
+        
         const messageContent = `Hi! I've placed a bid of €${bidAmount} for "${itemName}". I'm interested in purchasing this item. Please let me know if you'd like to discuss further!`;
+        
+        console.log('📋 Message content:', messageContent);
         
         // Import and use the chat service
         const { sendMessage } = await import('../services/marketplaceMessageService');
@@ -136,9 +179,12 @@ const sendBidChatMessage = async (itemId: number | string, bidderEmail: string, 
             content: messageContent
         };
         
+        console.log('📋 Message data:', messageData);
+        
         await sendMessage(messageData);
+        console.log('✅ Bid chat message sent successfully');
     } catch (error) {
-        console.error('Error sending bid chat message:', error);
+        console.error('❌ Error sending bid chat message:', error);
         throw error;
     }
 };
@@ -146,10 +192,12 @@ const sendBidChatMessage = async (itemId: number | string, bidderEmail: string, 
 // Get all bids for a specific item
 export const getBidsByItemId = async (itemId: number | string): Promise<MarketplaceBid[]> => {
     try {
+        console.log('📋 Fetching all bids for item:', itemId);
         const data = await apiCall(`/api/bids/${itemId}`);
+        console.log('📋 All bids response:', data);
         return data || [];
     } catch (error) {
-        console.error('Error fetching bids:', error);
+        console.error('❌ Error fetching bids:', error);
         return [];
     }
 };
@@ -157,10 +205,12 @@ export const getBidsByItemId = async (itemId: number | string): Promise<Marketpl
 // Get highest bid for an item
 export const getHighestBidForItem = async (itemId: number | string): Promise<MarketplaceBid | null> => {
     try {
+        console.log('📋 Fetching highest bid for item:', itemId);
         const data = await apiCall(`/api/bids/${itemId}/highest`);
+        console.log('📋 Highest bid response:', data);
         return data || null;
     } catch (error) {
-        console.error('Error fetching highest bid:', error);
+        console.error('❌ Error fetching highest bid:', error);
         return null;
     }
 };

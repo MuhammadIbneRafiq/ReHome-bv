@@ -6,8 +6,6 @@ import { supabase } from '../../lib/supabaseClient';
 import logoImage from '../../assets/logorehome.jpg';
 import { 
   getAllBidsForAdmin, 
-  approveBid, 
-  rejectBid, 
   getBidConfirmations, 
   confirmBid,
   BidWithItemDetails,
@@ -28,7 +26,7 @@ const MarketplaceManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'reserved' | 'sold'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'rehome' | 'user'>('all');
   const [bidStatusFilter, setBidStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'outbid'>('all');
-  const [processingBids, setProcessingBids] = useState<Set<string>>(new Set());
+
   
   // New state for enhanced functionality
   const [selectedListings, setSelectedListings] = useState<Set<string>>(new Set());
@@ -167,68 +165,14 @@ const MarketplaceManagement: React.FC = () => {
 
     if (bidStatusFilter !== 'all') {
       filteredBidsData = filteredBidsData.filter(bid =>
-        bid.status === bidStatusFilter
+        true // No status filtering in simple chat-style bidding
       );
     }
 
     setFilteredBids(filteredBidsData);
   };
 
-  const handleApproveBid = async (bidId: string) => {
-    try {
-      setProcessingBids(prev => new Set(prev).add(bidId));
-      
-      const { data: userData } = await supabase.auth.getUser();
-      const adminEmail = userData.user?.email;
-      
-      if (!adminEmail) {
-        toast.error('Admin authentication required');
-        return;
-      }
 
-      const success = await approveBid(bidId, adminEmail);
-      if (success) {
-        await fetchBids();
-      }
-    } catch (error) {
-      console.error('Error approving bid:', error);
-      toast.error('Failed to approve bid');
-    } finally {
-      setProcessingBids(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(bidId);
-        return newSet;
-      });
-    }
-  };
-
-  const handleRejectBid = async (bidId: string, reason?: string) => {
-    try {
-      setProcessingBids(prev => new Set(prev).add(bidId));
-      
-      const { data: userData } = await supabase.auth.getUser();
-      const adminEmail = userData.user?.email;
-      
-      if (!adminEmail) {
-        toast.error('Admin authentication required');
-        return;
-      }
-
-      const success = await rejectBid(bidId, adminEmail, reason);
-      if (success) {
-        await fetchBids();
-      }
-    } catch (error) {
-      console.error('Error rejecting bid:', error);
-      toast.error('Failed to reject bid');
-    } finally {
-      setProcessingBids(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(bidId);
-        return newSet;
-      });
-    }
-  };
 
   const handleConfirmBid = async (confirmationId: string) => {
     try {
@@ -651,10 +595,9 @@ const MarketplaceManagement: React.FC = () => {
                       <div className="flex items-center">
                         {getStatusIcon(bid.status)}
                         <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          bid.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          bid.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          'bg-orange-100 text-orange-800'
+                          bid.is_highest_bid ? 'bg-green-100 text-green-800' :
+                          bid.status === 'active' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
                         }`}>
                           {bid.status}
                         </span>
@@ -664,29 +607,17 @@ const MarketplaceManagement: React.FC = () => {
                       {formatDate(bid.created_at || '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {bid.status === 'pending' && (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleApproveBid(bid.id!)}
-                            disabled={processingBids.has(bid.id!)}
-                            className="text-green-600 hover:text-green-900 disabled:opacity-50"
-                          >
-                            <FaCheck />
-                          </button>
-                          <button
-                            onClick={() => handleRejectBid(bid.id!)}
-                            disabled={processingBids.has(bid.id!)}
-                            className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                          >
-                            <FaBan />
-                          </button>
-                        </div>
-                      )}
-                      {bid.approved_by && (
-                        <div className="text-xs text-gray-500">
-                          By: {bid.approved_by}
-                        </div>
-                      )}
+                      <div className="text-sm text-gray-900">
+                        {bid.is_highest_bid ? (
+                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
+                            Highest Bid
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
+                            {bid.status}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
