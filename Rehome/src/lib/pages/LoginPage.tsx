@@ -59,11 +59,15 @@ export default function LoginPage() {
       const response = await apiService.login(values.email, values.password);
       
       const { accessToken } = response;
-      console.log('Normal login successful, storing access token');
+      console.log('🔑 Normal login successful, storing access token:', !!accessToken);
       localStorage.setItem("accessToken", accessToken);
       
       // SIMPLIFIED: Just store the access token - useAuth will handle the rest
-      console.log('Access token stored, navigating to dashboard');
+      console.log('✅ Access token stored in localStorage');
+      
+      // Verify token was stored
+      const storedToken = localStorage.getItem("accessToken");
+      console.log('🔍 Verification - token stored successfully:', !!storedToken);
       
       toast({
         title: t('auth.loginSuccess'),
@@ -71,8 +75,12 @@ export default function LoginPage() {
         className: "bg-green-50 border-green-200",
       });
       
-      // Force a page reload to trigger authentication check
-      window.location.href = "/sell-dash";
+      // Add a small delay before redirect to ensure token is stored
+      setTimeout(() => {
+        console.log('🚀 Redirecting to dashboard...');
+        window.location.href = "/sell-dash";
+      }, 100);
+      
     } catch (error: any) {
       console.error("Login error details:", error);
       

@@ -28,22 +28,26 @@ export const useAuth = () => {
 
   useEffect(() => {
     async function fetchUser() {
+      console.log('🔍 useAuth: Starting authentication check...');
       setLoading(true);
+      
       // Check for both token names to ensure backward compatibility
       const accessToken = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      console.log('🔑 useAuth: Access token found:', !!accessToken);
 
       if (!accessToken) {
-        console.log('No access token found, user not authenticated');
+        console.log('❌ useAuth: No access token found, user not authenticated');
         logout();
         setLoading(false);
         return;
       }
 
       try {
-        console.log('Access token found, user is authenticated');
+        console.log('✅ useAuth: Access token found, user is authenticated');
         
         // SIMPLIFIED: Just check if we have an access token - that's enough for authentication
         setIsAuthenticated(true);
+        console.log('✅ useAuth: isAuthenticated set to true');
         
         // Try to get user data from multiple sources
         let userData = null;
@@ -109,11 +113,13 @@ export const useAuth = () => {
         }
         
       } catch (error) {
-        console.error("Error in authentication:", error);
+        console.error("❌ useAuth: Error in authentication:", error);
         // Even on error, if we have a token, consider user authenticated
         setIsAuthenticated(true);
+        console.log('✅ useAuth: Even with error, user considered authenticated due to token presence');
       } finally {
         setLoading(false);
+        console.log('🏁 useAuth: Authentication check completed, loading set to false');
       }
     }
 
@@ -128,6 +134,7 @@ export const useAuth = () => {
     };
   }, [location.pathname]);
 
+  console.log('🔄 useAuth: Current state - isAuthenticated:', isAuthenticated, 'loading:', loading);
   return { isAuthenticated, loading, logout, isAdmin, user };
 };
 

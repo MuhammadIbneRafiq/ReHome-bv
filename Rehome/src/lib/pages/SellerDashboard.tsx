@@ -55,16 +55,10 @@ const SellerDashboard = () => {
     const navigate = useNavigate();
     const location = useLocation(); // Get location to check for state
     const [dropdownOpen, setDropdownOpen] = useState<string | null>(null); // Track which dropdown is open
-    const { isAdmin, isAuthenticated } = useAuth();
+    const { isAdmin } = useAuth();
 
-    // Check if user is authenticated
-    useEffect(() => {
-        const token = localStorage.getItem('accessToken');
-        if (!token || !user || !isAuthenticated) {
-            toast.error("Please sign in to access your dashboard");
-            navigate('/login');
-        }
-    }, [user, navigate, t, isAuthenticated]);
+    // Note: Authentication is already handled by ProtectedRoute wrapper
+    // No need for additional auth check here
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -172,12 +166,12 @@ const SellerDashboard = () => {
             console.log('Is admin:', isAdmin);
 
             // Handle both old array format and new pagination format
-            const itemsArray = Array.isArray(data) ? data : (data as any).data;
+            const itemsArray: FurnitureItem[] = Array.isArray(data) ? data : (data as any).data;
 
             if (isAdmin) {
                 // Admin sees all listings
-                const active = itemsArray.filter(item => !item.sold);
-                const sold = itemsArray.filter(item => item.sold);
+                const active = itemsArray.filter((item: FurnitureItem) => !item.sold);
+                const sold = itemsArray.filter((item: FurnitureItem) => item.sold);
                 
                 console.log('Admin view - Active listings:', active);
                 console.log('Admin view - Sold listings:', sold);
@@ -186,8 +180,8 @@ const SellerDashboard = () => {
                 setSoldListings(sold);
             } else {
                 // Separate active and sold listings based on the signed-in user's email
-                const active = itemsArray.filter(item => item.seller_email === user?.email && !item.sold);
-                const sold = itemsArray.filter(item => item.seller_email === user?.email && item.sold);
+                const active = itemsArray.filter((item: FurnitureItem) => item.seller_email === user?.email && !item.sold);
+                const sold = itemsArray.filter((item: FurnitureItem) => item.seller_email === user?.email && item.sold);
 
                 console.log('User view - Active listings:', active);
                 console.log('User view - Sold listings:', sold);
