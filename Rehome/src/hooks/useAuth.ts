@@ -21,6 +21,7 @@ export const useAuth = () => {
   const logout = () => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("token");
+    localStorage.removeItem("google_user_info");
     setIsAuthenticated(false);
     setUser(undefined);
   };
@@ -38,20 +39,51 @@ export const useAuth = () => {
       }
 
       try {
-        const decoded = jwtDecode(accessToken);
+        // First check if we have Google user info stored
+        const googleUserInfo = localStorage.getItem("google_user_info");
+        console.log('Using Google user data:', googleUserInfo);
 
-        if (!decoded.exp || decoded.exp * 1000 < Date.now()) {
-          console.log("Access Token has expired");
-          logout();
-          setLoading(false);
-          return;
+        if (googleUserInfo) {
+          // Use Google user info if available
+          const userData = JSON.parse(googleUserInfo);
+          console.log('Using Google user data:', userData);
+          
+          const userForStore: UserData = {
+            email: userData.email,
+            sub: userData.id,
+            email_verified: userData.verified_email || true,
+            phone_verified: false,
+            role: 'user'
+          };
+          
+          setUser(userForStore);
+          console.log('User authenticated with Google data');
+          setIsAuthenticated(true);
+        } else {
+          // Try to decode JWT token for other auth methods
+          try {
+            const decoded = jwtDecode(accessToken);
+
+            if (!decoded.exp || decoded.exp * 1000 < Date.now()) {
+              console.log("Access Token has expired");
+              logout();
+              setLoading(false);
+              return;
+            }
+
+            // Handle different token structures
+            const userMetadata = (decoded as any).user_metadata || (decoded as any);
+            setUser(userMetadata as UserData);
+            console.log('User authenticated with JWT token');
+            setIsAuthenticated(true);
+          } catch (jwtError) {
+            console.error("Error decoding JWT token:", jwtError);
+            console.log("Token might be a direct Google OAuth token, clearing old data...");
+            logout();
+          }
         }
-
-        setUser((decoded as any).user_metadata as UserData);
-        console.log('User authenticated');
-        setIsAuthenticated(true);
       } catch (error) {
-        console.error("Error decoding token:", error);
+        console.error("Error in authentication:", error);
         logout();
       } finally {
         setLoading(false);

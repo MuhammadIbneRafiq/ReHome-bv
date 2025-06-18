@@ -55,16 +55,26 @@ const SellerDashboard = () => {
     const navigate = useNavigate();
     const location = useLocation(); // Get location to check for state
     const [dropdownOpen, setDropdownOpen] = useState<string | null>(null); // Track which dropdown is open
-    const { isAdmin } = useAuth();
+    const { isAdmin, isAuthenticated } = useAuth();
 
     // Check if user is authenticated
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
-        if (!token || !user) {
+        if (!token || !user || !isAuthenticated) {
             toast.error("Please sign in to access your dashboard");
             navigate('/login');
         }
-    }, [user, navigate, t]);
+    }, [user, navigate, t, isAuthenticated]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => {
+            setDropdownOpen(null);
+        };
+        
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
 
     // Check if we were redirected from the item detail page with an active chat
     useEffect(() => {
@@ -158,9 +168,11 @@ const SellerDashboard = () => {
 
             const data: FurnitureItem[] = await response.json();
             console.log('Fetched listings:', data);
+            console.log('Current user email:', user?.email);
+            console.log('Is admin:', isAdmin);
 
             // Handle both old array format and new pagination format
-            const itemsArray = Array.isArray(data) ? data : data.data;
+            const itemsArray = Array.isArray(data) ? data : (data as any).data;
 
             if (isAdmin) {
                 // Admin sees all listings
@@ -179,6 +191,10 @@ const SellerDashboard = () => {
 
                 console.log('User view - Active listings:', active);
                 console.log('User view - Sold listings:', sold);
+                console.log('Listings with delete permission check:');
+                itemsArray.forEach((item: FurnitureItem) => {
+                    console.log(`Item ${item.id}: seller_email=${item.seller_email}, user_email=${user?.email}, can_delete=${item.seller_email === user?.email || isAdmin}`);
+                });
 
                 setListings(active);
                 setSoldListings(sold);
