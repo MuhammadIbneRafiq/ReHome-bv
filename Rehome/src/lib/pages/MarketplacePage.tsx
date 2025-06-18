@@ -16,30 +16,69 @@ import { API_ENDPOINTS } from '../api/config';
 const MarketplacePage = () => {
     const { t } = useTranslation();
     const { isAuthenticated } = useAuth();
-    const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]); // Use any[] or create a type for your furniture data
+    const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]);
     const [filteredItems, setFilteredItems] = useState<FurnitureItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [cart, setCart] = useState<{id: string, quantity: number}[]>([]); // Cart with string IDs
-    const [_, setIsAddingToCart] = useState(false);
-    const [checkoutLoading, setCheckoutLoading] = useState(false);
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [cart, setCart] = useState<{id: string, quantity: number}[]>([]);
+    const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+    
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pagination, setPagination] = useState({
+        currentPage: 1,
+        totalPages: 1,
+        totalItems: 0,
+        itemsPerPage: 20,
+        hasNextPage: false,
+        hasPreviousPage: false
+    });
 
     useEffect(() => {
-        const fetchFurniture = async () => {
+        const fetchFurniture = async (page = 1) => {
             setLoading(true);
             setError(null);
 
             try {
-                const response = await fetch(API_ENDPOINTS.FURNITURE.LIST);
+                const response = await fetch(`${API_ENDPOINTS.FURNITURE.LIST}?page=${page}&limit=20`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const data: FurnitureItem[] = await response.json();
-                console.log('Fetched furniture data:', data); // Log the fetched data
-                console.log('Debug - checking isrehome field for each item:');
+                const responseData = await response.json();
+                
+                // Handle both old format (array) and new format (object with data and pagination)
+                let data: FurnitureItem[];
+                let paginationInfo;
+                
+                if (Array.isArray(responseData)) {
+                    // Old format - just array of items
+                    data = responseData;
+                    paginationInfo = {
+                        currentPage: 1,
+                        totalPages: 1,
+                        totalItems: responseData.length,
+                        itemsPerPage: responseData.length,
+                        hasNextPage: false,
+                        hasPreviousPage: false
+                    };
+                } else {
+                    // New format - object with data and pagination
+                    data = responseData.data || [];
+                    paginationInfo = responseData.pagination || {
+                        currentPage: 1,
+                        totalPages: 1,
+                        totalItems: data.length,
+                        itemsPerPage: data.length,
+                        hasNextPage: false,
+                        hasPreviousPage: false
+                    };
+                }
+                
+                console.log('Fetched furniture data:', data);
+                console.log('Pagination info:', paginationInfo);
                 
                 // Ensure proper field mapping for isrehome
                 const mappedData = data.map(item => ({
@@ -52,25 +91,27 @@ const MarketplacePage = () => {
                     console.log(`Item ${index + 1}:`, {
                         id: item.id,
                         name: item.name,
+                        price: item.price,
+                        pricing_type: (item as any).pricing_type,
                         isrehome: item.isrehome,
-                        is_rehome: (item as any).is_rehome, // Check if the underscore version exists
-                        hasIsRehomeField: 'isrehome' in item,
-                        hasIsRehomeUnderscore: 'is_rehome' in item,
-                        finalIsRehomeValue: item.isrehome
+                        created_at: (item as any).created_at
                     });
                 });
                 
                 setFurnitureItems(mappedData);
                 setFilteredItems(mappedData);
+                setPagination(paginationInfo);
+                setCurrentPage(page);
             } catch (err: any) {
-                console.error('Error fetching furniture and not displaying the mock', err);
+                console.error('Error fetching furniture:', err);
+                setError(err.message);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchFurniture();
-    }, []);
+        fetchFurniture(currentPage);
+    }, [currentPage]);
 
     const addToCart = (itemId: string) => {
         // Check if item is from ReHome
@@ -80,7 +121,7 @@ const MarketplacePage = () => {
             return;
         }
 
-        setIsAddingToCart(true);
+        setIsModalOpen(true);
         setTimeout(() => {
             setCart(prev => {
                 const existingItem = prev.find(cartItem => cartItem.id === itemId);
@@ -94,7 +135,6 @@ const MarketplacePage = () => {
                     return [...prev, { id: itemId, quantity: 1 }];
                 }
             });
-            setIsAddingToCart(false);
             toast.success('Item added to cart! Check your cart at the bottom right.');
         }, 500); // Simulate a delay
     };
@@ -285,6 +325,14 @@ const MarketplacePage = () => {
         setFilteredItems(searchResults);
     };
 
+    // Handle page change
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && newPage <= pagination.totalPages) {
+            setCurrentPage(newPage);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
+
     return (
         <div className="min-h-screen bg-orange-50 pt-24 pb-12">
             <AnimatePresence mode="wait">
@@ -393,6 +441,50 @@ const MarketplacePage = () => {
                                                 </p>
                                             </motion.div>
                                         ))}
+                                    </div>
+                                )}
+                                
+                                {/* Pagination Controls */}
+                                {pagination.totalPages > 1 && (
+                                    <div className="mt-6 flex justify-center items-center space-x-2">
+                                        <button
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={!pagination.hasPreviousPage}
+                                            className="px-3 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Previous
+                                        </button>
+                                        
+                                        {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                            const page = Math.max(1, Math.min(pagination.totalPages - 4, currentPage - 2)) + i;
+                                            if (page > pagination.totalPages) return null;
+                                            
+                                            return (
+                                                <button
+                                                    key={page}
+                                                    onClick={() => handlePageChange(page)}
+                                                    className={`px-3 py-2 text-sm rounded-md ${
+                                                        page === currentPage
+                                                            ? 'bg-orange-500 text-white'
+                                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            );
+                                        })}
+                                        
+                                        <button
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={!pagination.hasNextPage}
+                                            className="px-3 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            Next
+                                        </button>
+                                        
+                                        <span className="text-sm text-gray-600 ml-4">
+                                            Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalItems} items)
+                                        </span>
                                     </div>
                                 )}
                             </div>

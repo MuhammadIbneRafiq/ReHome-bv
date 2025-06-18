@@ -159,10 +159,13 @@ const SellerDashboard = () => {
             const data: FurnitureItem[] = await response.json();
             console.log('Fetched listings:', data);
 
+            // Handle both old array format and new pagination format
+            const itemsArray = Array.isArray(data) ? data : data.data;
+
             if (isAdmin) {
                 // Admin sees all listings
-                const active = data.filter(item => !item.sold);
-                const sold = data.filter(item => item.sold);
+                const active = itemsArray.filter(item => !item.sold);
+                const sold = itemsArray.filter(item => item.sold);
                 
                 console.log('Admin view - Active listings:', active);
                 console.log('Admin view - Sold listings:', sold);
@@ -171,8 +174,8 @@ const SellerDashboard = () => {
                 setSoldListings(sold);
             } else {
                 // Separate active and sold listings based on the signed-in user's email
-                const active = data.filter(item => item.seller_email === user?.email && !item.sold);
-                const sold = data.filter(item => item.seller_email === user?.email && item.sold);
+                const active = itemsArray.filter(item => item.seller_email === user?.email && !item.sold);
+                const sold = itemsArray.filter(item => item.seller_email === user?.email && item.sold);
 
                 console.log('User view - Active listings:', active);
                 console.log('User view - Sold listings:', sold);
