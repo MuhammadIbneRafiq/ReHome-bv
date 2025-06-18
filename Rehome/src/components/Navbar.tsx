@@ -1,5 +1,4 @@
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+// ToastContainer is handled in App.tsx - removed to avoid conflicts
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react"; // Import Sun and Moon
@@ -47,6 +46,7 @@ export default function Navbar() {
         // Clear local storage
         localStorage.removeItem("accessToken");
         localStorage.removeItem("token");
+        localStorage.removeItem("google_user_info");
         
         // Call the auth logout function
         logout();
@@ -111,7 +111,6 @@ export default function Navbar() {
             className={`fixed top-0 left-0 right-0 z-[102] w-full text-nav-label bg-gradient-to-r from-orange-500 to-red-600 shadow-md transition-transform ease-curve-d duration-600 ${isSticky ? 'translate-y-0' : '-translate-y-full'
                 }`}
         >
-            <ToastContainer />
             <nav aria-label="Main navigation" className="h-16 max-w-[2000px] mx-auto flex items-center justify-between px-4 md:px-6">
                 <div className="flex items-center">
                     <Link to="/" className="flex items-center text-2xl font-bold text-white"> 
