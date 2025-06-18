@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import API_ENDPOINTS from '../api/config';
-import { PRICING_TYPES, REHOME_PRICING_TYPES } from '../../types/marketplace';
+import { PRICING_TYPES } from '../../types/marketplace';
 
 interface FurnitureItem {
     id: string;
@@ -54,7 +54,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
     const [startingBid, setStartingBid] = useState(item.starting_bid?.toString() || '');
     
     // ReHome listing flag
-    const [isRehome, setIsRehome] = useState(item.is_rehome || false);
+    const [isRehome] = useState(item.is_rehome || false);
     
     // Flexible date options
     // const [hasFlexibleDates, setHasFlexibleDates] = useState(item.has_flexible_dates || false);
@@ -177,15 +177,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
         setExistingImages(prev => prev.filter((_, index) => index !== indexToRemove));
     };
 
-    // Handle ReHome checkbox change
-    const handleRehomeChange = (checked: boolean) => {
-        setIsRehome(checked);
-        // If switching to ReHome and bidding is selected, reset to fixed price
-        if (checked && pricingType === 'bidding') {
-            setPricingType('fixed');
-            setStartingBid('');
-        }
-    };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -468,25 +460,6 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                     {uploadError && <p className="text-red-500 text-sm mt-1">{uploadError}</p>}
                 </div>
 
-                {/* ReHome Listing Checkbox */}
-                <div>
-                    <div className="flex items-center">
-                        <input
-                            type="checkbox"
-                            id="is-rehome"
-                            checked={isRehome}
-                            onChange={(e) => handleRehomeChange(e.target.checked)}
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="is-rehome" className="ml-2 block text-sm text-gray-700">
-                            This is a ReHome listing
-                        </label>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                        ReHome listings have special pricing options and cannot use bidding
-                    </p>
-                </div>
-
                 {/* Pricing Options */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -495,7 +468,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                     
                     {/* Pricing Type Selection */}
                     <div className="space-y-3 mb-4">
-                        {(isRehome ? REHOME_PRICING_TYPES : PRICING_TYPES).map((type) => (
+                        {PRICING_TYPES.map((type) => (
                             <div key={type.value} className="flex items-center">
                                 <input
                                     id={`pricing-${type.value}`}
@@ -512,14 +485,6 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                             </div>
                         ))}
                     </div>
-
-                    {isRehome && (
-                        <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-md">
-                            <p className="text-sm text-orange-800">
-                                🏠 <strong>ReHome Listing:</strong> Bidding is not available for ReHome listings. Choose between fixed price or negotiable pricing.
-                            </p>
-                        </div>
-                    )}
 
                     {/* Conditional Price/Bid Fields */}
                     {pricingType === 'fixed' && (

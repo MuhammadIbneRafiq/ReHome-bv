@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API_ENDPOINTS from '../api/config';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
-import { PRICING_TYPES, REHOME_PRICING_TYPES } from '../../types/marketplace';
+import { PRICING_TYPES } from '../../types/marketplace';
 import useUserStore from '../../services/state/useUserSessionStore';
 
 // Location suggestion interface (same as in LocationAutocomplete)
@@ -20,21 +20,13 @@ interface LocationSuggestion {
     };
 }
 
-// List of admin email addresses - keep in sync with AdminRoute.tsx and Navbar.tsx
-const ADMIN_EMAILS = [
-    'muhammadibnerafiq123@gmail.com',
-    'testnewuser12345@gmail.com', // Test account with admin access
-    'egzmanagement@gmail.com',
-    'samuel.stroehle8@gmail.com',
-    'info@rehomebv.com'
-];
+
 
 const SellPage = ({ onClose }: { onClose: () => void }) => {
     // Get current user from the store
     const user = useUserStore((state) => state.user);
     
-    // Check if current user is admin
-    const isAdmin = user && ADMIN_EMAILS.includes(user.email);
+
 
     const [photos, setPhotos] = useState<File[]>([]);
     const [price, setPrice] = useState('');
@@ -53,8 +45,8 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
     const [pricingType, setPricingType] = useState<'fixed' | 'bidding' | 'negotiable'>('fixed');
     const [startingBid, setStartingBid] = useState('');
     
-    // ReHome listing flag - automatically set to true for admin users
-    const [isRehome, setIsRehome] = useState(isAdmin || false);
+    // ReHome listing flag - set to false for all users (only admins can create ReHome listings through admin panel)
+    const [isRehome] = useState(false);
     
     // Flexible date options
     const [hasFlexibleDates] = useState(false);
@@ -190,21 +182,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         setIsLocationLoading(false);
     };
 
-    // Handle ReHome checkbox change - only allowed for admin users
-    const handleRehomeChange = (checked: boolean) => {
-        // Only allow admin users to change ReHome status
-        if (!isAdmin) {
-            console.warn('ReHome listings can only be created by admin users');
-            return;
-        }
-        
-        setIsRehome(checked);
-        // If switching to ReHome and bidding is selected, reset to fixed price
-        if (checked && pricingType === 'bidding') {
-            setPricingType('fixed');
-            setStartingBid('');
-        }
-    };
+
 
     // Handle Terms of Service viewing
     const handleViewTerms = async () => {
@@ -268,13 +246,6 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         // Check if terms are agreed to
         if (!agreedToTerms) {
             setSubmitError('You must agree to the Terms of Service and Privacy Policy before submitting.');
-            setSubmitting(false);
-            return;
-        }
-
-        // Safety check: prevent non-admin users from submitting ReHome listings
-        if (isRehome && !isAdmin) {
-            setSubmitError('Only admin users can create ReHome listings. Please contact support if you believe this is an error.');
             setSubmitting(false);
             return;
         }
@@ -612,30 +583,6 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     )}
                 </div>
 
-                {/* ReHome Listing Checkbox - Only visible for admin users */}
-                {isAdmin && (
-                    <div>
-                        <div className="flex items-center">
-                            <input
-                                type="checkbox"
-                                id="is-rehome"
-                                checked={isRehome}
-                                onChange={(e) => handleRehomeChange(e.target.checked)}
-                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                            />
-                            <label htmlFor="is-rehome" className="ml-2 block text-sm text-gray-700">
-                                This is a ReHome listing
-                            </label>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                            ReHome listings have special pricing options and cannot use bidding
-                        </p>
-                        <p className="text-xs text-orange-600 mt-1">
-                            ⚡ Admin only: You can create ReHome listings with special features
-                        </p>
-                    </div>
-                )}
-
                 {/* Pricing Options */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -644,7 +591,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                     
                     {/* Pricing Type Selection */}
                     <div className="space-y-3 mb-4">
-                        {(isRehome ? REHOME_PRICING_TYPES : PRICING_TYPES).map((type) => (
+                        {PRICING_TYPES.map((type) => (
                             <div key={type.value} className="flex items-center">
                                 <input
                                     id={`pricing-${type.value}`}
@@ -662,19 +609,13 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                         ))}
                     </div>
 
-                    {isRehome && isAdmin && (
-                        <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-md">
-                            <p className="text-sm text-orange-800">
-                                🏠 <strong>ReHome Listing:</strong> Bidding is not available for ReHome listings. Choose between fixed price or negotiable pricing.
-                            </p>
-                        </div>
-                    )}
+
 
                     {/* Conditional Price/Bid Fields */}
                     {pricingType === 'fixed' && (
                         <div>
                             <label htmlFor="price" className="block text-sm font-medium text-gray-700">
-                                Fixed Price (€) *
+                                Price (€) *
                             </label>
                             <input
                                 type="number"

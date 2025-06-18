@@ -541,8 +541,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
             {/* Action Buttons at the Bottom */}
             <div className="mt-6 space-y-3">
-              {/* Status Update Buttons - for sellers and admins */}
-              {(isUserSeller || user?.email?.includes('@rehome.com')) && onUpdateStatus && (
+              {/* Status Update Buttons - for sellers only */}
+              {isUserSeller && onUpdateStatus && (
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleStatusUpdate('available')}

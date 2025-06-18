@@ -184,7 +184,7 @@ const MarketplacePage = () => {
     // Handle status update
     const handleStatusUpdate = async (itemId: string, newStatus: string) => {
         try {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('accessToken');
             const response = await fetch(`https://rehome-backend.vercel.app/api/furniture/${itemId}/status`, {
                 method: 'PUT',
                 headers: {
