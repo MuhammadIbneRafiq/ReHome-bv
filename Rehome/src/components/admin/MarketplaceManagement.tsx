@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaTrash, FaSearch, FaFilter, FaEye, FaCheck, FaGavel, FaClock, FaShoppingCart, FaBan, FaEdit, FaPlus, FaCheckSquare, FaSquare } from 'react-icons/fa';
+import { FaTrash, FaSearch, FaFilter, FaEye, FaGavel, FaClock, FaShoppingCart, FaEdit, FaPlus, FaCheckSquare, FaSquare, FaMoneyBillWave } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabaseClient';
 import logoImage from '../../assets/logorehome.jpg';
@@ -164,7 +164,7 @@ const MarketplaceManagement: React.FC = () => {
     }
 
     if (bidStatusFilter !== 'all') {
-      filteredBidsData = filteredBidsData.filter(bid =>
+      filteredBidsData = filteredBidsData.filter(() =>
         true // No status filtering in simple chat-style bidding
       );
     }
@@ -326,21 +326,6 @@ const MarketplaceManagement: React.FC = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <FaClock className="text-yellow-500" />;
-      case 'approved':
-        return <FaCheck className="text-green-500" />;
-      case 'rejected':
-        return <FaBan className="text-red-500" />;
-      case 'outbid':
-        return <FaGavel className="text-orange-500" />;
-      default:
-        return null;
-    }
   };
 
   return (
@@ -561,7 +546,7 @@ const MarketplaceManagement: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredBids.map((bid) => (
-                  <tr key={bid.id} className={bid.is_highest_bid ? 'bg-green-50' : ''}>
+                  <tr key={bid.id} className={bid.is_highest ? 'bg-green-50' : ''}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         {bid.item_image_url && (
@@ -587,19 +572,20 @@ const MarketplaceManagement: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-bold text-gray-900">€{bid.bid_amount}</div>
-                      {bid.is_highest_bid && (
-                        <div className="text-xs text-green-600 font-medium">Highest Bid</div>
+                      {bid.is_highest && (
+                        <span className="text-green-600 font-semibold text-xs">
+                          ⭐ Highest Bid
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {getStatusIcon(bid.status)}
+                        <FaMoneyBillWave className="text-green-500 mr-2" />
                         <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          bid.is_highest_bid ? 'bg-green-100 text-green-800' :
-                          bid.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                          'bg-gray-100 text-gray-800'
+                          bid.is_highest ? 'bg-green-100 text-green-800' :
+                          'bg-blue-100 text-blue-800'
                         }`}>
-                          {bid.status}
+                          {bid.is_highest ? 'Highest' : 'Active'}
                         </span>
                       </div>
                     </td>
@@ -607,17 +593,15 @@ const MarketplaceManagement: React.FC = () => {
                       {formatDate(bid.created_at || '')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="text-sm text-gray-900">
-                        {bid.is_highest_bid ? (
-                          <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">
-                            Highest Bid
-                          </span>
-                        ) : (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
-                            {bid.status}
-                          </span>
-                        )}
-                      </div>
+                      {bid.is_highest ? (
+                        <span className="text-green-600 font-semibold">
+                          Highest Bid
+                        </span>
+                      ) : (
+                        <span className="text-gray-600">
+                          Bid Placed
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
