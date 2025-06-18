@@ -335,12 +335,23 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
       const uniqueCities = [...new Set(items.map(item => item.city_name).filter(Boolean))];
       setCities(uniqueCities);
       
-      // Find min and max prices
-      const prices = items.map(item => item.price).filter(Boolean);
-      const minPrice = Math.floor(Math.min(...prices));
-      const maxPrice = Math.ceil(Math.max(...prices));
-      setPriceRange([minPrice, maxPrice]);
-      setSelectedPriceRange([minPrice, maxPrice]);
+      // Find min and max prices - FIXED: Include free items (price = 0)
+      const prices = items.map(item => {
+        const price = item.price;
+        // Include 0 (free items), exclude null/undefined
+        return (price !== null && price !== undefined) ? price : null;
+      }).filter(price => price !== null);
+      
+      if (prices.length > 0) {
+        const minPrice = Math.floor(Math.min(...prices));
+        const maxPrice = Math.ceil(Math.max(...prices));
+        setPriceRange([minPrice, maxPrice]);
+        setSelectedPriceRange([minPrice, maxPrice]);
+      } else {
+        // Fallback if no valid prices
+        setPriceRange([0, 1000]);
+        setSelectedPriceRange([0, 1000]);
+      }
     }
   }, [items]);
 
@@ -355,10 +366,13 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
       );
     }
     
-    // Filter by price range
-    filteredItems = filteredItems.filter(item => 
-      item.price >= selectedPriceRange[0] && item.price <= selectedPriceRange[1]
-    );
+    // Filter by price range - FIXED: Handle free items and null prices properly
+    filteredItems = filteredItems.filter(item => {
+      const price = item.price;
+      // Handle null/undefined prices (skip them) and include free items (price = 0)
+      if (price === null || price === undefined) return true; // Don't filter out items without prices
+      return price >= selectedPriceRange[0] && price <= selectedPriceRange[1];
+    });
     
     // Filter by category
     if (selectedCategory) {
@@ -416,7 +430,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     // Filter by selected location (city-based filtering)
     if (selectedLocation && selectedLocation.trim() !== '') {
       filteredItems = filteredItems.filter(item => {
-        if (!item.city_name) return false;
+        if (!item.city_name) return false; // Keep this - items without city should be filtered
         
         // Check if the item's city matches the selected location
         const itemCity = item.city_name.toLowerCase().trim();
