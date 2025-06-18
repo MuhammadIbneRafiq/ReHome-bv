@@ -7,7 +7,7 @@ import GoogleSignInButton from "../components/GoogleSignInButton";
 import React from "react";
 import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
-import useUserSessionStore from "../services/state/useUserSessionStore";
+// import useUserSessionStore from "../services/state/useUserSessionStore";
 
 const formSchema = z.object({
     email: z.string().min(1, "Email is required").email("Invalid email"),
@@ -23,7 +23,7 @@ interface ThirdPartyInterface {
 
 export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ text }) => {
     const { toast } = useToast();
-    const setUser = useUserSessionStore((state) => state.setUser);
+    // const setUser = useUserSessionStore((state) => state.setUser);
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -102,64 +102,21 @@ export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ text }) => {
                 const userInfo = userInfoResponse.data;
                 console.log('👤 User info from Google:', userInfo);
 
-                // Send the access token to our backend for verification and session creation
-                try {
-                    const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rehome-backend.vercel.app';
-                    const backendResponse = await axios.post(`${API_BASE_URL}/api/auth/google`, {
-                        access_token: codeResponse.access_token
-                    });
+                // SIMPLIFIED: Just use the Google access token directly
+                console.log('Google login successful, storing access token');
+                localStorage.setItem('accessToken', codeResponse.access_token);
+                localStorage.setItem('google_user_info', JSON.stringify(userInfo));
+                
+                console.log('Access token and user info stored');
+                
+                toast({
+                    title: "Success!",
+                    description: `Welcome, ${userInfo.name || userInfo.email}!`,
+                    className: "bg-green-50 border-green-200",
+                });
 
-                    if (backendResponse.data.accessToken) {
-                        // Store the backend access token
-                        localStorage.setItem('accessToken', backendResponse.data.accessToken);
-                        
-                        // Set user in the session store
-                        setUser({
-                            email: userInfo.email,
-                            sub: userInfo.id,
-                            email_verified: true,
-                            phone_verified: false,
-                            role: 'user'
-                        });
-
-                        localStorage.setItem('google_user_info', JSON.stringify(userInfo));
-                        
-                        toast({
-                            title: "Success!",
-                            description: `Welcome, ${userInfo.name || userInfo.email}!`,
-                            className: "bg-green-50 border-green-200",
-                        });
-
-                        // Redirect to marketplace
-                        window.location.href = '/marketplace';
-                    } else {
-                        throw new Error('No access token received from backend');
-                    }
-                } catch (backendError: any) {
-                    console.error('❌ Backend authentication error:', backendError);
-                    
-                    // Fallback to direct token usage
-                    localStorage.setItem('accessToken', codeResponse.access_token);
-                    localStorage.setItem('google_user_info', JSON.stringify(userInfo));
-                    
-                    // Set user in the session store
-                    setUser({
-                        email: userInfo.email,
-                        sub: userInfo.id,
-                        email_verified: true,
-                        phone_verified: false,
-                        role: 'user'
-                    });
-                    
-                    toast({
-                        title: "Success!",
-                        description: `Welcome, ${userInfo.name || userInfo.email}!`,
-                        className: "bg-green-50 border-green-200",
-                    });
-
-                    // Redirect to marketplace
-                    window.location.href = '/marketplace';
-                }
+                // Force a page reload to trigger authentication check
+                window.location.href = '/sell-dash';
 
             } catch (error: any) {
                 console.error('❌ Direct Google auth error:', error);
@@ -187,11 +144,7 @@ export const ThirdPartyAuth: React.FC<ThirdPartyInterface> = ({ text }) => {
         }
     };
 
-    // Main authentication handler - Use local OAuth to avoid Google Cloud Console setup
-    const handleGoogleAuth = () => {
-        // Check if we have a Google Client ID configured
-        // const hasGoogleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;        
-        console.log('🔑 No Google Client ID found, using Supabase OAuth (requires Google Cloud Console setup)...');
+    const handleGoogleAuth = () => {      
         supabaseGoogleAuth();
     
     };

@@ -11,7 +11,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Loader } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useState } from "react";
 import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import { apiService } from "../api/apiService";
+// import useUserSessionStore from "../../services/state/useUserSessionStore";
 
 const formSchema = z.object({
   email: z.string().min(1, { message: "Email is required" }).email({ message: "Invalid email format" }),
@@ -33,9 +34,10 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
+  // const setUser = useUserSessionStore((state) => state.setUser);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,7 +59,11 @@ export default function LoginPage() {
       const response = await apiService.login(values.email, values.password);
       
       const { accessToken } = response;
+      console.log('Normal login successful, storing access token');
       localStorage.setItem("accessToken", accessToken);
+      
+      // SIMPLIFIED: Just store the access token - useAuth will handle the rest
+      console.log('Access token stored, navigating to dashboard');
       
       toast({
         title: t('auth.loginSuccess'),
@@ -65,7 +71,8 @@ export default function LoginPage() {
         className: "bg-green-50 border-green-200",
       });
       
-      navigate("/sell-dash");
+      // Force a page reload to trigger authentication check
+      window.location.href = "/sell-dash";
     } catch (error: any) {
       console.error("Login error details:", error);
       

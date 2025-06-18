@@ -87,6 +87,7 @@ export default function SignupPage() {
       );
 
       if (response.data.accessToken) {
+        console.log('Signup successful, storing access token');
         localStorage.setItem("accessToken", response.data.accessToken);
         
         toast({
@@ -96,7 +97,8 @@ export default function SignupPage() {
           duration: 3000,
         });
         
-        navigate("/sell-dash");
+        // Force a page reload to trigger authentication check
+        window.location.href = "/sell-dash";
       } else {
         toast({
           title: t('auth.signupSuccess'),
