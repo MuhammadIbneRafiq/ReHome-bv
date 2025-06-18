@@ -14,7 +14,7 @@ export interface MarketplaceFurnitureItem {
     depth_cm?: number;
     
     // Pricing options
-    pricing_type: 'fixed' | 'bidding' | 'negotiable';
+    pricing_type: 'fixed' | 'bidding' | 'negotiable' | 'free';
     price?: number; // For fixed price
     starting_bid?: number; // For bidding
     
@@ -97,7 +97,7 @@ export interface CreateListingRequest {
     depth?: number;
     
     // Pricing
-    pricingType: 'fixed' | 'bidding' | 'negotiable';
+    pricingType: 'fixed' | 'bidding' | 'negotiable' | 'free';
     price?: number;
     startingBid?: number;
     
@@ -202,13 +202,15 @@ export type PartialMarketplaceItem = Partial<MarketplaceFurnitureItem> & {
 export const PRICING_TYPES = [
     { value: 'fixed', label: 'Fixed Price' },
     { value: 'bidding', label: 'Bidding/Auction' },
-    { value: 'negotiable', label: 'Price Negotiable' }
+    { value: 'negotiable', label: 'Price Negotiable' },
+    { value: 'free', label: 'Free' }
 ] as const;
 
 // Pricing types for ReHome listings (no bidding allowed)
 export const REHOME_PRICING_TYPES = [
     { value: 'fixed', label: 'Fixed Price' },
-    { value: 'negotiable', label: 'Price Negotiable' }
+    { value: 'negotiable', label: 'Price Negotiable' },
+    { value: 'free', label: 'Free' }
 ] as const;
 
 export type PricingType = typeof PRICING_TYPES[number]['value']; 

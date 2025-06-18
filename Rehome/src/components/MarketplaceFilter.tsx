@@ -679,6 +679,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
             <option value="fixed">Fixed Price</option>
             <option value="bidding">Bidding/Auction</option>
             <option value="negotiable">Price Negotiable</option>
+            <option value="free">Free</option>
           </select>
         </div>
         

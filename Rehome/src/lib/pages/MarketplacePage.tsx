@@ -185,37 +185,62 @@ const MarketplacePage = () => {
     const handleStatusUpdate = async (itemId: string, newStatus: string) => {
         try {
             const token = localStorage.getItem('accessToken');
+            console.log('=== FRONTEND STATUS UPDATE DEBUG ===');
+            console.log('📋 Item ID:', itemId);
+            console.log('📋 New Status:', newStatus); 
+            console.log('📋 Has Token:', !!token);
+            console.log('📋 Token length:', token?.length);
+            console.log('📋 Token preview:', token?.substring(0, 20) + '...');
+            
+            const requestBody = { status: newStatus };
+            console.log('📋 Request body:', requestBody);
+            
             const response = await fetch(`https://rehome-backend.vercel.app/api/furniture/${itemId}/status`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ status: newStatus })
+                body: JSON.stringify(requestBody)
             });
 
+            console.log('📋 Response status:', response.status);
+            console.log('📋 Response ok:', response.ok);
+            
+            // Try to get response body regardless of status
+            let responseData;
+            try {
+                responseData = await response.json();
+                console.log('📋 Response data:', responseData);
+            } catch (parseError) {
+                console.log('❌ Failed to parse response JSON:', parseError);
+                responseData = null;
+            }
+
             if (!response.ok) {
-                throw new Error('Failed to update status');
+                console.log('❌ Request failed with status:', response.status);
+                const errorMessage = responseData?.details || responseData?.error || `HTTP ${response.status}`;
+                throw new Error(errorMessage);
             }
 
-            // const result = await response.json();
-            
-            // Update the furniture items list
-            setFurnitureItems(prev => prev.map(item => 
-                item.id === itemId 
-                    ? { ...item, status: newStatus, sold: newStatus === 'sold' }
-                    : item
-            ));
-            
-            // Update the selected item
-            if (selectedItem && selectedItem.id === itemId) {
-                setSelectedItem({ ...selectedItem, status: newStatus, sold: newStatus === 'sold' });
-            }
+            console.log('✅ Status update successful');
 
+            // Update the local state
+            setFurnitureItems(prevItems => 
+                prevItems.map(item => 
+                    item.id === itemId 
+                        ? { ...item, status: newStatus, sold: newStatus === 'sold' }
+                        : item
+                )
+            );
+
+            // Show success message
             toast.success(`Item status updated to ${newStatus}`);
+            
         } catch (error) {
-            console.error('Error updating status:', error);
-            toast.error('Failed to update item status');
+            console.error('❌ Error updating status:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            toast.error(`Failed to update item status: ${errorMessage}`);
         }
     };
 
@@ -363,7 +388,9 @@ const MarketplacePage = () => {
                                                 />
                                                 <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
                                                 <p className="text-gray-600 text-xs">{item.description}</p>
-                                                <p className="text-red-500 font-bold text-xs">€{item.price}</p>
+                                                <p className="text-red-500 font-bold text-xs">
+                                                    {item.price === 0 ? 'Free' : `€${item.price}`}
+                                                </p>
                                             </motion.div>
                                         ))}
                                     </div>
@@ -431,7 +458,9 @@ const MarketplacePage = () => {
                                             />
                                             <div className="ml-4 flex-grow">
                                                 <h3 className="text-sm font-medium">{item.name}</h3>
-                                                <p className="text-orange-600 font-medium">€{item.price}</p>
+                                                <p className="text-orange-600 font-medium">
+                                                    {item.price === 0 ? 'Free' : `€${item.price}`}
+                                                </p>
                                             </div>
                                             <button 
                                                 onClick={() => removeFromCart(item.id)}

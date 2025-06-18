@@ -20,7 +20,7 @@ interface FurnitureItem {
     height_cm?: number;
     width_cm?: number;
     depth_cm?: number;
-    pricing_type?: 'fixed' | 'bidding' | 'negotiable';
+    pricing_type?: 'fixed' | 'bidding' | 'negotiable' | 'free';
     starting_bid?: number;
     is_rehome?: boolean;
     has_flexible_dates?: boolean;
@@ -50,7 +50,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
     const [depth, setDepth] = useState(item.depth_cm?.toString() || '');
     
     // Pricing
-    const [pricingType, setPricingType] = useState<'fixed' | 'bidding' | 'negotiable'>(item.pricing_type || 'fixed');
+    const [pricingType, setPricingType] = useState<'fixed' | 'bidding' | 'negotiable' | 'free'>(item.pricing_type || 'fixed');
     const [startingBid, setStartingBid] = useState(item.starting_bid?.toString() || '');
     
     // ReHome listing flag
@@ -230,7 +230,8 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                     
                     // Pricing
                     pricingType,
-                    price: pricingType === 'fixed' && price ? parseFloat(price) : null,
+                    price: pricingType === 'fixed' && price ? parseFloat(price) : 
+                           pricingType === 'free' ? 0 : null,
                     startingBid: pricingType === 'bidding' && startingBid ? parseFloat(startingBid) : null,
                     
                     imageUrl: allImageUrls,
@@ -476,7 +477,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                                     type="radio"
                                     value={type.value}
                                     checked={pricingType === type.value}
-                                    onChange={(e) => setPricingType(e.target.value as 'fixed' | 'bidding' | 'negotiable')}
+                                    onChange={(e) => setPricingType(e.target.value as 'fixed' | 'bidding' | 'negotiable' | 'free')}
                                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                 />
                                 <label htmlFor={`pricing-${type.value}`} className="ml-3 block text-sm text-gray-700">
@@ -530,6 +531,14 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                             <p className="text-sm text-blue-800">
                                 💬 Buyers will contact you to negotiate the price. Make sure to include any price expectations in the description.
+                            </p>
+                        </div>
+                    )}
+
+                    {pricingType === 'free' && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                            <p className="text-sm text-green-800">
+                                🎁 This item is offered for free! Buyers will contact you to arrange pickup. Make sure to mention any pickup requirements in the description.
                             </p>
                         </div>
                     )}

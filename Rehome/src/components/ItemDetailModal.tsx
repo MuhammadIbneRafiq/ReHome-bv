@@ -361,7 +361,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-2xl font-bold text-emerald-600">
-                    €{price?.toLocaleString() || '0'}
+                    {price === 0 ? 'Free' : `€${price?.toLocaleString() || '0'}`}
                   </span>
                   <span className={`px-3 py-1 rounded-full ${getStatusDisplay(status, sold).bgColor}`}>
                     {getStatusDisplay(status, sold).icon}

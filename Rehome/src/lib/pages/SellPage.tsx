@@ -42,7 +42,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
     const [depth, setDepth] = useState('');
     
     // Pricing
-    const [pricingType, setPricingType] = useState<'fixed' | 'bidding' | 'negotiable'>('fixed');
+    const [pricingType, setPricingType] = useState<'fixed' | 'bidding' | 'negotiable' | 'free'>('fixed');
     const [startingBid, setStartingBid] = useState('');
     
     // ReHome listing flag - set to false for all users (only admins can create ReHome listings through admin panel)
@@ -282,6 +282,8 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
             validationErrors.push('Valid starting bid is required for auction pricing');
         }
         
+        // Note: Free pricing type doesn't require price validation
+        
         if (validationErrors.length > 0) {
             setSubmitError(`Please fix the following issues: ${validationErrors.join(', ')}`);
             setSubmitting(false);
@@ -325,7 +327,8 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                 
                 // Pricing
                 pricingType,
-                price: pricingType === 'fixed' && price ? parseFloat(price) : null,
+                price: pricingType === 'fixed' && price ? parseFloat(price) : 
+                       pricingType === 'free' ? 0 : null,
                 startingBid: pricingType === 'bidding' && startingBid ? parseFloat(startingBid) : null,
                 
                 imageUrl: uploadedImageUrls, // Use the image URLs array
@@ -599,7 +602,7 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                                     type="radio"
                                     value={type.value}
                                     checked={pricingType === type.value}
-                                    onChange={(e) => setPricingType(e.target.value as 'fixed' | 'bidding' | 'negotiable')}
+                                    onChange={(e) => setPricingType(e.target.value as 'fixed' | 'bidding' | 'negotiable' | 'free')}
                                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                 />
                                 <label htmlFor={`pricing-${type.value}`} className="ml-3 block text-sm text-gray-700">
@@ -655,6 +658,14 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                         <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                             <p className="text-sm text-blue-800">
                                 💬 Buyers will contact you to negotiate the price. Make sure to include any price expectations in the description.
+                            </p>
+                        </div>
+                    )}
+
+                    {pricingType === 'free' && (
+                        <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                            <p className="text-sm text-green-800">
+                                🎁 This item is offered for free! Buyers will contact you to arrange pickup. Make sure to mention any pickup requirements in the description.
                             </p>
                         </div>
                     )}
