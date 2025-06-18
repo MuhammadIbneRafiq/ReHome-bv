@@ -54,13 +54,11 @@ export interface MarketplaceBid {
     bidder_email: string;
     bidder_name: string;
     bid_amount: number;
-    status: 'pending' | 'approved' | 'rejected' | 'outbid';
+    status: 'active' | 'outbid'; // Simplified: no pending approval needed
     created_at?: string;
     updated_at?: string;
     is_highest_bid?: boolean;
     admin_notes?: string;
-    approved_by?: string;
-    approved_at?: string;
 }
 
 export interface BidConfirmation {
@@ -83,15 +81,29 @@ export interface BidWithItemDetails extends MarketplaceBid {
     seller_email?: string;
 }
 
-// Place a new bid
-export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | 'updated_at'>): Promise<MarketplaceBid | null> => {
+// Place a new bid and automatically send chat message
+export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | 'updated_at'>, itemName?: string): Promise<MarketplaceBid | null> => {
     try {
+        // Set status to 'active' by default (no pending approval)
+        const bidData = {
+            ...bid,
+            status: 'active' as const
+        };
+
         const result = await apiCall('/api/bids', {
             method: 'POST',
-            body: JSON.stringify(bid),
+            body: JSON.stringify(bidData),
         });
 
         if (result.success) {
+            // Automatically send a chat message about the bid
+            try {
+                await sendBidChatMessage(bid.item_id, bid.bidder_email, bid.bid_amount, itemName || 'this item');
+            } catch (chatError) {
+                console.warn('Failed to send bid chat message:', chatError);
+                // Don't fail the entire bid if chat message fails
+            }
+
             toast.success(result.message || 'Bid placed successfully!');
             return result.data;
         } else {
@@ -101,6 +113,30 @@ export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | '
     } catch (error) {
         console.error('Error placing bid:', error);
         toast.error(error instanceof Error ? error.message : 'Failed to place bid');
+        throw error;
+    }
+};
+
+// Helper function to send chat message when bid is placed
+const sendBidChatMessage = async (itemId: number | string, bidderEmail: string, bidAmount: number, itemName: string): Promise<void> => {
+    try {
+        const messageContent = `Hi! I've placed a bid of €${bidAmount} for "${itemName}". I'm interested in purchasing this item. Please let me know if you'd like to discuss further!`;
+        
+        // Import and use the chat service
+        const { sendMessage } = await import('../services/marketplaceMessageService');
+        
+        // Create message object with proper structure
+        const messageData = {
+            item_id: String(itemId),
+            sender_id: bidderEmail,
+            sender_name: bidderEmail,
+            receiver_id: 'seller', // Will be resolved by backend to actual seller
+            content: messageContent
+        };
+        
+        await sendMessage(messageData);
+    } catch (error) {
+        console.error('Error sending bid chat message:', error);
         throw error;
     }
 };

@@ -35,6 +35,7 @@ interface ItemDetailsModalProps {
   onAddToCart?: (itemId: string) => void;
   onMarkAsSold?: (itemId: string) => void;
   onUpdateStatus?: (itemId: string, status: string) => void;
+  showStatusIndicator?: boolean; // New prop to control status display
 }
 
 const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ 
@@ -43,7 +44,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   item, 
   onAddToCart, 
   onMarkAsSold,
-  onUpdateStatus 
+  onUpdateStatus,
+  showStatusIndicator = false // Default to false (don't show in marketplace)
 }) => {
   // Move ALL hooks to the top, before any conditional logic
   const navigate = useNavigate();
@@ -166,10 +168,10 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         bidder_email: user.email,
         bidder_name: user.email,
         bid_amount: amount,
-        status: 'pending' as const
+        status: 'active' as const
       };
 
-      const result = await placeBid(bidData);
+      const result = await placeBid(bidData, name);
       if (result) {
         setShowBidModal(false);
         setBidAmount('');
@@ -363,10 +365,13 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   <span className="text-2xl font-bold text-emerald-600">
                     {price === 0 ? 'Free' : `€${price?.toLocaleString() || '0'}`}
                   </span>
-                  <span className={`px-3 py-1 rounded-full ${getStatusDisplay(status, sold).bgColor}`}>
-                    {getStatusDisplay(status, sold).icon}
-                    {getStatusDisplay(status, sold).text}
-                  </span>
+                  {/* Only show status indicator if showStatusIndicator prop is true (dashboard view) */}
+                  {showStatusIndicator && (
+                    <span className={`px-3 py-1 rounded-full ${getStatusDisplay(status, sold).bgColor}`}>
+                      {getStatusDisplay(status, sold).icon}
+                      {getStatusDisplay(status, sold).text}
+                    </span>
+                  )}
                 </div>
                 
                 {/* Action buttons */}
@@ -434,11 +439,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       ) : highestBid ? (
                         <span className="text-orange-600 font-bold">
                           Highest bid: €{highestBid.bid_amount}
-                          {highestBid.status === 'pending' && (
-                            <span className="text-yellow-600 text-sm ml-1">(Pending approval)</span>
-                          )}
-                          {highestBid.status === 'approved' && (
-                            <span className="text-green-600 text-sm ml-1">(Approved)</span>
+                          {highestBid.is_highest_bid && (
+                            <span className="text-green-600 text-sm ml-1">(Current highest)</span>
                           )}
                         </span>
                       ) : (
@@ -456,13 +458,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     {/* User's current bid status */}
                     {userBid && (
                       <div className={`mb-3 p-2 rounded text-sm ${
-                        userBid.status === 'approved' && userBid.is_highest_bid ? 'bg-green-100 text-green-800' :
-                        userBid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        userBid.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
+                        userBid.is_highest_bid ? 'bg-green-100 text-green-800' :
+                        userBid.status === 'outbid' ? 'bg-red-100 text-red-800' :
+                        'bg-blue-100 text-blue-800'
                       }`}>
-                        Your bid: €{userBid.bid_amount} - Status: {userBid.status}
-                        {userBid.status === 'approved' && userBid.is_highest_bid && ' (Highest bid!)'}
+                        Your bid: €{userBid.bid_amount} - {userBid.is_highest_bid ? 'Current highest bid!' : userBid.status === 'outbid' ? 'Outbid' : 'Active'}
                   </div>
                 )}
 
@@ -487,12 +487,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                                     {new Date(bid.created_at || '').toISOString()}
                                   </span>
                                   <span className={`text-xs px-2 py-1 rounded ${
-                                    bid.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                    bid.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                    bid.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                                    'bg-gray-100 text-gray-800'
+                                    bid.is_highest_bid ? 'bg-green-100 text-green-800' :
+                                    bid.status === 'outbid' ? 'bg-red-100 text-red-800' :
+                                    'bg-blue-100 text-blue-800'
                                   }`}>
-                                    {bid.status}
+                                    {bid.is_highest_bid ? 'Highest' : bid.status === 'outbid' ? 'Outbid' : 'Active'}
                                   </span>
                                 </div>
                               </div>

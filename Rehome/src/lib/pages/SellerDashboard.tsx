@@ -144,6 +144,57 @@ const SellerDashboard = () => {
         setEditingItem(null);
     };
 
+    const handleStatusUpdate = async (itemId: string, newStatus: string) => {
+        try {
+            // Update the item status via API
+            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE(itemId), {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify({ 
+                    status: newStatus,
+                    sold: newStatus === 'sold' // Also update sold field for backward compatibility
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Update local state
+            setListings(prev => prev.map(item => 
+                item.id === itemId 
+                    ? { ...item, status: newStatus, sold: newStatus === 'sold' }
+                    : item
+            ));
+            
+            setSoldListings(prev => {
+                if (newStatus === 'sold') {
+                    // Move item to sold listings if not already there
+                    const item = listings.find(l => l.id === itemId);
+                    if (item) {
+                        return [...prev, { ...item, status: newStatus, sold: true }];
+                    }
+                }
+                return prev.map(item => 
+                    item.id === itemId 
+                        ? { ...item, status: newStatus, sold: newStatus === 'sold' }
+                        : item
+                );
+            });
+
+            toast.success(`Item status updated to ${newStatus}`);
+            
+            // Refresh listings to ensure consistency
+            await fetchListings();
+        } catch (error) {
+            console.error('Error updating item status:', error);
+            toast.error('Failed to update item status');
+        }
+    };
+
     const fetchListings = async () => {
         setLoading(true);
         setError(null);
@@ -235,7 +286,13 @@ const SellerDashboard = () => {
 
     return (
         <div className="min-h-screen bg-orange-50 flex flex-col pt-24">
-            <ItemDetailsModal isOpen={isModalOpen} onClose={closeModal} item={selectedItem} />
+            <ItemDetailsModal 
+                isOpen={isModalOpen} 
+                onClose={closeModal} 
+                item={selectedItem} 
+                showStatusIndicator={true} // Show status indicators in dashboard
+                onUpdateStatus={handleStatusUpdate} // Enable status update buttons
+            />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Welcome Message */}
                 <motion.h1

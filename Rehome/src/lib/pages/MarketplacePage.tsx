@@ -344,6 +344,7 @@ const MarketplacePage = () => {
                         item={selectedItem || null}
                         onAddToCart={addToCart}
                         onUpdateStatus={handleStatusUpdate}
+                        showStatusIndicator={false} // Don't show status in marketplace
                     />
                 )}
             </AnimatePresence>
