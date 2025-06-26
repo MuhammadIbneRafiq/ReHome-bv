@@ -73,14 +73,12 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
               <div className="relative h-48 w-full overflow-hidden">
                 {/* ReHome logo badge for ReHome items */}
                 {item.isrehome && (
-                  <div className="absolute top-2 left-2 z-10 bg-white rounded shadow-md flex items-center justify-center w-8 h-8 border border-orange-300">
-                    <img 
-                      src={logoImage} 
-                      alt="ReHome Verified" 
-                      className="w-6 h-6 object-contain m-0 p-0" 
-                      style={{display: 'block'}}
-                    />
-                  </div>
+                  <img 
+                    src={logoImage} 
+                    alt="ReHome Verified" 
+                    className="absolute top-2 left-2 z-10 w-8 h-8 object-contain m-0 p-0"
+                    style={{display: 'block'}}
+                  />
                 )}
                 <img
                   src={item.image_url?.[0] || ''}

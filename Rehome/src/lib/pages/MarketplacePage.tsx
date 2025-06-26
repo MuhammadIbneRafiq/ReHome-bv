@@ -413,13 +413,12 @@ const MarketplacePage = () => {
                                                     });
                                                     return item.isrehome;
                                                 })() && (
-                                                    <div className="absolute top-2 left-2 z-10 bg-white p-1 rounded-md shadow-md">
-                                                        <img 
-                                                            src={logoImage} 
-                                                            alt="ReHome Verified" 
-                                                            className="w-8 h-8 object-contain" 
-                                                        />
-                                                    </div>
+                                                    <img 
+                                                        src={logoImage} 
+                                                        alt="ReHome Verified" 
+                                                        className="absolute top-2 left-2 z-10 w-8 h-8 object-contain m-0 p-0"
+                                                        style={{display: 'block'}}
+                                                    />
                                                 )}
                                                 <img 
                                                     src={(item.image_url && item.image_url.length > 0) ? item.image_url[0] : 
