@@ -31,7 +31,7 @@ export default function Navbar() {
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown
-    const [isPopupOpen, setIsPopupOpen] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
 
     const dropdownRef = useRef<HTMLDivElement>(null); // Ref to the dropdown container
@@ -54,6 +54,7 @@ export default function Navbar() {
         // Navigate and close menu
         navigate('/');
         setUserMenuOpen(false);
+        setIsMobileMenuOpen(false); // Close mobile menu on logout
     };
 
     const handleScroll = () => {
@@ -98,13 +99,22 @@ export default function Navbar() {
         return () => window.removeEventListener('scroll', handleScroll);
     }, [lastScrollY]);
 
-    const togglePopup = () => {
-        setIsPopupOpen(!isPopupOpen);
+    const toggleMobileMenu = () => {
+        setIsMobileMenuOpen(!isMobileMenuOpen);
     };
 
     const handleLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         changeLanguage(event.target.value);
     };
+
+    const navLinks = [
+        { to: "/marketplace", label: t('navbar.marketplace') },
+        { to: "/item-donation", label: t('navbar.itemDonation') },
+        { to: "/house-moving", label: t('navbar.houseMoving') },
+        { to: "/item-transport", label: "Item Transport" },
+        { to: "/special-request", label: t('navbar.specialRequest') },
+    ];
+
 
     return (
         <header
@@ -121,19 +131,33 @@ export default function Navbar() {
                         />
                         Rehome B.v.
                     </Link>
-                    
-                    {/* Left Side Navigation Items - Item Donation and Marketplace */}
-                    <div className="hidden md:flex ml-6 space-x-4">
+                </div>
+
+                {/* Desktop Navigation */}
+                <div className="hidden md:flex items-center justify-center gap-4 md:gap-6">
+                    {/* Centered Navigation Links */}
+                    <div className="flex space-x-4">
                         <Link to="/item-donation" className="rehome-nav-link">
                             {t('navbar.itemDonation')}
                         </Link>
                         <Link to="/marketplace" className="rehome-nav-link">
                             {t('navbar.marketplace')}
                         </Link>
+                        <Link to="/house-moving" className="rehome-nav-link">
+                            {t('navbar.houseMoving')}
+                        </Link>
+                        <Link to="/item-transport" className="rehome-nav-link">
+                            Item Transport
+                        </Link>
+                        <Link to="/special-request" className="rehome-nav-link">
+                            {t('navbar.specialRequest')}
+                        </Link>
                     </div>
-                    
-                    {/* Language Selector */}
-                    <div className="ml-6 relative">
+                </div>
+
+                <div className="hidden md:flex items-center gap-4">
+                     {/* Language Selector */}
+                     <div className="relative">
                         <select
                             value={currentLanguage}
                             onChange={handleLanguageChange}
@@ -146,28 +170,10 @@ export default function Navbar() {
                             ))}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <ChevronDownIcon className="h-5 w-5" aria-hidden="true" /> {/*  Using a Radix UI icon */}
+                            <ChevronDownIcon className="h-5 w-5" aria-hidden="true" />
                         </div>
                     </div>
-                </div>
-
-                <div className="flex items-center justify-center gap-4 md:gap-6">
-                    {/* Right Side Navigation Items - House Moving, Item Transport, Special Request */}
-                    <div className="hidden md:flex flex-col items-center"> {/* Use flex-col to stack items */}
-                        <div className="flex space-x-4 relative"> {/* Added relative class */}
-                            <Link to="/house-moving" className="rehome-nav-link">
-                                {t('navbar.houseMoving')}
-                            </Link>
-                            <Link to="/item-transport" className="rehome-nav-link">
-                                Item Transport
-                            </Link>
-                            <Link to="/special-request" className="rehome-nav-link">
-                                {t('navbar.specialRequest')}
-                            </Link>
-                        </div>
-                    </div>
-                    
-                    {!isAuthenticated && (
+                    {!isAuthenticated ? (
                         <>
                             <Link to="/register" className="rehome-nav-button">
                                 {t('navbar.signup')}
@@ -176,8 +182,7 @@ export default function Navbar() {
                                 {t('navbar.login')}
                             </Link>
                         </>
-                    )}
-                    {isAuthenticated && (
+                    ) : (
                         <div className="relative">
                             <div className="flex items-center space-x-3">
                                 <Link to="/sell-dash" className="rehome-dashboard-button">
@@ -231,37 +236,79 @@ export default function Navbar() {
                             )}
                         </div>
                     )}
-                    <div className="relative md:hidden">
-                        {!isAuthenticated &&
-                            <Button variant="ghost" size="icon" className="md:hidden three-dot dark:text-white text-black" onClick={togglePopup}>
-                                <Menu className="w-6 h-6" />
-                            </Button>
-                        }
-                        {isPopupOpen && (
-                            <div className="absolute border-solid border-2 border-black-200 right-0 top-10 bg-transperant text-gray-400 shadow-lg rounded-lg w-40">
-                                <nav className="grid gap-2 p-4 text-sm font-medium">
-                                    {/* Mobile Navigation */}
-                                    <Link to="/marketplace" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        {t('navbar.marketplace')}
-                                    </Link>
-                                    <Link to="/item-donation" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        {t('navbar.itemDonation')}
-                                    </Link>
-                                    <Link to="/item-transport" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        Item Transport
-                                    </Link>
-                                    <Link to="/house-moving" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        {t('navbar.houseMoving')}
-                                    </Link>
-                                    <Link to="/special-request" className="text-gray-400 transition-colors duration-fast hover:text-black hover:dark:text-white">
-                                        {t('navbar.specialRequest')}
-                                    </Link>
-                                </nav>
-                            </div>
-                        )}
-                    </div>
+                </div>
+
+                {/* Mobile Menu Button */}
+                <div className="md:hidden">
+                    <Button variant="ghost" size="icon" className="text-white" onClick={toggleMobileMenu}>
+                        <Menu className="w-6 h-6" />
+                    </Button>
                 </div>
             </nav>
+
+            {/* Mobile Menu */}
+            {isMobileMenuOpen && (
+                 <div className="md:hidden bg-white text-black">
+                    <nav className="flex flex-col p-4">
+                        {navLinks.map((link) => (
+                            <Link
+                                key={link.to}
+                                to={link.to}
+                                className="py-2 text-center text-lg hover:bg-gray-100 rounded-md"
+                                onClick={() => setIsMobileMenuOpen(false)}
+                            >
+                                {link.label}
+                            </Link>
+                        ))}
+                         <div className="mt-4 pt-4 border-t border-gray-200">
+                             <div className="relative mb-4">
+                                <select
+                                    value={currentLanguage}
+                                    onChange={handleLanguageChange}
+                                    className="w-full bg-gray-100 text-sm text-gray-700 py-2 px-3 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 appearance-none pr-8"
+                                >
+                                    {languageOptions.map((option) => (
+                                        <option key={option.code} value={option.code}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                    <ChevronDownIcon className="h-5 w-5" aria-hidden="true" />
+                                </div>
+                            </div>
+
+                            {isAuthenticated ? (
+                                <>
+                                    <Link to="/sell-dash" className="block w-full text-center py-2 text-lg hover:bg-gray-100 rounded-md" onClick={() => setIsMobileMenuOpen(false)}>
+                                        {t('navbar.dashboard')}
+                                    </Link>
+                                     <Link to="/messages" className="block w-full text-center py-2 text-lg hover:bg-gray-100 rounded-md" onClick={() => setIsMobileMenuOpen(false)}>
+                                        Messages
+                                    </Link>
+                                    {user && ADMIN_EMAILS.includes(user.email) && (
+                                        <Link to="/admin" className="block w-full text-center py-2 text-lg hover:bg-gray-100 rounded-md" onClick={() => setIsMobileMenuOpen(false)}>
+                                            Admin Dashboard
+                                        </Link>
+                                    )}
+                                    <button onClick={handleLogout} className="block w-full text-center py-2 text-lg hover:bg-gray-100 rounded-md">
+                                        {t('auth.logout')}
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link to="/register" className="block w-full text-center py-2 text-lg hover:bg-gray-100 rounded-md" onClick={() => setIsMobileMenuOpen(false)}>
+                                        {t('navbar.signup')}
+                                    </Link>
+                                    <Link to="/login" className="block w-full text-center py-2 text-lg hover:bg-gray-100 rounded-md" onClick={() => setIsMobileMenuOpen(false)}>
+                                        {t('navbar.login')}
+                                    </Link>
+                                </>
+                            )}
+                        </div>
+                    </nav>
+                 </div>
+            )}
         </header>
     );
 }

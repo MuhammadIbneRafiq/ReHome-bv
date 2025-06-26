@@ -69,7 +69,7 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
         {/* Items grid */}
         <div className="mt-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <div key={item.id} className="bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
+            <Link key={item.id} to={`/marketplace`} className="block bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
               <div className="relative h-48 w-full overflow-hidden">
                 {/* ReHome logo badge for ReHome items */}
                 {item.isrehome && (
@@ -97,12 +97,6 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
                 </div>
                 <p className="mt-2 text-sm text-gray-500 line-clamp-2">{item.description}</p>
                 <div className="mt-4 flex justify-between items-center">
-                  <Link
-                    to={`/marketplace`}
-                    className="text-orange-600 hover:text-orange-700 text-sm font-medium"
-                  >
-                    {t('marketplace.viewDetails')} &rarr;
-                  </Link>
                   <span className="text-xs text-gray-500">{item.city_name}</span>
                 </div>
                 
@@ -111,7 +105,7 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
                   <AddToCartButton item={item} buttonType="secondary" />
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
 
