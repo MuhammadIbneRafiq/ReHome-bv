@@ -5,17 +5,12 @@ const socialMedia = [
   {
     id: 1,
     img: "https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png", // Instagram logo
-    link: "https://www.instagram.com/autolandingaiofficial/",
+    link: "https://www.instagram.com/rehome.move/",
   },
   {
     id: 2,
-    img: "https://upload.wikimedia.org/wikipedia/commons/4/42/YouTube_icon_%282013-2017%29.png", // YouTube logo
-    link: "https://www.youtube.com/channel/UCbmFzKaDReXV7XpUi6HTfXw",
-  },
-  {
-    id: 3,
-    img: "https://upload.wikimedia.org/wikipedia/commons/e/e9/Linkedin_icon.svg", // LinkedIn logo
-    link: "https://www.linkedin.com/in/muhammad-ibne-rafiq/",
+    img: "https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg",
+    link: "https://www.facebook.com/profile.php?id=61572410534379#",
   }
 ];
 
