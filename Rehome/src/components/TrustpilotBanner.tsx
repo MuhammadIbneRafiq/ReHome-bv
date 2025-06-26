@@ -1,4 +1,4 @@
-import { FaStar, FaRegStar } from 'react-icons/fa';
+import { FaStar } from 'react-icons/fa';
 
 const TrustpilotBanner = () => {
   return (
