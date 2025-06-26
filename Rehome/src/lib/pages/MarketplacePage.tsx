@@ -7,15 +7,19 @@ import logoImage from '../../assets/logorehome.jpg'
 import { useTranslation } from "react-i18next";
 import MarketplaceFilter from "../../components/MarketplaceFilter";
 import { translateFurnitureItem } from "../utils/dynamicTranslation";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-toastify';
-import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
+import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus, FaComments } from 'react-icons/fa';
 import { API_ENDPOINTS } from '../api/config';
+import useUserStore from '../../services/state/useUserSessionStore';
+import { sendMessage } from '../../services/marketplaceMessageService';
 
 const MarketplacePage = () => {
     const { t } = useTranslation();
     const { isAuthenticated } = useAuth();
+    const navigate = useNavigate();
+    const user = useUserStore((state) => state.user);
     const [furnitureItems, setFurnitureItems] = useState<FurnitureItem[]>([]);
     const [filteredItems, setFilteredItems] = useState<FurnitureItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -26,6 +30,12 @@ const MarketplacePage = () => {
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
     
+    // Chat modal state
+    const [showChatModal, setShowChatModal] = useState(false);
+    const [chatItem, setChatItem] = useState<FurnitureItem | null>(null);
+    const [chatMessage, setChatMessage] = useState('');
+    const [isSendingMessage, setIsSendingMessage] = useState(false);
+
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const [pagination, setPagination] = useState({
@@ -333,6 +343,65 @@ const MarketplacePage = () => {
         }
     };
 
+    // Handle chat with seller
+    const handleChatWithSeller = (item: FurnitureItem, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent opening the item modal
+        
+        if (!user) {
+            navigate('/login?redirect=back');
+            return;
+        }
+
+        // Don't allow chatting with yourself
+        if (item.seller_email === user.email) {
+            toast.info("You can't chat with yourself as the seller");
+            return;
+        }
+
+        // Set chat item and default message
+        setChatItem(item);
+        setChatMessage(`Hi, I'm interested in your item: ${item.name}`);
+        setShowChatModal(true);
+    };
+
+    // Handle sending chat message
+    const handleSendChatMessage = async () => {
+        if (!chatMessage.trim()) {
+            toast.error("Please enter a message");
+            return;
+        }
+
+        if (!user || !chatItem) {
+            toast.error("You must be logged in to send messages");
+            return;
+        }
+
+        try {
+            setIsSendingMessage(true);
+            await sendMessage({
+                item_id: chatItem.id,
+                content: chatMessage.trim(),
+                sender_id: user.email,
+                sender_name: user.email,
+                receiver_id: chatItem.seller_email
+            });
+            
+            // Close modal and redirect to chat dashboard
+            setShowChatModal(false);
+            navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: chatItem.id } });
+            toast.success("Message sent successfully!");
+            
+            // Reset chat state
+            setChatItem(null);
+            setChatMessage('');
+        } catch (error) {
+            console.error('Error sending message:', error);
+            toast.error("Failed to send message. Please try again later.");
+        } finally {
+            setIsSendingMessage(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-orange-50 pt-24 pb-12">
             <AnimatePresence mode="wait">
@@ -401,7 +470,10 @@ const MarketplacePage = () => {
                                                 key={item.id}
                                                 className="bg-[#f3e4d6] shadow-lg rounded-lg p-2 hover:scale-105 transition-transform cursor-pointer relative"
                                                 whileHover={{ scale: 1.05 }}
-                                                onClick={() => openModal(item)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openModal(item);
+                                                }}
                                             >
                                                 {/* ReHome logo badge for ReHome items */}
                                                 {(() => {
@@ -436,9 +508,22 @@ const MarketplacePage = () => {
                                                 />
                                                 <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
                                                 <p className="text-gray-600 text-xs line-clamp-2 h-8">{item.description}</p>
-                                                <p className="text-red-500 font-bold text-xs">
-                                                    {item.price === 0 ? 'Free' : `€${item.price}`}
-                                                </p>
+                                                <div className="flex justify-between items-center mt-2">
+                                                    <p className="text-red-500 font-bold text-xs">
+                                                        {item.price === 0 ? 'Free' : `€${item.price}`}
+                                                    </p>
+                                                    {/* Chat with Seller Button */}
+                                                    {item.seller_email !== user?.email && (
+                                                        <button
+                                                            onClick={(e) => handleChatWithSeller(item, e)}
+                                                            className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded transition-colors"
+                                                            title="Chat with Seller"
+                                                        >
+                                                            <FaComments size={10} />
+                                                            Chat
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </motion.div>
                                         ))}
                                     </div>
@@ -602,6 +687,80 @@ const MarketplacePage = () => {
                     </div>
                 </>
             )}
+
+            {/* Chat Modal */}
+            <AnimatePresence>
+                {showChatModal && chatItem && (
+                    <motion.div 
+                        className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                    <motion.div 
+                        className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full mx-4 relative"
+                        initial={{ scale: 0.95, y: 20 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.95, y: 20 }}
+                    >
+                        <button 
+                            className="absolute top-2 right-2 text-gray-400 hover:text-blue-600 text-xl" 
+                            onClick={() => setShowChatModal(false)}
+                        >
+                            &times;
+                        </button>
+                        <h3 className="text-lg font-bold mb-4 text-blue-700">
+                            Chat with Seller
+                        </h3>
+                        <div className="mb-4">
+                            <div className="bg-gray-100 p-3 rounded-lg mb-4">
+                                <div className="flex items-center gap-3">
+                                    <img 
+                                        src={(chatItem.image_url && chatItem.image_url[0]) || (chatItem.image_urls && chatItem.image_urls[0]) || '/placeholder-image.jpg'}
+                                        alt={chatItem.name}
+                                        className="w-12 h-12 object-cover rounded"
+                                    />
+                                    <div>
+                                        <h4 className="font-semibold text-sm">{chatItem.name}</h4>
+                                        <p className="text-orange-600 font-bold text-sm">
+                                            {chatItem.price === 0 ? 'Free' : `€${chatItem.price}`}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <label className="block text-gray-700 mb-2 font-medium">
+                                Your message
+                            </label>
+                            <textarea
+                                value={chatMessage}
+                                onChange={e => setChatMessage(e.target.value)}
+                                className="w-full border border-gray-300 rounded px-3 py-2 h-32 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                placeholder="Write your message here..."
+                                disabled={isSendingMessage}
+                            />
+                        </div>
+                        <div className="flex justify-between">
+                            <button 
+                                type="button" 
+                                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" 
+                                onClick={() => setShowChatModal(false)}
+                                disabled={isSendingMessage}
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="button" 
+                                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50" 
+                                onClick={handleSendChatMessage}
+                                disabled={isSendingMessage || !chatMessage.trim()}
+                            >
+                                {isSendingMessage ? 'Sending...' : 'Send Message'}
+                            </button>
+                        </div>
+                    </motion.div>
+                </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

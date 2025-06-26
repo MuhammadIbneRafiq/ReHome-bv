@@ -63,6 +63,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [loadingBids, setLoadingBids] = useState(false);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatMessage, setChatMessage] = useState('');
+  const [showBidMessageModal, setShowBidMessageModal] = useState(false);
+  const [bidMessage, setBidMessage] = useState('');
 
   // Load bidding data when modal opens
   useEffect(() => {
@@ -143,7 +145,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     }
   };
 
-  // Handle bid submit
+  // Handle bid submit - show message modal first
   const handleBidSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amount = parseFloat(bidAmount);
@@ -161,6 +163,24 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       return;
     }
 
+    // Set default message and show message modal
+    setBidMessage(`Hi! I've placed a bid of €${amount} for "${name}". I'm interested in purchasing this item. Please let me know if you'd like to discuss further!`);
+    setShowBidMessageModal(true);
+  };
+
+  // Handle final bid submission with custom message
+  const handleFinalBidSubmit = async () => {
+    if (!bidMessage.trim()) {
+      toast.error("Please enter a message to send with your bid");
+      return;
+    }
+
+    if (!user) {
+      toast.error("You must be logged in to place a bid");
+      return;
+    }
+
+    const amount = parseFloat(bidAmount);
     setIsProcessing(true);
     try {
       const bidData = {
@@ -171,12 +191,18 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         status: 'active' as const
       };
 
-      const result = await placeBid(bidData, name);
+      const result = await placeBid(bidData, name, bidMessage);
       if (result) {
         setShowBidModal(false);
+        setShowBidMessageModal(false);
         setBidAmount('');
         setBidError('');
+        setBidMessage('');
         await loadBiddingData(); // Reload data after successful bid
+        
+        // Navigate to chat dashboard to see the sent message
+        navigate('/sell-dash', { state: { activeTab: 'chats', activeItemId: id } });
+        toast.success("Bid placed and message sent successfully!");
       }
     } catch (error) {
       console.error('Error placing bid:', error);
@@ -408,6 +434,20 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                                 {canAddToCartStatus.message}
                               </div>
                             )}
+                            
+                            {/* Chat button for ReHome items */}
+                            <button
+                              onClick={handleInitiateChat}
+                              disabled={isProcessing}
+                              className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {isProcessing ? (
+                                <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                              ) : (
+                                <FaComments />
+                              )}
+                              Chat with Seller
+                            </button>
                           </>
                         )}
                         
@@ -685,6 +725,54 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       <button type="submit" className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600">Place Bid</button>
                     </div>
                   </form>
+                </div>
+              </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Bid Message Modal */}
+            <AnimatePresence>
+              {showBidMessageModal && (
+                <motion.div 
+                  className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full relative">
+                  <button className="absolute top-2 right-2 text-gray-400 hover:text-orange-600 text-xl" onClick={() => setShowBidMessageModal(false)}>&times;</button>
+                  <h3 className="text-lg font-bold mb-4 text-orange-700">Edit Your Bid Message</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Your bid of €{bidAmount} will be placed along with this message to the seller:
+                  </p>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 mb-2 font-medium">Message to seller</label>
+                    <textarea
+                      value={bidMessage}
+                      onChange={e => setBidMessage(e.target.value)}
+                      className="w-full border border-gray-300 rounded px-3 py-2 h-32 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+                      placeholder="Write your message here..."
+                      disabled={isProcessing}
+                    />
+                  </div>
+                  <div className="flex justify-between">
+                    <button 
+                      type="button" 
+                      className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300" 
+                      onClick={() => setShowBidMessageModal(false)}
+                      disabled={isProcessing}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      type="button" 
+                      className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:opacity-50" 
+                      onClick={handleFinalBidSubmit}
+                      disabled={isProcessing || !bidMessage.trim()}
+                    >
+                      {isProcessing ? 'Placing Bid...' : 'Place Bid & Send Message'}
+                    </button>
+                  </div>
                 </div>
               </motion.div>
               )}

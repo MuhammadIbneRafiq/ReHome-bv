@@ -105,11 +105,16 @@ export interface BidWithItemDetails extends MarketplaceBid {
 }
 
 // Place a new bid and automatically send chat message
-export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | 'updated_at'>, itemName?: string): Promise<MarketplaceBid | null> => {
+export const placeBid = async (
+    bid: Omit<MarketplaceBid, 'id' | 'created_at' | 'updated_at'>, 
+    itemName?: string, 
+    customMessage?: string
+): Promise<MarketplaceBid | null> => {
     try {
         console.log('=== PLACING BID DEBUG ===');
         console.log('📋 Bid data:', bid);
         console.log('📋 Item name:', itemName);
+        console.log('📋 Custom message:', customMessage);
         
         // Simple bid data - no status needed, works like chat
         const bidData = {
@@ -133,7 +138,7 @@ export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | '
             
             // Automatically send a chat message about the bid
             try {
-                await sendBidChatMessage(bid.item_id, bid.bidder_email, bid.bid_amount, itemName || 'this item');
+                await sendBidChatMessage(bid.item_id, bid.bidder_email, bid.bid_amount, itemName || 'this item', customMessage);
                 console.log('✅ Bid chat message sent successfully');
             } catch (chatError) {
                 console.warn('❌ Failed to send bid chat message:', chatError);
@@ -155,17 +160,24 @@ export const placeBid = async (bid: Omit<MarketplaceBid, 'id' | 'created_at' | '
 };
 
 // Helper function to send chat message when bid is placed
-const sendBidChatMessage = async (itemId: number | string, bidderEmail: string, bidAmount: number, itemName: string): Promise<void> => {
+const sendBidChatMessage = async (
+    itemId: number | string, 
+    bidderEmail: string, 
+    bidAmount: number, 
+    itemName: string, 
+    customMessage?: string
+): Promise<void> => {
     try {
         console.log('=== SENDING BID CHAT MESSAGE ===');
         console.log('📋 Item ID:', itemId);
         console.log('📋 Bidder Email:', bidderEmail);
         console.log('📋 Bid Amount:', bidAmount);
         console.log('📋 Item Name:', itemName);
+        console.log('📋 Custom Message:', customMessage);
         
-        const messageContent = `Hi! I've placed a bid of €${bidAmount} for "${itemName}". I'm interested in purchasing this item. Please let me know if you'd like to discuss further!`;
+        const messageContent = customMessage || `Hi! I've placed a bid of €${bidAmount} for "${itemName}". I'm interested in purchasing this item. Please let me know if you'd like to discuss further!`;
         
-        console.log('📋 Message content:', messageContent);
+        console.log('📋 Final message content:', messageContent);
         
         // Import and use the chat service
         const { sendMessage } = await import('../services/marketplaceMessageService');

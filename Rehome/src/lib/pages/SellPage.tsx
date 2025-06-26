@@ -304,28 +304,42 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                     console.log(`Converting ${heicPhotos.length} HEIC images to web-compatible format...`);
                 }
                 
-                for (const photo of photos) {
-                    const formData = new FormData();
-                    formData.append('photos', photo);
-                    const uploadResponse = await fetch(API_ENDPOINTS.UPLOAD.PHOTOS, {
-                        method: 'POST',
-                        body: formData,
-                    });
-
-                    if (!uploadResponse.ok) {
-                        throw new Error(`HTTP upload error! status: ${uploadResponse.status}`);
-                    }
-                    const uploadData = await uploadResponse.json();
-                    
-                    // Log conversion details if any
-                    if (uploadData.conversions && uploadData.conversions.length > 0) {
-                        uploadData.conversions.forEach((conversion: any) => {
-                            console.log(`✅ Converted ${conversion.original} (${conversion.originalFormat}) to ${conversion.converted} (${conversion.outputFormat})`);
-                            console.log(`Size reduced: ${Math.round((1 - conversion.convertedSize / conversion.originalSize) * 100)}%`);
+                try {
+                    for (const photo of photos) {
+                        const formData = new FormData();
+                        formData.append('photos', photo);
+                        
+                        // Add timeout to prevent hanging requests
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+                        
+                        const uploadResponse = await fetch(API_ENDPOINTS.UPLOAD.PHOTOS, {
+                            method: 'POST',
+                            body: formData,
+                            signal: controller.signal
                         });
+
+                        clearTimeout(timeoutId);
+
+                        if (!uploadResponse.ok) {
+                            throw new Error(`HTTP upload error! status: ${uploadResponse.status}`);
+                        }
+                        const uploadData = await uploadResponse.json();
+                        
+                        // Log conversion details if any
+                        if (uploadData.conversions && uploadData.conversions.length > 0) {
+                            uploadData.conversions.forEach((conversion: any) => {
+                                console.log(`✅ Converted ${conversion.original} (${conversion.originalFormat}) to ${conversion.converted} (${conversion.outputFormat})`);
+                                console.log(`Size reduced: ${Math.round((1 - conversion.convertedSize / conversion.originalSize) * 100)}%`);
+                            });
+                        }
+                        
+                        uploadedImageUrls.push(...uploadData.imageUrls);
                     }
-                    
-                    uploadedImageUrls.push(...uploadData.imageUrls);
+                } catch (uploadError: any) {
+                    console.error('Image upload failed:', uploadError);
+                    setUploadError(`Image upload failed: ${uploadError.message}. Continuing without images...`);
+                    // Continue with listing creation even if image upload fails
                 }
                 setUploading(false);
             }
@@ -566,8 +580,11 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
 
                 <div>
                     <label htmlFor="photos" className="block text-sm font-medium text-gray-700">
-                        Photos
+                        Photos (Optional)
                     </label>
+                    <p className="text-sm text-gray-600 mb-2">
+                        Note: If image upload fails due to connectivity issues, your listing will still be created without images. You can edit it later to add photos.
+                    </p>
                     <input
                         type="file"
                         id="photos"
@@ -575,8 +592,8 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                         onChange={handlePhotoChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                     />
-                    {uploading && <p>Uploading image...</p>}
-                    {uploadError && <p className="text-red-500">{uploadError}</p>}
+                    {uploading && <p className="text-blue-600 text-sm mt-1">Uploading images...</p>}
+                    {uploadError && <p className="text-orange-600 text-sm mt-1">{uploadError}</p>}
                     {imageUrls.length > 0 && ( // Display image preview if imageUrl is available
                         <div className="mt-2">
                             {imageUrls.map((url, index) => (
