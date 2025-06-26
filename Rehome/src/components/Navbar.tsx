@@ -183,9 +183,7 @@ export default function Navbar() {
                                 <Link to="/sell-dash" className="rehome-dashboard-button">
                                     {t('navbar.dashboard')}
                                 </Link>
-                                <Link to="/messages" className="text-white">
-                                    <MessageNotifications />
-                                </Link>
+                                <MessageNotifications onClick={() => navigate('/messages')} />
                                 <div 
                                     onClick={toggleUserMenu} 
                                     className="cursor-pointer"

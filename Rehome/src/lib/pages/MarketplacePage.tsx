@@ -436,7 +436,7 @@ const MarketplacePage = () => {
                                                     }}
                                                 />
                                                 <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
-                                                <p className="text-gray-600 text-xs">{item.description}</p>
+                                                <p className="text-gray-600 text-xs line-clamp-2 h-8">{item.description}</p>
                                                 <p className="text-red-500 font-bold text-xs">
                                                     {item.price === 0 ? 'Free' : `€${item.price}`}
                                                 </p>

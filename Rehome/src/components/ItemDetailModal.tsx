@@ -239,8 +239,15 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     }
   };
 
-  // Handle status update
+  // Handle status update with confirmation
   const handleStatusUpdate = async (newStatus: string) => {
+    if (newStatus === 'sold') {
+      const confirmed = window.confirm(
+        "⚠️ Warning: If you mark this item as SOLD, we will remove your advertisement from the marketplace.\n\nDo you want to proceed?"
+      );
+      if (!confirmed) return;
+    }
+    
     if (onUpdateStatus) {
       await onUpdateStatus(id, newStatus);
     }
@@ -281,16 +288,17 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
   return (
     <motion.div
-      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 backdrop-blur-sm"
+      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 backdrop-blur-sm p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="bg-white rounded-xl shadow-2xl p-8 max-w-5xl w-full mx-4 relative overflow-hidden"
+        className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-y-auto relative"
         initial={{ scale: 0.95 }}
         animate={{ scale: 1 }}
       >
+        <div className="p-4 sm:p-6 lg:p-8">
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-gray-700 transition-colors"
@@ -672,6 +680,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </motion.div>
     </motion.div>
   );

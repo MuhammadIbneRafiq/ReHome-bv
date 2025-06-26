@@ -1,11 +1,13 @@
 // src/pages/SellerDashboard.tsx
 import { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag, FaComments, FaEdit } from "react-icons/fa";
 import { MdOutlineInventory2, MdSell } from "react-icons/md";
 import SellPage from "./SellPage";
 import EditPage from "./EditPage";
 import ItemDetailsModal from '../../components/ItemDetailModal'
+import LazyImage from '../../components/ui/LazyImage';
+import { useModal } from '../../components/ui/DynamicModal';
 import useUserStore from "@/services/state/useUserSessionStore"; // Import the user store
 import axios from 'axios'; // Import axios for API calls
 import { useTranslation } from "react-i18next";
@@ -41,12 +43,7 @@ interface FurnitureItem {
 
 const SellerDashboard = () => {
     const { t } = useTranslation();
-    const [isSellModalOpen, setIsSellModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [editingItem, setEditingItem] = useState<FurnitureItem | null>(null);
     const [activeTab, setActiveTab] = useState('listings'); // Add a state for active tab
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [listings, setListings] = useState<FurnitureItem[]>([]);
@@ -56,6 +53,17 @@ const SellerDashboard = () => {
     const location = useLocation(); // Get location to check for state
     const [dropdownOpen, setDropdownOpen] = useState<string | null>(null); // Track which dropdown is open
     const { isAdmin } = useAuth();
+    
+    // Dynamic modal hooks
+    const itemDetailModal = useModal('item-detail');
+    const sellModal = useModal('sell-item');
+    const editModal = useModal('edit-item');
+
+    // Debug user state
+    console.log('=== SELLER DASHBOARD DEBUG ===');
+    console.log('User from store:', user);
+    console.log('Is admin:', isAdmin);
+    console.log('Loading state:', loading);
 
     // Note: Authentication is already handled by ProtectedRoute wrapper
     // No need for additional auth check here
@@ -81,14 +89,12 @@ const SellerDashboard = () => {
         }
     }, [location, navigate]);
 
-    const openModal = (item: FurnitureItem) => {
-        setSelectedItem(item);
-        setIsModalOpen(true);
-    };
-
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setSelectedItem(null);
+        const openModal = (item: FurnitureItem) => {
+        itemDetailModal.open(ItemDetailsModal, {
+            item,
+            showStatusIndicator: true,
+            onUpdateStatus: handleStatusUpdate
+        }, { size: 'lg' });
     };
 
     const deleteListing = async (id: string, item?: FurnitureItem) => {
@@ -123,8 +129,10 @@ const SellerDashboard = () => {
     };
 
     const editListing = (item: FurnitureItem) => {
-        setEditingItem(item);
-        setIsEditModalOpen(true);
+        editModal.open(EditPage, {
+            item,
+            onSave: handleEditSave
+        }, { size: 'lg' });
         setDropdownOpen(null); // Close dropdown
     };
 
@@ -137,11 +145,7 @@ const SellerDashboard = () => {
             item.id === updatedItem.id ? updatedItem : item
         ));
         toast.success('Listing updated successfully!');
-    };
-
-    const handleEditModalClose = () => {
-        setIsEditModalOpen(false);
-        setEditingItem(null);
+        editModal.close();
     };
 
     const handleStatusUpdate = async (itemId: string, newStatus: string) => {
@@ -214,6 +218,11 @@ const SellerDashboard = () => {
         setError(null);
 
         try {
+            console.log('=== FETCH LISTINGS DEBUG ===');
+            console.log('User email:', user?.email);
+            console.log('Is admin:', isAdmin);
+            console.log('Access token exists:', !!localStorage.getItem('accessToken'));
+
             const response = await fetch(API_ENDPOINTS.FURNITURE.LIST, {
                 method: 'GET',
                 headers: {
@@ -221,17 +230,23 @@ const SellerDashboard = () => {
                 }
             });
 
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.log('Error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
             }
 
             const data: FurnitureItem[] = await response.json();
-            console.log('Fetched listings:', data);
+            console.log('Fetched listings raw:', data);
             console.log('Current user email:', user?.email);
             console.log('Is admin:', isAdmin);
 
             // Handle both old array format and new pagination format
-            const itemsArray: FurnitureItem[] = Array.isArray(data) ? data : (data as any).data;
+            const itemsArray: FurnitureItem[] = Array.isArray(data) ? data : (data as any).data || [];
+            console.log('Items array:', itemsArray);
 
             if (isAdmin) {
                 // Admin sees all listings
@@ -250,10 +265,6 @@ const SellerDashboard = () => {
 
                 console.log('User view - Active listings:', active);
                 console.log('User view - Sold listings:', sold);
-                console.log('Listings with delete permission check:');
-                itemsArray.forEach((item: FurnitureItem) => {
-                    console.log(`Item ${item.id}: seller_email=${item.seller_email}, user_email=${user?.email}, can_delete=${item.seller_email === user?.email || isAdmin}`);
-                });
 
                 setListings(active);
                 setSoldListings(sold);
@@ -262,6 +273,9 @@ const SellerDashboard = () => {
         } catch (err: any) {
             console.error('Error fetching listings:', err);
             setError(err.message || 'Failed to fetch listings.');
+            // Set empty arrays to stop loading even on error
+            setListings([]);
+            setSoldListings([]);
         } finally {
             setLoading(false);
         }
@@ -270,11 +284,37 @@ const SellerDashboard = () => {
     useEffect(() => {
         if (user?.email) {
             fetchListings();
+        } else {
+            // If no user email after 5 seconds, stop loading and show error
+            const timeout = setTimeout(() => {
+                if (!user?.email) {
+                    console.log('No user email found after timeout, stopping loading');
+                    setLoading(false);
+                    setError('Unable to load user information. Please try refreshing the page.');
+                }
+            }, 5000);
+
+            return () => clearTimeout(timeout);
         }
-    }, [user?.email]); // Fetch listings whenever the user's email changes
+    }, [user?.email, isAdmin]); // Fetch listings whenever the user's email or admin status changes
+
+    // Additional timeout to prevent infinite loading
+    useEffect(() => {
+        const maxLoadTimeout = setTimeout(() => {
+            if (loading) {
+                console.log('Maximum loading time exceeded, stopping loading');
+                setLoading(false);
+                if (!error) {
+                    setError('Loading took too long. Please check your connection and try refreshing the page.');
+                }
+            }
+        }, 10000); // 10 seconds max loading time
+
+        return () => clearTimeout(maxLoadTimeout);
+    }, [loading, error]);
 
     const handleModalClose = () => {
-        setIsSellModalOpen(false);
+        sellModal.close();
         fetchListings(); // Refresh listings after closing the modal
     };
 
@@ -283,6 +323,11 @@ const SellerDashboard = () => {
             <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
                 <p className="mt-4 text-gray-600">Loading your dashboard...</p>
+                <div className="mt-2 text-sm text-gray-500">
+                    <p>User: {user?.email || 'Loading...'}</p>
+                    <p>Admin: {isAdmin ? 'Yes' : 'No'}</p>
+                    <p>Token: {localStorage.getItem('accessToken') ? 'Present' : 'Missing'}</p>
+                </div>
             </div>
         );
     }
@@ -290,9 +335,33 @@ const SellerDashboard = () => {
     if (error) {
         return (
             <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-2xl mx-4" role="alert">
                     <strong className="font-bold">Error: </strong>
                     <span className="block sm:inline">{error}</span>
+                    <div className="mt-4 text-sm">
+                        <p><strong>Debug Information:</strong></p>
+                        <p>User: {user?.email || 'Not loaded'}</p>
+                        <p>Admin: {isAdmin ? 'Yes' : 'No'}</p>
+                        <p>Token: {localStorage.getItem('accessToken') ? 'Present' : 'Missing'}</p>
+                        <div className="mt-3 flex gap-2">
+                            <button 
+                                onClick={() => window.location.reload()} 
+                                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+                            >
+                                Refresh Page
+                            </button>
+                            <button 
+                                onClick={() => {
+                                    setError(null);
+                                    setLoading(true);
+                                    fetchListings();
+                                }} 
+                                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm"
+                            >
+                                Retry
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -300,13 +369,6 @@ const SellerDashboard = () => {
 
     return (
         <div className="min-h-screen bg-orange-50 flex flex-col pt-24">
-            <ItemDetailsModal 
-                isOpen={isModalOpen} 
-                onClose={closeModal} 
-                item={selectedItem} 
-                showStatusIndicator={true} // Show status indicators in dashboard
-                onUpdateStatus={handleStatusUpdate} // Enable status update buttons
-            />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Welcome Message */}
                 <motion.h1
@@ -417,7 +479,7 @@ const SellerDashboard = () => {
                                         {isAdmin ? 'All Marketplace Listings' : 'Your Listings'}
                                     </h2>
                                     <button
-                                        onClick={() => setIsSellModalOpen(true)}
+                                        onClick={() => sellModal.open(SellPage, { onClose: handleModalClose }, { size: 'lg' })}
                                         className="flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
                                     >
                                         <FaPlus className="mr-2" /> Add New Listing
@@ -437,7 +499,7 @@ const SellerDashboard = () => {
                                             <h4 className="text-xl font-semibold text-gray-800 mb-2">No Active Listings</h4>
                                             <p className="text-gray-600 mb-6">Start selling your items today!</p>
                                             <button
-                                                onClick={() => setIsSellModalOpen(true)}
+                                                onClick={() => sellModal.open(SellPage, { onClose: handleModalClose }, { size: 'lg' })}
                                                 className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
                                             >
                                                 <FaUpload className="mr-2" /> Create Your First Listing
@@ -453,24 +515,21 @@ const SellerDashboard = () => {
                                                     onClick={() => openModal(listing)}
                                                 >
                                                     <div className="relative h-48 mb-3 overflow-hidden rounded-md">
-                                                        <img 
+                                                        <LazyImage
                                                             src={listing.image_urls && Array.isArray(listing.image_urls) && listing.image_urls.length > 0 
                                                                 ? listing.image_urls[0] 
-                                                                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4='
+                                                                : ''
                                                             } 
                                                             alt={listing.name} 
-                                                            className="w-full h-full object-cover" 
-                                                            onError={(e) => {
-                                                                const target = e.target as HTMLImageElement;
-                                                                target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
-                                                            }}
+                                                            className="w-full h-full object-cover"
+                                                            priority={false}
                                                         />
                                                         <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
                                                             €{listing.price}
                                                         </div>
                                                     </div>
                                                     <h3 className="text-lg font-semibold mb-1 truncate">{listing.name}</h3>
-                                                    <p className="text-gray-500 text-sm mb-2 truncate">{listing.description}</p>
+                                                    <p className="text-gray-500 text-sm mb-2 line-clamp-2 h-10 overflow-hidden">{listing.description}</p>
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex-1">
                                                             <span className="text-xs text-gray-500">{listing.city_name}</span>
@@ -497,8 +556,8 @@ const SellerDashboard = () => {
                                                                             e.stopPropagation(); // Prevent modal from opening
                                                                             editListing(listing);
                                                                         }}
-                                                                        className="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 flex items-center"
-                                                                    >
+                                                                        className="flex w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 items-center"
+                                                                    >   
                                                                         <FaEdit className="mr-2" /> Edit
                                                                     </button>
                                                                     {/* Show delete button only for own listings OR if user is admin */}
@@ -538,7 +597,7 @@ const SellerDashboard = () => {
                                             <p className="text-gray-600 mb-6">{t('dashboard.soldAppearHere')}</p>
                                             {listings.length === 0 ? (
                                                 <button
-                                                    onClick={() => setIsSellModalOpen(true)}
+                                                    onClick={() => sellModal.open(SellPage, { onClose: handleModalClose }, { size: 'lg' })}
                                                     className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
                                                 >
                                                     <FaUpload className="mr-2" /> {t('dashboard.createFirst')}
@@ -557,17 +616,14 @@ const SellerDashboard = () => {
                                                     onClick={() => openModal(listing)}
                                                 >
                                                     <div className="relative h-48 mb-3 overflow-hidden rounded-md">
-                                                        <img 
+                                                        <LazyImage
                                                             src={listing.image_urls && Array.isArray(listing.image_urls) && listing.image_urls.length > 0 
                                                                 ? listing.image_urls[0] 
-                                                                : 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSUjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4='
+                                                                : ''
                                                             } 
                                                             alt={listing.name} 
-                                                            className="w-full h-full object-cover opacity-70" 
-                                                            onError={(e) => {
-                                                                const target = e.target as HTMLImageElement;
-                                                                target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=';
-                                                            }}
+                                                            className="w-full h-full object-cover opacity-70"
+                                                            priority={false}
                                                         />
                                                         <div className="absolute inset-0 flex items-center justify-center">
                                                             <span className="bg-green-500 text-white text-sm font-bold px-3 py-1 rounded-full">
@@ -579,7 +635,7 @@ const SellerDashboard = () => {
                                                         </div>
                                                     </div>
                                                     <h3 className="text-lg font-semibold mb-1 truncate">{listing.name}</h3>
-                                                    <p className="text-gray-500 text-sm mb-2 truncate">{listing.description}</p>
+                                                    <p className="text-gray-500 text-sm mb-2 line-clamp-2 h-10 overflow-hidden">{listing.description}</p>
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex-1">
                                                             <span className="text-xs text-gray-500">{listing.city_name}</span>
@@ -606,8 +662,8 @@ const SellerDashboard = () => {
                                                                             e.stopPropagation(); // Prevent modal from opening
                                                                             editListing(listing);
                                                                         }}
-                                                                        className="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 flex items-center"
-                                                                    >
+                                                                        className="flex w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 items-center"
+                                                                    >   
                                                                         <FaEdit className="mr-2" /> Edit
                                                                     </button>
                                                                     {/* Show delete button only for own listings OR if user is admin */}
@@ -643,58 +699,7 @@ const SellerDashboard = () => {
                 </div>
             </div>
 
-            {/* Sell Modal */}
-            <AnimatePresence>
-                {isSellModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-                        >
-                            <div className="p-6">
-                                <div className="flex justify-between items-start mb-4">
-                                    <h2 className="text-2xl font-bold">{t('dashboard.newListing')}</h2>
-                                </div>
-                                <SellPage onClose={handleModalClose} />
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
-            {/* Edit Modal */}
-            <AnimatePresence>
-                {isEditModalOpen && editingItem && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-                        >
-                            <div className="p-6">
-                                <EditPage 
-                                    item={editingItem}
-                                    onClose={handleEditModalClose} 
-                                    onSave={handleEditSave}
-                                />
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };
