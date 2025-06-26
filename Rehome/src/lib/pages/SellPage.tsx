@@ -291,10 +291,21 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
         }
 
         try {
-            // 1. Upload all the images
+            // 1. Upload all the images with automatic format conversion
             const uploadedImageUrls: string[] = [];
             if (photos.length > 0) {
                 setUploading(true);
+                
+                // Check if any photos are HEIC format
+                const heicPhotos = photos.filter(photo => 
+                    photo.name.toLowerCase().includes('.heic') || 
+                    photo.name.toLowerCase().includes('.heif')
+                );
+                
+                if (heicPhotos.length > 0) {
+                    console.log(`Converting ${heicPhotos.length} HEIC images to web-compatible format...`);
+                }
+                
                 for (const photo of photos) {
                     const formData = new FormData();
                     formData.append('photos', photo);
@@ -307,6 +318,15 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
                         throw new Error(`HTTP upload error! status: ${uploadResponse.status}`);
                     }
                     const uploadData = await uploadResponse.json();
+                    
+                    // Log conversion details if any
+                    if (uploadData.conversions && uploadData.conversions.length > 0) {
+                        uploadData.conversions.forEach((conversion: any) => {
+                            console.log(`✅ Converted ${conversion.original} (${conversion.originalFormat}) to ${conversion.converted} (${conversion.outputFormat})`);
+                            console.log(`Size reduced: ${Math.round((1 - conversion.convertedSize / conversion.originalSize) * 100)}%`);
+                        });
+                    }
+                    
                     uploadedImageUrls.push(...uploadData.imageUrls);
                 }
                 setUploading(false);
