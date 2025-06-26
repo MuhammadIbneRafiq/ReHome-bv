@@ -48,12 +48,6 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     return `€${price.toFixed(2)}`;
   };
 
-  // Generate a random order number
-  const generateOrderNumber = () => {
-    const timestamp = new Date().getTime();
-    const random = Math.floor(Math.random() * 1000);
-    return `RH-${timestamp.toString().slice(-6)}-${random}`;
-  };
 
   // Handle checkout process - Open ReHome checkout modal
   const handleCheckout = () => {

@@ -3,7 +3,6 @@ import { FaTimes, FaInfoCircle, FaCheckCircle } from 'react-icons/fa';
 import { Switch } from "@headlessui/react";
 import { useCart } from '../../contexts/CartContext';
 import LocationAutocomplete from '../ui/LocationAutocomplete';
-import { getItemPoints } from '../../lib/constants';
 import pricingService, { PricingInput } from '../../services/pricingService';
 import { toast } from 'react-toastify';
 
@@ -91,7 +90,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       const assemblyItems: { [key: string]: boolean } = {};
       
       rehomeItems.forEach(item => {
-        const itemKey = `${item.category.toLowerCase()}-${item.name.toLowerCase().replace(/\s+/g, '-')}`;
+        const itemKey = `${item.category?.toLowerCase() || ''}-${item.name.toLowerCase().replace(/\s+/g, '-')}`;
         itemQuantities[itemKey] = item.quantity;
         assemblyItems[itemKey] = itemAssistance[item.id]?.needsAssembly || false;
       });
@@ -370,7 +369,6 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                   <h4 className="font-medium text-gray-900 mb-3">Your Items</h4>
                   <div className="space-y-3">
                     {rehomeItems.map((item) => {
-                      const itemPoints = getItemPoints(`${item.category.toLowerCase()}-${item.name.toLowerCase().replace(/\s+/g, '-')}`) || 3;
                       const assistanceState = itemAssistance[item.id] || { needsCarrying: false, needsAssembly: false };
                       
                       return (
