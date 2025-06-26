@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import API_ENDPOINTS from '../api/config';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PRICING_TYPES } from '../../types/marketplace';
@@ -22,7 +21,7 @@ interface LocationSuggestion {
 
 
 
-const SellPage = ({ onClose }: { onClose: () => void }) => {
+const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) => {
     // Get current user from the store
     const user = useUserStore((state) => state.user);
     
@@ -66,8 +65,6 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
     // Terms and Conditions agreement state
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
-    
-    const navigate = useNavigate(); // Initialize navigate
 
     // Categories and subcategories (same as in MarketplaceFilter)
     const categories = [
@@ -408,9 +405,11 @@ const SellPage = ({ onClose }: { onClose: () => void }) => {
 
             const data = await response.json();
             console.log('Listing created:', data); // Debug: Check the response
-            // Redirect to the dashboard after successful submission
-            navigate('/sell-dash'); // Use navigate to redirect
+            // Close the modal and trigger success callback for navigation
             onClose(); // Close the modal after successful submission
+            if (onSuccess) {
+                onSuccess(); // Trigger success callback for navigation
+            }
         } catch (err: any) {
             console.error('Error submitting listing:', err);
             setSubmitError(err.message || 'Failed to submit listing.');

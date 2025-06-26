@@ -174,6 +174,12 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
     };
 
     const removeExistingImage = (indexToRemove: number) => {
+        // Warn if trying to remove the last existing photo and no new photos are added
+        if (existingImages.length === 1 && photos.length === 0) {
+            if (!confirm('This is your last photo. Are you sure you want to remove it? You will need to add a new photo to save your listing.')) {
+                return;
+            }
+        }
         setExistingImages(prev => prev.filter((_, index) => index !== indexToRemove));
     };
 
@@ -183,6 +189,13 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
         e.preventDefault();
         setSubmitError(null);
         setSubmitting(true);
+
+        // Validate that at least one photo exists (existing or new)
+        if (existingImages.length === 0 && photos.length === 0) {
+            setSubmitError('At least one photo is required. Please add a photo or keep at least one existing photo.');
+            setSubmitting(false);
+            return;
+        }
 
         try {
             // 1. Upload new images if any
@@ -422,7 +435,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                 {existingImages.length > 0 && (
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Current Images
+                            Current Images *
                         </label>
                         <div className="flex flex-wrap gap-2">
                             {existingImages.map((imageUrl, index) => (
@@ -436,19 +449,23 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                                         type="button"
                                         onClick={() => removeExistingImage(index)}
                                         className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                                        title="Remove this image"
                                     >
                                         ×
                                     </button>
                                 </div>
                             ))}
                         </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                            At least one photo is required. Click × to remove unwanted images.
+                        </p>
                     </div>
                 )}
 
                 {/* Add New Photos */}
                 <div>
                     <label htmlFor="photos" className="block text-sm font-medium text-gray-700">
-                        Add New Photos (Optional)
+                        Add New Photos {existingImages.length === 0 ? '*' : '(Optional)'}
                     </label>
                     <input
                         type="file"
@@ -457,6 +474,11 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                         onChange={handlePhotoChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
                     />
+                    {existingImages.length === 0 && (
+                        <p className="text-sm text-gray-600 mt-1">
+                            * At least one photo is required for your listing
+                        </p>
+                    )}
                     {uploading && <p className="text-blue-600 text-sm mt-1">Uploading images...</p>}
                     {uploadError && <p className="text-red-500 text-sm mt-1">{uploadError}</p>}
                 </div>
