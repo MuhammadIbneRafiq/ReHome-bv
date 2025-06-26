@@ -3,6 +3,12 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag, FaComments, FaEdit } from "react-icons/fa";
 import { MdOutlineInventory2, MdSell } from "react-icons/md";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import SellPage from "./SellPage";
 import EditPage from "./EditPage";
 import ItemDetailsModal from '../../components/ItemDetailModal'
@@ -51,7 +57,6 @@ const SellerDashboard = () => {
     const user = useUserStore((state) => state.user);
     const navigate = useNavigate();
     const location = useLocation(); // Get location to check for state
-    const [dropdownOpen, setDropdownOpen] = useState<string | null>(null); // Track which dropdown is open
     const { isAdmin } = useAuth();
     
     // Dynamic modal hooks
@@ -67,16 +72,6 @@ const SellerDashboard = () => {
 
     // Note: Authentication is already handled by ProtectedRoute wrapper
     // No need for additional auth check here
-
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = () => {
-            setDropdownOpen(null);
-        };
-        
-        document.addEventListener('click', handleClickOutside);
-        return () => document.removeEventListener('click', handleClickOutside);
-    }, []);
 
     // Check if we were redirected from the item detail page with an active chat
     useEffect(() => {
@@ -133,7 +128,6 @@ const SellerDashboard = () => {
             item,
             onSave: handleEditSave
         }, { size: 'lg' });
-        setDropdownOpen(null); // Close dropdown
     };
 
     const handleEditSave = (updatedItem: FurnitureItem) => {
@@ -539,50 +533,30 @@ const SellerDashboard = () => {
                                                     <p className="text-gray-500 text-sm mb-2 line-clamp-2 h-10 overflow-hidden">{listing.description}</p>
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex-1">
-                                                            <span className="text-xs text-gray-500">{listing.city_name}</span>
-                                                            {isAdmin && (
-                                                                <div className="text-xs text-blue-600 mt-1">
-                                                                    Seller: {listing.seller_email}
-                                                                </div>
-                                                            )}
+                                                            <h4 className="font-bold text-gray-800 truncate">{listing.name}</h4>
+                                                            <p className="text-sm text-gray-600">
+                                                                {listing.price !== null && typeof listing.price !== 'undefined'
+                                                                    ? `€${listing.price.toFixed(2)}`
+                                                                    : t('common.contactForPrice')}
+                                                            </p>
                                                         </div>
-                                                        <div className="relative">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation(); // Prevent modal from opening
-                                                                    setDropdownOpen(dropdownOpen === listing.id ? null : listing.id); // Toggle dropdown
-                                                                }}
-                                                                className="text-gray-500 hover:text-red-500 p-1"
-                                                            >
-                                                                <FaEllipsisV />
-                                                            </button>
-                                                            {dropdownOpen === listing.id && (
-                                                                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation(); // Prevent modal from opening
-                                                                            editListing(listing);
-                                                                        }}
-                                                                        className="flex w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 items-center"
-                                                                    >   
-                                                                        <FaEdit className="mr-2" /> Edit
-                                                                    </button>
-                                                                    {/* Show delete button only for own listings OR if user is admin */}
-                                                                    {(listing.seller_email === user?.email || isAdmin) && (
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation(); // Prevent modal from opening
-                                                                                deleteListing(listing.id, listing);
-                                                                                setDropdownOpen(null); // Close dropdown after deletion
-                                                                            }}
-                                                                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
-                                                                        >
-                                                                            {isAdmin && listing.seller_email !== user?.email ? 'Admin Delete' : t('common.delete')}
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-red-500 p-1">
+                                                                    <FaEllipsisV />
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                                                <DropdownMenuItem onSelect={() => editListing(listing)} className="text-blue-600 hover:!bg-blue-100 hover:!text-blue-700">
+                                                                    <FaEdit className="mr-2" /> Edit
+                                                                </DropdownMenuItem>
+                                                                {(listing.seller_email === user?.email || isAdmin) && (
+                                                                    <DropdownMenuItem onSelect={() => deleteListing(listing.id, listing)} className="text-red-600 hover:!bg-red-100 hover:!text-red-700">
+                                                                        {isAdmin && listing.seller_email !== user?.email ? 'Admin Delete' : t('common.delete')}
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
                                                 </motion.div>
                                             ))}
@@ -645,50 +619,30 @@ const SellerDashboard = () => {
                                                     <p className="text-gray-500 text-sm mb-2 line-clamp-2 h-10 overflow-hidden">{listing.description}</p>
                                                     <div className="flex justify-between items-center">
                                                         <div className="flex-1">
-                                                            <span className="text-xs text-gray-500">{listing.city_name}</span>
-                                                            {isAdmin && (
-                                                                <div className="text-xs text-blue-600 mt-1">
-                                                                    Seller: {listing.seller_email}
-                                                                </div>
-                                                            )}
+                                                            <h4 className="font-bold text-gray-800 truncate">{listing.name}</h4>
+                                                            <p className="text-sm text-gray-600">
+                                                                {listing.price !== null && typeof listing.price !== 'undefined'
+                                                                    ? `€${listing.price.toFixed(2)}`
+                                                                    : t('common.contactForPrice')}
+                                                            </p>
                                                         </div>
-                                                        <div className="relative">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation(); // Prevent modal from opening
-                                                                    setDropdownOpen(dropdownOpen === listing.id ? null : listing.id); // Toggle dropdown
-                                                                }}
-                                                                className="text-gray-500 hover:text-red-500 p-1"
-                                                            >
-                                                                <FaEllipsisV />
-                                                            </button>
-                                                            {dropdownOpen === listing.id && (
-                                                                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-300 rounded-md shadow-lg z-10">
-                                                                    <button
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation(); // Prevent modal from opening
-                                                                            editListing(listing);
-                                                                        }}
-                                                                        className="flex w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-100 items-center"
-                                                                    >   
-                                                                        <FaEdit className="mr-2" /> Edit
-                                                                    </button>
-                                                                    {/* Show delete button only for own listings OR if user is admin */}
-                                                                    {(listing.seller_email === user?.email || isAdmin) && (
-                                                                        <button
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation(); // Prevent modal from opening
-                                                                                deleteListing(listing.id, listing);
-                                                                                setDropdownOpen(null); // Close dropdown after deletion
-                                                                            }}
-                                                                            className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-100"
-                                                                        >
-                                                                            {isAdmin && listing.seller_email !== user?.email ? 'Admin Delete' : t('common.delete')}
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </div>
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger asChild>
+                                                                <button onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-red-500 p-1">
+                                                                    <FaEllipsisV />
+                                                                </button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                                                <DropdownMenuItem onSelect={() => editListing(listing)} className="text-blue-600 hover:!bg-blue-100 hover:!text-blue-700">
+                                                                    <FaEdit className="mr-2" /> Edit
+                                                                </DropdownMenuItem>
+                                                                {(listing.seller_email === user?.email || isAdmin) && (
+                                                                    <DropdownMenuItem onSelect={() => deleteListing(listing.id, listing)} className="text-red-600 hover:!bg-red-100 hover:!text-red-700">
+                                                                        {isAdmin && listing.seller_email !== user?.email ? 'Admin Delete' : t('common.delete')}
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                     </div>
                                                 </motion.div>
                                             ))}
