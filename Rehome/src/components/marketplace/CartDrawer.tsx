@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
 import logoImage from "../../assets/logorehome.jpg";
-import CheckoutConfirmation from './CheckoutConfirmation';
+import ReHomeCheckoutModal from './ReHomeCheckoutModal';
+import OrderSuccessModal from './OrderSuccessModal';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
   const { items, removeItem, updateQuantity, clearCart } = useCart();
   const cartRef = useRef<HTMLDivElement>(null);
   const [showCheckoutConfirmation, setShowCheckoutConfirmation] = useState(false);
+  const [showReHomeCheckout, setShowReHomeCheckout] = useState(false);
   const [orderNumber, setOrderNumber] = useState('');
 
   // Handle Escape key press
@@ -53,51 +55,26 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
     return `RH-${timestamp.toString().slice(-6)}-${random}`;
   };
 
-  // Handle checkout process (simplified without Mollie)
-  const handleCheckout = async () => {
-    try {
-      // Filter only ReHome items for checkout
-      const rehomeItems = items.filter(item => item.isrehome);
-      
-      if (rehomeItems.length === 0) {
-        alert('Only ReHome items can be checked out through our system.');
-        return;
-      }
-
-      // Create order directly without payment processing
-      const orderData = {
-        items: rehomeItems,
-        totalAmount: rehomeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-        orderNumber: generateOrderNumber(),
-        userId: localStorage.getItem('userId'), // Assuming user ID is stored
-        createdAt: new Date().toISOString(),
-      };
-
-      // Save order to backend (you can implement this endpoint)
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-        },
-        body: JSON.stringify(orderData),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setOrderNumber(result.orderNumber || orderData.orderNumber);
-        setShowCheckoutConfirmation(true);
-        onClose();
-      } else {
-        throw new Error('Failed to create order');
-      }
-    } catch (error) {
-      console.error('Checkout error:', error);
-      // Fallback to order confirmation with generated order number
-      setOrderNumber(generateOrderNumber());
-      setShowCheckoutConfirmation(true);
-      onClose();
+  // Handle checkout process - Open ReHome checkout modal
+  const handleCheckout = () => {
+    // Filter only ReHome items for checkout
+    const rehomeItems = items.filter(item => item.isrehome);
+    
+    if (rehomeItems.length === 0) {
+      alert('Only ReHome items can be checked out through our system.');
+      return;
     }
+
+    // Open the ReHome checkout modal
+    setShowReHomeCheckout(true);
+  };
+
+  // Handle order completion from ReHome checkout
+  const handleOrderComplete = (orderNumber: string) => {
+    setOrderNumber(orderNumber);
+    setShowReHomeCheckout(false);
+    setShowCheckoutConfirmation(true);
+    onClose();
   };
 
   // Check if cart has ReHome items
@@ -272,13 +249,19 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
         </div>
       </div>
 
-      {/* Checkout Confirmation Modal */}
-      {showCheckoutConfirmation && (
-        <CheckoutConfirmation 
-          orderNumber={orderNumber} 
-          onClose={() => setShowCheckoutConfirmation(false)} 
-        />
-      )}
+      {/* ReHome Checkout Modal */}
+      <ReHomeCheckoutModal
+        isOpen={showReHomeCheckout}
+        onClose={() => setShowReHomeCheckout(false)}
+        onOrderComplete={handleOrderComplete}
+      />
+
+      {/* Order Success Modal */}
+      <OrderSuccessModal
+        isOpen={showCheckoutConfirmation}
+        orderNumber={orderNumber}
+        onClose={() => setShowCheckoutConfirmation(false)}
+      />
     </>
   );
 };
