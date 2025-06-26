@@ -418,7 +418,7 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
             setSubmitting(false);
         }
     };
-
+    
     return (
        <div className="w-full relative">
             {/* Close Button - styled like ItemDetailModal */}
