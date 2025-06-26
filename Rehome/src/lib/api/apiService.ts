@@ -1,6 +1,6 @@
 import axios, { AxiosResponse, AxiosError } from 'axios';
 import { API_ENDPOINTS, getAuthHeaders } from './config';
-import { toast } from '../ui/use-toast';
+import { toast } from '../../components/ui/use-toast';
 
 // API Service class for handling HTTP requests
 class ApiService {
@@ -20,7 +20,9 @@ class ApiService {
     // Show popup notification for token expiration
     toast({
       title: "🔐 Session Expired",
-      description: "Your login session has expired. Please sign in again to continue.",
+      description: errorMessage === 'Session expired' 
+        ? "Your login session has expired. Please sign in again to continue."
+        : `Authentication failed: ${errorMessage}`,
       variant: "destructive",
       duration: 8000, // Show for 8 seconds
     });

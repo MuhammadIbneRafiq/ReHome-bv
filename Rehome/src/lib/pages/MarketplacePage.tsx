@@ -299,27 +299,6 @@ const MarketplacePage = () => {
         }
     };
 
-    // Translate furniture items
-    const translatedItems = filteredItems.map(item => {
-        const translated = translateFurnitureItem(item);
-        const result = {
-            ...item,
-            name: translated.name,
-            description: translated.description
-        };
-        
-        // Debug: Check if isrehome field is preserved
-        if (item.isrehome) {
-            console.log('Item with isrehome=true:', {
-                originalItem: item,
-                translatedResult: result,
-                isrehomePreserved: result.isrehome
-            });
-        }
-        
-        return result;
-    });
-
     // Handle filter changes
     const handleFilterChange = (newFilteredItems: FurnitureItem[]) => {
         setFilteredItems(newFilteredItems);
