@@ -1,10 +1,41 @@
 import axios, { AxiosResponse, AxiosError } from 'axios';
 import { API_ENDPOINTS, getAuthHeaders } from './config';
+import { toast } from '../ui/use-toast';
 
 // API Service class for handling HTTP requests
 class ApiService {
   private getToken(): string | null {
     return localStorage.getItem('accessToken');
+  }
+
+  // Check if error is authentication-related
+  private isAuthError(error: AxiosError): boolean {
+    return error.response?.status === 401 || error.response?.status === 403;
+  }
+
+  // Handle authentication errors with popup notification
+  private handleAuthError(error: AxiosError): void {
+    const errorMessage = (error.response?.data as any)?.error || 'Session expired';
+    
+    // Show popup notification for token expiration
+    toast({
+      title: "🔐 Session Expired",
+      description: "Your login session has expired. Please sign in again to continue.",
+      variant: "destructive",
+      duration: 8000, // Show for 8 seconds
+    });
+    
+    // Clear stored tokens
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("token");
+    localStorage.removeItem("google_user_info");
+    
+    // Add a delay before redirect to ensure user sees the popup
+    setTimeout(() => {
+      // Redirect to login with current page as return URL
+      const currentPath = window.location.pathname + window.location.search;
+      window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+    }, 2000);
   }
 
   // Generic request method
@@ -27,7 +58,15 @@ class ApiService {
       const response: AxiosResponse<T> = await axios(config);
       return response.data;
     } catch (error) {
-      throw this.handleError(error as AxiosError);
+      const axiosError = error as AxiosError;
+      
+      // Handle authentication errors specifically
+      if (this.isAuthError(axiosError)) {
+        this.handleAuthError(axiosError);
+        throw new Error('Authentication required');
+      }
+      
+      throw this.handleError(axiosError);
     }
   }
 
@@ -121,7 +160,7 @@ class ApiService {
     return this.request<any>('POST', API_ENDPOINTS.PRICING.CALCULATE, pricingData);
   }
 
-  // Upload methods
+  // Upload methods with enhanced error handling
   async uploadPhotos(formData: FormData) {
     try {
       const token = this.getToken();
@@ -135,7 +174,21 @@ class ApiService {
       });
       return response.data;
     } catch (error) {
-      throw this.handleError(error as AxiosError);
+      const axiosError = error as AxiosError;
+      
+      // Handle authentication errors specifically for upload
+      if (this.isAuthError(axiosError)) {
+        toast({
+          title: "🔐 Upload Failed - Session Expired",
+          description: "Your session expired during upload. Please sign in again and try uploading your listing.",
+          variant: "destructive",
+          duration: 10000, // Show longer for upload errors
+        });
+        this.handleAuthError(axiosError);
+        throw new Error('Authentication required for upload');
+      }
+      
+      throw this.handleError(axiosError);
     }
   }
 

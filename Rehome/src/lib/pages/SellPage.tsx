@@ -326,11 +326,14 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                         }
                         const uploadData = await uploadResponse.json();
                         
-                        // Log conversion details if any
+                        // Show user feedback about image optimization
                         if (uploadData.conversions && uploadData.conversions.length > 0) {
+                            console.log('📊 Image optimization results:', uploadData);
+                                                        
+                            // Log detailed conversion info
                             uploadData.conversions.forEach((conversion: any) => {
-                                console.log(`✅ Converted ${conversion.original} (${conversion.originalFormat}) to ${conversion.converted} (${conversion.outputFormat})`);
-                                console.log(`Size reduced: ${Math.round((1 - conversion.convertedSize / conversion.originalSize) * 100)}%`);
+                                console.log(`✅ Optimized ${conversion.original} (${conversion.originalFormat}) to ${conversion.converted} (${conversion.outputFormat})`);
+                                console.log(`📊 Size reduced: ${conversion.sizeReduction}% (${(conversion.originalSize / 1024 / 1024).toFixed(2)} MB → ${(conversion.convertedSize / 1024 / 1024).toFixed(2)} MB)`);
                             });
                         }
                         

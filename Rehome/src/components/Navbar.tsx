@@ -11,6 +11,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import useUserStore from "../services/state/useUserSessionStore";
 import logoImage from "../assets/logorehome.jpg"; // Import the ReHome logo
 import MessageNotifications from './MessageNotifications';
+import { jwtDecode } from "jwt-decode";
 
 // List of admin email addresses - keep in sync with AdminRoute.tsx
 const ADMIN_EMAILS = [
@@ -25,13 +26,14 @@ export default function Navbar() {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { currentLanguage, changeLanguage, languageOptions } = useLanguage();
-    const { isAuthenticated, logout } = useAuth();
-    const user = useUserStore((state) => state.user);
+    const { isAuthenticated, logout, user } = useAuth();
     const [lastScrollY, setLastScrollY] = useState(0);
     const [isSticky, setIsSticky] = useState(true);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false); // State for dropdown
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [sessionTimeLeft, setSessionTimeLeft] = useState<number | null>(null);
+    const [isSessionWarning, setIsSessionWarning] = useState(false);
 
     const dropdownRef = useRef<HTMLDivElement>(null); // Ref to the dropdown container
     const transportationButtonRef = useRef<HTMLButtonElement>(null);
@@ -114,6 +116,49 @@ export default function Navbar() {
         { to: "/special-request", label: t('navbar.specialRequest') },
     ];
 
+    // Monitor session expiration
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        const checkSessionTime = () => {
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+            if (token) {
+                try {
+                    const decoded = jwtDecode(token);
+                    if (decoded.exp) {
+                        const expirationTime = decoded.exp * 1000;
+                        const currentTime = Date.now();
+                        const timeLeft = expirationTime - currentTime;
+                        
+                        setSessionTimeLeft(Math.max(0, timeLeft));
+                        
+                        // Show warning if less than 5 minutes left
+                        const fiveMinutes = 5 * 60 * 1000;
+                        setIsSessionWarning(timeLeft < fiveMinutes && timeLeft > 0);
+                    }
+                } catch (error) {
+                    console.error('Error checking session time:', error);
+                }
+            }
+        };
+
+        // Check immediately and then every 30 seconds
+        checkSessionTime();
+        const interval = setInterval(checkSessionTime, 30000);
+
+        return () => clearInterval(interval);
+    }, [isAuthenticated]);
+
+    // Format time remaining
+    const formatTimeLeft = (ms: number) => {
+        const minutes = Math.floor(ms / (1000 * 60));
+        const hours = Math.floor(minutes / 60);
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes % 60}m`;
+        }
+        return `${minutes}m`;
+    };
 
     return (
         <header
@@ -188,6 +233,15 @@ export default function Navbar() {
                                     {t('navbar.dashboard')}
                                 </Link>
                                 <MessageNotifications onClick={() => navigate('/messages')} />
+                                
+                                {/* Session Warning Indicator */}
+                                {isSessionWarning && sessionTimeLeft && (
+                                    <div className="flex items-center bg-yellow-100 border border-yellow-300 text-yellow-800 px-2 py-1 rounded-md text-xs">
+                                        <span className="mr-1">⏰</span>
+                                        <span>Session expires in {formatTimeLeft(sessionTimeLeft)}</span>
+                                    </div>
+                                )}
+                                
                                 <div 
                                     onClick={toggleUserMenu} 
                                     className="cursor-pointer"

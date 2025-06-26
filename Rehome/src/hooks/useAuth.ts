@@ -3,6 +3,7 @@ import { UserData } from "@/types/UserData";
 import { jwtDecode } from "jwt-decode";
 import { useLocation } from "react-router-dom";
 import useUserSessionStore from "@/services/state/useUserSessionStore";
+import { toast } from "../components/ui/use-toast";
 
 export const useAuth = () => {
   const setUser = useUserSessionStore((state) => state.setUser);
@@ -18,12 +19,37 @@ export const useAuth = () => {
                   user?.email?.includes('admin') || 
                   user?.role === 'admin';
 
-  const logout = () => {
+  const logout = (showToast = false, reason = '') => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("token");
     localStorage.removeItem("google_user_info");
     setIsAuthenticated(false);
     setUser(undefined);
+    
+    if (showToast) {
+      toast({
+        title: "🔐 Session Expired",
+        description: reason || "Your login session has expired. Please sign in again to continue.",
+        variant: "destructive",
+        duration: 8000,
+      });
+    }
+  };
+
+  // Check if token is close to expiring (within 5 minutes)
+  const isTokenExpiringSoon = (token: string): boolean => {
+    try {
+      const decoded = jwtDecode(token);
+      if (decoded.exp) {
+        const expirationTime = decoded.exp * 1000;
+        const currentTime = Date.now();
+        const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
+        return (expirationTime - currentTime) < fiveMinutes;
+      }
+    } catch (error) {
+      console.error('Error checking token expiration:', error);
+    }
+    return false;
   };
 
   useEffect(() => {
@@ -45,12 +71,9 @@ export const useAuth = () => {
       try {
         console.log('✅ useAuth: Access token found, user is authenticated');
         
-        // SIMPLIFIED: Just check if we have an access token - that's enough for authentication
-        setIsAuthenticated(true);
-        console.log('✅ useAuth: isAuthenticated set to true');
-        
         // Try to get user data from multiple sources
         let userData = null;
+        let tokenExpired = false;
         
         // First try Google user info
         const googleUserInfo = localStorage.getItem("google_user_info");
@@ -70,7 +93,7 @@ export const useAuth = () => {
           }
         }
         
-        // If no Google data, try to decode JWT token
+        // If no Google data, try to decode JWT token and check expiration
         if (!userData) {
           try {
             const decoded = jwtDecode(accessToken);
@@ -78,9 +101,19 @@ export const useAuth = () => {
             // Check if token is expired
             if (decoded.exp && decoded.exp * 1000 < Date.now()) {
               console.log("Access Token has expired");
-              logout();
+              logout(true, "Your session has expired. Please sign in again.");
               setLoading(false);
               return;
+            }
+
+            // Check if token is expiring soon and warn user
+            if (isTokenExpiringSoon(accessToken)) {
+              toast({
+                title: "⏰ Session Expiring Soon",
+                description: "Your session will expire in less than 5 minutes. Please save your work and sign in again.",
+                variant: "default",
+                duration: 10000,
+              });
             }
 
             // Extract user data from token
@@ -107,6 +140,12 @@ export const useAuth = () => {
           }
         }
         
+        // Only set authenticated if token is not expired
+        if (!tokenExpired) {
+          setIsAuthenticated(true);
+          console.log('✅ useAuth: isAuthenticated set to true');
+        }
+        
         // Set user data if available
         if (userData) {
           setUser(userData as UserData);
@@ -114,19 +153,18 @@ export const useAuth = () => {
         
       } catch (error) {
         console.error("❌ useAuth: Error in authentication:", error);
-        // Even on error, if we have a token, consider user authenticated
-        setIsAuthenticated(true);
-        console.log('✅ useAuth: Even with error, user considered authenticated due to token presence');
-      } finally {
-        setLoading(false);
-        console.log('🏁 useAuth: Authentication check completed, loading set to false');
+        // On error, consider user not authenticated for security
+        logout(true, "Authentication error occurred. Please sign in again.");
       }
+      
+      setLoading(false);
+      console.log('🏁 useAuth: Authentication check completed, loading set to false');
     }
 
     fetchUser();
 
-    // Set up an interval to check authentication status
-    const intervalId = setInterval(fetchUser, 60000); // 60000 ms = 1 minute
+    // Set up an interval to check authentication status more frequently
+    const intervalId = setInterval(fetchUser, 30000); // Check every 30 seconds
 
     // Cleanup function to clear the interval when the component unmounts
     return () => {

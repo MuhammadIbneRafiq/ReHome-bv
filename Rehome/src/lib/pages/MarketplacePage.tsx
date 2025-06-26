@@ -14,6 +14,7 @@ import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus, FaComments } from 'r
 import { API_ENDPOINTS } from '../api/config';
 import useUserStore from '../../services/state/useUserSessionStore';
 import { sendMessage } from '../../services/marketplaceMessageService';
+import StableLoader from '../../components/ui/StableLoader';
 
 const MarketplacePage = () => {
     const { t } = useTranslation();
@@ -48,7 +49,11 @@ const MarketplacePage = () => {
     });
 
     useEffect(() => {
+        let isCancelled = false;
+
         const fetchFurniture = async (page = 1) => {
+            if (isCancelled) return;
+            
             setLoading(true);
             setError(null);
 
@@ -58,6 +63,8 @@ const MarketplacePage = () => {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const responseData = await response.json();
+                
+                if (isCancelled) return; // Check if effect was cancelled
                 
                 // Handle both old format (array) and new format (object with data and pagination)
                 let data: FurnitureItem[];
@@ -87,8 +94,7 @@ const MarketplacePage = () => {
                     };
                 }
                 
-                console.log('Fetched furniture data:', data);
-                console.log('Pagination info:', paginationInfo);
+                console.log('Fetched furniture data:', data.length, 'items');
                 
                 // Ensure proper field mapping for isrehome
                 const mappedData = data.map(item => ({
@@ -97,30 +103,29 @@ const MarketplacePage = () => {
                     isrehome: item.isrehome ?? (item as any).is_rehome ?? false
                 }));
                 
-                mappedData.forEach((item, index) => {
-                    console.log(`Item ${index + 1}:`, {
-                        id: item.id,
-                        name: item.name,
-                        price: item.price,
-                        pricing_type: (item as any).pricing_type,
-                        isrehome: item.isrehome,
-                        created_at: (item as any).created_at
-                    });
-                });
-                
-                setFurnitureItems(mappedData);
-                setFilteredItems(mappedData);
-                setPagination(paginationInfo);
-                setCurrentPage(page);
+                if (!isCancelled) {
+                    setFurnitureItems(mappedData);
+                    setFilteredItems(mappedData);
+                    setPagination(paginationInfo);
+                }
             } catch (err: any) {
-                console.error('Error fetching furniture:', err);
-                setError(err.message);
+                if (!isCancelled) {
+                    console.error('Error fetching furniture:', err);
+                    setError(err.message);
+                }
             } finally {
-                setLoading(false);
+                if (!isCancelled) {
+                    // Add small delay to prevent rapid state changes
+                    setTimeout(() => setLoading(false), 100);
+                }
             }
         };
 
         fetchFurniture(currentPage);
+
+        return () => {
+            isCancelled = true;
+        };
     }, [currentPage]);
 
     const addToCart = (itemId: string) => {
@@ -438,13 +443,10 @@ const MarketplacePage = () => {
                     </div>
                 </div>
                 
-                {loading ? (
-                    <div className="flex justify-center items-center h-64">
-                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
-                    </div>
-                ) : error ? (
-                    <div className="text-center text-red-500">{error}</div>
-                ) : (
+                <StableLoader isLoading={loading} minLoadingTime={300}>
+                    {error ? (
+                        <div className="text-center text-red-500">{error}</div>
+                    ) : (
                     <div>
                         {/* Search and Filter */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -465,26 +467,20 @@ const MarketplacePage = () => {
                                     <p className="text-white py-4 text-center">{t('marketplace.noResults')}</p>
                                 ) : (
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {translatedItems.map((item) => (
+                                        {filteredItems.map((item) => {
+                                            const translatedItem = { ...item, ...translateFurnitureItem(item) };
+                                            return (
                                             <motion.div
                                                 key={item.id}
                                                 className="bg-[#f3e4d6] shadow-lg rounded-lg p-2 hover:scale-105 transition-transform cursor-pointer relative"
                                                 whileHover={{ scale: 1.05 }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    openModal(item);
+                                                    openModal(translatedItem);
                                                 }}
                                             >
                                                 {/* ReHome logo badge for ReHome items */}
-                                                {(() => {
-                                                    console.log(`Item ${item.name} - isrehome check:`, {
-                                                        isrehome: item.isrehome,
-                                                        type: typeof item.isrehome,
-                                                        truthyCheck: !!item.isrehome,
-                                                        showIcon: !!item.isrehome
-                                                    });
-                                                    return item.isrehome;
-                                                })() && (
+                                                {translatedItem.isrehome && (
                                                     <img 
                                                         src={logoImage} 
                                                         alt="ReHome Verified" 
@@ -493,29 +489,25 @@ const MarketplacePage = () => {
                                                     />
                                                 )}
                                                 <img 
-                                                    src={(item.image_url && item.image_url.length > 0) ? item.image_url[0] : 
-                                                         (item.image_urls && item.image_urls.length > 0) ? item.image_urls[0]
+                                                    src={(translatedItem.image_url && translatedItem.image_url.length > 0) ? translatedItem.image_url[0] : 
+                                                         (translatedItem.image_urls && translatedItem.image_urls.length > 0) ? translatedItem.image_urls[0]
                                                          : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'}
-                                                    alt={item.name}
+                                                    alt={translatedItem.name}
                                                     className="w-full h-32 object-cover rounded-md mb-1"
                                                     onError={(e) => {
-                                                        console.error(`Failed to load image for ${item.name}:`, item.image_url?.[0] || item.image_urls?.[0]);
                                                         e.currentTarget.src = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
                                                     }}
-                                                    onLoad={() => {
-                                                        console.log(`Successfully loaded image for ${item.name}:`, item.image_url?.[0] || item.image_urls?.[0]);
-                                                    }}
                                                 />
-                                                <h3 className="text-sm font-semibold text-gray-800">{item.name}</h3>
-                                                <p className="text-gray-600 text-xs line-clamp-2 h-8">{item.description}</p>
+                                                <h3 className="text-sm font-semibold text-gray-800">{translatedItem.name}</h3>
+                                                <p className="text-gray-600 text-xs line-clamp-2 h-8">{translatedItem.description}</p>
                                                 <div className="flex justify-between items-center mt-2">
                                                     <p className="text-red-500 font-bold text-xs">
-                                                        {item.price === 0 ? 'Free' : `€${item.price}`}
+                                                        {translatedItem.price === 0 ? 'Free' : `€${translatedItem.price}`}
                                                     </p>
                                                     {/* Chat with Seller Button */}
-                                                    {item.seller_email !== user?.email && (
+                                                    {translatedItem.seller_email !== user?.email && (
                                                         <button
-                                                            onClick={(e) => handleChatWithSeller(item, e)}
+                                                            onClick={(e) => handleChatWithSeller(translatedItem, e)}
                                                             className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded transition-colors"
                                                             title="Chat with Seller"
                                                         >
@@ -525,7 +517,8 @@ const MarketplacePage = () => {
                                                     )}
                                                 </div>
                                             </motion.div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                                 
@@ -575,7 +568,8 @@ const MarketplacePage = () => {
                             </div>
                         </div>
                     </div>
-                )}
+                    )}
+                </StableLoader>
             </div>
 
             {/* Checkout Button (Displayed conditionally) */}
