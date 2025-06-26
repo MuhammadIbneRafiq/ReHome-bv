@@ -316,50 +316,55 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 
                 {/* Image Section */}
-                <div className="relative">
-                  <div className="relative aspect-square overflow-hidden rounded-lg">
+                <div className="relative flex flex-col items-center justify-center">
+                  <div className="relative w-full flex items-center justify-center overflow-hidden rounded-lg" style={{ background: '#f3f4f6' }}>
                     <AnimatePresence initial={false}>
                       <motion.img
                         key={currentImageIndex}
                         src={image_urls?.[currentImageIndex] || '/placeholder-image.jpg'}
                         alt={name}
-                        className="w-full h-full object-cover"
+                        className="max-w-full max-h-[400px] object-contain mx-auto"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
                       />
                     </AnimatePresence>
-                  </div>
-
-                  {image_urls && image_urls.length > 1 && (
-                    <>
-                      <button onClick={goToPrevImage} className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full z-10 hover:bg-opacity-60">
-                        <FaChevronLeft />
-                      </button>
-                      <button onClick={goToNextImage} className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full z-10 hover:bg-opacity-60">
-                        <FaChevronRight />
-                      </button>
-                    </>
-                  )}
-                  
-                  {/* Dots Indicator */}
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                    {image_urls?.map((_, index) => (
-                      <div
-                        key={index}
-                        className={`w-2 h-2 rounded-full transition-colors ${
-                          index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                        }`}
-                      />
-                    ))}
+                    {image_urls && image_urls.length > 1 && (
+                      <>
+                        <button onClick={goToPrevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full z-10 hover:bg-opacity-60">
+                          <FaChevronLeft />
+                        </button>
+                        <button onClick={goToNextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full z-10 hover:bg-opacity-60">
+                          <FaChevronRight />
+                        </button>
+                      </>
+                    )}
+                    {/* Dots Indicator */}
+                    {image_urls && image_urls.length > 1 && (
+                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+                        {image_urls.map((_, index) => (
+                          <div
+                            key={index}
+                            className={`w-2 h-2 rounded-full transition-colors ${
+                              index === currentImageIndex ? 'bg-white' : 'bg-white/50'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Details Section */}
                 <div className="flex flex-col">
                   <div className="flex items-center gap-3 mb-6">
-                    <img src={logo} alt="Rehome Logo" className="h-10 w-auto" />
+                    <img
+                      src={logo}
+                      alt="Rehome Logo"
+                      className="h-12 w-12 object-contain"
+                      style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: 0 }}
+                    />
                     <h1 className="text-3xl font-bold text-gray-900">{name}</h1>
                   </div>
                   

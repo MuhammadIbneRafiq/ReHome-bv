@@ -240,8 +240,19 @@ export default function Navbar() {
 
                 {/* Mobile Menu Button */}
                 <div className="md:hidden">
-                    <Button variant="ghost" size="icon" className="text-white" onClick={toggleMobileMenu}>
-                        <Menu className="w-6 h-6" />
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-white bg-orange-500 border-2 border-white shadow-lg rounded-lg p-2 hover:bg-orange-600 focus:ring-2 focus:ring-white focus:outline-none transition-all duration-200"
+                        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+                        onClick={toggleMobileMenu}>
+                        {/* Custom 4-bar hamburger icon for extra highlight */}
+                        <span className="flex flex-col justify-center items-center w-8 h-8">
+                          <span className="block w-7 h-1 bg-white rounded mb-1"></span>
+                          <span className="block w-7 h-1 bg-white rounded mb-1"></span>
+                          <span className="block w-7 h-1 bg-white rounded mb-1"></span>
+                          <span className="block w-7 h-1 bg-white rounded"></span>
+                        </span>
                     </Button>
                 </div>
             </nav>
