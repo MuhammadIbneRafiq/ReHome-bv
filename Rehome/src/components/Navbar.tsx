@@ -1,7 +1,6 @@
 // ToastContainer is handled in App.tsx - removed to avoid conflicts
 import { Button } from "./ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu } from "lucide-react"; // Import Sun and Moon
 import UserAvatar from "./UserAvatar";
 import { useAuth } from "../hooks/useAuth";
 import '../index.css';
