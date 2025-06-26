@@ -3,6 +3,7 @@ import API_ENDPOINTS from '../api/config';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PRICING_TYPES } from '../../types/marketplace';
 import useUserStore from '../../services/state/useUserSessionStore';
+import { FaTimes } from 'react-icons/fa';
 
 // Location suggestion interface (same as in LocationAutocomplete)
 interface LocationSuggestion {
@@ -419,12 +420,17 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
     };
 
     return (
-       <div className="w-full">
-            <div className="flex justify-between items-center mb-4">
+       <div className="w-full relative">
+            {/* Close Button - styled like ItemDetailModal */}
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 z-[1010] hover:bg-gray-200 transition"
+              aria-label="Close"
+            >
+              <FaTimes className="w-5 h-5" />
+            </button>
+            <div className="flex items-center mb-4 pr-14">
                 <h1 className="text-2xl font-bold">Sell Your Furniture</h1>
-                <button onClick={onClose} className="text-gray-600 hover:text-gray-800">
-                    × {/* Close Icon (X) */}
-                </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Name Input */}

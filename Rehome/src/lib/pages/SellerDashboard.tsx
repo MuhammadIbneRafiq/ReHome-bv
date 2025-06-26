@@ -486,7 +486,7 @@ const SellerDashboard = () => {
                                         {isAdmin ? 'All Marketplace Listings' : 'Your Listings'}
                                     </h2>
                                     <button
-                                        onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg' })}
+                                        onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg', showCloseButton: false })}
                                         className="flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
                                     >
                                         <FaPlus className="mr-2" /> Add New Listing
@@ -506,7 +506,7 @@ const SellerDashboard = () => {
                                             <h4 className="text-xl font-semibold text-gray-800 mb-2">No Active Listings</h4>
                                             <p className="text-gray-600 mb-6">Start selling your items today!</p>
                                             <button
-                                                onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg' })}
+                                                onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg', showCloseButton: false })}
                                                 className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
                                             >
                                                 <FaUpload className="mr-2" /> Create Your First Listing
@@ -604,7 +604,7 @@ const SellerDashboard = () => {
                                             <p className="text-gray-600 mb-6">{t('dashboard.soldAppearHere')}</p>
                                             {listings.length === 0 ? (
                                                 <button
-                                                    onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg' })}
+                                                    onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg', showCloseButton: false })}
                                                     className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
                                                 >
                                                     <FaUpload className="mr-2" /> {t('dashboard.createFirst')}
