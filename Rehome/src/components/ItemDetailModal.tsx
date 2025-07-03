@@ -17,7 +17,7 @@ import {
 } from '../services/biddingService';
 
 interface ItemDetailsModalProps {
-  isOpen: boolean;
+  isOpen?: boolean; // Made optional since DynamicModal handles this
   onClose: () => void;
   item: {
     id: string; // Always UUID string now
@@ -39,7 +39,7 @@ interface ItemDetailsModalProps {
 }
 
 const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ 
-  isOpen, 
+  isOpen = true, // Default to true since DynamicModal only renders when open
   onClose, 
   item, 
   onAddToCart, 
@@ -68,7 +68,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
   // Load bidding data when modal opens
   useEffect(() => {
-    if (isOpen && item && !item.isrehome && user?.email) {
+    if (item && !item.isrehome && user?.email) {
       loadBiddingData();
       
       // Subscribe to real-time bid updates
@@ -79,11 +79,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
       return unsubscribe;
     }
-  }, [isOpen, item?.id, item?.isrehome, user?.email]);
+  }, [item?.id, item?.isrehome, user?.email]);
 
   // Reset state when modal closes or item changes
   useEffect(() => {
-    if (!isOpen) {
+    // Reset state when component unmounts (DynamicModal handles this)
+    return () => {
       setCurrentImageIndex(0);
       setBids([]);
       setShowBidModal(false);
@@ -94,8 +95,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       setHighestBid(null);
       setCanAddToCartStatus({canAdd: false, message: ''});
       setLoadingBids(false);
-    }
-  }, [isOpen]);
+    };
+  }, []);
 
   // Since we're using AnimatePresence in parent, we don't need conditional return here
   // The component should always render when called, but handle null item gracefully
@@ -129,8 +130,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         canAddToCart(item.id, user.email)
       ]);
 
-      // Only update state if component is still mounted and modal is still open
-      if (isOpen && item) {
+      // Only update state if component is still mounted
+      if (item) {
         setBids(allBids);
         setUserBid(usersBid);
         setHighestBid(highest);
@@ -139,9 +140,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     } catch (error) {
       console.error('Error loading bidding data:', error);
     } finally {
-      if (isOpen) {
-        setLoadingBids(false);
-      }
+      setLoadingBids(false);
     }
   };
 
