@@ -56,8 +56,8 @@ const App = () => {
       <GoogleOAuthProvider clientId={googleClientId}>
         <LanguageProvider>
           <CartProvider>
-            <DynamicModalProvider>
-              <BrowserRouter>
+            <BrowserRouter>
+              <DynamicModalProvider>
                 <AuthErrorHandler>
                   <div className="min-h-screen">
                     <Navbar />
@@ -114,8 +114,8 @@ const App = () => {
                     />
                   </div>
                 </AuthErrorHandler>
-              </BrowserRouter>
-            </DynamicModalProvider>
+              </DynamicModalProvider>
+            </BrowserRouter>
           </CartProvider>
         </LanguageProvider>
       </GoogleOAuthProvider>
