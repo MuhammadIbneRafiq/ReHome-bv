@@ -206,6 +206,14 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                 
                 try {
                     for (const photo of photos) {
+                        // Check file size before uploading
+                        const fileSizeMB = photo.size / 1024 / 1024;
+                        if (fileSizeMB > 50) {
+                            throw new Error(`File "${photo.name}" is ${fileSizeMB.toFixed(1)}MB which exceeds the 50MB limit. Please compress or resize your image.`);
+                        }
+                        
+                        console.log(`📤 Uploading file: ${photo.name}, Size: ${fileSizeMB.toFixed(2)}MB`);
+                        
                         const formData = new FormData();
                         formData.append('photos', photo);
                         
@@ -222,7 +230,16 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                         clearTimeout(timeoutId);
 
                         if (!uploadResponse.ok) {
-                            throw new Error(`HTTP upload error! status: ${uploadResponse.status}`);
+                            // Try to get the error details from the response
+                            let errorDetails = `HTTP ${uploadResponse.status}`;
+                            try {
+                                const errorData = await uploadResponse.json();
+                                errorDetails = errorData.error || errorData.message || errorDetails;
+                            } catch (e) {
+                                // If we can't parse the response, use the status
+                                errorDetails = `HTTP ${uploadResponse.status} - ${uploadResponse.statusText}`;
+                            }
+                            throw new Error(errorDetails);
                         }
                         
                         const uploadData = await uploadResponse.json();
@@ -230,21 +247,30 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                     }
                 } catch (uploadError: any) {
                     console.error('Image upload failed:', uploadError);
+                    console.error('Error details:', {
+                        name: uploadError.name,
+                        message: uploadError.message,
+                        stack: uploadError.stack
+                    });
+                    
                     setUploading(false);
                     setSubmitting(false);
                     
                     // Show retry option for image upload failures
                     const errorMessage = uploadError.message || 'Unknown error occurred';
-                    const isNetworkError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Network Error');
+                    const isNetworkError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Network Error') || errorMessage.includes('NetworkError');
                     const isTimeoutError = errorMessage.includes('timeout') || errorMessage.includes('aborted') || uploadError.name === 'AbortError';
+                    const isFileSizeError = errorMessage.includes('File too large') || errorMessage.includes('413') || errorMessage.includes('Payload Too Large');
                     
                     let retryMessage = 'Image upload failed. ';
-                    if (isNetworkError) {
-                        retryMessage += 'Please check your internet connection and try again.';
+                    if (isFileSizeError) {
+                        retryMessage += 'File is too large. Please try uploading a smaller image (under 10MB).';
+                    } else if (isNetworkError) {
+                        retryMessage += `Connection failed. This might be due to file size or network issues. Error: ${errorMessage}`;
                     } else if (isTimeoutError) {
                         retryMessage += 'Upload timed out after 2 minutes. This may happen with very large images. Please try uploading a smaller image (under 5MB) or check your connection speed.';
                     } else {
-                        retryMessage += 'Please try uploading the same image again, or try a smaller image (under 5MB).';
+                        retryMessage += `Error: ${errorMessage}. Please try uploading the same image again, or try a smaller image (under 5MB).`;
                     }
                     
                     setUploadError(retryMessage);
