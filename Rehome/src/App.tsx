@@ -7,6 +7,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import { CartProvider } from "./contexts/CartContext";
 import { DynamicModalProvider } from "./components/ui/DynamicModal";
+import AuthErrorHandler from "./components/AuthErrorHandler";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -57,60 +58,62 @@ const App = () => {
           <CartProvider>
             <DynamicModalProvider>
               <BrowserRouter>
-                <div className="min-h-screen">
-                  <Navbar />
-                  <main className="min-h-screen bg-orange-50">
-                    <Routes>
-                      <Route path="/" element={<LandingPage />} />
-                      <Route path="/marketplace" element={<MarketplacePage />} />
-                      <Route path="/marketplace/learn-more" element={<MarketplaceLearnMore />} />
-                      <Route path="/house-moving" element={<HouseMovingPage />} />
-                      <Route path="/house-moving/learn-more" element={<HouseMovingLearnMore />} />
-                      <Route path="/item-transport" element={<ItemMovingPage />} />
-                      <Route path="/item-transport/learn-more" element={<ItemTransportLearnMore />} />
-                      <Route path="/item-moving" element={<Navigate to="/item-transport" replace />} />
-                      <Route path="/item-donation" element={<ItemDonationPage />} />
-                      <Route path="/special-request" element={<SpecialRequestPage />} />
-                      <Route path="/special-request/learn-more" element={<SpecialRequestLearnMore />} />
-                      <Route path="/sell-dash" element={
-                        <ProtectedRoute>
-                          <SellerDashboard />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/messages" element={
-                        <ProtectedRoute>
-                          <MessagesPage />
-                        </ProtectedRoute>
-                      } />
-                      <Route path="/admin" element={
-                        <AdminRoute>
-                          <AdminDashboard />
-                        </AdminRoute>
-                      } />
-                      <Route path="/auth/callback" element={<AuthCallback />} />
-                      <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
-                      <Route path="/contact-us" element={<ContactUsPage />} />
-                      <Route path="/about-us" element={<AboutUsPage />} />
-                      <Route path="/terms" element={<TermsPage />} />
-                      <Route path="/privacy" element={<PrivacyPage />} />
-                      <Route path="/cookies" element={<CookiesPage />} />
-                      <Route path="/login" element={<LoginPage />} />
-                      <Route path="/register" element={<SignupPage />} />
-                    </Routes>
-                  </main>
-                  <ToastContainer
-                    position="top-right"
-                    autoClose={3000}
-                    hideProgressBar={false}
-                    newestOnTop={false}
-                    closeOnClick
-                    rtl={false}
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                    theme="light"
-                  />
-                </div>
+                <AuthErrorHandler>
+                  <div className="min-h-screen">
+                    <Navbar />
+                    <main className="min-h-screen bg-orange-50">
+                      <Routes>
+                        <Route path="/" element={<LandingPage />} />
+                        <Route path="/marketplace" element={<MarketplacePage />} />
+                        <Route path="/marketplace/learn-more" element={<MarketplaceLearnMore />} />
+                        <Route path="/house-moving" element={<HouseMovingPage />} />
+                        <Route path="/house-moving/learn-more" element={<HouseMovingLearnMore />} />
+                        <Route path="/item-transport" element={<ItemMovingPage />} />
+                        <Route path="/item-transport/learn-more" element={<ItemTransportLearnMore />} />
+                        <Route path="/item-moving" element={<Navigate to="/item-transport" replace />} />
+                        <Route path="/item-donation" element={<ItemDonationPage />} />
+                        <Route path="/special-request" element={<SpecialRequestPage />} />
+                        <Route path="/special-request/learn-more" element={<SpecialRequestLearnMore />} />
+                        <Route path="/sell-dash" element={
+                          <ProtectedRoute>
+                            <SellerDashboard />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/messages" element={
+                          <ProtectedRoute>
+                            <MessagesPage />
+                          </ProtectedRoute>
+                        } />
+                        <Route path="/admin" element={
+                          <AdminRoute>
+                            <AdminDashboard />
+                          </AdminRoute>
+                        } />
+                        <Route path="/auth/callback" element={<AuthCallback />} />
+                        <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
+                        <Route path="/contact-us" element={<ContactUsPage />} />
+                        <Route path="/about-us" element={<AboutUsPage />} />
+                        <Route path="/terms" element={<TermsPage />} />
+                        <Route path="/privacy" element={<PrivacyPage />} />
+                        <Route path="/cookies" element={<CookiesPage />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<SignupPage />} />
+                      </Routes>
+                    </main>
+                    <ToastContainer
+                      position="top-right"
+                      autoClose={3000}
+                      hideProgressBar={false}
+                      newestOnTop={false}
+                      closeOnClick
+                      rtl={false}
+                      pauseOnFocusLoss
+                      draggable
+                      pauseOnHover
+                      theme="light"
+                    />
+                  </div>
+                </AuthErrorHandler>
               </BrowserRouter>
             </DynamicModalProvider>
           </CartProvider>

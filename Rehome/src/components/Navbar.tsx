@@ -235,9 +235,18 @@ export default function Navbar() {
                                 
                                 {/* Session Warning Indicator */}
                                 {isSessionWarning && sessionTimeLeft && (
-                                    <div className="flex items-center bg-yellow-100 border border-yellow-300 text-yellow-800 px-2 py-1 rounded-md text-xs">
-                                        <span className="mr-1">⏰</span>
-                                        <span>Session expires in {formatTimeLeft(sessionTimeLeft)}</span>
+                                    <div className="flex items-center bg-gradient-to-r from-yellow-100 to-orange-100 border border-yellow-300 text-yellow-800 px-3 py-2 rounded-lg text-sm shadow-sm">
+                                        <span className="mr-2 text-lg">⏰</span>
+                                        <div className="flex flex-col">
+                                            <span className="font-medium">Session expires in</span>
+                                            <span className="text-xs font-bold">{formatTimeLeft(sessionTimeLeft)}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => window.location.href = '/login'}
+                                            className="ml-3 px-2 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700 transition-colors"
+                                        >
+                                            Extend
+                                        </button>
                                     </div>
                                 )}
                                 

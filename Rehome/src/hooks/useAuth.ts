@@ -11,6 +11,7 @@ export const useAuth = () => {
   // return true or false if user is authenticated
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sessionTimeLeft, setSessionTimeLeft] = useState<number | null>(null);
 
   const location = useLocation();
 
@@ -25,6 +26,7 @@ export const useAuth = () => {
     localStorage.removeItem("google_user_info");
     setIsAuthenticated(false);
     setUser(undefined);
+    setSessionTimeLeft(null);
     
     if (showToast) {
       toast({
@@ -33,23 +35,56 @@ export const useAuth = () => {
         variant: "destructive",
         duration: 8000,
       });
+      
+      // Redirect to login after showing toast
+      setTimeout(() => {
+        const currentPath = window.location.pathname + window.location.search;
+        window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+      }, 2000);
     }
   };
 
-  // Check if token is close to expiring (within 5 minutes)
+  // Check if token is close to expiring (within 30 minutes for 48hr tokens)
   const isTokenExpiringSoon = (token: string): boolean => {
     try {
       const decoded = jwtDecode(token);
       if (decoded.exp) {
         const expirationTime = decoded.exp * 1000;
         const currentTime = Date.now();
-        const fiveMinutes = 5 * 60 * 1000; // 5 minutes in milliseconds
-        return (expirationTime - currentTime) < fiveMinutes;
+        const thirtyMinutes = 30 * 60 * 1000; // 30 minutes in milliseconds
+        return (expirationTime - currentTime) < thirtyMinutes;
       }
     } catch (error) {
       console.error('Error checking token expiration:', error);
     }
     return false;
+  };
+
+  // Get time remaining until token expires
+  const getTimeUntilExpiration = (token: string): number | null => {
+    try {
+      const decoded = jwtDecode(token);
+      if (decoded.exp) {
+        const expirationTime = decoded.exp * 1000;
+        const currentTime = Date.now();
+        return Math.max(0, expirationTime - currentTime);
+      }
+    } catch (error) {
+      console.error('Error getting expiration time:', error);
+    }
+    return null;
+  };
+
+  // Format time remaining for display
+  const formatTimeRemaining = (milliseconds: number): string => {
+    const totalMinutes = Math.floor(milliseconds / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
   };
 
   useEffect(() => {
@@ -106,11 +141,18 @@ export const useAuth = () => {
               return;
             }
 
+            // Update session time left
+            const timeLeft = getTimeUntilExpiration(accessToken);
+            if (timeLeft !== null) {
+              setSessionTimeLeft(timeLeft);
+            }
+
             // Check if token is expiring soon and warn user
             if (isTokenExpiringSoon(accessToken)) {
+              const timeRemaining = formatTimeRemaining(timeLeft || 0);
               toast({
                 title: "⏰ Session Expiring Soon",
-                description: "Your session will expire in less than 5 minutes. Please save your work and sign in again.",
+                description: `Your session will expire in ${timeRemaining}. Please save your work and sign in again.`,
                 variant: "default",
                 duration: 10000,
               });
@@ -164,7 +206,20 @@ export const useAuth = () => {
     fetchUser();
 
     // Set up an interval to check authentication status more frequently
-    const intervalId = setInterval(fetchUser, 30000); // Check every 30 seconds
+    const intervalId = setInterval(() => {
+      const accessToken = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      if (accessToken) {
+        const timeLeft = getTimeUntilExpiration(accessToken);
+        if (timeLeft !== null) {
+          setSessionTimeLeft(timeLeft);
+          
+          // Auto-logout if expired
+          if (timeLeft <= 0) {
+            logout(true, "Your session has expired automatically. Please sign in again.");
+          }
+        }
+      }
+    }, 30000); // Check every 30 seconds
 
     // Cleanup function to clear the interval when the component unmounts
     return () => {
@@ -173,6 +228,14 @@ export const useAuth = () => {
   }, [location.pathname]);
 
   console.log('🔄 useAuth: Current state - isAuthenticated:', isAuthenticated, 'loading:', loading);
-  return { isAuthenticated, loading, logout, isAdmin, user };
+  return { 
+    isAuthenticated, 
+    loading, 
+    logout, 
+    isAdmin, 
+    user, 
+    sessionTimeLeft,
+    formatTimeRemaining: sessionTimeLeft ? formatTimeRemaining(sessionTimeLeft) : null
+  };
 };
 
