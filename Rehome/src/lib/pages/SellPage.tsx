@@ -232,7 +232,8 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         setUploadError(null); 
         if (e.target.files) {
-          setPhotos(Array.from(e.target.files));
+            const files = Array.from(e.target.files);
+            setPhotos(files);
         }
     };
 
@@ -269,6 +270,10 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
         
         if (!cityName.trim()) {
             validationErrors.push('Location is required');
+        }
+        
+        if (photos.length === 0) {
+            validationErrors.push('At least one photo is required');
         }
         
         // Pricing validation
@@ -583,10 +588,10 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
 
                 <div>
                     <label htmlFor="photos" className="block text-sm font-medium text-gray-700">
-                        Photos (Optional)
+                        Photos *
                     </label>
                     <p className="text-sm text-gray-600 mb-2">
-                        Note: If image upload fails due to connectivity issues, your listing will still be created without images. You can edit it later to add photos.
+                        At least one photo is required. Images will be automatically optimized for web.
                     </p>
                     <input
                         type="file"

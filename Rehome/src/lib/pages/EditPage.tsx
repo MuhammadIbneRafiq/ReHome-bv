@@ -169,7 +169,8 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
     const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         setUploadError(null);
         if (e.target.files) {
-            setPhotos(Array.from(e.target.files));
+            const files = Array.from(e.target.files);
+            setPhotos(files);
         }
     };
 
@@ -479,6 +480,9 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                             * At least one photo is required for your listing
                         </p>
                     )}
+                    <p className="text-xs text-gray-500 mt-1">
+                        Images will be automatically optimized for web
+                    </p>
                     {uploading && <p className="text-blue-600 text-sm mt-1">Uploading images...</p>}
                     {uploadError && <p className="text-red-500 text-sm mt-1">{uploadError}</p>}
                 </div>

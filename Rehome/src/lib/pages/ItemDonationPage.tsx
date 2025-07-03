@@ -30,7 +30,8 @@ const ItemDonationPage = () => {
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setPhotos(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      setPhotos(files);
     }
   };
 
@@ -46,6 +47,10 @@ const ItemDonationPage = () => {
     }
     if (!description.trim()) {
       toast.error("Please provide a description of your item.");
+      return false;
+    }
+    if (photos.length === 0) {
+      toast.error("Please upload at least one photo of your item.");
       return false;
     }
     if (!address.trim()) {
@@ -173,6 +178,10 @@ const ItemDonationPage = () => {
     if (step === 1) {
       if (!description.trim()) {
         toast.error("Please provide a description of your item.");
+        return;
+      }
+      if (photos.length === 0) {
+        toast.error("Please upload at least one photo of your item.");
         return;
       }
       if (mode === 'sell' && !price.trim()) {
@@ -374,7 +383,7 @@ const ItemDonationPage = () => {
                 {/* Photo Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
-                    Upload Photos (optional)
+                    Upload Photos *
                   </label>
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                     <div className="space-y-1 text-center">
@@ -389,7 +398,7 @@ const ItemDonationPage = () => {
                         <p className="pl-1">or drag and drop</p>
                       </div>
                       <p className="text-xs text-gray-500">
-                        PNG, JPG, GIF up to 10MB
+                        PNG, JPG, GIF images will be automatically optimized for web
                       </p>
                       {photos.length > 0 && (
                         <p className="text-sm text-green-600">

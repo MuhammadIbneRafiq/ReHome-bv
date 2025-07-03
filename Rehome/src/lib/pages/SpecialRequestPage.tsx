@@ -44,7 +44,8 @@ const SpecialRequestPage = () => {
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setPhotos(Array.from(e.target.files));
+      const files = Array.from(e.target.files);
+      setPhotos(files);
     }
   };
 
@@ -64,6 +65,12 @@ const SpecialRequestPage = () => {
           isValid = false;
         }
       });
+    }
+
+    // Photo validation - mandatory for all services
+    if (photos.length === 0) {
+      newErrors.photos = 'Please upload at least one photo.';
+      isValid = false;
     }
 
     // Contact info validation
@@ -443,7 +450,10 @@ const SpecialRequestPage = () => {
             {/* Photo Upload */}
             {selectedService && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Attach Photos (optional)</label>
+                <label className="block text-sm font-medium text-gray-700">Attach Photos *</label>
+                <p className="text-sm text-gray-500 mb-2">
+                  At least one photo is required. Images will be automatically optimized for web.
+                </p>
                 <input
                   type="file"
                   multiple
@@ -458,6 +468,7 @@ const SpecialRequestPage = () => {
                     ))}
                   </div>
                 )}
+                {errors.photos && <p className="text-red-500 text-sm mt-1">{errors.photos}</p>}
               </div>
             )}
 
