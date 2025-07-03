@@ -266,7 +266,20 @@ const SellerDashboard = () => {
 
         } catch (err: any) {
             console.error('Error fetching listings:', err);
-            setError(err.message || 'Failed to fetch listings.');
+            
+            // Provide more specific error messages
+            let errorMessage = 'Failed to fetch listings.';
+            if (err.message?.includes('Failed to fetch') || err.message?.includes('Network Error')) {
+                errorMessage = 'Unable to connect to server. Please check your internet connection and try again.';
+            } else if (err.message?.includes('401') || err.message?.includes('unauthorized')) {
+                errorMessage = 'Authentication failed. Please log in again.';
+            } else if (err.message?.includes('500')) {
+                errorMessage = 'Server error. Please try again in a few minutes.';
+            } else if (err.message) {
+                errorMessage = err.message;
+            }
+            
+            setError(errorMessage);
             // Set empty arrays to stop loading even on error
             setListings([]);
             setSoldListings([]);

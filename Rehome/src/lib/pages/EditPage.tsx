@@ -203,19 +203,52 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
             const uploadedImageUrls: string[] = [];
             if (photos.length > 0) {
                 setUploading(true);
-                for (const photo of photos) {
-                    const formData = new FormData();
-                    formData.append('photos', photo);
-                    const uploadResponse = await fetch(API_ENDPOINTS.UPLOAD.PHOTOS, {
-                        method: 'POST',
-                        body: formData,
-                    });
+                
+                try {
+                    for (const photo of photos) {
+                        const formData = new FormData();
+                        formData.append('photos', photo);
+                        
+                        // Add timeout to prevent hanging requests - generous timeout for backend compression
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout for image processing
+                        
+                        const uploadResponse = await fetch(API_ENDPOINTS.UPLOAD.PHOTOS, {
+                            method: 'POST',
+                            body: formData,
+                            signal: controller.signal
+                        });
 
-                    if (!uploadResponse.ok) {
-                        throw new Error(`HTTP upload error! status: ${uploadResponse.status}`);
+                        clearTimeout(timeoutId);
+
+                        if (!uploadResponse.ok) {
+                            throw new Error(`HTTP upload error! status: ${uploadResponse.status}`);
+                        }
+                        
+                        const uploadData = await uploadResponse.json();
+                        uploadedImageUrls.push(...uploadData.imageUrls);
                     }
-                    const uploadData = await uploadResponse.json();
-                    uploadedImageUrls.push(...uploadData.imageUrls);
+                } catch (uploadError: any) {
+                    console.error('Image upload failed:', uploadError);
+                    setUploading(false);
+                    setSubmitting(false);
+                    
+                    // Show retry option for image upload failures
+                    const errorMessage = uploadError.message || 'Unknown error occurred';
+                    const isNetworkError = errorMessage.includes('Failed to fetch') || errorMessage.includes('Network Error');
+                    const isTimeoutError = errorMessage.includes('timeout') || errorMessage.includes('aborted') || uploadError.name === 'AbortError';
+                    
+                    let retryMessage = 'Image upload failed. ';
+                    if (isNetworkError) {
+                        retryMessage += 'Please check your internet connection and try again.';
+                    } else if (isTimeoutError) {
+                        retryMessage += 'Upload timed out after 2 minutes. This may happen with very large images. Please try uploading a smaller image (under 5MB) or check your connection speed.';
+                    } else {
+                        retryMessage += 'Please try uploading the same image again, or try a smaller image (under 5MB).';
+                    }
+                    
+                    setUploadError(retryMessage);
+                    return; // Stop the submission process
                 }
                 setUploading(false);
             }
@@ -223,39 +256,90 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
             // Combine existing images with newly uploaded images
             const allImageUrls = [...existingImages, ...uploadedImageUrls];
 
-            // 2. Update the listing data
-            const response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE(item.id), {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                },
-                body: JSON.stringify({
-                    name,
-                    description,
-                    category,
-                    subcategory: subcategory || null,
-                    conditionRating: conditionRating ? parseInt(conditionRating) : null,
+            // 2. Update the listing data with retry logic
+            let response: Response | null = null;
+            let retries = 0;
+            const maxRetries = 3;
+            
+            while (retries < maxRetries) {
+                try {
+                    // Add timeout for main API request
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 60000); // 1 minute timeout for API requests
                     
-                    // Dimensions (optional)
-                    height: height ? parseFloat(height) : null,
-                    width: width ? parseFloat(width) : null,
-                    depth: depth ? parseFloat(depth) : null,
+                    response = await fetch(API_ENDPOINTS.FURNITURE.UPDATE(item.id), {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                        },
+                        body: JSON.stringify({
+                            name,
+                            description,
+                            category,
+                            subcategory: subcategory || null,
+                            conditionRating: conditionRating ? parseInt(conditionRating) : null,
+                            
+                            // Dimensions (optional)
+                            height: height ? parseFloat(height) : null,
+                            width: width ? parseFloat(width) : null,
+                            depth: depth ? parseFloat(depth) : null,
+                            
+                            // Pricing
+                            pricingType,
+                            price: pricingType === 'fixed' && price ? parseFloat(price) : 
+                                   pricingType === 'free' ? 0 : null,
+                            startingBid: pricingType === 'bidding' && startingBid ? parseFloat(startingBid) : null,
+                            
+                            imageUrl: allImageUrls,
+                            cityName,
+                            isRehome,
+                        }),
+                        signal: controller.signal
+                    });
                     
-                    // Pricing
-                    pricingType,
-                    price: pricingType === 'fixed' && price ? parseFloat(price) : 
-                           pricingType === 'free' ? 0 : null,
-                    startingBid: pricingType === 'bidding' && startingBid ? parseFloat(startingBid) : null,
+                    clearTimeout(timeoutId);
                     
-                    imageUrl: allImageUrls,
-                    cityName,
-                    isRehome,
-                }),
-            });
+                    // If request was successful, break out of retry loop
+                    break;
+                    
+                } catch (fetchError: any) {
+                    retries++;
+                    console.error(`Fetch attempt ${retries} failed:`, fetchError);
+                    
+                    if (retries >= maxRetries) {
+                        throw new Error(`Failed to connect to server after ${maxRetries} attempts. Please check your internet connection and try again.`);
+                    }
+                    
+                    // Wait before retrying (longer delays for backend processing)
+                    await new Promise(resolve => setTimeout(resolve, 3000 * retries)); // 3s, 6s, 9s delays
+                }
+            }
+
+            // Check if we got a response (should always be true if we reach here)
+            if (!response) {
+                throw new Error('Failed to get response from server. Please try again.');
+            }
 
             if (!response.ok) {
-                throw new Error(`Failed to update listing`);
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error response:', errorData);
+                
+                // Handle specific error cases
+                if (response.status === 401) {
+                    throw new Error('Authentication failed. Please log in again.');
+                }
+                if (response.status === 403) {
+                    throw new Error('Access denied. Please check your permissions.');
+                }
+                if (response.status === 500) {
+                    throw new Error('Server error. Please try again in a few minutes.');
+                }
+                if (response.status === 504 || response.status === 502) {
+                    throw new Error('Server is temporarily unavailable. Please try again.');
+                }
+                
+                throw new Error(errorData.error || errorData.message || `Failed to update listing (${response.status})`);
             }
 
             // const updatedData = await response.json();
