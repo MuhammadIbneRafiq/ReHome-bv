@@ -46,6 +46,7 @@ export const API_ENDPOINTS = {
   // Communication
   EMAIL: {
     SEND: `${API_BASE_URL}/api/send-email`,
+    REHOME_ORDER_CONFIRMATION: `${API_BASE_URL}/api/rehome-order/send-confirmation`,
   },
 
   // Contact

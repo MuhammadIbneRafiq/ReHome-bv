@@ -147,6 +147,25 @@ class ApiService {
     return this.request<{ success: boolean }>('POST', API_ENDPOINTS.EMAIL.SEND, emailData);
   }
 
+  // ReHome order confirmation email
+  async sendReHomeOrderConfirmation(orderData: {
+    orderNumber: string;
+    items: Array<any>;
+    totalAmount: number;
+    customerInfo: {
+      email: string;
+      firstName?: string;
+      lastName?: string;
+    }
+  }) {
+    console.log('📧 Sending ReHome order confirmation email:', orderData.orderNumber);
+    return this.request<{ success: boolean; emailSent: boolean; message: string }>(
+      'POST', 
+      API_ENDPOINTS.EMAIL.REHOME_ORDER_CONFIRMATION, 
+      orderData
+    );
+  }
+
   // Legal document methods
   async acceptTerms(acceptanceData: {
     userId: string;

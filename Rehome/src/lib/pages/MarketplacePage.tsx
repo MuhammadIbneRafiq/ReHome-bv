@@ -16,6 +16,8 @@ import useUserStore from '../../services/state/useUserSessionStore';
 import { sendMessage } from '../../services/marketplaceMessageService';
 import StableLoader from '../../components/ui/StableLoader';
 import ShareButton from '@/components/ui/ShareButton';
+import apiService from '../api/apiService';
+import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 
 
 const MarketplacePage = () => {
@@ -38,6 +40,11 @@ const MarketplacePage = () => {
     const [chatItem, setChatItem] = useState<FurnitureItem | null>(null);
     const [chatMessage, setChatMessage] = useState('');
     const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+    // Order confirmation modal state
+    const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+    const [orderNumber, setOrderNumber] = useState('');
+    const [isReHomeOrder, setIsReHomeOrder] = useState(false);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -199,7 +206,12 @@ const MarketplacePage = () => {
             
             const totalAmount = getTotalPrice();
             
+            // Generate a unique order number
+            const orderNumber = `RH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
+            setOrderNumber(orderNumber);
+            
             console.log('Creating order:', {
+                orderNumber,
                 amount: totalAmount,
                 items: cartItems,
             });
@@ -208,14 +220,55 @@ const MarketplacePage = () => {
             const orderData = {
                 items: cartItems,
                 totalAmount: totalAmount,
-                orderNumber: `RH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`,
+                orderNumber,
                 userId: localStorage.getItem('userId'), // Assuming user ID is stored
                 createdAt: new Date().toISOString(),
             };
 
-            // For now, just show success message (you can implement order endpoint later)
-            console.log('Order created:', orderData);
+            // For ReHome items, send confirmation email
+            const hasReHomeItems = cartItems.some(item => item.isrehome);
+            setIsReHomeOrder(hasReHomeItems);
+            
+            if (hasReHomeItems && user) {
+                try {
+                    // Get user info for email
+                    const customerInfo = {
+                        email: user.email,
+                        firstName: user.user_metadata?.first_name || 'Valued Customer',
+                        lastName: user.user_metadata?.last_name || ''
+                    };
+                    
+                    console.log('Sending ReHome order confirmation email:', {
+                        orderNumber,
+                        items: cartItems,
+                        totalAmount,
+                        customerInfo
+                    });
+                    
+                    const emailResult = await apiService.sendReHomeOrderConfirmation({
+                        orderNumber,
+                        items: cartItems,
+                        totalAmount,
+                        customerInfo
+                    });
+                    
+                    if (emailResult.success && emailResult.emailSent) {
+                        console.log('ReHome order confirmation email sent successfully');
+                    } else {
+                        console.warn('ReHome order confirmation email could not be sent:', emailResult.message);
+                    }
+                } catch (emailError) {
+                    console.error('Error sending ReHome order confirmation email:', emailError);
+                    // Don't fail the checkout if email fails
+                }
+            }
+
+            // Show success message
             toast.success(`Order created successfully! Order #${orderData.orderNumber}`);
+            
+            // Close cart drawer and show confirmation modal
+            setIsCartDrawerOpen(false);
+            setShowOrderConfirmation(true);
             
             // Clear cart after successful order
             setCart([]);
@@ -399,6 +452,18 @@ const MarketplacePage = () => {
                         item={selectedItem || null}
                         onAddToCart={addToCart}
                         onUpdateStatus={handleStatusUpdate}
+                    />
+                )}
+            </AnimatePresence>
+            
+            {/* Order Confirmation Modal */}
+            <AnimatePresence>
+                {showOrderConfirmation && (
+                    <OrderConfirmationModal
+                        isOpen={showOrderConfirmation}
+                        onClose={() => setShowOrderConfirmation(false)}
+                        orderNumber={orderNumber}
+                        isReHomeOrder={isReHomeOrder}
                     />
                 )}
             </AnimatePresence>
