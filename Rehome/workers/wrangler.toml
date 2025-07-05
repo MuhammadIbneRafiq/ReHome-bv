@@ -1,0 +1,25 @@
+name = "rehome-image-proxy"
+main = "image-proxy.js"
+compatibility_date = "2023-12-01"
+
+# Configure routes
+routes = [
+  { pattern = "*rehome.com/image-proxy*", zone_name = "rehome.com" }
+]
+
+# Configure caching
+[site]
+bucket = "./public"
+
+[env.production]
+workers_dev = false
+route = "*rehome.com/image-proxy*"
+zone_id = ""  # Add your Cloudflare Zone ID here
+
+[env.staging]
+workers_dev = true
+
+# Configure cache settings
+[cache_settings]
+browser_TTL = 2592000  # 30 days in seconds
+edge_TTL = 2592000     # 30 days in seconds 
