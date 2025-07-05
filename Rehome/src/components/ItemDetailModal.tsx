@@ -66,7 +66,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [showBidMessageModal, setShowBidMessageModal] = useState(false);
   const [bidMessage, setBidMessage] = useState('');
 
-  // Load bidding data when modal opens
+  // Load bidding data when modal opens - ONLY for non-ReHome items with bidding
   useEffect(() => {
     if (item && !item.isrehome && user?.email && item.pricing_type === 'bidding') {
       loadBiddingData();
@@ -74,12 +74,26 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       // Subscribe to real-time bid updates
       const unsubscribe = subscribeToBidUpdates(item.id, (updatedBids) => {
         setBids(updatedBids);
-        loadBiddingData(); // Reload all data when bids change
+        loadBiddingData(); // Reload data when bids change
       });
 
       return unsubscribe;
     }
   }, [item?.id, item?.isrehome, item?.pricing_type, user?.email]);
+
+  // Load cart data for ReHome items ONLY
+  useEffect(() => {
+    if (item && item.isrehome) {
+      // For ReHome items, we don't need to check bid status
+      // Just set canAddToCart directly
+      setCanAddToCartStatus({canAdd: true, message: ''});
+      
+      // Reset bid-related state for ReHome items
+      setBids([]);
+      setUserBid(null);
+      setHighestBid(null);
+    }
+  }, [item?.id, item?.isrehome]);
 
   // Reset state when modal closes or item changes
   useEffect(() => {

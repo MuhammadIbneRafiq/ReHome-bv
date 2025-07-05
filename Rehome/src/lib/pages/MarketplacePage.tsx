@@ -561,6 +561,7 @@ const MarketplacePage = () => {
                                                         {/* Show chat button for user listings and WhatsApp for ReHome */}
                                                         {translatedItem.seller_email !== user?.email && (
                                                             translatedItem.isrehome ? (
+                                                                <>
                                                                 <a
                                                                     href={`https://wa.me/31645839273`}
                                                                     target="_blank"
@@ -571,6 +572,7 @@ const MarketplacePage = () => {
                                                                 >
                                                                     <FaWhatsapp size={16} />
                                                                 </a>
+                                                                </>
                                                             ) : (
                                                                 <button
                                                                     onClick={(e) => {
