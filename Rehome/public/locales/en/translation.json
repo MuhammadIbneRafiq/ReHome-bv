@@ -94,7 +94,6 @@
     "noResults": "No results found",
     "viewDetails": "View Details",
     "contactSeller": "Contact Seller",
-    "categories": "Categories",
     "condition": "Condition",
     "sortBy": "Sort by",
     "newest": "Newest",
@@ -219,7 +218,10 @@
     "terms": "Terms of Service",
     "privacy": "Privacy Policy",
     "cookies": "Cookie Policy",
-    "copyright": "© 2025 Rehome B.V. All rights reserved."
+    "copyright": "© 2025 ReHome B.V. All rights reserved.",
+    "create_listing": "Create Listing",
+    "item_donation": "Item Donation",
+    "whatsapp_us": "WhatsApp Us"
   },
   "furniture": {
     "cozy_sofa": "Cozy Sofa",

@@ -10,11 +10,12 @@ import { translateFurnitureItem } from "../utils/dynamicTranslation";
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-toastify';
-import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus, FaComments } from 'react-icons/fa';
+import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus, FaComments, FaWhatsapp } from 'react-icons/fa';
 import { API_ENDPOINTS } from '../api/config';
 import useUserStore from '../../services/state/useUserSessionStore';
 import { sendMessage } from '../../services/marketplaceMessageService';
 import StableLoader from '../../components/ui/StableLoader';
+import ShareButton from '@/components/ui/ShareButton';
 
 const MarketplacePage = () => {
     const { t } = useTranslation();
@@ -483,17 +484,41 @@ const MarketplacePage = () => {
                                                     <p className="text-red-500 font-bold text-xs">
                                                         {translatedItem.price === 0 ? 'Free' : `€${translatedItem.price}`}
                                                     </p>
-                                                    {/* Chat with Seller Button */}
-                                                    {translatedItem.seller_email !== user?.email && (
-                                                        <button
-                                                            onClick={(e) => handleChatWithSeller(translatedItem, e)}
-                                                            className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white text-xs px-2 py-1 rounded transition-colors"
-                                                            title="Chat with Seller"
-                                                        >
-                                                            <FaComments size={10} />
-                                                            Chat
-                                                        </button>
-                                                    )}
+                                                    <div className="flex items-center gap-2">
+                                                        <ShareButton
+                                                            title={translatedItem.name}
+                                                            url={`${window.location.origin}${window.location.pathname}?item=${translatedItem.id}`}
+                                                            description={translatedItem.description}
+                                                            variant="icon"
+                                                            className="!p-1.5"
+                                                        />
+                                                        {/* Show chat button for user listings and WhatsApp for ReHome */}
+                                                        {translatedItem.seller_email !== user?.email && (
+                                                            translatedItem.isrehome ? (
+                                                                <a
+                                                                    href={`https://wa.me/31645839273`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center justify-center p-1.5 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full transition-colors"
+                                                                    title="Contact via WhatsApp"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <FaWhatsapp size={16} />
+                                                                </a>
+                                                            ) : (
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleChatWithSeller(translatedItem, e);
+                                                                    }}
+                                                                    className="flex items-center justify-center p-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition-colors"
+                                                                    title="Chat with Seller"
+                                                                >
+                                                                    <FaComments size={16} />
+                                                                </button>
+                                                            )
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </motion.div>
                                             );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments, FaGavel, FaClock, FaExclamationTriangle } from "react-icons/fa";
-import logo from "../../src/assets/logorehome.jpg"; // eslint-disable-line @typescript-eslint/no-unused-vars
+import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments, FaGavel, FaClock, FaExclamationTriangle, FaWhatsapp } from "react-icons/fa";
+import logo from "../assets/logorehome.jpg";
 import { useNavigate } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
 import { sendMessage } from '../services/marketplaceMessageService';
@@ -15,6 +15,7 @@ import {
   subscribeToBidUpdates,
   MarketplaceBid 
 } from '../services/biddingService';
+import ShareButton from './ui/ShareButton';
 
 interface ItemDetailsModalProps {
   isOpen?: boolean; // Made optional since DynamicModal handles this
@@ -31,6 +32,7 @@ interface ItemDetailsModalProps {
     status?: string; // New status field: available, reserved, sold
     seller_email: string;
     isrehome?: boolean;
+    pricing_type?: string; // Added pricing_type field
   } | null;
   onAddToCart?: (itemId: string) => void;
   onMarkAsSold?: (itemId: string) => void;
@@ -68,7 +70,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
   // Load bidding data when modal opens
   useEffect(() => {
-    if (item && !item.isrehome && user?.email) {
+    if (item && !item.isrehome && user?.email && item.pricing_type === 'bidding') {
       loadBiddingData();
       
       // Subscribe to real-time bid updates
@@ -79,7 +81,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
       return unsubscribe;
     }
-  }, [item?.id, item?.isrehome, user?.email]);
+  }, [item?.id, item?.isrehome, item?.pricing_type, user?.email]);
 
   // Reset state when modal closes or item changes
   useEffect(() => {
@@ -104,7 +106,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     return null;
   }
 
-  const { id, name, description, image_urls, price, city_name, sold, status, seller_email, isrehome } = item;
+  const { id, name, description, image_urls, price, city_name, sold, status, seller_email, isrehome, pricing_type } = item;
   
   // Check if user is the seller
   const isUserSeller = user?.email === seller_email;
@@ -390,7 +392,15 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       className="h-12 w-12 object-contain"
                       style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: 0 }}
                     />
-                    <h1 className="text-3xl font-bold text-gray-900">{name}</h1>
+                    <div className="flex-1 flex justify-between items-center">
+                      <h1 className="text-3xl font-bold text-gray-900">{name}</h1>
+                      <ShareButton 
+                        title={name}
+                        description={description}
+                        url={`${window.location.origin}/marketplace?item=${id}`}
+                        variant="icon"
+                      />
+                    </div>
                   </div>
                   
                   {isUserSeller && (
@@ -421,24 +431,44 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                         {!sold && !isUserSeller && isrehome && (
                           <>
                             {canAddToCartStatus.canAdd ? (
-                          <button
-                            onClick={() => onAddToCart && onAddToCart(id)}
-                            className="flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-                          >
-                            <FaShoppingCart />
-                            Add to Cart
-                          </button>
+                              <>
+                                <button
+                                  onClick={() => onAddToCart && onAddToCart(id)}
+                                  className="col-span-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                                >
+                                  <FaShoppingCart />
+                                  Add to Cart
+                                </button>
+                                <a
+                                  href={`https://wa.me/31645839273`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="col-span-1 flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white py-3 px-4 rounded-lg font-medium transition-colors"
+                                >
+                                  <FaWhatsapp />
+                                  WhatsApp
+                                </a>
+                              </>
                             ) : (
-                              <div className="col-span-2 bg-yellow-100 text-yellow-800 py-3 px-4 rounded-lg text-center font-medium">
+                              <div className="col-span-2 flex items-center justify-center gap-2 bg-gray-100 text-gray-500 py-3 px-4 rounded-lg">
+                                <FaExclamationTriangle />
                                 {canAddToCartStatus.message}
                               </div>
                             )}
-                            
-                            {/* Chat button for ReHome items */}
+                          </>
+                        )}
+                        
+                        {/* User listings: Show contact seller message and chat button */}
+                        {!sold && !isUserSeller && !isrehome && (
+                          <>
+                            <div className="col-span-2 bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-center font-medium">
+                              Contact seller directly for user listings
+                            </div>
+                            {/* Chat button for user listings only */}
                             <button
                               onClick={handleInitiateChat}
                               disabled={isProcessing}
-                              className="flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                              className="col-span-2 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                               {isProcessing ? (
                                 <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
@@ -449,40 +479,10 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                             </button>
                           </>
                         )}
-                        
-                        {/* User listings: Show contact seller message and chat button */}
-                        {!sold && !isUserSeller && !isrehome && (
-                          <>
-                          <div className="col-span-2 bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-center font-medium">
-                            Contact seller directly for user listings
-                          </div>
-                            {/* Chat button for user listings only */}
-                          <button
-                            onClick={handleInitiateChat}
-                            disabled={isProcessing}
-                              className="col-span-2 flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                          >
-                            {isProcessing ? (
-                              <span className="inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                            ) : (
-                              <FaComments />
-                            )}
-                            Chat with Seller
-                          </button>
-                          </>
-                        )}
-                        
-                        {/* ReHome items: Show special message about bidding system */}
-                        {!sold && !isUserSeller && isrehome && (
-                          <div className="col-span-2 bg-blue-100 text-blue-800 py-3 px-4 rounded-lg text-center font-medium">
-                            <FaGavel className="inline mr-2" />
-                            ReHome Item - Bidding system active. Place your bid below!
-                          </div>
-                        )}
                       </div>
                       
-                      {/* Bidding Section - for both user listings and ReHome items */}
-                      {!isUserSeller && (
+                      {/* Bidding Section - only for user listings (not ReHome items) */}
+                      {!isUserSeller && !isrehome && pricing_type === 'bidding' && (
                         <div className="mb-4">
                           <div className="flex items-center gap-2 mb-3">
                             <FaGavel className="text-orange-500" />
