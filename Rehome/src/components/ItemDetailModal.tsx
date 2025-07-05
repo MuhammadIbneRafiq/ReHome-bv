@@ -37,7 +37,6 @@ interface ItemDetailsModalProps {
   onAddToCart?: (itemId: string) => void;
   onMarkAsSold?: (itemId: string) => void;
   onUpdateStatus?: (itemId: string, status: string) => void;
-  showStatusIndicator?: boolean; // New prop to control status display
 }
 
 const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ 
@@ -46,8 +45,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   item, 
   onAddToCart, 
   onMarkAsSold,
-  onUpdateStatus,
-  showStatusIndicator = false // Default to false (don't show in marketplace)
+  onUpdateStatus
 }) => {
   // Move ALL hooks to the top, before any conditional logic
   const navigate = useNavigate();
@@ -416,13 +414,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                         <span className="text-2xl font-bold text-emerald-600">
                           {price === 0 ? 'Free' : `€${price?.toLocaleString() || '0'}`}
                         </span>
-                        {/* Only show status indicator if showStatusIndicator prop is true (dashboard view) */}
-                        {showStatusIndicator && (
-                          <span className={`px-3 py-1 rounded-full ${getStatusDisplay(status, sold).bgColor}`}>
-                            {getStatusDisplay(status, sold).icon}
-                            {getStatusDisplay(status, sold).text}
-                          </span>
-                        )}
+                        {/* Always show status indicator */}
+                        <span className={`px-3 py-1 rounded-full ${getStatusDisplay(status, sold).bgColor}`}>
+                          {getStatusDisplay(status, sold).icon}
+                          {getStatusDisplay(status, sold).text}
+                        </span>
                       </div>
                       
                       {/* Action buttons */}

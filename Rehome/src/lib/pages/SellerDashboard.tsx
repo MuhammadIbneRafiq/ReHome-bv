@@ -77,7 +77,6 @@ const SellerDashboard = () => {
         const openModal = (item: FurnitureItem) => {
         itemDetailModal.open(ItemDetailsModal, {
             item,
-            showStatusIndicator: true,
             onUpdateStatus: handleStatusUpdate
         }, { size: 'lg' });
     };
