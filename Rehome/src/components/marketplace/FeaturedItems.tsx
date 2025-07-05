@@ -6,10 +6,20 @@ import { categories } from '../../services/marketplace';
 import { API_ENDPOINTS } from '../../lib/api/config';
 import logoImage from "../../assets/logorehome.jpg";
 import AddToCartButton from './AddToCartButton';
+import { motion } from 'framer-motion';
+import LazyImage from '../ui/LazyImage';
+import { translateFurnitureItem } from '../../lib/utils/dynamicTranslation';
 
 interface FeaturedItemsProps {
   maxItems?: number;
 }
+
+// Helper function to get the first valid image URL
+const getFirstImageUrl = (item: FurnitureItem): string => {
+  if (item.image_url && item.image_url.length > 0) return item.image_url[0];
+  if (item.image_urls && item.image_urls.length > 0) return item.image_urls[0];
+  return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+};
 
 const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
   const { t } = useTranslation();
@@ -217,16 +227,15 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
                       alt="ReHome Verified" 
                       className="absolute top-2 left-2 z-10 w-8 h-8 object-contain m-0 p-0"
                       style={{display: 'block'}}
+                      loading="eager"
                     />
                   )}
-                  <img
-                    src={item.image_url?.[0] || item.image_urls?.[0] || ''}
+                  <LazyImage
+                    src={getFirstImageUrl(item)}
                     alt={item.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      // Fallback to placeholder image on error
-                      e.currentTarget.src = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-                    }}
+                    priority={false}
+                    quality={75}
                   />
                 </div>
                 <div className="px-4 py-5 sm:p-6">

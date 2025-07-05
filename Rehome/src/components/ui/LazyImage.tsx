@@ -31,10 +31,18 @@ const LazyImage: React.FC<LazyImageProps> = memo(({
   const [currentSrc, setCurrentSrc] = useState<string>(placeholder);
   const imgRef = useRef<HTMLImageElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadAttemptedRef = useRef<boolean>(false);
+  const imageCache = useRef<Map<string, string>>(new Map());
 
   // Optimize Supabase image URLs with transformations
   const getOptimizedImageUrl = (originalSrc: string, targetQuality: number = quality): string => {
     if (!originalSrc || !originalSrc.includes('supabase')) return originalSrc;
+    
+    // Check cache first
+    const cacheKey = `${originalSrc}_${targetQuality}`;
+    if (imageCache.current.has(cacheKey)) {
+      return imageCache.current.get(cacheKey)!;
+    }
     
     try {
       const url = new URL(originalSrc);
@@ -44,15 +52,32 @@ const LazyImage: React.FC<LazyImageProps> = memo(({
       url.searchParams.set('resize', 'cover');
       url.searchParams.set('quality', targetQuality.toString());
       url.searchParams.set('format', 'webp');
-      return url.toString();
+      
+      const optimizedUrl = url.toString();
+      // Cache the result
+      imageCache.current.set(cacheKey, optimizedUrl);
+      return optimizedUrl;
     } catch {
       return originalSrc;
     }
   };
 
+  // Preload image in memory
+  const preloadImage = (url: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = url;
+      img.onload = () => resolve(url);
+      img.onerror = () => reject(new Error('Image failed to load'));
+    });
+  };
+
   // Intersection Observer for lazy loading
   useEffect(() => {
-    if (priority) return;
+    if (priority) {
+      setIsInView(true);
+      return;
+    }
 
     const img = imgRef.current;
     if (!img) return;
@@ -65,8 +90,8 @@ const LazyImage: React.FC<LazyImageProps> = memo(({
         }
       },
       {
-        rootMargin: '50px 0px', // Start loading 50px before entering viewport
-        threshold: 0.1
+        rootMargin: '200px 0px', // Start loading 200px before entering viewport for smoother experience
+        threshold: 0.01
       }
     );
 
@@ -79,48 +104,42 @@ const LazyImage: React.FC<LazyImageProps> = memo(({
 
   // Load image when in view
   useEffect(() => {
-    if (!isInView || !src) return;
-
-    const img = new Image();
+    if (!isInView || !src || loadAttemptedRef.current) return;
+    
+    loadAttemptedRef.current = true;
     const optimizedSrc = getOptimizedImageUrl(src);
     
-    img.onload = () => {
-      setCurrentSrc(optimizedSrc);
-      setImageState('loaded');
-      onLoad?.();
-    };
-
-    img.onerror = () => {
-      // Try fallback URL first, then use placeholder
-      if (fallbackSrc && optimizedSrc !== fallbackSrc) {
-        const fallbackImg = new Image();
-        fallbackImg.onload = () => {
-          setCurrentSrc(fallbackSrc);
-          setImageState('loaded');
-        };
-        fallbackImg.onerror = () => {
+    // Use Promise to handle image loading
+    preloadImage(optimizedSrc)
+      .then(() => {
+        setCurrentSrc(optimizedSrc);
+        setImageState('loaded');
+        onLoad?.();
+      })
+      .catch(() => {
+        // Try fallback URL first, then use placeholder
+        if (fallbackSrc && optimizedSrc !== fallbackSrc) {
+          return preloadImage(fallbackSrc)
+            .then(() => {
+              setCurrentSrc(fallbackSrc);
+              setImageState('loaded');
+            })
+            .catch(() => {
+              setCurrentSrc(fallbackSrc);
+              setImageState('error');
+              onError?.();
+            });
+        } else {
           setCurrentSrc(fallbackSrc);
           setImageState('error');
           onError?.();
-        };
-        fallbackImg.src = fallbackSrc;
-      } else {
-        setCurrentSrc(fallbackSrc);
-        setImageState('error');
-        onError?.();
-      }
-    };
+        }
+      });
 
-    img.src = optimizedSrc;
-
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
   }, [isInView, src, fallbackSrc, onLoad, onError, quality]);
 
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden ${className}`} style={{ aspectRatio: '4/3' }}>
       <motion.img
         ref={imgRef}
         src={currentSrc}
@@ -131,9 +150,10 @@ const LazyImage: React.FC<LazyImageProps> = memo(({
         sizes={sizes}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
+        fetchPriority={priority ? 'high' : 'auto'}
         initial={{ opacity: 0 }}
         animate={{ opacity: imageState === 'loaded' ? 1 : 0 }}
-        transition={{ duration: 0.3 }}
+        transition={{ duration: 0.2 }}
       />
       
       {/* Loading indicator */}

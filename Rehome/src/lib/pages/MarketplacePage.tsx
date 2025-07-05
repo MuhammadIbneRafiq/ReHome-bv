@@ -18,7 +18,14 @@ import StableLoader from '../../components/ui/StableLoader';
 import ShareButton from '@/components/ui/ShareButton';
 import apiService from '../api/apiService';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
+import LazyImage from '@/components/ui/LazyImage';
 
+// Helper function to get the first valid image URL
+const getFirstImageUrl = (item: FurnitureItem): string => {
+    if (item.image_url && item.image_url.length > 0) return item.image_url[0];
+    if (item.image_urls && item.image_urls.length > 0) return item.image_urls[0];
+    return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
+};
 
 const MarketplacePage = () => {
     const { t } = useTranslation();
@@ -514,6 +521,8 @@ const MarketplacePage = () => {
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         {filteredItems.map((item) => {
                                             const translatedItem = { ...item, ...translateFurnitureItem(item) };
+                                            const imageUrl = getFirstImageUrl(translatedItem);
+                                            
                                             return (
                                             <motion.div
                                                 key={item.id}
@@ -531,20 +540,21 @@ const MarketplacePage = () => {
                                                         alt="ReHome Verified" 
                                                         className="absolute top-2 left-2 z-10 w-8 h-8 object-contain m-0 p-0"
                                                         style={{display: 'block'}}
+                                                        loading="eager"
                                                     />
                                                 )}
                                                 
-                                                <img 
-                                                    src={(translatedItem.image_url && translatedItem.image_url.length > 0) ? translatedItem.image_url[0] : 
-                                                         (translatedItem.image_urls && translatedItem.image_urls.length > 0) ? translatedItem.image_urls[0]
-                                                         : 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'}
-                                                    alt={translatedItem.name}
-                                                    className="w-full h-32 object-cover rounded-md mb-1"
-                                                    onError={(e) => {
-                                                        e.currentTarget.src = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-                                                    }}
-                                                />
-                                                <h3 className="text-sm font-semibold text-gray-800">{translatedItem.name}</h3>
+                                                <div className="w-full h-32 relative">
+                                                    <LazyImage 
+                                                        src={imageUrl}
+                                                        alt={translatedItem.name}
+                                                        className="w-full h-full object-cover rounded-md"
+                                                        priority={false}
+                                                        quality={75}
+                                                    />
+                                                </div>
+                                                
+                                                <h3 className="text-sm font-semibold text-gray-800 mt-1">{translatedItem.name}</h3>
                                                 <p className="text-gray-600 text-xs line-clamp-2 h-8">{translatedItem.description}</p>
                                                 <div className="flex justify-between items-center mt-2">
                                                     <p className="text-red-500 font-bold text-xs">
@@ -686,21 +696,19 @@ const MarketplacePage = () => {
                             {cart.map(cartItem => {
                                 const item = furnitureItems.find(item => item.id === cartItem.id);
                                 if (!item) return null;
+                                const imageUrl = getFirstImageUrl(item);
                                 
                                 return (
                                     <div key={item.id} className="border-b border-gray-200 py-4">
                                         <div className="flex mb-2">
-                                            <img 
-                                                src={(item.image_url && item.image_url[0]) || (item.image_urls && item.image_urls[0]) || 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80'} 
-                                                alt={item.name} 
+                                            <LazyImage 
+                                                src={imageUrl}
+                                                alt={item.name}
                                                 className="w-20 h-20 object-cover rounded"
-                                                onError={(e) => {
-                                                    console.error(`Failed to load cart image for ${item.name}:`, item.image_url?.[0] || item.image_urls?.[0]);
-                                                    e.currentTarget.src = 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
-                                                }}
+                                                priority={false}
                                             />
-                                            <div className="ml-4 flex-grow">
-                                                <h3 className="text-sm font-medium">{item.name}</h3>
+                                            <div className="ml-4 flex-1">
+                                                <h3 className="font-semibold">{item.name}</h3>
                                                 <p className="text-orange-600 font-medium">
                                                     {item.price === 0 ? 'Free' : `€${item.price}`}
                                                 </p>

@@ -16,6 +16,7 @@ import {
   MarketplaceBid 
 } from '../services/biddingService';
 import ShareButton from './ui/ShareButton';
+import LazyImage from './ui/LazyImage';
 
 interface ItemDetailsModalProps {
   isOpen?: boolean; // Made optional since DynamicModal handles this
@@ -38,6 +39,22 @@ interface ItemDetailsModalProps {
   onMarkAsSold?: (itemId: string) => void;
   onUpdateStatus?: (itemId: string, status: string) => void;
 }
+
+// Helper function to optimize image URLs
+const getOptimizedImageUrl = (url: string, quality: number = 85): string => {
+  if (!url || !url.includes('supabase')) return url;
+  
+  try {
+    const parsedUrl = new URL(url);
+    // Add Supabase image transformation parameters
+    parsedUrl.searchParams.set('width', '800');
+    parsedUrl.searchParams.set('quality', quality.toString());
+    parsedUrl.searchParams.set('format', 'webp');
+    return parsedUrl.toString();
+  } catch {
+    return url;
+  }
+};
 
 const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({ 
   isOpen = true, // Default to true since DynamicModal only renders when open
@@ -124,11 +141,27 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const isUserSeller = user?.email === seller_email;
 
   const goToNextImage = () => {
-    setCurrentImageIndex(prev => (prev + 1) % (image_urls?.length || 1));
+    const nextIndex = (currentImageIndex + 1) % (image_urls?.length || 1);
+    setCurrentImageIndex(nextIndex);
+    
+    // Preload the next image after that
+    if (image_urls && image_urls.length > 1) {
+      const nextNextIndex = (nextIndex + 1) % image_urls.length;
+      const img = new Image();
+      img.src = getOptimizedImageUrl(image_urls[nextNextIndex]);
+    }
   };
 
   const goToPrevImage = () => {
-    setCurrentImageIndex(prev => (prev - 1 + (image_urls?.length || 1)) % (image_urls?.length || 1));
+    const prevIndex = (currentImageIndex - 1 + (image_urls?.length || 1)) % (image_urls?.length || 1);
+    setCurrentImageIndex(prevIndex);
+    
+    // Preload the previous image before that
+    if (image_urls && image_urls.length > 1) {
+      const prevPrevIndex = (prevIndex - 1 + image_urls.length) % image_urls.length;
+      const img = new Image();
+      img.src = getOptimizedImageUrl(image_urls[prevPrevIndex]);
+    }
   };
 
   const loadBiddingData = async () => {
@@ -357,37 +390,77 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 {/* Image Section */}
                 <div className="relative flex flex-col items-center justify-center">
                   <div className="relative w-full flex items-center justify-center overflow-hidden rounded-lg" style={{ background: '#f3f4f6' }}>
-                    <AnimatePresence initial={false}>
-                      <motion.img
+                    <AnimatePresence initial={false} mode="wait">
+                      <motion.div
                         key={currentImageIndex}
-                        src={image_urls?.[currentImageIndex] || '/placeholder-image.jpg'}
-                        alt={name}
-                        className="max-w-full max-h-[400px] object-contain mx-auto"
+                        className="w-full h-full flex items-center justify-center"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                      />
+                        transition={{ duration: 0.2 }}
+                      >
+                        <LazyImage
+                          src={image_urls?.[currentImageIndex] || '/placeholder-image.jpg'}
+                          alt={`${name} - image ${currentImageIndex + 1}`}
+                          className="max-w-full max-h-[400px] object-contain mx-auto"
+                          priority={true}
+                          quality={85}
+                        />
+                      </motion.div>
                     </AnimatePresence>
+                    
+                    {/* Preload adjacent images */}
+                    {image_urls && image_urls.length > 1 && (
+                      <div className="hidden">
+                        {/* Preload next image */}
+                        {currentImageIndex < image_urls.length - 1 && (
+                          <img 
+                            src={getOptimizedImageUrl(image_urls[currentImageIndex + 1])} 
+                            alt="preload next" 
+                            aria-hidden="true"
+                          />
+                        )}
+                        {/* Preload previous image */}
+                        {currentImageIndex > 0 && (
+                          <img 
+                            src={getOptimizedImageUrl(image_urls[currentImageIndex - 1])} 
+                            alt="preload previous" 
+                            aria-hidden="true"
+                          />
+                        )}
+                      </div>
+                    )}
+                    
                     {image_urls && image_urls.length > 1 && (
                       <>
-                        <button onClick={goToPrevImage} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full z-10 hover:bg-opacity-60">
+                        <button 
+                          onClick={goToPrevImage} 
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full z-10 hover:bg-opacity-60 transition-all"
+                          aria-label="Previous image"
+                        >
                           <FaChevronLeft />
                         </button>
-                        <button onClick={goToNextImage} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full z-10 hover:bg-opacity-60">
+                        <button 
+                          onClick={goToNextImage} 
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full z-10 hover:bg-opacity-60 transition-all"
+                          aria-label="Next image"
+                        >
                           <FaChevronRight />
                         </button>
                       </>
                     )}
+                    
                     {/* Dots Indicator */}
                     {image_urls && image_urls.length > 1 && (
                       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
                         {image_urls.map((_, index) => (
-                          <div
+                          <button
                             key={index}
+                            onClick={() => setCurrentImageIndex(index)}
                             className={`w-2 h-2 rounded-full transition-colors ${
                               index === currentImageIndex ? 'bg-white' : 'bg-white/50'
                             }`}
+                            aria-label={`Go to image ${index + 1}`}
                           />
                         ))}
                       </div>
