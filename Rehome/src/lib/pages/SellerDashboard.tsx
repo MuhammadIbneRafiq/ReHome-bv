@@ -141,7 +141,6 @@ const SellerDashboard = () => {
             console.log('📋 New Status:', newStatus);
             console.log('📋 Endpoint:', endpoint);
             console.log('📋 Has Token:', !!token);
-            console.log('📋 Token preview:', token?.substring(0, 20) + '...');
             
             const response = await axios.put(endpoint, 
                 { status: newStatus },
@@ -155,32 +154,11 @@ const SellerDashboard = () => {
             console.log('📋 Response Status:', response.status);
             console.log('📋 Response Data:', response.data);
 
-            // Update local state
-            setListings(prev => prev.map(item => 
-                item.id === itemId 
-                    ? { ...item, status: newStatus, sold: newStatus === 'sold' }
-                    : item
-            ));
-            
-            setSoldListings(prev => {
-                if (newStatus === 'sold') {
-                    // Move item to sold listings if not already there
-                    const item = listings.find(l => l.id === itemId);
-                    if (item) {
-                        return [...prev, { ...item, status: newStatus, sold: true }];
-                    }
-                }
-                return prev.map(item => 
-                    item.id === itemId 
-                        ? { ...item, status: newStatus, sold: newStatus === 'sold' }
-                        : item
-                );
-            });
-
             toast.success(`Item status updated to ${newStatus}`);
             
-            // Refresh listings to ensure consistency
+            // Refresh listings to get updated data from the database
             await fetchListings();
+            
         } catch (error) {
             console.error('Error updating item status:', error);
             toast.error('Failed to update item status');
@@ -197,39 +175,40 @@ const SellerDashboard = () => {
             console.log('Is admin:', isAdmin);
             console.log('Access token exists:', !!localStorage.getItem('accessToken'));
 
-            const response = await axios.get(API_ENDPOINTS.FURNITURE.LIST, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-                }
-            });
+            const token = localStorage.getItem('accessToken');
+            const headers = {
+                'Authorization': `Bearer ${token}`
+            };
 
-            console.log('Response status:', response.status);
-            console.log('Response data:', response.data);
+            // Fetch all items (both active and sold)
+            const allResponse = await axios.get(API_ENDPOINTS.FURNITURE.LIST + '?include_sold=true', { headers });
+            console.log('All items response:', allResponse.status, allResponse.data);
 
             // Handle both old array format and new pagination format
-            const itemsArray: FurnitureItem[] = Array.isArray(response.data) ? response.data : (response.data.data || []);
-            console.log('Items array:', itemsArray);
+            const allItems: FurnitureItem[] = Array.isArray(allResponse.data) ? allResponse.data : (allResponse.data.data || []);
+            
+            // Separate active and sold items
+            const activeItems = allItems.filter((item: FurnitureItem) => !item.sold);
+            const soldItems = allItems.filter((item: FurnitureItem) => item.sold);
+
+            console.log('Active items count:', activeItems.length);
+            console.log('Sold items count:', soldItems.length);
 
             if (isAdmin) {
                 // Admin sees all listings
-                const active = itemsArray.filter((item: FurnitureItem) => !item.sold);
-                const sold = itemsArray.filter((item: FurnitureItem) => item.sold);
-                
-                console.log('Admin view - Active listings:', active);
-                console.log('Admin view - Sold listings:', sold);
-
-                setListings(active);
-                setSoldListings(sold);
+                console.log('Admin view - Setting all active and sold listings');
+                setListings(activeItems);
+                setSoldListings(soldItems);
             } else {
-                // Separate active and sold listings based on the signed-in user's email
-                const active = itemsArray.filter((item: FurnitureItem) => item.seller_email === user?.email && !item.sold);
-                const sold = itemsArray.filter((item: FurnitureItem) => item.seller_email === user?.email && item.sold);
+                // Filter by user email for regular users
+                const userActiveItems = activeItems.filter((item: FurnitureItem) => item.seller_email === user?.email);
+                const userSoldItems = soldItems.filter((item: FurnitureItem) => item.seller_email === user?.email);
 
-                console.log('User view - Active listings:', active);
-                console.log('User view - Sold listings:', sold);
+                console.log('User view - Active listings:', userActiveItems.length);
+                console.log('User view - Sold listings:', userSoldItems.length);
 
-                setListings(active);
-                setSoldListings(sold);
+                setListings(userActiveItems);
+                setSoldListings(userSoldItems);
             }
         } catch (error) {
             console.error('Error fetching listings:', error);

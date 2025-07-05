@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
   // Furniture Management
   FURNITURE: {
     LIST: `${API_BASE_URL}/api/furniture`,
+    SOLD: `${API_BASE_URL}/api/furniture/sold`,
     CREATE: `${API_BASE_URL}/api/furniture/new`,
     UPDATE: (id: string) => `${API_BASE_URL}/api/furniture/${id}`,
     DELETE: (id: string) => `${API_BASE_URL}/api/furniture/${id}`,

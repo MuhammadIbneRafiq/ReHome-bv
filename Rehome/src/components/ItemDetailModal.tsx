@@ -315,7 +315,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const handleStatusUpdate = async (newStatus: string) => {
     if (newStatus === 'sold') {
       const confirmed = window.confirm(
-        "⚠️ Warning: If you mark this item as SOLD, we will remove your advertisement from the marketplace.\n\nDo you want to proceed?"
+        "⚠️ Warning: If you mark this item as SOLD, it will be moved to your 'Sold Items' section and removed from the marketplace.\n\nYou can re-advertise it later by changing the status back to 'Available'.\n\nDo you want to proceed?"
+      );
+      if (!confirmed) return;
+    } else if (newStatus === 'available') {
+      const confirmed = window.confirm(
+        "✅ This will re-advertise your item in the marketplace and move it back to your active listings.\n\nDo you want to proceed?"
       );
       if (!confirmed) return;
     }
