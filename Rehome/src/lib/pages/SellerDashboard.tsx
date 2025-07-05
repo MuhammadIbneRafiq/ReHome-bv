@@ -1,7 +1,7 @@
 // src/pages/SellerDashboard.tsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag, FaComments, FaEdit } from "react-icons/fa";
+import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag, FaComments, FaEdit, FaTrash } from "react-icons/fa";
 import { MdOutlineInventory2, MdSell } from "react-icons/md";
 import {
   DropdownMenu,
@@ -22,16 +22,6 @@ import { toast } from 'react-toastify';
 import ChatDashboard from '../../components/ChatDashboard';
 import API_ENDPOINTS from '../api/config';
 import { useAuth } from '../../hooks/useAuth';
-
-// Mock Analytics Data (replace with your API calls)
-const mockAnalytics = {
-    listings: 15,
-    earnings: 0,
-    views: 50,
-    soldListings: 7,
-    activeListings: 8,
-};
-
 interface FurnitureItem {
     id: string;
     name: string;
@@ -154,26 +144,17 @@ const SellerDashboard = () => {
             console.log('📋 Has Token:', !!token);
             console.log('📋 Token preview:', token?.substring(0, 20) + '...');
             
-            // Update the item status via API using the dedicated status endpoint
-            const response = await fetch(endpoint, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ 
-                    status: newStatus
-                })
-            });
+            const response = await axios.put(endpoint, 
+                { status: newStatus },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                }
+            );
 
             console.log('📋 Response Status:', response.status);
-            console.log('📋 Response OK:', response.ok);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.log('❌ Error Response:', errorText);
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-            }
+            console.log('📋 Response Data:', response.data);
 
             // Update local state
             setListings(prev => prev.map(item => 
@@ -217,29 +198,17 @@ const SellerDashboard = () => {
             console.log('Is admin:', isAdmin);
             console.log('Access token exists:', !!localStorage.getItem('accessToken'));
 
-            const response = await fetch(API_ENDPOINTS.FURNITURE.LIST, {
-                method: 'GET',
+            const response = await axios.get(API_ENDPOINTS.FURNITURE.LIST, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                 }
             });
 
             console.log('Response status:', response.status);
-            console.log('Response ok:', response.ok);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.log('Error response:', errorText);
-                throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-            }
-
-            const data: FurnitureItem[] = await response.json();
-            console.log('Fetched listings raw:', data);
-            console.log('Current user email:', user?.email);
-            console.log('Is admin:', isAdmin);
+            console.log('Response data:', response.data);
 
             // Handle both old array format and new pagination format
-            const itemsArray: FurnitureItem[] = Array.isArray(data) ? data : (data as any).data || [];
+            const itemsArray: FurnitureItem[] = Array.isArray(response.data) ? response.data : (response.data.data || []);
             console.log('Items array:', itemsArray);
 
             if (isAdmin) {
@@ -263,26 +232,10 @@ const SellerDashboard = () => {
                 setListings(active);
                 setSoldListings(sold);
             }
-
-        } catch (err: any) {
-            console.error('Error fetching listings:', err);
-            
-            // Provide more specific error messages
-            let errorMessage = 'Failed to fetch listings.';
-            if (err.message?.includes('Failed to fetch') || err.message?.includes('Network Error')) {
-                errorMessage = 'Unable to connect to server. Please check your internet connection and try again.';
-            } else if (err.message?.includes('401') || err.message?.includes('unauthorized')) {
-                errorMessage = 'Authentication failed. Please log in again.';
-            } else if (err.message?.includes('500')) {
-                errorMessage = 'Server error. Please try again in a few minutes.';
-            } else if (err.message) {
-                errorMessage = err.message;
-            }
-            
-            setError(errorMessage);
-            // Set empty arrays to stop loading even on error
-            setListings([]);
-            setSoldListings([]);
+        } catch (error) {
+            console.error('Error fetching listings:', error);
+            setError('Failed to fetch listings. Please try again.');
+            toast.error(t('common.error'));
         } finally {
             setLoading(false);
         }
@@ -382,33 +335,33 @@ const SellerDashboard = () => {
     }
 
     return (
-        <div className="min-h-screen bg-orange-50 flex flex-col pt-24">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Welcome Message */}
-                <motion.h1
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="text-3xl font-extrabold text-gray-900 mb-6"
-                >
-                    {isAdmin ? `Admin Dashboard - Welcome, ${user?.email}!` : `Welcome back, ${user?.email}!`}
-                </motion.h1>
+        <div className="min-h-screen bg-orange-50 pt-24">
+            <div className="container mx-auto px-4 py-8 max-w-7xl">
+                {/* Welcome Section */}
+                <div className="mb-8">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 break-words">
+                        {isAdmin ? `Admin Dashboard - Welcome,` : `Welcome back,`}
+                    </h1>
+                    <p className="text-lg md:text-xl text-gray-600 break-words">
+                        {user?.email}
+                    </p>
+                </div>
 
-                {/* Admin notice */}
+                {/* Admin Notice */}
                 {isAdmin && (
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
-                        className="bg-red-50 border border-red-200 rounded-md p-4 mb-6"
+                        className="bg-red-50 border border-red-200 rounded-md p-4 mb-8"
                     >
-                        <div className="flex">
+                        <div className="flex items-start space-x-3">
                             <div className="flex-shrink-0">
                                 <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                                 </svg>
                             </div>
-                            <div className="ml-3">
+                            <div className="flex-1">
                                 <h3 className="text-sm font-medium text-red-800">
                                     Administrator Access
                                 </h3>
@@ -420,48 +373,48 @@ const SellerDashboard = () => {
                     </motion.div>
                 )}
 
-                {/* Analytics Section */}
+                {/* Analytics Cards */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.7 }}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-8"
                 >
                     {/* Analytics Card - Listings */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
                         <div className="flex items-center justify-between">
-                            <FaBoxOpen className="text-orange-500 text-2xl" />
-                            <span className="text-2xl font-semibold">{listings.length}</span>
+                            <FaBoxOpen className="text-orange-500 text-xl md:text-2xl" />
+                            <span className="text-xl md:text-2xl font-semibold">{listings.length}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">{isAdmin ? 'Total Active Listings' : 'Active Listings'}</p>
+                        <p className="text-sm md:text-base text-gray-500 mt-2">{isAdmin ? 'Total Active Listings' : 'Active Listings'}</p>
                     </div>
 
                     {/* Analytics Card - Earnings */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
                         <div className="flex items-center justify-between">
-                            <FaMoneyBillWave className="text-green-500 text-2xl" />
-                            <span className="text-2xl font-semibold">€{mockAnalytics.earnings}</span>
+                            <FaMoneyBillWave className="text-green-500 text-xl md:text-2xl" />
+                            <span className="text-xl md:text-2xl font-semibold">€0</span>
                         </div>
-                        <p className="text-gray-500 mt-2">{isAdmin ? 'Platform Earnings' : 'Your Earnings'}</p>
+                        <p className="text-sm md:text-base text-gray-500 mt-2">{isAdmin ? 'Platform Earnings' : 'Your Earnings'}</p>
                     </div>
 
-                    {/* Analytics Card - Views */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    {/* Analytics Card - Sold Items */}
+                    <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
                         <div className="flex items-center justify-between">
-                            <FaCheckCircle className="text-blue-500 text-2xl" />
-                            <span className="text-2xl font-semibold">{soldListings.length}</span>
+                            <FaCheckCircle className="text-blue-500 text-xl md:text-2xl" />
+                            <span className="text-xl md:text-2xl font-semibold">{soldListings.length}</span>
                         </div>
-                        <p className="text-gray-500 mt-2">{isAdmin ? 'Total Sold Items' : 'Items Sold'}</p>
+                        <p className="text-sm md:text-base text-gray-500 mt-2">{isAdmin ? 'Total Sold Items' : 'Items Sold'}</p>
                     </div>
                 </motion.div>
 
                 {/* Dashboard Tabs */}
                 <div className="bg-white rounded-lg shadow-md mb-8">
                     <div className="border-b border-gray-200">
-                        <nav className="flex -mb-px">
+                        <nav className="flex flex-wrap">
                             <button
                                 onClick={() => setActiveTab('listings')}
-                                className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                                className={`py-3 md:py-4 px-4 md:px-6 font-medium text-sm border-b-2 ${
                                     activeTab === 'listings'
                                         ? 'border-orange-500 text-orange-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -472,7 +425,7 @@ const SellerDashboard = () => {
                             </button>
                             <button
                                 onClick={() => setActiveTab('chats')}
-                                className={`py-4 px-6 font-medium text-sm border-b-2 ${
+                                className={`py-3 md:py-4 px-4 md:px-6 font-medium text-sm border-b-2 ${
                                     activeTab === 'chats'
                                         ? 'border-orange-500 text-orange-600'
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -484,178 +437,190 @@ const SellerDashboard = () => {
                         </nav>
                     </div>
 
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                         {/* Listings Tab Content */}
                         {activeTab === 'listings' && (
                             <div>
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-2xl font-semibold text-gray-800">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                    <h2 className="text-xl md:text-2xl font-semibold text-gray-800 break-words">
                                         {isAdmin ? 'All Marketplace Listings' : 'Your Listings'}
                                     </h2>
                                     <button
                                         onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg', showCloseButton: false })}
-                                        className="flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
+                                        className="w-full sm:w-auto flex items-center justify-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-md transition duration-300"
                                     >
                                         <FaPlus className="mr-2" /> Add New Listing
                                     </button>
                                 </div>
                                 
                                 {/* Active Listings Section */}
-                                <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+                                <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-8">
                                     <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
                                         <MdOutlineInventory2 className="mr-2 text-orange-500" /> {isAdmin ? 'All Active Listings' : 'Active Listings'}
                                     </h3>
                                     
                                     {/* Check if there are no active listings */}
                                     {listings.length === 0 ? (
-                                        <div className="bg-orange-50 rounded-lg p-8 text-center">
-                                            <FaTag className="mx-auto text-orange-400 text-5xl mb-4" />
-                                            <h4 className="text-xl font-semibold text-gray-800 mb-2">No Active Listings</h4>
-                                            <p className="text-gray-600 mb-6">Start selling your items today!</p>
-                                            <button
-                                                onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg', showCloseButton: false })}
-                                                className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
-                                            >
-                                                <FaUpload className="mr-2" /> Create Your First Listing
-                                            </button>
+                                        <div className="bg-orange-50 rounded-lg p-6 md:p-8 text-center">
+                                            <FaTag className="mx-auto text-orange-400 text-4xl md:text-5xl mb-4" />
+                                            <h4 className="text-lg md:text-xl font-semibold text-gray-800 mb-2">No Active Listings</h4>
+                                            <p className="text-gray-600 mb-6">
+                                                {isAdmin ? 'No active listings in the marketplace.' : 'Start selling your items today!'}
+                                            </p>
+                                            {(
+                                                <button
+                                                    onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg', showCloseButton: false })}
+                                                    className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 md:py-3 md:px-6 rounded-md transition duration-300"
+                                                >
+                                                    <FaUpload className="mr-2" /> Create Your First Listing
+                                                </button>
+                                            )}
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                             {listings.map((listing) => (
-                                                <motion.div
+                                                <div
                                                     key={listing.id}
-                                                    className="bg-white border border-gray-200 shadow-sm rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer relative"
-                                                    whileHover={{ scale: 1.02 }}
+                                                    className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer"
                                                     onClick={() => openModal(listing)}
                                                 >
-                                                    <div className="relative h-48 mb-3 overflow-hidden rounded-md">
+                                                    <div className="relative aspect-w-16 aspect-h-9">
                                                         <LazyImage
                                                             src={listing.image_urls && Array.isArray(listing.image_urls) && listing.image_urls.length > 0 
                                                                 ? listing.image_urls[0] 
                                                                 : ''
                                                             } 
-                                                            alt={listing.name} 
-                                                            className="w-full h-full object-cover"
+                                                            alt={listing.name}
+                                                            className="object-cover w-full h-full"
                                                             priority={false}
                                                         />
-                                                        <div className="absolute top-2 right-2 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
-                                                            €{listing.price}
-                                                        </div>
-                                                    </div>
-                                                    <h3 className="text-lg font-semibold mb-1 truncate">{listing.name}</h3>
-                                                    <p className="text-gray-500 text-sm mb-2 line-clamp-2 h-10 overflow-hidden">{listing.description}</p>
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="flex-1">
-                                                            <h4 className="font-bold text-gray-800 truncate">{listing.name}</h4>
-                                                            <p className="text-sm text-gray-600">
-                                                                {listing.price !== null && typeof listing.price !== 'undefined'
-                                                                    ? `€${listing.price.toFixed(2)}`
-                                                                    : t('common.contactForPrice')}
-                                                            </p>
-                                                        </div>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <button onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-red-500 p-1">
-                                                                    <FaEllipsisV />
-                                                                </button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                                                <DropdownMenuItem onSelect={() => editListing(listing)} className="text-blue-600 hover:!bg-blue-100 hover:!text-blue-700">
-                                                                    <FaEdit className="mr-2" /> Edit
-                                                                </DropdownMenuItem>
-                                                                {(listing.seller_email === user?.email || isAdmin) && (
-                                                                    <DropdownMenuItem onSelect={() => deleteListing(listing.id, listing)} className="text-red-600 hover:!bg-red-100 hover:!text-red-700">
-                                                                        {isAdmin && listing.seller_email !== user?.email ? 'Admin Delete' : t('common.delete')}
+                                                        <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger className="p-1 bg-white/90 rounded-full hover:bg-white transition-colors">
+                                                                    <FaEllipsisV className="w-4 h-4 text-gray-600" />
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent>
+                                                                    <DropdownMenuItem onClick={() => editListing(listing)}>
+                                                                        <FaEdit className="mr-2" /> Edit
                                                                     </DropdownMenuItem>
-                                                                )}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
+                                                                    <DropdownMenuItem 
+                                                                        className="text-red-600 hover:text-red-700"
+                                                                        onClick={() => deleteListing(listing.id, listing)}
+                                                                    >
+                                                                        <FaTrash className="mr-2" /> Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
                                                     </div>
-                                                </motion.div>
+                                                    <div className="p-4">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{listing.name}</h3>
+                                                            <span className="text-lg font-semibold text-emerald-600">€{listing.price}</span>
+                                                        </div>
+                                                        <p className="text-gray-600 text-sm line-clamp-2 mb-3">{listing.description}</p>
+                                                        <div className="flex items-center justify-between text-sm text-gray-500">
+                                                            <div className="flex items-center space-x-2">
+                                                                <span>{listing.city_name}</span>
+                                                                {isAdmin && (
+                                                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                                                        {listing.seller_email}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
                                 
                                 {/* Sold Listings Section */}
-                                <div className="bg-white rounded-lg shadow-md p-6">
+                                <div className="bg-white rounded-lg shadow-md p-4 md:p-6">
                                     <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
                                         <MdSell className="mr-2 text-green-500" /> {isAdmin ? 'All Sold Listings' : t('dashboard.soldListing')}
                                     </h3>
                                     
                                     {/* Check if there are no sold listings */}
                                     {soldListings.length === 0 ? (
-                                        <div className="bg-gray-50 rounded-lg p-8 text-center">
-                                            <FaShoppingCart className="mx-auto text-gray-400 text-5xl mb-4" />
-                                            <h4 className="text-xl font-semibold text-gray-800 mb-2">{t('dashboard.noSoldItems')}</h4>
-                                            <p className="text-gray-600 mb-6">{t('dashboard.soldAppearHere')}</p>
-                                            {listings.length === 0 ? (
+                                        <div className="bg-gray-50 rounded-lg p-6 md:p-8 text-center">
+                                            <FaShoppingCart className="mx-auto text-gray-400 text-4xl md:text-5xl mb-4" />
+                                            <h4 className="text-lg md:text-xl font-semibold text-gray-800 mb-2">{t('dashboard.noSoldItems')}</h4>
+                                            <p className="text-gray-600 mb-6">
+                                                {isAdmin ? 'No items have been sold yet.' : t('dashboard.soldAppearHere')}
+                                            </p>
+                                            { listings.length === 0 && (
                                                 <button
                                                     onClick={() => sellModal.open(SellPage, { onClose: handleModalClose, onSuccess: handleSellSuccess }, { size: 'lg', showCloseButton: false })}
-                                                    className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-6 rounded-md transition duration-300"
+                                                    className="inline-flex items-center bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 md:py-3 md:px-6 rounded-md transition duration-300"
                                                 >
                                                     <FaUpload className="mr-2" /> {t('dashboard.createFirst')}
                                                 </button>
-                                            ) : (
+                                            )}
+                                            {listings.length > 0 && (
                                                 <p className="text-sm text-gray-500">{t('dashboard.promoteListings')}</p>
                                             )}
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                             {soldListings.map((listing) => (
                                                 <motion.div
                                                     key={listing.id}
-                                                    className="bg-white border border-gray-200 shadow-sm rounded-lg p-4 hover:shadow-lg transition-shadow cursor-pointer relative"
+                                                    className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer"
                                                     whileHover={{ scale: 1.02 }}
                                                     onClick={() => openModal(listing)}
                                                 >
-                                                    <div className="relative h-48 mb-3 overflow-hidden rounded-md">
+                                                    <div className="relative aspect-w-16 aspect-h-9">
                                                         <LazyImage
                                                             src={listing.image_urls && Array.isArray(listing.image_urls) && listing.image_urls.length > 0 
                                                                 ? listing.image_urls[0] 
                                                                 : ''
                                                             } 
-                                                            alt={listing.name} 
-                                                            className="w-full h-full object-cover opacity-70"
+                                                            alt={listing.name}
+                                                            className="object-cover w-full h-full"
                                                             priority={false}
                                                         />
-                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                                                             <span className="bg-green-500 text-white text-sm font-bold px-3 py-1 rounded-full">
                                                                 {t('dashboard.soldTag')}
                                                             </span>
                                                         </div>
-                                                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">
-                                                            €{listing.price}
+                                                        <div className="absolute top-2 right-2" onClick={(e) => e.stopPropagation()}>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger className="p-1 bg-white/90 rounded-full hover:bg-white transition-colors">
+                                                                    <FaEllipsisV className="w-4 h-4 text-gray-600" />
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent>
+                                                                    <DropdownMenuItem onClick={() => editListing(listing)}>
+                                                                        <FaEdit className="mr-2" /> Edit
+                                                                    </DropdownMenuItem>
+                                                                    <DropdownMenuItem 
+                                                                        className="text-red-600 hover:text-red-700"
+                                                                        onClick={() => deleteListing(listing.id, listing)}
+                                                                    >
+                                                                        <FaTrash className="mr-2" /> Delete
+                                                                    </DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         </div>
                                                     </div>
-                                                    <h3 className="text-lg font-semibold mb-1 truncate">{listing.name}</h3>
-                                                    <p className="text-gray-500 text-sm mb-2 line-clamp-2 h-10 overflow-hidden">{listing.description}</p>
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="flex-1">
-                                                            <h4 className="font-bold text-gray-800 truncate">{listing.name}</h4>
-                                                            <p className="text-sm text-gray-600">
-                                                                {listing.price !== null && typeof listing.price !== 'undefined'
-                                                                    ? `€${listing.price.toFixed(2)}`
-                                                                    : t('common.contactForPrice')}
-                                                            </p>
+                                                    <div className="p-4">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{listing.name}</h3>
+                                                            <span className="text-lg font-semibold text-emerald-600">€{listing.price}</span>
                                                         </div>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <button onClick={(e) => e.stopPropagation()} className="text-gray-500 hover:text-red-500 p-1">
-                                                                    <FaEllipsisV />
-                                                                </button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                                                <DropdownMenuItem onSelect={() => editListing(listing)} className="text-blue-600 hover:!bg-blue-100 hover:!text-blue-700">
-                                                                    <FaEdit className="mr-2" /> Edit
-                                                                </DropdownMenuItem>
-                                                                {(listing.seller_email === user?.email || isAdmin) && (
-                                                                    <DropdownMenuItem onSelect={() => deleteListing(listing.id, listing)} className="text-red-600 hover:!bg-red-100 hover:!text-red-700">
-                                                                        {isAdmin && listing.seller_email !== user?.email ? 'Admin Delete' : t('common.delete')}
-                                                                    </DropdownMenuItem>
+                                                        <p className="text-gray-600 text-sm line-clamp-2 mb-3">{listing.description}</p>
+                                                        <div className="flex items-center justify-between text-sm text-gray-500">
+                                                            <div className="flex items-center space-x-2">
+                                                                <span>{listing.city_name}</span>
+                                                                {isAdmin && (
+                                                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                                                        {listing.seller_email}
+                                                                    </span>
                                                                 )}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </motion.div>
                                             ))}
@@ -672,8 +637,6 @@ const SellerDashboard = () => {
                     </div>
                 </div>
             </div>
-
-
         </div>
     );
 };

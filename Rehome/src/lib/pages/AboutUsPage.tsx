@@ -45,9 +45,9 @@ export default function AboutUsPage() {
                 <div>
                   <h3 className="text-xl font-bold mb-2">Modular Services</h3>
                   <p className="text-lg">Only pay for what you need — nothing more. Whether it's full support or just transport, you stay in control.</p>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
             <div>
               <div className="flex items-start gap-4">
@@ -57,7 +57,7 @@ export default function AboutUsPage() {
                   <p className="text-lg">We don't force a one-size-fits-all approach. You decide what gets carried, assembled, or handled.</p>
                 </div>
               </div>
-            </div>
+                  </div>
 
             <div>
               <div className="flex items-start gap-4">
@@ -65,9 +65,9 @@ export default function AboutUsPage() {
                 <div>
                   <h3 className="text-xl font-bold mb-2">Nationwide Reach</h3>
                   <p className="text-lg">We operate across most major cities in the Netherlands — from local moves to intercity deliveries.</p>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
             <div>
               <div className="flex items-start gap-4">
@@ -85,9 +85,9 @@ export default function AboutUsPage() {
                 <div>
                   <h3 className="text-xl font-bold mb-2">Fast, Friendly, Human Service</h3>
                   <p className="text-lg">We respond quickly, confirm personally, and carry out services with care. No call centers. No bots.</p>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
             <div>
               <div className="flex items-start gap-4">

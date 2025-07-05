@@ -172,7 +172,7 @@ export default function Navbar() {
                             alt="ReHome Logo" 
                             className="w-8 h-8 mr-2 rounded-full object-cover border border-white"
                         />
-                        Rehome B.v.
+                        ReHome B.v.
                     </Link>
                 </div>
 
