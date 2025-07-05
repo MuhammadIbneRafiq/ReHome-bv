@@ -10,45 +10,13 @@ import { translateFurnitureItem } from "../utils/dynamicTranslation";
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-toastify';
-import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus, FaComments, FaWhatsapp, FaCheckCircle, FaClock, FaTags } from 'react-icons/fa';
+import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus, FaComments, FaWhatsapp } from 'react-icons/fa';
 import { API_ENDPOINTS } from '../api/config';
 import useUserStore from '../../services/state/useUserSessionStore';
 import { sendMessage } from '../../services/marketplaceMessageService';
 import StableLoader from '../../components/ui/StableLoader';
 import ShareButton from '@/components/ui/ShareButton';
 
-// Helper function to get status display properties
-const getStatusDisplay = (status?: string, sold?: boolean) => {
-  // Fallback to sold field if status not available
-  const actualStatus = status || (sold ? 'sold' : 'available');
-  
-  switch (actualStatus) {
-    case 'available':
-      return {
-        icon: <FaCheckCircle className="text-green-600" />,
-        text: 'Available',
-        bgColor: 'bg-green-100 text-green-800'
-      };
-    case 'reserved':
-      return {
-        icon: <FaClock className="text-yellow-600" />,
-        text: 'Reserved',
-        bgColor: 'bg-yellow-100 text-yellow-800'
-      };
-    case 'sold':
-      return {
-        icon: <FaTags className="text-red-600" />,
-        text: 'Sold',
-        bgColor: 'bg-red-100 text-red-800'
-      };
-    default:
-      return {
-        icon: <FaCheckCircle className="text-green-600" />,
-        text: 'Available',
-        bgColor: 'bg-green-100 text-green-800'
-      };
-  }
-};
 
 const MarketplacePage = () => {
     const { t } = useTranslation();
@@ -500,14 +468,6 @@ const MarketplacePage = () => {
                                                         style={{display: 'block'}}
                                                     />
                                                 )}
-                                                
-                                                {/* Status Badge */}
-                                                <div className="absolute top-2 right-2 z-10">
-                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusDisplay(translatedItem.status, translatedItem.sold).bgColor}`}>
-                                                        {getStatusDisplay(translatedItem.status, translatedItem.sold).icon}
-                                                        <span className="ml-1">{getStatusDisplay(translatedItem.status, translatedItem.sold).text}</span>
-                                                    </span>
-                                                </div>
                                                 
                                                 <img 
                                                     src={(translatedItem.image_url && translatedItem.image_url.length > 0) ? translatedItem.image_url[0] : 
