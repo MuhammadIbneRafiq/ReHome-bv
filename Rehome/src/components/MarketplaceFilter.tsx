@@ -38,10 +38,10 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   // Extract unique cities from items (keeping for potential future use)
   const [_, setCities] = useState<string[]>([]);
   // Track min and max prices
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
   // Track selected filters
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
-  const [selectedPriceRange, setSelectedPriceRange] = useState<[number, number]>([0, 1000]);
+  const [selectedPriceRange, setSelectedPriceRange] = useState<[number, number]>([0, 500]);
   const [showRehomeOnly, setShowRehomeOnly] = useState(false);
   // Toggle for filter visibility
   // const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -335,23 +335,9 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
       const uniqueCities = [...new Set(items.map(item => item.city_name).filter(Boolean))];
       setCities(uniqueCities);
       
-      // Find min and max prices - FIXED: Include free items (price = 0)
-      const prices = items.map(item => {
-        const price = item.price;
-        // Include 0 (free items), exclude null/undefined
-        return (price !== null && price !== undefined) ? price : null;
-      }).filter(price => price !== null);
-      
-      if (prices.length > 0) {
-        const minPrice = Math.floor(Math.min(...prices));
-        const maxPrice = Math.ceil(Math.max(...prices));
-        setPriceRange([minPrice, maxPrice]);
-        setSelectedPriceRange([minPrice, maxPrice]);
-      } else {
-        // Fallback if no valid prices
-        setPriceRange([0, 1000]);
-        setSelectedPriceRange([0, 1000]);
-      }
+      // Set fixed price range from 0 to 500
+      setPriceRange([0, 500]);
+      setSelectedPriceRange([0, 500]);
     }
   }, [items]);
 
@@ -593,7 +579,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
               onChange={(e) => handlePriceChange(Number(e.target.value), selectedPriceRange[1])}
               className="mt-1 block w-1/2 rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
               min={priceRange[0]}
-              max={selectedPriceRange[1]}
+              max={priceRange[1]}
               placeholder="Min price"
             />
             <input
