@@ -594,6 +594,25 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
           </div>
         </div>
         
+        {/* Pricing Type Filter */}
+        <div className="relative">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Pricing type filter
+          </label>
+          <select
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+            value={selectedPricingType}
+            onChange={(e) => setSelectedPricingType(e.target.value)}
+            style={{ position: 'relative', zIndex: 5 }}
+          >
+            <option value="">All pricing types</option>
+            <option value="fixed">Fixed Price</option>
+            <option value="bidding">Bidding/Auction</option>
+            <option value="negotiable">Price Negotiable</option>
+            <option value="free">Free</option>
+          </select>
+        </div>
+        
         {/* Distance Filter with Enhanced Location Autocomplete */}
         <div className="relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -661,25 +680,6 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
                 {condition.label}
               </option>
             ))}
-          </select>
-        </div>
-        
-        {/* Pricing Type Filter */}
-        <div className="relative">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Pricing type filter
-          </label>
-          <select
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-            value={selectedPricingType}
-            onChange={(e) => setSelectedPricingType(e.target.value)}
-            style={{ position: 'relative', zIndex: 5 }}
-          >
-            <option value="">All pricing types</option>
-            <option value="fixed">Fixed Price</option>
-            <option value="bidding">Bidding/Auction</option>
-            <option value="negotiable">Price Negotiable</option>
-            <option value="free">Free</option>
           </select>
         </div>
         

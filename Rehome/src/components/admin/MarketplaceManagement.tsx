@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { FaTrash, FaSearch, FaFilter, FaEye, FaGavel, FaClock, FaShoppingCart, FaEdit, FaPlus, FaCheckSquare, FaSquare, FaMoneyBillWave } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { supabase } from '../../lib/supabaseClient';
-import logoImage from '../../assets/logorehome.jpg';
+import logoImage from '../../assets/logorehome.png';
 import { 
   getAllBidsForAdmin, 
   getBidConfirmations, 

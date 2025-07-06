@@ -22,6 +22,8 @@ import { toast } from 'react-toastify';
 import ChatDashboard from '../../components/ChatDashboard';
 import API_ENDPOINTS from '../api/config';
 import { useAuth } from '../../hooks/useAuth';
+import ShareButton from '../../components/ui/ShareButton';
+
 interface FurnitureItem {
     id: string;
     name: string;
@@ -506,6 +508,13 @@ const SellerDashboard = () => {
                                                                     </span>
                                                                 )}
                                                             </div>
+                                                            <ShareButton 
+                                                                title={listing.name}
+                                                                description={listing.description}
+                                                                url={`${window.location.origin}/marketplace?item=${listing.id}`}
+                                                                variant="icon"
+                                                                className="!p-1"
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>
@@ -598,6 +607,13 @@ const SellerDashboard = () => {
                                                                     </span>
                                                                 )}
                                                             </div>
+                                                            <ShareButton 
+                                                                title={listing.name}
+                                                                description={listing.description}
+                                                                url={`${window.location.origin}/marketplace?item=${listing.id}`}
+                                                                variant="icon"
+                                                                className="!p-1"
+                                                            />
                                                         </div>
                                                     </div>
                                                 </motion.div>

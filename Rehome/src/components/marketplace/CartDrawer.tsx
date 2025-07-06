@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus } from 'react-icons/fa';
 import { useCart } from '../../contexts/CartContext';
-import logoImage from "../../assets/logorehome.jpg";
+import logoImage from "../../assets/logorehome.png";
 import ReHomeCheckoutModal from './ReHomeCheckoutModal';
 import OrderSuccessModal from './OrderSuccessModal';
 

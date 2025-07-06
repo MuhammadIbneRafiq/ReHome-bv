@@ -1,5 +1,5 @@
 import { FaDollarSign, FaTree, FaTruck, FaHandshake, FaStore, FaUsers } from 'react-icons/fa';
-import logo from "../../assets/logorehome.jpg"
+import logo from "../../assets/logorehome.png"
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCheckCircle, FaTimes, FaChevronLeft, FaChevronRight, FaShoppingCart, FaComments, FaGavel, FaClock, FaExclamationTriangle, FaWhatsapp } from "react-icons/fa";
-import logo from "../assets/logorehome.jpg";
+import logo from "../assets/logorehome.png";
 import { useNavigate } from 'react-router-dom';
 import useUserStore from '../services/state/useUserSessionStore';
 import { sendMessage } from '../services/marketplaceMessageService';
@@ -476,12 +476,14 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 {/* Details Section */}
                 <div className="flex flex-col">
                   <div className="flex items-center gap-3 mb-6">
-                    <img
-                      src={logo}
-                      alt="Rehome Logo"
-                      className="h-12 w-12 object-contain"
-                      style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: 0 }}
-                    />
+                    {isrehome && (
+                      <img
+                        src={logo}
+                        alt="Rehome Logo"
+                        className="h-12 w-12 object-contain"
+                        style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: 0 }}
+                      />
+                    )}
                     <div className="flex-1 flex justify-between items-center">
                       <h1 className="text-3xl font-bold text-gray-900">{name}</h1>
                       <ShareButton 

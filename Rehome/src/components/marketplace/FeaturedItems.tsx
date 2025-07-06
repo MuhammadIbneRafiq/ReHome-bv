@@ -4,11 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { FurnitureItem } from '../../types/furniture';
 import { categories } from '../../services/marketplace';
 import { API_ENDPOINTS } from '../../lib/api/config';
-import logoImage from "../../assets/logorehome.jpg";
+import logoImage from "../../assets/logorehome.png";
 import AddToCartButton from './AddToCartButton';
-import { motion } from 'framer-motion';
 import LazyImage from '../ui/LazyImage';
-import { translateFurnitureItem } from '../../lib/utils/dynamicTranslation';
 
 interface FeaturedItemsProps {
   maxItems?: number;

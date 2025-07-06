@@ -33,13 +33,13 @@ const TrustpilotBanner = () => {
               ))}
             </div>
             <p className="text-gray-700 font-semibold text-lg">
-              Excellent 4.8
+              Great 4.2
             </p>
           </div>
 
           {/* Reviews Link */}
           <p className="text-gray-600">
-            Based on <span className="font-bold underline">100+ reviews</span>
+            Based on <span className="font-bold underline">27 reviews</span>
           </p>
         </a>
       </div>

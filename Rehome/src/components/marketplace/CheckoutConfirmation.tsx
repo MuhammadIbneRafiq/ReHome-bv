@@ -1,6 +1,6 @@
 import React from 'react';
 import { useCart } from '../../contexts/CartContext';
-import logoImage from "../../assets/logorehome.jpg";
+import logoImage from "../../assets/logorehome.png";
 
 interface CheckoutConfirmationProps {
   orderNumber: string;

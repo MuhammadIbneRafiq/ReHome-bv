@@ -8,7 +8,7 @@ import { useState, useEffect, useRef } from 'react'; // Import useRef
 import { ChevronDownIcon } from "@radix-ui/react-icons"; // if it exists
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../hooks/useLanguage';
-import logoImage from "../assets/logorehome.jpg"; // Import the ReHome logo
+import logoImage from "../assets/logorehome.png"; // Import the ReHome logo
 import MessageNotifications from './MessageNotifications';
 import { jwtDecode } from "jwt-decode";
 

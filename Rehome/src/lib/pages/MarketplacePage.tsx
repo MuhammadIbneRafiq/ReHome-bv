@@ -3,7 +3,7 @@ import MarketplaceSearch from '../../components/MarketplaceSearch';
 import { motion, AnimatePresence } from "framer-motion";
 import {FurnitureItem} from '../../types/furniture'; // Import the type
 import ItemDetailsModal from '@/components/ItemDetailModal'; // Import the modal
-import logoImage from '../../assets/logorehome.jpg'
+import logoImage from '../../assets/logorehome.png'
 import { useTranslation } from "react-i18next";
 import MarketplaceFilter from "../../components/MarketplaceFilter";
 import { translateFurnitureItem } from "../utils/dynamicTranslation";
