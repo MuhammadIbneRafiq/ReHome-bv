@@ -17,7 +17,7 @@ import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
-import ThirdPartyAuth from "../../hooks/ThirdPartyAuth";
+import CustomGoogleAuth from "../../components/CustomGoogleAuth";
 // import TestAuth from "../../components/TestAuth";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -206,7 +206,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="mt-6 space-y-4">
-                <ThirdPartyAuth text={googleMessage} />
+                <CustomGoogleAuth text={googleMessage} />
                 {/* <TestAuth /> */}
               </div>
             </div>

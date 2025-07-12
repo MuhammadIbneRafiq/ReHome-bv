@@ -1,15 +1,6 @@
     // API Configuration for ReHome Backend
-// This file centralizes all API endpoint configurations
 
-// Use Vercel backend by default, can be overridden with VITE_API_URL environment variable
-// In development, use relative URLs to work with Vite proxy
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'development' ? '' : 'https://rehome-backend.vercel.app');
-
-// Debug: Log the API base URL in development
-if (import.meta.env.MODE === 'development') {
-  console.log('🚀 API Base URL:', API_BASE_URL || 'Using relative URLs (proxy)');
-}
+const API_BASE_URL = 'http://localhost:3000';
 
 // API Endpoints Configuration
 export const API_ENDPOINTS = {
@@ -18,6 +9,7 @@ export const API_ENDPOINTS = {
     SIGNUP: `${API_BASE_URL}/api/auth/signup`,
     LOGIN: `${API_BASE_URL}/api/auth/login`,
     LOGOUT: `${API_BASE_URL}/api/auth/logout`,
+    GOOGLE_CALLBACK: `${API_BASE_URL}/api/auth/google/callback`,
   },
 
   // Furniture Management

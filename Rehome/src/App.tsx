@@ -34,6 +34,7 @@ import TermsPage from "./lib/pages/TermsPage";
 import PrivacyPage from "./lib/pages/PrivacyPage";
 import CookiesPage from "./lib/pages/CookiesPage";
 import AuthCallback from "./hooks/AuthCallback";
+import GoogleOAuthCallback from "./components/GoogleOAuthCallback";
 
 // const usePostData = <T,>(endpoint: string) => {
 //   return useMutation<T, Error, T>(
@@ -90,6 +91,7 @@ const App = () => {
                           </AdminRoute>
                         } />
                         <Route path="/auth/callback" element={<AuthCallback />} />
+                        <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
                         <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
                         <Route path="/contact-us" element={<ContactUsPage />} />
                         <Route path="/about-us" element={<AboutUsPage />} />

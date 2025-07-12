@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { UserData } from "@/types/UserData";
 import { jwtDecode } from "jwt-decode";
 import { useLocation } from "react-router-dom";
-import useUserSessionStore from "@/services/state/useUserSessionStore";
 import { toast } from "../components/ui/use-toast";
+import { useUserSessionStore } from "@/services/state/useUserSessionStore";
 
 export const useAuth = () => {
   const setUser = useUserSessionStore((state) => state.setUser);
@@ -16,9 +16,7 @@ export const useAuth = () => {
   const location = useLocation();
 
   // Check if user is admin - you can modify this logic based on your needs
-  const isAdmin = user?.email === 'admin@rehome.com' || 
-                  user?.email?.includes('admin') || 
-                  user?.role === 'admin';
+  const isAdmin = user?.email === 'admin@rehome.com';
 
   const logout = (showToast = false, reason = '') => {
     localStorage.removeItem("accessToken");
@@ -70,7 +68,6 @@ export const useAuth = () => {
         return Math.max(0, expirationTime - currentTime);
       }
     } catch (error) {
-      console.error('Error getting expiration time:', error);
     }
     return null;
   };
@@ -81,53 +78,25 @@ export const useAuth = () => {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
     
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
+    if (hours > 0) {return `${hours}h ${minutes}m`;}
     return `${minutes}m`;
   };
 
   useEffect(() => {
     async function fetchUser() {
-      console.log('🔍 useAuth: Starting authentication check...');
       setLoading(true);
-      
       // Check for both token names to ensure backward compatibility
-      const accessToken = localStorage.getItem("accessToken") || localStorage.getItem("token");
-      console.log('🔑 useAuth: Access token found:', !!accessToken);
-
+      const accessToken = localStorage.getItem("accessToken") 
+      console.log('accessToken', accessToken);
       if (!accessToken) {
-        console.log('❌ useAuth: No access token found, user not authenticated');
         logout();
         setLoading(false);
         return;
       }
 
-      try {
-        console.log('✅ useAuth: Access token found, user is authenticated');
-        
-        // Try to get user data from multiple sources
+      try {       
         let userData = null;
         let tokenExpired = false;
-        
-        // First try Google user info
-        const googleUserInfo = localStorage.getItem("google_user_info");
-        if (googleUserInfo) {
-          try {
-            const googleData = JSON.parse(googleUserInfo);
-            userData = {
-              email: googleData.email,
-              sub: googleData.id,
-              email_verified: googleData.verified_email || true,
-              phone_verified: false,
-              role: 'user'
-            };
-            console.log('Using Google user data:', userData);
-          } catch (e) {
-            console.error('Error parsing Google user info:', e);
-          }
-        }
-        
         // If no Google data, try to decode JWT token and check expiration
         if (!userData) {
           try {
@@ -159,83 +128,51 @@ export const useAuth = () => {
             }
 
             // Extract user data from token
-            const tokenData = (decoded as any).user_metadata || (decoded as any) || {};
+            const tokenData = (decoded as any).user_metadata;
             userData = {
-              email: tokenData.email || 'user@example.com',
-              sub: tokenData.sub || tokenData.id || 'unknown',
-              email_verified: tokenData.email_verified || false,
-              phone_verified: tokenData.phone_verified || false,
-              role: tokenData.role || 'user'
+              email: tokenData.email,
+              sub: tokenData.sub,
+              email_verified: tokenData.email_verified,
+              phone_verified: tokenData.phone_verified,
+              role: tokenData.role
             };
             console.log('Using JWT token data:', userData);
           } catch (jwtError) {
             console.error("Error decoding JWT token:", jwtError);
-            // Even if token decode fails, still consider user authenticated if token exists
-            userData = {
-              email: 'user@example.com',
-              sub: 'unknown',
-              email_verified: false,
-              phone_verified: false,
-              role: 'user'
-            };
-            console.log('Using fallback user data');
           }
         }
-        
-        // Only set authenticated if token is not expired
         if (!tokenExpired) {
           setIsAuthenticated(true);
-          console.log('✅ useAuth: isAuthenticated set to true');
         }
-        
-        // Set user data if available
-        if (userData) {
-          setUser(userData as UserData);
-        }
-        
+        setUser(userData as UserData);
       } catch (error) {
-        console.error("❌ useAuth: Error in authentication:", error);
-        // On error, consider user not authenticated for security
         logout(true, "Authentication error occurred. Please sign in again.");
       }
-      
       setLoading(false);
-      console.log('🏁 useAuth: Authentication check completed, loading set to false');
     }
-
     fetchUser();
-
     // Set up an interval to check authentication status more frequently
     const intervalId = setInterval(() => {
-      const accessToken = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      const accessToken = localStorage.getItem("accessToken");
       if (accessToken) {
-        const timeLeft = getTimeUntilExpiration(accessToken);
-        if (timeLeft !== null) {
-          setSessionTimeLeft(timeLeft);
-          
-          // Auto-logout if expired
-          if (timeLeft <= 0) {
-            logout(true, "Your session has expired automatically. Please sign in again.");
-          }
+      const timeLeft = getTimeUntilExpiration(accessToken);
+      if (timeLeft !== null) {
+        setSessionTimeLeft(timeLeft);
+        
+        if (timeLeft <= 0) {
+          logout(true, "Your session has expired automatically. Please sign in again.");
         }
       }
+      }
     }, 30000); // Check every 30 seconds
-
-    // Cleanup function to clear the interval when the component unmounts
     return () => {
       clearInterval(intervalId);
     };
   }, [location.pathname]);
 
-  console.log('🔄 useAuth: Current state - isAuthenticated:', isAuthenticated, 'loading:', loading);
   return { 
-    isAuthenticated, 
-    loading, 
-    logout, 
-    isAdmin, 
-    user, 
-    sessionTimeLeft,
+    isAuthenticated, loading, logout, isAdmin, 
+    user, sessionTimeLeft,
     formatTimeRemaining: sessionTimeLeft ? formatTimeRemaining(sessionTimeLeft) : null
   };
 };
-
