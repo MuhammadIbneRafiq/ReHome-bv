@@ -18,6 +18,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ text }) => {
       sessionStorage.setItem('oauth_state', state);
 
       // Google OAuth parameters
+      console.log('import.meta.env.MODE', import.meta.env.MODE);
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       
       // Use environment-specific redirect URI
