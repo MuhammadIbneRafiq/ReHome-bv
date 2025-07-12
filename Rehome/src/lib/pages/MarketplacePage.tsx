@@ -42,6 +42,24 @@ const MarketplacePage = () => {
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
     
+    // Get the item ID from URL query parameter
+    const searchParams = new URLSearchParams(window.location.search);
+    const itemIdFromUrl = searchParams.get('item');
+
+    // Effect to open modal when item ID is in URL
+    useEffect(() => {
+        if (itemIdFromUrl && furnitureItems.length > 0) {
+            const item = furnitureItems.find(item => item.id === itemIdFromUrl);
+            if (item) {
+                setSelectedItem(item);
+                setIsModalOpen(true);
+                // Remove the item parameter from URL without navigation
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+    }, [itemIdFromUrl, furnitureItems]);
+    
     // Chat modal state
     const [showChatModal, setShowChatModal] = useState(false);
     const [chatItem, setChatItem] = useState<FurnitureItem | null>(null);
@@ -296,6 +314,11 @@ const MarketplacePage = () => {
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedItem(null);
+        // Remove the item parameter from URL if it exists
+        if (itemIdFromUrl) {
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
     };
 
     // Handle status update

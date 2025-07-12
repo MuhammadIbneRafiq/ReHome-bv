@@ -216,7 +216,11 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
             </div>
           ) : (
             items.map((item) => (
-              <Link key={item.id} to={`/marketplace`} className="block bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-lg transition-shadow">
+              <Link 
+                key={item.id} 
+                to={`/marketplace?item=${item.id}`} 
+                className="block bg-white overflow-hidden shadow rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
+              >
                 <div className="relative h-48 w-full overflow-hidden">
                   {/* ReHome logo badge for ReHome items */}
                   {item.isrehome && (
