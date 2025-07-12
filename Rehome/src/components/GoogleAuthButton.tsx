@@ -19,7 +19,15 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ text }) => {
 
       // Google OAuth parameters
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      const redirectUri = `${window.location.origin}/auth/google/callback`;
+      
+      // Use environment-specific redirect URI
+      let redirectUri;
+      if (import.meta.env.MODE === 'development') {
+        redirectUri = `${window.location.origin}/auth/google/callback`;
+      } else {
+        // In production, always use https://www.rehomebv.com
+        redirectUri = 'https://www.rehomebv.com/auth/google/callback';
+      }
 
       const params = new URLSearchParams({
         client_id: clientId,
@@ -37,6 +45,7 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ text }) => {
       window.location.href = googleAuthUrl;
 
     } catch (error: any) {
+      console.error('Google Auth Error:', error);
     }
   };
 
