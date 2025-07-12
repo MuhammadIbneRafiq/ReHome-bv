@@ -172,11 +172,6 @@ const SellerDashboard = () => {
         setError(null);
 
         try {
-            console.log('=== FETCH LISTINGS DEBUG ===');
-            console.log('User email:', user?.email);
-            console.log('Is admin:', isAdmin);
-            console.log('Access token exists:', !!localStorage.getItem('accessToken'));
-
             const token = localStorage.getItem('accessToken');
             const headers = {
                 'Authorization': `Bearer ${token}`

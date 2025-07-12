@@ -126,15 +126,16 @@ export const useAuth = () => {
                 duration: 10000,
               });
             }
-
+            console.log('decoded loojs like this', decoded);
             // Extract user data from token
-            const tokenData = (decoded as any).user_metadata;
+            const tokenData = (decoded as any);
+            console.log('tokenData', tokenData);
             userData = {
               email: tokenData.email,
               sub: tokenData.sub,
               email_verified: tokenData.email_verified,
-              phone_verified: tokenData.phone_verified,
-              role: tokenData.role
+              phone_verified: tokenData.phone_verified || true,
+              role: tokenData.role || 'user'
             };
             console.log('Using JWT token data:', userData);
           } catch (jwtError) {

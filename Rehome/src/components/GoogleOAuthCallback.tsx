@@ -1,14 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useToast } from './ui/use-toast';
 import API_ENDPOINTS from '../lib/api/config';
-import { Loader } from 'lucide-react';
 
 export const GoogleOAuthCallback: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
-  const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -29,11 +25,6 @@ export const GoogleOAuthCallback: React.FC = () => {
 
         // Verify state to prevent CSRF attacks
         const savedState = sessionStorage.getItem('oauth_state');
-        console.log('🔍 State validation:', { 
-          receivedState: state, 
-          savedState: savedState,
-          match: state === savedState 
-        });
         
         if (!state) {
           console.warn('⚠️ No state parameter received from Google');
@@ -60,7 +51,8 @@ export const GoogleOAuthCallback: React.FC = () => {
           },
           body: JSON.stringify({
             code: code,
-            redirect_uri: `${window.location.origin}/auth/google/callback`
+            redirect_uri: `${window.location.origin}/auth/google/callback`,
+            response_type: 'id_token token', // Request both ID token and access token
           }),
         });
 
@@ -81,42 +73,37 @@ export const GoogleOAuthCallback: React.FC = () => {
         }
 
         const data = await response.json();
-        
-        if (data.accessToken) {
-          console.log('✅ Google OAuth successful, storing access token');
-          localStorage.setItem("accessToken", data.accessToken);
+        console.log('data', data);
+        if (data.accessToken) { // Using accessToken which is a JWT
+          console.log('✅ Google OAuth successful, storing ID token (JWT)');
           
+          console.log('data.accessToken', data.accessToken);
+          // Store the JWT token
+          localStorage.setItem('accessToken', data.accessToken);
+          
+          // ID tokens have a standard exp claim we can decode
+          try {
+            const tokenParts = data.accessToken.split('.');
+            const payload = JSON.parse(atob(tokenParts[1]));
+            if (payload.exp) {
+              localStorage.setItem('tokenExpiry', (payload.exp * 1000).toString());
+            }
+          } catch (e) {
+            console.warn('Could not decode token expiry');
+          }
+
           if (data.user) {
             localStorage.setItem('user_info', JSON.stringify(data.user));
           }
-          
-          setStatus('success');
-          
-          toast({
-            title: "Success!",
-            description: `Welcome, ${data.user?.name || data.user?.email}!`,
-            className: "bg-green-50 border-green-200",
-            duration: 3000,
-          });
-          
+                    
           // Redirect to dashboard after a short delay
           setTimeout(() => {
             window.location.href = "/sell-dash";
           }, 1500);
           
-        } else {
-          throw new Error('No access token received');
-        }
-
+        } 
       } catch (error: any) {
         console.error('❌ Google OAuth callback error:', error);
-        setStatus('error');
-        
-        toast({
-          title: "Authentication Failed",
-          description: error.message || "Failed to complete Google authentication. Please try again.",
-          variant: "destructive",
-        });
         
         // Redirect to login page after error
         setTimeout(() => {
@@ -126,49 +113,11 @@ export const GoogleOAuthCallback: React.FC = () => {
     };
 
     handleCallback();
-  }, [searchParams, navigate, toast]);
+  }, [searchParams, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-orange-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 text-center">
-        {status === 'processing' && (
-          <>
-            <Loader className="mx-auto h-12 w-12 animate-spin text-orange-600" />
-            <h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-gray-900">
-              Completing Google Sign In...
-            </h2>
-            <p className="text-gray-600">Please wait while we authenticate your account.</p>
-          </>
-        )}
-        
-        {status === 'success' && (
-          <>
-            <div className="mx-auto h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-gray-900">
-              Authentication Successful!
-            </h2>
-            <p className="text-gray-600">Redirecting to your dashboard...</p>
-          </>
-        )}
-        
-        {status === 'error' && (
-          <>
-            <div className="mx-auto h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
-              <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <h2 className="mt-6 text-center text-2xl font-bold tracking-tight text-gray-900">
-              Authentication Failed
-            </h2>
-            <p className="text-gray-600">Redirecting to login page...</p>
-          </>
-        )}
-      </div>
+    <div className="flex items-center justify-center min-h-screen">
+      <div>Processing authentication...</div>
     </div>
   );
 };

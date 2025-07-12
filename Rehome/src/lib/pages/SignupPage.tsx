@@ -24,7 +24,7 @@ import { useState } from "react";
 import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import CustomGoogleAuth from "../../components/CustomGoogleAuth";
+import GoogleAuthButton from "../../components/GoogleAuthButton";
 import { motion } from "framer-motion";
 import { FaEnvelope, FaLock } from "react-icons/fa";
 import { AxiosResponse } from "axios";
@@ -250,7 +250,7 @@ export default function SignupPage() {
                   </div>
                 </div>
                 <div className="mt-6">
-                  <CustomGoogleAuth text={googleMessage} />
+                  <GoogleAuthButton text={googleMessage} />
                 </div>
               </div>
             </Form>

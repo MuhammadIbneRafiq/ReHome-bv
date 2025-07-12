@@ -17,7 +17,7 @@ import { useToast } from "../../components/ui/use-toast";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
-import CustomGoogleAuth from "../../components/CustomGoogleAuth";
+import GoogleAuthButton from "../../components/GoogleAuthButton";
 // import TestAuth from "../../components/TestAuth";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
@@ -59,16 +59,10 @@ export default function LoginPage() {
       const response = await apiService.login(values.email, values.password);
       
       const { accessToken } = response;
-      console.log('🔑 Normal login successful, storing access token:', !!accessToken);
       localStorage.setItem("accessToken", accessToken);
       
       // SIMPLIFIED: Just store the access token - useAuth will handle the rest
-      console.log('✅ Access token stored in localStorage');
-      
-      // Verify token was stored
-      const storedToken = localStorage.getItem("accessToken");
-      console.log('🔍 Verification - token stored successfully:', !!storedToken);
-      
+
       toast({
         title: t('auth.loginSuccess'),
         description: t('auth.loginSuccess'),
@@ -206,7 +200,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <div className="mt-6 space-y-4">
-                <CustomGoogleAuth text={googleMessage} />
+                <GoogleAuthButton text={googleMessage} />
                 {/* <TestAuth /> */}
               </div>
             </div>
