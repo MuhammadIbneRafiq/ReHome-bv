@@ -18,16 +18,26 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ text }) => {
       sessionStorage.setItem('oauth_state', state);
 
       // Google OAuth parameters
-      console.log('import.meta.env.MODE', import.meta.env.MODE);
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      console.log('clientId', clientId);
       
-      // Use environment-specific redirect URI
+      // Use domain-based environment detection
+      const currentDomain = window.location.hostname;
       let redirectUri;
-      if (import.meta.env.MODE === 'development') {
+      
+      if (currentDomain === 'localhost' || currentDomain.includes('127.0.0.1')) {
+        // Local development
         redirectUri = `${window.location.origin}/auth/google/callback`;
-      } else {
-        // In production, always use https://www.rehomebv.com
+        console.log('Using development redirect URI:', redirectUri);
+      } else if (currentDomain === 'www.rehomebv.com' || currentDomain === 'rehomebv.com') {
+        // Production
         redirectUri = 'https://www.rehomebv.com/auth/google/callback';
+        console.log('Using production redirect URI:', redirectUri);
+      } else {
+        // Unknown domain - use current origin but log a warning
+        redirectUri = `${window.location.origin}/auth/google/callback`;
+        console.warn('Unknown domain detected:', currentDomain);
+        console.warn('Falling back to current origin redirect URI:', redirectUri);
       }
 
       const params = new URLSearchParams({
@@ -40,8 +50,11 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ text }) => {
         prompt: 'consent'
       });
 
-      // Redirect to Google OAuth
+      // Log the full auth URL in development
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      if (currentDomain === 'localhost' || currentDomain.includes('127.0.0.1')) {
+        console.log('Full Google Auth URL:', googleAuthUrl);
+      }
       
       window.location.href = googleAuthUrl;
 
