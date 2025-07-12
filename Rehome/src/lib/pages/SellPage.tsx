@@ -67,6 +67,15 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
 
+
+    // List of admin email addresses - keep in sync with other admin files
+    const ADMIN_EMAILS = [
+        'muhammadibnerafiq@gmail.com',
+        'testnewuser12345@gmail.com',
+        'egzmanagement@gmail.com',
+        'samuel.stroehle8@gmail.com',
+        'info@rehomebv.com'
+    ];
     // Categories and subcategories (same as in MarketplaceFilter)
     const categories = [
         { 
@@ -524,6 +533,12 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
         }
     };
     
+    // Determine pricing options based on user
+    const isAdminUser = user && ADMIN_EMAILS.includes(user.email);
+    const pricingOptions = isAdminUser
+        ? PRICING_TYPES.filter((type) => type.value !== 'bidding')
+        : PRICING_TYPES;
+
     return (
        <div className="w-full relative">
             {/* Close Button - styled like ItemDetailModal */}
@@ -727,7 +742,7 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                     
                     {/* Pricing Type Selection */}
                     <div className="space-y-3 mb-4">
-                        {PRICING_TYPES.map((type) => (
+                        {pricingOptions.map((type) => (
                             <div key={type.value} className="flex items-center">
                                 <input
                                     id={`pricing-${type.value}`}

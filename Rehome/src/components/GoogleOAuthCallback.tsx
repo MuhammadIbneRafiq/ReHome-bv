@@ -116,8 +116,31 @@ export const GoogleOAuthCallback: React.FC = () => {
   }, [searchParams, navigate]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div>Processing authentication...</div>
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="text-center space-y-6 p-8 rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm shadow-xl border border-gray-200/50 dark:border-gray-700/50">
+        {/* Animated Spinner */}
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-blue-200 dark:border-gray-600 rounded-full animate-spin border-t-blue-600 dark:border-t-blue-400 mx-auto"></div>
+          <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-ping border-t-blue-400 dark:border-t-blue-300 opacity-20"></div>
+        </div>
+        
+        {/* Loading Text */}
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+            Authenticating with Google
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            Please wait...
+          </p>
+        </div>
+        
+        {/* Animated Dots */}
+        <div className="flex justify-center space-x-1">
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+          <div className="w-2 h-2 bg-orange-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+        </div>
+      </div>
     </div>
   );
 };
