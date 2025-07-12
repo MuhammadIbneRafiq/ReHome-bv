@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useTranslation } from 'react-i18next';
 import { FaCheckCircle, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
+import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 
 const ItemDonationPage = () => {
   const { t } = useTranslation();
@@ -37,6 +38,10 @@ const ItemDonationPage = () => {
 
   const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setContactInfo({ ...contactInfo, [e.target.name]: e.target.value });
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setContactInfo(prev => ({ ...prev, phone: value }));
   };
 
   const validateForm = () => {
@@ -566,14 +571,9 @@ const ItemDonationPage = () => {
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                       Phone Number
                     </label>
-                    <input
-                      type="tel"
-                      id="phone"
-                      name="phone"
+                    <PhoneNumberInput
                       value={contactInfo.phone}
-                      onChange={handleContactInfoChange}
-                      className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                      placeholder="+31 6 12345678"
+                      onChange={handlePhoneChange}
                       required
                     />
                   </div>

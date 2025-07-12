@@ -11,11 +11,59 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Dropdown and Select styling fixes */
+@layer components {
+  /* Fix for all dropdown/select transparency issues */
+  [data-radix-select-content],
+  [data-radix-dropdown-menu-content],
+  .select-content,
+  .dropdown-content {
+    @apply bg-white border border-gray-300 shadow-lg rounded-md;
+    background-color: white !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Ensure select items have solid background */
+  [data-radix-select-item],
+  .select-item {
+    @apply bg-white hover:bg-gray-50 text-gray-900;
+    background-color: white !important;
+  }
+
+  /* Fix for dropdown menu items */
+  [data-radix-dropdown-menu-item],
+  .dropdown-item {
+    @apply bg-white hover:bg-gray-50 text-gray-900;
+    background-color: white !important;
+  }
+
+  /* Additional fixes for all select elements */
+  select,
+  select option {
+    @apply bg-white text-gray-900;
+    background-color: white !important;
+    color: #111827 !important;
+  }
+
+  /* Fix for Radix UI Select components specifically */
+  [data-radix-select-viewport] {
+    @apply bg-white;
+    background-color: white !important;
+  }
+
+  /* Fix for any popover content */
+  [data-radix-popper-content-wrapper] {
+    @apply bg-white;
+    background-color: white !important;
+  }
+}
+
 html {
     height: 100%;
     color: inherit;
 }
-
 
 body {
     width: 100%;
@@ -79,7 +127,6 @@ body {
         line-height: 40px;
     }
 }
-
 
 button:hover {
     cursor: pointer;

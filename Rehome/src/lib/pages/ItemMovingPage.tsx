@@ -9,6 +9,7 @@ import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { itemCategories, getItemPoints } from '../../lib/constants';
 import pricingService, { PricingBreakdown } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
+import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 
 const ItemMovingPage = () => {
     const { t } = useTranslation();
@@ -165,6 +166,10 @@ const ItemMovingPage = () => {
 
     const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
+    };
+
+    const handlePhoneChange = (value: string) => {
+        setContactInfo(prev => ({ ...prev, phone: value }));
     };
 
     const isFormValid = () => {
@@ -986,13 +991,9 @@ const ItemMovingPage = () => {
                                             <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                                                 Phone Number
                                             </label>
-                                            <input
-                                                type="tel"
-                                                id="phone"
+                                            <PhoneNumberInput
                                                 value={contactInfo.phone}
-                                                onChange={handleContactInfoChange}
-                                                className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                                                placeholder="+31 6 12345678"
+                                                onChange={handlePhoneChange}
                                                 required
                                             />
                                         </div>

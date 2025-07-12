@@ -5,6 +5,7 @@ import { useCart } from '../../contexts/CartContext';
 import LocationAutocomplete from '../ui/LocationAutocomplete';
 import pricingService, { PricingInput } from '../../services/pricingService';
 import { toast } from 'react-toastify';
+import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 
 interface ReHomeCheckoutModalProps {
   isOpen: boolean;
@@ -122,8 +123,14 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   };
 
   const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setContactInfo(prev => ({ ...prev, [name]: value }));
+    setContactInfo(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handlePhoneChange = (value: string) => {
+    setContactInfo(prev => ({ ...prev, phone: value }));
   };
 
   const toggleItemAssistance = (itemId: string, type: 'carrying' | 'assembly') => {
@@ -274,12 +281,9 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Phone *
                   </label>
-                  <input
-                    type="tel"
-                    name="phone"
+                  <PhoneNumberInput
                     value={contactInfo.phone}
-                    onChange={handleContactInfoChange}
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+                    onChange={handlePhoneChange}
                     required
                   />
                 </div>

@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
+import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 
 // Define interfaces for component props
 interface ContactInfo {
@@ -184,6 +185,10 @@ const HouseMovingPage = () => {
 
     const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
+    };
+
+    const handlePhoneChange = (value: string) => {
+        setContactInfo(prev => ({ ...prev, phone: value }));
     };
 
     const isFormValid = () => {
@@ -857,18 +862,11 @@ const HouseMovingPage = () => {
                                         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                                             Phone Number
                                         </label>
-                                        <input
-                                            type="tel"
-                                            id="phone"
+                                        <PhoneNumberInput
                                             value={contactInfo.phone}
-                                            onChange={handleContactInfoChange}
-                                            placeholder="+31612345678"
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            onChange={handlePhoneChange}
                                             required
                                         />
-                                        <p className="mt-1 text-xs text-gray-500">
-                                            Please include country code (e.g., +31 for Netherlands)
-                                        </p>
                                     </div>
                                     
                                     <div className="mt-4">
