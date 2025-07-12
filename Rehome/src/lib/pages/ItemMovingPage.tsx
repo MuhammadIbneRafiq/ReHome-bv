@@ -11,15 +11,24 @@ import pricingService, { PricingBreakdown } from '../../services/pricingService'
 import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 
+interface ContactInfo {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    isPhoneValid?: boolean;
+}
+
 const ItemMovingPage = () => {
     const { t } = useTranslation();
     const [step, setStep] = useState(1);
     const [disassembly, setDisassembly] = useState(false);
-    const [contactInfo, setContactInfo] = useState({
+    const [contactInfo, setContactInfo] = useState<ContactInfo>({
         firstName: '',
         lastName: '',
         email: '',
         phone: '',
+        isPhoneValid: false
     });
     const [firstLocation, setFirstLocation] = useState('');
     const [secondLocation, setSecondLocation] = useState('');
@@ -168,8 +177,8 @@ const ItemMovingPage = () => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
     };
 
-    const handlePhoneChange = (value: string) => {
-        setContactInfo(prev => ({ ...prev, phone: value }));
+    const handlePhoneChange = (value: string, isValid: boolean) => {
+        setContactInfo(prev => ({ ...prev, phone: value, isPhoneValid: isValid }));
     };
 
     const isFormValid = () => {

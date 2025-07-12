@@ -48,16 +48,37 @@ const MarketplacePage = () => {
 
     // Effect to open modal when item ID is in URL
     useEffect(() => {
-        if (itemIdFromUrl && furnitureItems.length > 0) {
-            const item = furnitureItems.find(item => item.id === itemIdFromUrl);
-            if (item) {
-                setSelectedItem(item);
-                setIsModalOpen(true);
+        const openItemFromUrl = async () => {
+            if (itemIdFromUrl) {
+                // If we don't have the items yet, fetch the specific item
+                if (furnitureItems.length === 0) {
+                    try {
+                        const response = await fetch(API_ENDPOINTS.FURNITURE.GET_BY_ID(itemIdFromUrl));
+                        if (response.ok) {
+                            const item = await response.json();
+                            if (item) {
+                                setSelectedItem(item);
+                                setIsModalOpen(true);
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error fetching item:', err);
+                    }
+                } else {
+                    // If we have items, find it in our existing list
+                    const item = furnitureItems.find(item => item.id === itemIdFromUrl);
+                    if (item) {
+                        setSelectedItem(item);
+                        setIsModalOpen(true);
+                    }
+                }
                 // Remove the item parameter from URL without navigation
                 const newUrl = window.location.pathname;
                 window.history.replaceState({}, '', newUrl);
             }
-        }
+        };
+
+        openItemFromUrl();
     }, [itemIdFromUrl, furnitureItems]);
     
     // Chat modal state

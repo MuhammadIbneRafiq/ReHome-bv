@@ -61,7 +61,7 @@ const LandingPage = () => {
                 />
                 {/* Road markings - infinite animation - positioned for natural truck placement */}
                 <motion.div
-                  className="absolute bottom-[50px] w-full flex justify-center"
+                  className="absolute bottom-[42px] w-full flex justify-center"
                   initial={{ x: "100%" }}
                   animate={{ x: "-100%" }}
                   transition={{

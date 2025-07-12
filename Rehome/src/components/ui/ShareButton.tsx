@@ -46,7 +46,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
         };
         
         await navigator.share(shareData);
-        toast.success('Shared successfully!');
+        toast.success('Link is copied!');
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           console.error('Share failed:', error);

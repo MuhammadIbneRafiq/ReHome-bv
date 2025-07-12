@@ -1,7 +1,7 @@
 // src/pages/SellerDashboard.tsx
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag, FaComments, FaEdit, FaTrash } from "react-icons/fa";
+import { FaBoxOpen, FaMoneyBillWave, FaPlus, FaCheckCircle, FaEllipsisV, FaShoppingCart, FaUpload, FaTag, FaComments, FaEdit, FaTrash, FaInfoCircle } from "react-icons/fa";
 import { MdOutlineInventory2, MdSell } from "react-icons/md";
 import {
   DropdownMenu,
@@ -428,6 +428,19 @@ const SellerDashboard = () => {
                                     </button>
                                 </div>
                                 
+                                {/* 45-day warning banner */}
+                                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+                                    <div className="flex items-start">
+                                        <FaInfoCircle className="text-blue-500 mt-1 mr-3 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm text-blue-700">
+                                                Please note: Your listings will be automatically removed after 45 days. 
+                                                Make sure to renew or update your listings if you want them to stay active.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {/* Active Listings Section */}
                                 <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-8">
                                     <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">

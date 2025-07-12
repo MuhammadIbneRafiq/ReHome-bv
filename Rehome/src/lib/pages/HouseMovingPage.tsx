@@ -17,6 +17,7 @@ interface ContactInfo {
     lastName: string;
     email: string;
     phone: string;
+    isPhoneValid?: boolean;
 }
 
 interface ItemQuantities {
@@ -40,6 +41,7 @@ const HouseMovingPage = () => {
         lastName: '',
         email: '',
         phone: '',
+        isPhoneValid: false
     });
     const [selectedDate, setSelectedDate] = useState('');
     const [elevatorPickup, setElevatorPickup] = useState(false);
@@ -187,8 +189,8 @@ const HouseMovingPage = () => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
     };
 
-    const handlePhoneChange = (value: string) => {
-        setContactInfo(prev => ({ ...prev, phone: value }));
+    const handlePhoneChange = (value: string, isValid: boolean) => {
+        setContactInfo(prev => ({ ...prev, phone: value, isPhoneValid: isValid }));
     };
 
     const isFormValid = () => {
