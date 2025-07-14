@@ -16,9 +16,9 @@ import useUserStore from '../../services/state/useUserSessionStore';
 import { sendMessage } from '../../services/marketplaceMessageService';
 import StableLoader from '../../components/ui/StableLoader';
 import ShareButton from '@/components/ui/ShareButton';
-import apiService from '../api/apiService';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import LazyImage from '@/components/ui/LazyImage';
+import { useCart } from '../../contexts/CartContext';
 
 // Helper function to get the first valid image URL
 const getFirstImageUrl = (item: FurnitureItem): string => {
@@ -42,6 +42,8 @@ const MarketplacePage = () => {
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
     
+    const { clearCart } = useCart();
+
     // Get the item ID from URL query parameter
     const searchParams = new URLSearchParams(window.location.search);
     const itemIdFromUrl = searchParams.get('item');
@@ -90,7 +92,7 @@ const MarketplacePage = () => {
     // Order confirmation modal state
     const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
     const [orderNumber, setOrderNumber] = useState('');
-    const [isReHomeOrder, setIsReHomeOrder] = useState(false);
+    const [isReHomeOrder] = useState(false);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -240,7 +242,6 @@ const MarketplacePage = () => {
 
     const handleCheckout = async () => {
         setCheckoutLoading(true);
-        
         try {
             const cartItems = cart.map(cartItem => {
                 const furnitureItem = furnitureItems.find(item => item.id === cartItem.id);
@@ -249,20 +250,11 @@ const MarketplacePage = () => {
                     quantity: cartItem.quantity
                 };
             });
-            
             const totalAmount = getTotalPrice();
-            
             // Generate a unique order number
             const orderNumber = `RH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
             setOrderNumber(orderNumber);
-            
-            console.log('Creating order:', {
-                orderNumber,
-                amount: totalAmount,
-                items: cartItems,
-            });
-
-            // Create order directly without payment processing
+            // Prepare order data
             const orderData = {
                 items: cartItems,
                 totalAmount: totalAmount,
@@ -270,59 +262,27 @@ const MarketplacePage = () => {
                 userId: localStorage.getItem('userId'), // Assuming user ID is stored
                 createdAt: new Date().toISOString(),
             };
-
-            // For ReHome items, send confirmation email
-            const hasReHomeItems = cartItems.some(item => item.isrehome);
-            setIsReHomeOrder(hasReHomeItems);
-            
-            if (hasReHomeItems && user) {
-                try {
-                    // Get user info for email
-                    const customerInfo = {
-                        email: user.email,
-                        firstName: user.user_metadata?.first_name || 'Valued Customer',
-                        lastName: user.user_metadata?.last_name || ''
-                    };
-                    
-                    console.log('Sending ReHome order confirmation email:', {
-                        orderNumber,
-                        items: cartItems,
-                        totalAmount,
-                        customerInfo
-                    });
-                    
-                    const emailResult = await apiService.sendReHomeOrderConfirmation({
-                        orderNumber,
-                        items: cartItems,
-                        totalAmount,
-                        customerInfo
-                    });
-                    
-                    if (emailResult.success && emailResult.emailSent) {
-                        console.log('ReHome order confirmation email sent successfully');
-                    } else {
-                        console.warn('ReHome order confirmation email could not be sent:', emailResult.message);
-                    }
-                } catch (emailError) {
-                    console.error('Error sending ReHome order confirmation email:', emailError);
-                    // Don't fail the checkout if email fails
-                }
+            // Actually send the order to the backend
+            const response = await fetch(API_ENDPOINTS.REHOME_ORDERS.CREATE, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+                },
+                body: JSON.stringify(orderData),
+            });
+            if (response.ok) {
+                clearCart();
+                setIsCartDrawerOpen(false);
+                setShowOrderConfirmation(true);
+                toast.success(`Order created successfully! Order #${orderData.orderNumber}`);
+            } else {
+                toast.error('Failed to create order. Please try again.');
             }
-
-            // Show success message
-            toast.success(`Order created successfully! Order #${orderData.orderNumber}`);
-            
-            // Close cart drawer and show confirmation modal
-            setIsCartDrawerOpen(false);
-            setShowOrderConfirmation(true);
-            
-            // Clear cart after successful order
-            setCart([]);
-            setCheckoutLoading(false);
-            
         } catch (error) {
             console.error('Checkout error:', error);
-            toast.error(`Checkout failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            toast.error('Failed to place order. Please try again.');
+        } finally {
             setCheckoutLoading(false);
         }
     };

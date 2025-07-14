@@ -70,6 +70,11 @@ export const API_ENDPOINTS = {
     CITY_DAY_DATA: `${API_BASE_URL}/api/city-day-data`,
   },
 
+  // ReHome Orders
+  REHOME_ORDERS: {
+    CREATE: `${API_BASE_URL}/api/rehome-orders`,
+  },
+
   // Admin (if needed)
   ADMIN: {
     LOGIN: `${API_BASE_URL}/api/admin/login`,
