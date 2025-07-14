@@ -1,6 +1,7 @@
     // API Configuration for ReHome Backend
 
 const API_BASE_URL = 'https://rehome-backend.vercel.app';
+// const API_BASE_URL = 'http://localhost:3000';
 
 // API Endpoints Configuration
 export const API_ENDPOINTS = {

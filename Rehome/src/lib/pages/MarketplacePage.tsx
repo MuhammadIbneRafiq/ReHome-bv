@@ -254,15 +254,43 @@ const MarketplacePage = () => {
             // Generate a unique order number
             const orderNumber = `RH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
             setOrderNumber(orderNumber);
+            console.log('user data looks like this',user);
+            const userData = localStorage.getItem('user_info');
+            const name = userData ? JSON.parse(userData)?.name : '';
+            console.log('Parsed userData:', userData ? JSON.parse(userData) : 'null');
+            console.log('Extracted name:', name);
+            
             // Prepare order data
             const orderData = {
                 items: cartItems,
                 totalAmount: totalAmount,
                 orderNumber,
-                userId: localStorage.getItem('userId'), // Assuming user ID is stored
+                contactInfo: {
+                    email: user?.email || localStorage.getItem('userEmail') || '',
+                    firstName: name || '',
+                    lastName: '',
+                    phone: '', // Add phone field
+                },
+                deliveryAddress: 'To be provided', // Add required deliveryAddress
+                floor: 0, // Add floor field
+                elevatorAvailable: false, // Add elevatorAvailable field
+                baseTotal: totalAmount, // Add baseTotal field
+                assistanceCosts: 0, // Add assistanceCosts field
+                pricingBreakdown: { // Add pricingBreakdown object
+                    carryingCost: 0,
+                    assemblyCost: 0
+                },
                 createdAt: new Date().toISOString(),
             };
+            
+            console.log('Order data being sent:', JSON.stringify(orderData, null, 2));
             // Actually send the order to the backend
+            console.log('Sending request to:', API_ENDPOINTS.REHOME_ORDERS.CREATE);
+            console.log('Request headers:', {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')?.substring(0, 20)}...`,
+            });
+            
             const response = await fetch(API_ENDPOINTS.REHOME_ORDERS.CREATE, {
                 method: 'POST',
                 headers: {
@@ -271,6 +299,15 @@ const MarketplacePage = () => {
                 },
                 body: JSON.stringify(orderData),
             });
+            
+            console.log('Response status:', response.status);
+            console.log('Response ok:', response.ok);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.log('Error response body:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
             if (response.ok) {
                 clearCart();
                 setIsCartDrawerOpen(false);
