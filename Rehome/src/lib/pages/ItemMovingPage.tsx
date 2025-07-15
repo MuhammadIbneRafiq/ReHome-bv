@@ -9,6 +9,7 @@ import { itemCategories, getItemPoints } from '../../lib/constants';
 import pricingService, { PricingBreakdown } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
+import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 
 interface ContactInfo {
     firstName: string;
@@ -50,6 +51,7 @@ const ItemMovingPage = () => {
     const [paymentLoading] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -315,15 +317,8 @@ const ItemMovingPage = () => {
                 throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
             }
 
-            toast.success("Request submitted successfully! Check your email for confirmation.", {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-            });
+            // Show confirmation modal instead of toast
+            setShowConfirmationModal(true);
 
         } catch (error) {
             console.error("Error submitting the moving request:", error);
@@ -377,14 +372,16 @@ const ItemMovingPage = () => {
         }
 
         // Check if we have valid base pricing (location + date provided)
-        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && selectedDateRange.start;
+        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && (isDateFlexible || selectedDateRange.start);
         
         if (!hasValidBasePricing) {
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
                     <p className="text-gray-500">
-                        {!selectedDateRange.start ? "Select a date to see base pricing" : "Enter both pickup and dropoff locations"}
+                        {!firstLocation || !secondLocation ? "Enter both pickup and dropoff locations" : 
+                         !isDateFlexible && !selectedDateRange.start ? "Select a date to see base pricing" : 
+                         "Calculating pricing..."}
                     </p>
                 </div>
             );
@@ -419,6 +416,7 @@ const ItemMovingPage = () => {
                     {pricingBreakdown.breakdown.baseCharge.city && (
                         <div className="text-xs text-gray-500 ml-4">
                             {pricingBreakdown.breakdown.baseCharge.city} - {
+                                isDateFlexible ? "Flexible date (50% off)" :
                                 pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
                                 pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
                             }
@@ -1277,6 +1275,15 @@ const ItemMovingPage = () => {
                     </div>
                 </div>
             </div>
+            
+            {/* Order Confirmation Modal */}
+            <OrderConfirmationModal
+                isOpen={showConfirmationModal}
+                onClose={() => setShowConfirmationModal(false)}
+                orderNumber=""
+                isReHomeOrder={false}
+                isMovingRequest={true}
+            />
         </div>
     );
 };

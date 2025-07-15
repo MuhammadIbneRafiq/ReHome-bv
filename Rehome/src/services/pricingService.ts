@@ -175,20 +175,61 @@ class PricingService {
    * Calculate base charge breakdown (async)
    */
   private async calculateBaseChargeBreakdown(input: PricingInput, breakdown: PricingBreakdown) {
-    if (!input.pickupLocation || !input.selectedDate) {
+    if (!input.pickupLocation) {
       breakdown.basePrice = 0;
       breakdown.breakdown.baseCharge.city = null;
       return;
     }
 
     try {
-      const date = new Date(input.selectedDate);
-      const baseResult = await this.calculateBaseCharge(input.pickupLocation, date);
+      let baseResult;
+      
+      if (input.isDateFlexible) {
+        // For flexible dates, apply early booking discount (50% off normal rate)
+        const city = await this.findClosestCity(input.pickupLocation);
+        if (!city) {
+          breakdown.basePrice = 0;
+          breakdown.breakdown.baseCharge.city = null;
+          return;
+        }
+        
+        const normalRate = cityBaseCharges[city]?.normal || 0;
+        const baseCharge = Math.round(normalRate * 0.5);
+        const distanceFromCenter = await this.calculateDistanceFromCityCenter(input.pickupLocation, city);
+        
+        let finalCharge = baseCharge;
+        let chargeType = `${city} flexible date (50% off)`;
+        
+        // Apply extra charge if beyond 8km from city center
+        if (distanceFromCenter > 8) {
+          const extraKm = distanceFromCenter - 8;
+          const extraCharge = Math.round(extraKm * 3); // €3 per km beyond 8km
+          finalCharge += extraCharge;
+          chargeType += ` (+€${extraCharge} for ${Math.round(extraKm)}km beyond city center)`;
+        }
+        
+        baseResult = {
+          charge: finalCharge,
+          type: chargeType,
+          city,
+          distance: Math.round(distanceFromCenter * 10) / 10
+        };
+      } else {
+        // For fixed dates, use the normal calculation
+        if (!input.selectedDate) {
+          breakdown.basePrice = 0;
+          breakdown.breakdown.baseCharge.city = null;
+          return;
+        }
+        
+        const date = new Date(input.selectedDate);
+        baseResult = await this.calculateBaseCharge(input.pickupLocation, date);
+      }
       
       breakdown.basePrice = baseResult.charge;
       breakdown.breakdown.baseCharge.city = baseResult.city;
       breakdown.breakdown.baseCharge.isCityDay = baseResult.type.includes('city day');
-      breakdown.breakdown.baseCharge.isEarlyBooking = baseResult.type.includes('early booking');
+      breakdown.breakdown.baseCharge.isEarlyBooking = baseResult.type.includes('early booking') || input.isDateFlexible;
       breakdown.breakdown.baseCharge.originalPrice = baseResult.charge;
       breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
     } catch (error) {
