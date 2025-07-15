@@ -337,7 +337,7 @@ const MarketplacePage = () => {
                 clearCart();
                 setIsCartDrawerOpen(false);
                 setShowOrderConfirmation(true);
-                toast.success(`Order created successfully! Order #${orderData.orderNumber}`);
+                toast.success(`Order created successfully! Check your email for confirmation. Order #${orderData.orderNumber}`);
             } else {
                 toast.error('Failed to create order. Please try again.');
             }

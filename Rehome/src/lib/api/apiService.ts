@@ -142,10 +142,7 @@ class ApiService {
     return this.request<any>('POST', API_ENDPOINTS.MOVING.SPECIAL_REQUEST, requestData);
   }
 
-  // Email service
-  async sendEmail(emailData: { email: string; firstName: string; lastName: string }) {
-    return this.request<{ success: boolean }>('POST', API_ENDPOINTS.EMAIL.SEND, emailData);
-  }
+
 
   // ReHome order confirmation email
   async sendReHomeOrderConfirmation(orderData: {

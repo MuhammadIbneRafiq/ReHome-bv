@@ -4,7 +4,6 @@ import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { itemCategories, getItemPoints } from '../../lib/constants';
-import createOrder from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
@@ -55,6 +54,7 @@ const HouseMovingPage = () => {
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
         const file = event.target.files?.[0];
@@ -138,7 +138,7 @@ const HouseMovingPage = () => {
 
     const nextStep = () => {
         // Validate date selection in step 4
-        if (step === 4 && (!selectedDateRange.start || !selectedDateRange.end || selectedDateRange.start !== selectedDateRange.end)) {
+        if (step === 4 && (!selectedDateRange.start || !selectedDateRange.end)) {
             toast.error("Please select a date or indicate that your date is flexible.");
             return;
         }
@@ -171,6 +171,11 @@ const HouseMovingPage = () => {
             const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 international format
             if (!phoneRegex.test(contactInfo.phone)) {
                 toast.error("Please enter a valid phone number.");
+                return;
+            }
+            // Check if terms and conditions are agreed to
+            if (!agreedToTerms) {
+                toast.error("Please agree to the Terms and Conditions to continue.");
                 return;
             }
         }
@@ -209,7 +214,7 @@ const HouseMovingPage = () => {
     };
 
     const isFormValid = () => {
-        if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end || selectedDateRange.start !== selectedDateRange.end)) return false;
+        if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) return false;
         if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
             !contactInfo.email.trim() || !contactInfo.phone.trim()) return false;
         
@@ -218,6 +223,9 @@ const HouseMovingPage = () => {
         
         const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 international format
         if (!phoneRegex.test(contactInfo.phone)) return false;
+        
+        // Check if terms and conditions are agreed to
+        if (!agreedToTerms) return false;
         
         return true;
     };
@@ -242,6 +250,50 @@ const HouseMovingPage = () => {
             selectedDateRange,
             isDateFlexible,
             pricingBreakdown,
+            // Additional order summary details for email
+            preferredTimeSpan,
+            studentId: studentId ? studentId.name : null,
+            // Complete order summary for email
+            orderSummary: {
+                pickupDetails: {
+                    address: firstLocation,
+                    floor: floorPickup || '0',
+                    elevator: elevatorPickup
+                },
+                deliveryDetails: {
+                    address: secondLocation,
+                    floor: floorDropoff || '0',
+                    elevator: elevatorDropoff
+                },
+                schedule: {
+                    date: isDateFlexible ? 'Flexible' : new Date(selectedDateRange.start).toLocaleDateString(),
+                    time: preferredTimeSpan ? (
+                        preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
+                        preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
+                        preferredTimeSpan === 'evening' ? 'Evening (16:00 - 20:00)' : 'Anytime'
+                    ) : 'Not specified'
+                },
+                items: Object.entries(itemQuantities)
+                    .filter(([_, quantity]) => quantity > 0)
+                    .map(([itemId, quantity]) => ({
+                        name: itemId.replace(/-/g, ' - '),
+                        quantity,
+                        points: getItemPoints(itemId) * quantity,
+                        value: getItemPoints(itemId) * quantity * 1 // €1 per point
+                    })),
+                additionalServices: {
+                    assembly: (pricingBreakdown?.assemblyCost ?? 0) > 0 ? (pricingBreakdown?.assemblyCost ?? 0) : 0,
+                    extraHelper: (pricingBreakdown?.extraHelperCost ?? 0) > 0 ? (pricingBreakdown?.extraHelperCost ?? 0) : 0,
+                    carrying: (pricingBreakdown?.carryingCost ?? 0) > 0 ? (pricingBreakdown?.carryingCost ?? 0) : 0,
+                    studentDiscount: (pricingBreakdown?.studentDiscount ?? 0) > 0 ? (pricingBreakdown?.studentDiscount ?? 0) : 0
+                },
+                contactInfo: {
+                    name: `${contactInfo.firstName} ${contactInfo.lastName}`,
+                    email: contactInfo.email,
+                    phone: contactInfo.phone
+                },
+                totalPrice: pricingBreakdown?.total || 0
+            }
         };
 
         try {
@@ -259,28 +311,7 @@ const HouseMovingPage = () => {
                 throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
             }
 
-            // Send confirmation email
-            try {
-                const emailResponse = await fetch(API_ENDPOINTS.EMAIL.SEND, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        email: contactInfo.email,
-                        firstName: contactInfo.firstName,
-                        lastName: contactInfo.lastName
-                    }),
-                });
-                
-                if (emailResponse.ok) {
-                    console.log("Confirmation email sent successfully");
-                } else {
-                    console.error("Failed to send confirmation email");
-                }
-            } catch (emailError) {
-                console.error("Error sending confirmation email:", emailError);
-            }
+
 
             toast.success("Request submitted successfully! Check your email for confirmation.", {
                 position: "top-right",
@@ -291,42 +322,11 @@ const HouseMovingPage = () => {
                 draggable: true,
                 progress: undefined,
             });
-
-            // Redirect to order creation after successful submission
-            const finalPrice = pricingBreakdown?.total || 0;
-            if (finalPrice > 0) {
-                try {
-                    const orderResult = await createOrder({
-                        items: Object.entries(itemQuantities)
-                            .filter(([_, quantity]) => quantity > 0)
-                            .map(([itemId, quantity]) => ({
-                                itemId,
-                                quantity,
-                                name: itemId.replace(/-/g, ' - '),
-                                points: getItemPoints(itemId) * quantity
-                            })),
-                        totalAmount: finalPrice,
-                        userId: localStorage.getItem('userId') || undefined
-                    });
-                    
-                    if (orderResult.success) {
-                        toast.success(`Order created successfully! Order #${orderResult.orderNumber}`);
-                    } else {
-                        throw new Error(orderResult.error || 'Failed to create order');
-                    }
-                } catch (error) {
-                    console.error("Error creating order:", error);
-                    toast.error("Failed to create order. Please try again.");
-                }
-            } else {
-                toast.error("Could not process order: invalid price");
-            }
         } catch (error) {
             console.error("Error submitting house moving request:", error);
             toast.error("An error occurred while submitting your request.");
         }
     };
-
     // Add a real-time pricing display component that will be shown throughout the process
     const PriceSummary: React.FC<PriceSummaryProps> = ({ pricingBreakdown }) => {
         // Step 1: Don't show any pricing estimate yet - only after locations AND date
@@ -952,6 +952,8 @@ const HouseMovingPage = () => {
                                                     id="terms"
                                                     name="terms"
                                                     type="checkbox"
+                                                    checked={agreedToTerms}
+                                                    onChange={(e) => setAgreedToTerms(e.target.checked)}
                                                     className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                                 />
                                             </div>

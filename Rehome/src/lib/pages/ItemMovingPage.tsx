@@ -3,7 +3,6 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import createOrder from './PricingHook.tsx';
 import { useTranslation } from 'react-i18next';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { itemCategories, getItemPoints } from '../../lib/constants';
@@ -50,6 +49,7 @@ const ItemMovingPage = () => {
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -111,7 +111,7 @@ const ItemMovingPage = () => {
 
     const nextStep = () => {
         // Validate date selection in step 4
-        if (step === 4 && (!selectedDateRange.start || !selectedDateRange.end || selectedDateRange.start !== selectedDateRange.end)) {
+        if (step === 4 && (!selectedDateRange.start || !selectedDateRange.end)) {
             toast.error("Please select a date or indicate that your date is flexible.");
             return;
         }
@@ -144,6 +144,11 @@ const ItemMovingPage = () => {
             const phoneRegex = /^\+?[1-9]\d{1,14}$/;
             if (!phoneRegex.test(contactInfo.phone)) {
                 toast.error("Please enter a valid phone number.");
+                return;
+            }
+            // Check if terms and conditions are agreed to
+            if (!agreedToTerms) {
+                toast.error("Please agree to the Terms and Conditions to continue.");
                 return;
             }
         }
@@ -182,16 +187,42 @@ const ItemMovingPage = () => {
     };
 
     const isFormValid = () => {
-        if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end || selectedDateRange.start !== selectedDateRange.end)) return false;
+        // Debug logging to identify which validation is failing
+        console.log('🔍 Form validation check:');
+        console.log('- isDateFlexible:', isDateFlexible);
+        console.log('- selectedDateRange:', selectedDateRange);
+        console.log('- contactInfo:', contactInfo);
+        console.log('- agreedToTerms:', agreedToTerms);
+        
+        if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) {
+            console.log('❌ Date validation failed - missing start or end date');
+            return false;
+        }
         if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
-            !contactInfo.email.trim() || !contactInfo.phone.trim()) return false;
+            !contactInfo.email.trim() || !contactInfo.phone.trim()) {
+            console.log('❌ Contact info validation failed');
+            return false;
+        }
         
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(contactInfo.email)) return false;
+        if (!emailRegex.test(contactInfo.email)) {
+            console.log('❌ Email validation failed');
+            return false;
+        }
         
         const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-        if (!phoneRegex.test(contactInfo.phone)) return false;
+        if (!phoneRegex.test(contactInfo.phone)) {
+            console.log('❌ Phone validation failed');
+            return false;
+        }
         
+        // Check if terms and conditions are agreed to
+        if (!agreedToTerms) {
+            console.log('❌ Terms agreement validation failed');
+            return false;
+        }
+        
+        console.log('✅ All validations passed');
         return true;
     };
 
@@ -221,11 +252,56 @@ const ItemMovingPage = () => {
             disassemblyItems,
             extraHelperItems,
             isStudent,
-            pricingBreakdown
+            pricingBreakdown,
+            // Additional order summary details for email
+            preferredTimeSpan,
+            customItem,
+            studentId: studentId ? studentId.name : null,
+            // Complete order summary for email
+            orderSummary: {
+                pickupDetails: {
+                    address: firstLocation,
+                    floor: floorPickup || '0',
+                    elevator: elevatorPickup
+                },
+                deliveryDetails: {
+                    address: secondLocation,
+                    floor: floorDropoff || '0',
+                    elevator: elevatorDropoff
+                },
+                schedule: {
+                    date: isDateFlexible ? 'Flexible' : new Date(selectedDateRange.start).toLocaleDateString(),
+                    time: preferredTimeSpan ? (
+                        preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
+                        preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
+                        preferredTimeSpan === 'evening' ? 'Evening (16:00 - 20:00)' : 'Anytime'
+                    ) : 'Not specified'
+                },
+                items: Object.entries(itemQuantities)
+                    .filter(([_, quantity]) => quantity > 0)
+                    .map(([itemId, quantity]) => ({
+                        name: itemId.replace(/-/g, ' - '),
+                        quantity,
+                        points: getItemPoints(itemId) * quantity,
+                        value: getItemPoints(itemId) * quantity * 1 // €1 per point
+                    })),
+                additionalServices: {
+                    assembly: (pricingBreakdown?.assemblyCost ?? 0) > 0 ? (pricingBreakdown?.assemblyCost ?? 0) : 0,
+                    extraHelper: (pricingBreakdown?.extraHelperCost ?? 0) > 0 ? (pricingBreakdown?.extraHelperCost ?? 0) : 0,
+                    carrying: (pricingBreakdown?.carryingCost ?? 0) > 0 ? (pricingBreakdown?.carryingCost ?? 0) : 0,
+                    studentDiscount: (pricingBreakdown?.studentDiscount ?? 0) > 0 ? (pricingBreakdown?.studentDiscount ?? 0) : 0
+                },
+                contactInfo: {
+                    name: `${contactInfo.firstName} ${contactInfo.lastName}`,
+                    email: contactInfo.email,
+                    phone: contactInfo.phone
+                },
+                totalPrice: pricingBreakdown?.total || 0
+            }
         };
 
         try {
-            // Submit the moving request
+            // Submit the moving request (this will also send the email)
             const response = await fetch(API_ENDPOINTS.MOVING.ITEM_REQUEST, {
                 method: "POST",
                 headers: {
@@ -239,29 +315,6 @@ const ItemMovingPage = () => {
                 throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
             }
 
-            // Send confirmation email
-            try {
-                const emailResponse = await fetch(API_ENDPOINTS.EMAIL.SEND, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        email: contactInfo.email,
-                        firstName: contactInfo.firstName,
-                        lastName: contactInfo.lastName
-                    }),
-                });
-                
-                if (emailResponse.ok) {
-                    console.log("Confirmation email sent successfully");
-                } else {
-                    console.error("Failed to send confirmation email");
-                }
-            } catch (emailError) {
-                console.error("Error sending confirmation email:", emailError);
-            }
-
             toast.success("Request submitted successfully! Check your email for confirmation.", {
                 position: "top-right",
                 autoClose: 5000,
@@ -272,35 +325,6 @@ const ItemMovingPage = () => {
                 progress: undefined,
             });
 
-            // Redirect to order creation after successful submission
-            const finalPrice = pricingBreakdown?.total || 0;
-            if (finalPrice > 0) {
-                try {
-                    const orderResult = await createOrder({
-                        items: Object.entries(itemQuantities)
-                            .filter(([_, quantity]) => quantity > 0)
-                            .map(([itemId, quantity]) => ({
-                                itemId,
-                                quantity,
-                                name: itemId.replace(/-/g, ' - '),
-                                points: getItemPoints(itemId) * quantity
-                            })),
-                        totalAmount: finalPrice,
-                        userId: localStorage.getItem('userId') || undefined
-                    });
-                    
-                    if (orderResult.success) {
-                        toast.success(`Order created successfully! Order #${orderResult.orderNumber}`);
-                    } else {
-                        throw new Error(orderResult.error || 'Failed to create order');
-                    }
-                } catch (error) {
-                    console.error("Error creating order:", error);
-                    toast.error("Failed to create order. Please try again.");
-                }
-            } else {
-                toast.error("Could not process order: invalid price");
-            }
         } catch (error) {
             console.error("Error submitting the moving request:", error);
             toast.error("An error occurred while submitting your request.");
@@ -1045,6 +1069,8 @@ const ItemMovingPage = () => {
                                             <input
                                                 id="agree-terms"
                                                 type="checkbox"
+                                                checked={agreedToTerms}
+                                                onChange={(e) => setAgreedToTerms(e.target.checked)}
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                                 required
                                             />
@@ -1163,6 +1189,35 @@ const ItemMovingPage = () => {
                                             </p>
                                         </div>
                                     </div>
+                                    
+                                    {/* Validation Status */}
+                                    {step === 6 && (
+                                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                            <h4 className="text-md font-medium text-blue-800 mb-2">Fill in the following fields:</h4>
+                                            <div className="space-y-1 text-sm">
+                                                <div className={`flex items-center ${!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end) ? 'text-red-600' : 'text-green-600'}`}>
+                                                    <span className="mr-2">{!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end) ? '❌' : '✅'}</span>
+                                                    <span>Date Selection: {!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end) ? 'Please select start and end dates' : 'Valid'}</span>
+                                                </div>
+                                                <div className={`flex items-center ${!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || !contactInfo.email.trim() || !contactInfo.phone.trim() ? 'text-red-600' : 'text-green-600'}`}>
+                                                    <span className="mr-2">{!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || !contactInfo.email.trim() || !contactInfo.phone.trim() ? '❌' : '✅'}</span>
+                                                    <span>Contact Information: {!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || !contactInfo.email.trim() || !contactInfo.phone.trim() ? 'Please fill all contact fields' : 'Complete'}</span>
+                                                </div>
+                                                <div className={`flex items-center ${!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) ? 'text-red-600' : 'text-green-600'}`}>
+                                                    <span className="mr-2">{!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) ? '❌' : '✅'}</span>
+                                                    <span>Email Format: {!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) ? 'Invalid email format' : 'Valid'}</span>
+                                                </div>
+                                                <div className={`flex items-center ${!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone) ? 'text-red-600' : 'text-green-600'}`}>
+                                                    <span className="mr-2">{!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone) ? '❌' : '✅'}</span>
+                                                    <span>Phone Format: {!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone) ? 'Invalid phone format' : 'Valid'}</span>
+                                                </div>
+                                                <div className={`flex items-center ${!agreedToTerms ? 'text-red-600' : 'text-green-600'}`}>
+                                                    <span className="mr-2">{!agreedToTerms ? '❌' : '✅'}</span>
+                                                    <span>Terms Agreement: {!agreedToTerms ? 'Please agree to terms and conditions' : 'Agreed'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 

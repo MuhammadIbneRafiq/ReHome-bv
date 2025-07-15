@@ -46,7 +46,7 @@ const OrderConfirmationModal = ({ isOpen, onClose, orderNumber, isReHomeOrder }:
           </div>
           
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Order Confirmed!</h2>
-          <p className="text-gray-600 mb-4">Your order #{orderNumber} has been placed successfully.</p>
+          <p className="text-gray-600 mb-4">Check your email for confirmation. Your order #{orderNumber} has been placed successfully.</p>
           
           {isReHomeOrder && (
             <div className="bg-orange-50 border border-orange-200 rounded-md p-4 mb-6">

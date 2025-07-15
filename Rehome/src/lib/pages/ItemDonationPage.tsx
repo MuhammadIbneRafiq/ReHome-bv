@@ -28,6 +28,7 @@ const ItemDonationPage = () => {
   const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [confirmation, setConfirmation] = useState('');
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -86,6 +87,12 @@ const ItemDonationPage = () => {
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
     if (!phoneRegex.test(contactInfo.phone)) {
       toast.error("Please enter a valid phone number.");
+      return false;
+    }
+
+    // Check if terms and conditions are agreed to
+    if (!agreedToTerms) {
+      toast.error("Please agree to the Terms and Conditions to continue.");
       return false;
     }
 
@@ -170,6 +177,7 @@ const ItemDonationPage = () => {
       setPreferredDate('');
       setIsDateFlexible(false);
       setPreferredTimeSpan('');
+      setAgreedToTerms(false);
     } catch (error) {
       console.error("Error submitting the form:", error);
       toast.error("An error occurred while submitting your request. Please try again.");
@@ -201,6 +209,36 @@ const ItemDonationPage = () => {
     } else if (step === 3) {
       if (!preferredDate && !isDateFlexible) {
         toast.error("Please select a date or indicate that your date is flexible.");
+        return;
+      }
+    } else if (step === 4) {
+      if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim()) {
+        toast.error("Please enter your full name.");
+        return;
+      }
+      if (!contactInfo.email.trim()) {
+        toast.error("Please enter your email address.");
+        return;
+      }
+      if (!contactInfo.phone.trim()) {
+        toast.error("Please enter your phone number.");
+        return;
+      }
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(contactInfo.email)) {
+        toast.error("Please enter a valid email address.");
+        return;
+      }
+      // Basic phone validation
+      const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(contactInfo.phone)) {
+        toast.error("Please enter a valid phone number.");
+        return;
+      }
+      // Check if terms and conditions are agreed to
+      if (!agreedToTerms) {
+        toast.error("Please agree to the Terms and Conditions to continue.");
         return;
       }
     }
@@ -583,6 +621,8 @@ const ItemDonationPage = () => {
                   <input 
                     id="agreeTerms"
                     type="checkbox"
+                    checked={agreedToTerms}
+                    onChange={(e) => setAgreedToTerms(e.target.checked)}
                     className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                     required
                   />

@@ -29,7 +29,7 @@ const OrderSuccessModal: React.FC<OrderSuccessModalProps> = ({
         <div className="text-center mb-6">
           <FaCheckCircle className="text-green-500 text-6xl mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            Your order has been placed successfully!
+            Your order has been placed successfully, check your email for confirmation!
           </h3>
           <p className="text-gray-600 text-sm">
             Order #{orderNumber}
