@@ -312,7 +312,7 @@ const MarketplacePage = () => {
                 // Send confirmation email
                 try {
                     console.log('📧 Sending confirmation email for order:', orderNumber);
-                    const emailResponse = await fetch('/api/rehome-order/send-confirmation', {
+                    const emailResponse = await fetch(API_ENDPOINTS.EMAIL.REHOME_ORDER_CONFIRMATION, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
