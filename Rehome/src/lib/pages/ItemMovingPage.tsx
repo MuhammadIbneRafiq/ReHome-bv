@@ -113,7 +113,7 @@ const ItemMovingPage = () => {
 
     const nextStep = () => {
         // Validate date selection in step 4
-        if (step === 4 && !isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) {
+        if (step === 4 && !isDateFlexible || (!selectedDateRange.start || !selectedDateRange.end)) {
             toast.error("Please select a date or indicate that your date is flexible.");
             return;
         }
