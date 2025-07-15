@@ -194,7 +194,7 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
     // Handle Terms of Service viewing
     const handleViewTerms = async () => {
         try {
-            window.open(API_ENDPOINTS.LEGAL.TERMS_OF_SERVICE, '_blank');
+            window.open('/terms', '_blank');
         } catch (error) {
             console.error('Error opening Terms of Service:', error);
         }
@@ -203,7 +203,7 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
     // Handle Privacy Policy viewing
     const handleViewPrivacy = async () => {
         try {
-            window.open(API_ENDPOINTS.LEGAL.PRIVACY_POLICY, '_blank');
+            window.open('/privacy', '_blank');
         } catch (error) {
             console.error('Error opening Privacy Policy:', error);
         }

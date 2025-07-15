@@ -587,7 +587,7 @@ const ItemDonationPage = () => {
                     required
                   />
                   <label htmlFor="agreeTerms" className="ml-2 block text-sm text-gray-700">
-                    I agree to the <a href="#" className="text-orange-600 hover:text-orange-500">Terms and Conditions</a> and <a href="#" className="text-orange-600 hover:text-orange-500">Privacy Policy</a>
+                    I agree to the <a href="/terms" target="_blank" className="text-orange-600 hover:text-orange-500">Terms and Conditions</a> and <a href="/privacy" target="_blank" className="text-orange-600 hover:text-orange-500">Privacy Policy</a>
                   </label>
                 </div>
               </div>

@@ -11,7 +11,6 @@ import pricingService, { PricingBreakdown, PricingInput } from '../../services/p
 import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 
-// Define interfaces for component props
 interface ContactInfo {
     firstName: string;
     lastName: string;
@@ -43,7 +42,7 @@ const HouseMovingPage = () => {
         phone: '',
         isPhoneValid: false
     });
-    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedDateRange, setSelectedDateRange] = useState({ start: '', end: '' });
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
@@ -63,7 +62,20 @@ const HouseMovingPage = () => {
     };
 
     const calculatePrice = async () => {
+        console.log('🔍 [UI DEBUG] House moving calculatePrice called with:', {
+            firstLocation,
+            secondLocation,
+            selectedDateRange,
+            isDateFlexible,
+            itemQuantities,
+            floorPickup,
+            floorDropoff,
+            elevatorPickup,
+            elevatorDropoff
+        });
+
         if (!firstLocation || !secondLocation) {
+            console.log('🔍 [UI DEBUG] Missing locations, setting pricing to null');
             setPricingBreakdown(null);
             return;
         }
@@ -73,7 +85,7 @@ const HouseMovingPage = () => {
                 serviceType: 'house-moving',
                 pickupLocation: firstLocation,
                 dropoffLocation: secondLocation,
-                selectedDate: selectedDate || '',
+                selectedDate: selectedDateRange.start,
                 isDateFlexible: isDateFlexible,
                 itemQuantities: itemQuantities,
                 floorPickup: parseInt(floorPickup) || 0,
@@ -87,11 +99,14 @@ const HouseMovingPage = () => {
                 isEarlyBooking: false // This would be determined by checking calendar availability
             };
 
+            console.log('🔍 [UI DEBUG] House moving pricing input prepared:', input);
+
             // Use async pricing calculation
             const result = await pricingService.calculatePricing(input);
+            console.log('🔍 [UI DEBUG] House moving pricing breakdown received:', result);
             setPricingBreakdown(result);
         } catch (error) {
-            console.error('Error calculating pricing:', error);
+            console.error('🔍 [UI DEBUG] Error calculating house moving pricing:', error);
             setPricingBreakdown(null);
         }
     };
@@ -112,7 +127,7 @@ const HouseMovingPage = () => {
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDate, isDateFlexible]);
+    }, [firstLocation, secondLocation, selectedDateRange, isDateFlexible]);
 
     // Immediate price calculation for non-location changes
     useEffect(() => {
@@ -123,7 +138,7 @@ const HouseMovingPage = () => {
 
     const nextStep = () => {
         // Validate date selection in step 4
-        if (step === 4 && !selectedDate && !isDateFlexible) {
+        if (step === 4 && (!selectedDateRange.start || !selectedDateRange.end || selectedDateRange.start !== selectedDateRange.end)) {
             toast.error("Please select a date or indicate that your date is flexible.");
             return;
         }
@@ -194,7 +209,7 @@ const HouseMovingPage = () => {
     };
 
     const isFormValid = () => {
-        if (!selectedDate && !isDateFlexible) return false;
+        if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end || selectedDateRange.start !== selectedDateRange.end)) return false;
         if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
             !contactInfo.email.trim() || !contactInfo.phone.trim()) return false;
         
@@ -224,7 +239,7 @@ const HouseMovingPage = () => {
             disassembly,
             contactInfo,
             estimatedPrice: pricingBreakdown?.total || 0,
-            selectedDate,
+            selectedDateRange,
             isDateFlexible,
             pricingBreakdown,
         };
@@ -335,14 +350,14 @@ const HouseMovingPage = () => {
         }
 
         // Check if we have valid base pricing (location + date provided)
-        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && selectedDate;
+        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && selectedDateRange.start;
         
         if (!hasValidBasePricing) {
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
                     <p className="text-gray-500">
-                        {!selectedDate ? "Select a date to see base pricing" : "Enter both pickup and dropoff locations"}
+                        {!selectedDateRange.start ? "Select a date to see base pricing" : "Enter both pickup and dropoff locations"}
                     </p>
                 </div>
             );
@@ -382,8 +397,22 @@ const HouseMovingPage = () => {
                     )}
                     {pricingBreakdown.carryingCost > 0 && (
                         <div className="flex justify-between">
-                            <span>Carrying:</span>
+                            <span>Carrying ({pricingBreakdown.breakdown.carrying.floors} floors):</span>
                             <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {/* Elevator discount explanation */}
+                    {pricingBreakdown.carryingCost > 0 && ((elevatorPickup && parseInt(floorPickup) > 1) || (elevatorDropoff && parseInt(floorDropoff) > 1)) && (
+                        <div className="text-xs text-green-700 ml-6">
+                            <span>
+                                Elevator discount applied:
+                                {elevatorPickup && parseInt(floorPickup) > 1 && (
+                                    <> Pickup floors reduced from {parseInt(floorPickup) - 1} to {Math.ceil((parseInt(floorPickup) - 1) / 2)}.</>
+                                )}
+                                {elevatorDropoff && parseInt(floorDropoff) > 1 && (
+                                    <> Dropoff floors reduced from {parseInt(floorDropoff) - 1} to {Math.ceil((parseInt(floorDropoff) - 1) / 2)}.</>
+                                )}
+                            </span>
                         </div>
                     )}
                     {pricingBreakdown.assemblyCost > 0 && (
@@ -495,7 +524,13 @@ const HouseMovingPage = () => {
                                                     onChange={setElevatorPickup}
                                                     className={`${elevatorPickup ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
                                                 >
-                                                    <span className={`${elevatorPickup ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                    <span
+                                                        style={{
+                                                            transform: (elevatorPickup) ? 'translateX(24px)' : 'translateX(4px)',
+                                                            transition: 'transform 0.2s'
+                                                        }}
+                                                        className="inline-block h-4 w-4 rounded-full bg-white"
+                                                    />
                                                 </Switch>
                                                 <span className="ml-2 text-sm text-gray-700">Elevator available at pickup location</span>
                                             </div>
@@ -520,7 +555,10 @@ const HouseMovingPage = () => {
                                                 type="number"
                                                 min="0"
                                                 value={floorDropoff}
-                                                onChange={(e) => setFloorDropoff(e.target.value)}
+                                                onChange={(e) => {
+                                                    console.log('🔍 [UI DEBUG] House moving floor dropoff input changed:', { oldValue: floorDropoff, newValue: e.target.value });
+                                                    setFloorDropoff(e.target.value);
+                                                }}
                                                 placeholder="Floor number"
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                             />
@@ -533,7 +571,13 @@ const HouseMovingPage = () => {
                                                     onChange={setElevatorDropoff}
                                                     className={`${elevatorDropoff ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
                                                 >
-                                                    <span className={`${elevatorDropoff ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                    <span
+                                                        style={{
+                                                            transform: (elevatorDropoff) ? 'translateX(24px)' : 'translateX(4px)',
+                                                            transition: 'transform 0.2s'
+                                                        }}
+                                                        className="inline-block h-4 w-4 rounded-full bg-white"
+                                                    />
                                                 </Switch>
                                                 <span className="ml-2 text-sm text-gray-700">Elevator available at dropoff location</span>
                                             </div>
@@ -546,28 +590,51 @@ const HouseMovingPage = () => {
                             {step === 2 && (
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Select Moving Date
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Select range of Start Date</label>
                                         <input
                                             type="date"
-                                            value={selectedDate}
-                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            value={selectedDateRange.start}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                const year = val.split('-')[0];
+                                                if (year.length <= 4) setSelectedDateRange(r => ({ ...r, start: val, end: isDateFlexible ? r.end : val }));
+                                            }}
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                            min={new Date().toISOString().split('T')[0]} // Set minimum date to today
+                                            min={new Date().toISOString().split('T')[0]}
+                                            required
+                                            disabled={isDateFlexible}
                                         />
-                                        <div className="mt-2 flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                id="flexible-date"
-                                                checked={isDateFlexible}
-                                                onChange={(e) => setIsDateFlexible(e.target.checked)}
-                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="flexible-date" className="ml-2 block text-sm text-gray-700">
-                                                My date is flexible, ReHome can suggest a suitable date
-                                            </label>
-                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                        <input
+                                            type="date"
+                                            value={selectedDateRange.end}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                const year = val.split('-')[0];
+                                                if (year.length <= 4) setSelectedDateRange(r => ({ ...r, end: val }));
+                                            }}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            min={selectedDateRange.start || new Date().toISOString().split('T')[0]}
+                                            required
+                                            disabled={isDateFlexible}
+                                        />
+                                    </div>
+                                    <div className="mt-2 flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            id="flexible-date"
+                                            checked={isDateFlexible}
+                                            onChange={e => {
+                                                setIsDateFlexible(e.target.checked);
+                                                if (e.target.checked) setSelectedDateRange({ start: '', end: '' });
+                                            }}
+                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                        />
+                                        <label htmlFor="flexible-date" className="ml-2 block text-sm text-gray-700">
+                                            My date is flexible, ReHome can suggest a suitable date
+                                        </label>
                                     </div>
                                     
                                     <div>
@@ -586,23 +653,12 @@ const HouseMovingPage = () => {
                                             <option value="flexible">Flexible (Any time)</option>
                                         </select>
                                     </div>
-                                    
-                                    <div className="mt-4 bg-orange-100 p-4 rounded-lg">
-                                        <div className="flex items-start">
-                                            <FaInfoCircle className="text-orange-600 mt-1 flex-shrink-0" />
-                                            <div className="ml-3">
-                                                <h3 className="text-sm font-medium text-gray-900">Availability Information</h3>
-                                                <p className="mt-1 text-sm text-gray-700">
-                                                    Our team operates in most major cities daily. In Amsterdam we offer service 7 days a week. 
-                                                    Selecting a flexible date may help us accommodate your request more easily and can sometimes result in faster service.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <div className="mt-2 text-xs text-blue-600">
+  If your date is fixed, set both start and end date to the same day.
+</div>
                                 </div>
                             )}
                             
-                            {/* Step 3: Items Selection */}
                             {step === 3 && (
                                 <div className="space-y-6">
                                     <p className="text-sm text-gray-600 mb-4">
@@ -690,7 +746,13 @@ const HouseMovingPage = () => {
                                                         className={`${disassembly ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
                                                         id="disassembly-toggle"
                                                     >
-                                                        <span className={`${disassembly ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                        <span
+                                                            style={{
+                                                                transform: (disassembly) ? 'translateX(24px)' : 'translateX(4px)',
+                                                                transition: 'transform 0.2s'
+                                                            }}
+                                                            className="inline-block h-4 w-4 rounded-full bg-white"
+                                                        />
                                                     </Switch>
                                                 </div>
                                                 
@@ -753,7 +815,13 @@ const HouseMovingPage = () => {
                                                         className={`${extraHelper ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
                                                         id="extra-helper-toggle"
                                                     >
-                                                        <span className={`${extraHelper ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                        <span
+                                                            style={{
+                                                                transform: (extraHelper) ? 'translateX(24px)' : 'translateX(4px)',
+                                                                transition: 'transform 0.2s'
+                                                            }}
+                                                            className="inline-block h-4 w-4 rounded-full bg-white"
+                                                        />
                                                     </Switch>
                                                 </div>
                                                 
@@ -782,7 +850,13 @@ const HouseMovingPage = () => {
                                                         className={`${isStudent ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
                                                         id="student-toggle"
                                                     >
-                                                        <span className={`${isStudent ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                                        <span
+                                                            style={{
+                                                                transform: (isStudent) ? 'translateX(24px)' : 'translateX(4px)',
+                                                                transition: 'transform 0.2s'
+                                                            }}
+                                                            className="inline-block h-4 w-4 rounded-full bg-white"
+                                                        />
                                                     </Switch>
                                                 </div>
                                                 
@@ -886,7 +960,7 @@ const HouseMovingPage = () => {
                                                     I agree to the Terms and Conditions
                                                 </label>
                                                 <p className="text-gray-500">
-                                                    By proceeding, you agree to our <a href="#" className="text-orange-600 hover:text-orange-800">Terms of Service</a> and <a href="#" className="text-orange-600 hover:text-orange-800">Privacy Policy</a>.
+                                                    By proceeding, you agree to our <a href="/terms" target="_blank" className="text-orange-600 hover:text-orange-800">Terms of Service</a> and <a href="/privacy" target="_blank" className="text-orange-600 hover:text-orange-800">Privacy Policy</a>.
                                                 </p>
                                             </div>
                                         </div>
@@ -925,8 +999,8 @@ const HouseMovingPage = () => {
                                             <p className="text-gray-900">
                                                 {isDateFlexible 
                                                     ? "Flexible date (we'll contact you to confirm)" 
-                                                    : selectedDate 
-                                                        ? new Date(selectedDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                                                    : selectedDateRange.start 
+                                                        ? new Date(selectedDateRange.start).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
                                                         : "Not specified"
                                                 }
                                             </p>

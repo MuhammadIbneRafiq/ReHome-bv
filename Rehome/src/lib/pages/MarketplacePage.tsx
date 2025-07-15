@@ -309,6 +309,31 @@ const MarketplacePage = () => {
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
             if (response.ok) {
+                // Send confirmation email
+                try {
+                    console.log('📧 Sending confirmation email for order:', orderNumber);
+                    const emailResponse = await fetch('/api/rehome-order/send-confirmation', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            orderNumber,
+                            items: cartItems,
+                            totalAmount,
+                            customerInfo: orderData.contactInfo
+                        }),
+                    });
+
+                    if (emailResponse.ok) {
+                        console.log('✅ Confirmation email sent successfully');
+                    } else {
+                        console.error('❌ Failed to send confirmation email:', emailResponse.status);
+                    }
+                } catch (emailError) {
+                    console.error('❌ Error sending confirmation email:', emailError);
+                }
+
                 clearCart();
                 setIsCartDrawerOpen(false);
                 setShowOrderConfirmation(true);

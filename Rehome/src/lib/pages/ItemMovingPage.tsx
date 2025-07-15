@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaInfoCircle } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -35,7 +35,7 @@ const ItemMovingPage = () => {
     const [floorPickup, setFloorPickup] = useState('');
     const [floorDropoff, setFloorDropoff] = useState('');
 
-    const [selectedDate, setSelectedDate] = useState('');
+    const [selectedDateRange, setSelectedDateRange] = useState({ start: '', end: '' });
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
@@ -61,7 +61,7 @@ const ItemMovingPage = () => {
             serviceType: 'item-transport' as const,
             pickupLocation: firstLocation,
             dropoffLocation: secondLocation,
-            selectedDate,
+            selectedDate: selectedDateRange.start,
             isDateFlexible,
             itemQuantities,
             floorPickup: parseInt(floorPickup) || 0,
@@ -100,7 +100,7 @@ const ItemMovingPage = () => {
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDate, isDateFlexible]);
+    }, [firstLocation, secondLocation, selectedDateRange.start, isDateFlexible]);
 
     // Immediate price calculation for non-location changes
     useEffect(() => {
@@ -111,7 +111,7 @@ const ItemMovingPage = () => {
 
     const nextStep = () => {
         // Validate date selection in step 4
-        if (step === 4 && !selectedDate && !isDateFlexible) {
+        if (step === 4 && (!selectedDateRange.start || !selectedDateRange.end || selectedDateRange.start !== selectedDateRange.end)) {
             toast.error("Please select a date or indicate that your date is flexible.");
             return;
         }
@@ -182,7 +182,7 @@ const ItemMovingPage = () => {
     };
 
     const isFormValid = () => {
-        if (!selectedDate && !isDateFlexible) return false;
+        if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end || selectedDateRange.start !== selectedDateRange.end)) return false;
         if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
             !contactInfo.email.trim() || !contactInfo.phone.trim()) return false;
         
@@ -213,7 +213,7 @@ const ItemMovingPage = () => {
             disassembly,
             contactInfo,
             estimatedPrice: pricingBreakdown?.total || 0,
-            selectedDate,
+            selectedDateRange,
             isDateFlexible,
             elevatorPickup,
             elevatorDropoff,
@@ -318,7 +318,13 @@ const ItemMovingPage = () => {
                 onChange={onChange}
                 className={`${checked ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
             >
-                <span className={`${checked ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                <span
+                    style={{
+                        transform: checked ? 'translateX(24px)' : 'translateX(4px)',
+                        transition: 'transform 0.2s'
+                    }}
+                    className="inline-block h-4 w-4 rounded-full bg-white"
+                />
             </Switch>
             <span className="ml-2 text-sm text-gray-700">{label}</span>
         </div>
@@ -347,14 +353,14 @@ const ItemMovingPage = () => {
         }
 
         // Check if we have valid base pricing (location + date provided)
-        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && selectedDate;
+        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && selectedDateRange.start;
         
         if (!hasValidBasePricing) {
             return (
                 <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
                     <p className="text-gray-500">
-                        {!selectedDate ? "Select a date to see base pricing" : "Enter both pickup and dropoff locations"}
+                        {!selectedDateRange.start ? "Select a date to see base pricing" : "Enter both pickup and dropoff locations"}
                     </p>
                 </div>
             );
@@ -374,7 +380,7 @@ const ItemMovingPage = () => {
                 };
             });
 
-        const totalItemPoints = selectedItems.reduce((sum, item) => sum + item.points, 0);
+        // const totalItemPoints = selectedItems.reduce((sum, item) => sum + item.points, 0);
         const totalItemValue = selectedItems.reduce((sum, item) => sum + item.value, 0);
         
         return (
@@ -398,7 +404,7 @@ const ItemMovingPage = () => {
                     {/* Items Section - Show detailed breakdown */}
                     <div className="border-t pt-3">
                         <div className="flex justify-between font-medium">
-                            <span>Items ({totalItemPoints} points):</span>
+                            {/* <span>Items ({totalItemPoints} points):</span> */}
                             <span>€{totalItemValue.toFixed(2)}</span>
                         </div>
                         {selectedItems.length > 0 && (
@@ -406,12 +412,12 @@ const ItemMovingPage = () => {
                                 {selectedItems.map((item, index) => (
                                     <div key={index} className="flex justify-between text-xs text-gray-600 ml-4">
                                         <span>{item.name} ({item.quantity}x)</span>
-                                        <span>{item.points} pts → €{item.value.toFixed(2)}</span>
+                                        <span>€{item.value.toFixed(2)}</span>
                                     </div>
                                 ))}
-                                <div className="text-xs text-gray-500 ml-4 mt-1">
+                                {/* <div className="text-xs text-gray-500 ml-4 mt-1">
                                     Total item value = {totalItemPoints} points × €1
-                                </div>
+                                </div> */}
                             </div>
                         )}
                         {selectedItems.length === 0 && (
@@ -447,7 +453,7 @@ const ItemMovingPage = () => {
                                     {pricingBreakdown.breakdown.assembly.itemBreakdown.map((item, index) => (
                                         <div key={index} className="flex justify-between text-xs text-gray-600 ml-6">
                                             <span>{item.itemId.replace(/-/g, ' - ')}</span>
-                                            <span>{item.points} pts × {item.multiplier} × €3 = €{item.cost.toFixed(2)}</span>
+                                            <span>€{item.cost.toFixed(2)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -460,10 +466,24 @@ const ItemMovingPage = () => {
                                         <span className="ml-2">Carrying ({pricingBreakdown.breakdown.carrying.floors} floors):</span>
                                         <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
                                     </div>
+                                    {/* Elevator discount explanation */}
+                                    {((elevatorPickup && parseInt(floorPickup) > 1) || (elevatorDropoff && parseInt(floorDropoff) > 1)) && (
+                                        <div className="text-xs text-green-700 ml-6">
+                                            <span>
+                                                Elevator discount applied:
+                                                {elevatorPickup && parseInt(floorPickup) > 1 && (
+                                                    <> Pickup floors reduced from {parseInt(floorPickup) - 1} to {Math.ceil((parseInt(floorPickup) - 1) / 2)}.</>
+                                                )}
+                                                {elevatorDropoff && parseInt(floorDropoff) > 1 && (
+                                                    <> Dropoff floors reduced from {parseInt(floorDropoff) - 1} to {Math.ceil((parseInt(floorDropoff) - 1) / 2)}.</>
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
                                     {pricingBreakdown.breakdown.carrying.itemBreakdown.map((item, index) => (
                                         <div key={index} className="flex justify-between text-xs text-gray-600 ml-6">
                                             <span>{item.itemId.replace(/-/g, ' - ')}</span>
-                                            <span>{item.points} pts × {item.multiplier} × €3 = €{item.cost.toFixed(2)}</span>
+                                            <span>€{item.cost.toFixed(2)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -666,28 +686,48 @@ const ItemMovingPage = () => {
                                     </p>
                                     
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Preferred Date
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Select range of Start Date</label>
                                         <input
                                             type="date"
-                                            value={selectedDate}
-                                            onChange={(e) => setSelectedDate(e.target.value)}
+                                            value={selectedDateRange.start}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                const year = val.split('-')[0];
+                                                if (year.length <= 4) setSelectedDateRange(r => ({ ...r, start: val, end: isDateFlexible ? r.end : val }));
+                                            }}
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                             min={new Date().toISOString().split('T')[0]}
                                             required
                                             disabled={isDateFlexible}
                                         />
                                     </div>
-                                    
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                        <input
+                                            type="date"
+                                            value={selectedDateRange.end}
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                const year = val.split('-')[0];
+                                                if (year.length <= 4) setSelectedDateRange(r => ({ ...r, end: val }));
+                                            }}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            min={selectedDateRange.start || new Date().toISOString().split('T')[0]}
+                                            required
+                                            disabled={isDateFlexible}
+                                        />
+                                    </div>
+                                    <div className="mt-2 text-xs text-blue-600">
+                                        If your date is fixed, set both start and end date to the same day.
+                                    </div>
                                     <div className="flex items-center mt-2">
                                         <input
-                                            id="date-flexibility"
                                             type="checkbox"
+                                            id="date-flexibility"
                                             checked={isDateFlexible}
                                             onChange={(e) => {
                                                 setIsDateFlexible(e.target.checked);
-                                                if (e.target.checked) setSelectedDate('');
+                                                if (e.target.checked) setSelectedDateRange({ start: '', end: '' });
                                             }}
                                             className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                         />
@@ -713,14 +753,14 @@ const ItemMovingPage = () => {
                                         </select>
                                     </div>
                                     
-                                    <div className="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
+                                    {/* <div className="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
                                         <h3 className="text-sm font-medium text-blue-800 flex items-center">
                                             <FaInfoCircle className="mr-2" /> Pricing Information
                                         </h3>
                                         <p className="mt-1 text-sm text-blue-700">
                                             Weekday rates apply Monday through Friday. Weekend rates (Saturday/Sunday) have a 15% surcharge.
                                         </p>
-                                    </div>
+                                    </div> */}
                                 </div>
                             )}
                             
@@ -747,7 +787,6 @@ const ItemMovingPage = () => {
                                                                 <div className="flex-1">
                                                                     <div className="text-sm text-gray-700">{item.name}</div>
                                                                     <div className="text-xs text-gray-500">
-                                                                        {points} points = €{points.toFixed(2)} each
                                                                         {quantity > 0 && (
                                                                             <span className="ml-2 text-orange-600 font-medium">
                                                                                 ({quantity}x = €{itemValue.toFixed(2)})
@@ -845,12 +884,8 @@ const ItemMovingPage = () => {
                                                 <p className="text-sm text-gray-600">
                                                     Select which items need disassembly/reassembly:
                                                 </p>
-                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
-                                                    const points = getItemPoints(itemId);
-                                                    const quantity = itemQuantities[itemId];
-                                                    const multiplier = points <= 6 ? 0.5 : 0.7; // Assembly multiplier based on item value
-                                                    const assemblyPoints = points * multiplier * quantity;
-                                                    const assemblyCost = assemblyPoints * 3; // €3 per point for add-ons
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                    const quantity: number = itemQuantities[itemId];
                                                     
                                                     // Find the item data to get the proper name
                                                     const itemData = itemCategories
@@ -874,9 +909,6 @@ const ItemMovingPage = () => {
                                                                 <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
                                                                     {itemName} ({quantity}x)
                                                                 </label>
-                                                            </div>
-                                                            <div className="text-xs text-gray-500">
-                                                                {points} pts × {multiplier} × {quantity} × €3 = €{assemblyCost.toFixed(2)}
                                                             </div>
                                                         </div>
                                                     );
@@ -1017,7 +1049,7 @@ const ItemMovingPage = () => {
                                                 required
                                             />
                                             <label htmlFor="agree-terms" className="ml-2 text-sm text-gray-700">
-                                                I agree to the <a href="#" className="text-orange-600 hover:text-orange-500">Terms and Conditions</a> and <a href="#" className="text-orange-600 hover:text-orange-500">Privacy Policy</a>
+                                                I agree to the <a href="/terms" target="_blank" className="text-orange-600 hover:text-orange-500">Terms and Conditions</a> and <a href="/privacy" target="_blank" className="text-orange-600 hover:text-orange-500">Privacy Policy</a>
                                             </label>
                                         </div>
                                     </div>
@@ -1051,7 +1083,7 @@ const ItemMovingPage = () => {
                                             {isDateFlexible ? (
                                                 <p><span className="text-gray-500">Date:</span> <span className="font-medium">Flexible</span></p>
                                             ) : (
-                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">{new Date(selectedDate).toLocaleDateString()}</span></p>
+                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">{new Date(selectedDateRange.start).toLocaleDateString()}</span></p>
                                             )}
                                             {preferredTimeSpan && (
                                                 <p className="mt-1"><span className="text-gray-500">Time:</span> <span className="font-medium">

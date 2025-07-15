@@ -92,6 +92,15 @@ class PricingService {
    * Calculate comprehensive pricing for house moving or item transport
    */
   async calculatePricing(input: PricingInput): Promise<PricingBreakdown> {
+    console.log('🔍 [PRICING DEBUG] Starting calculatePricing with input:', {
+      serviceType: input.serviceType,
+      pickupLocation: input.pickupLocation,
+      dropoffLocation: input.dropoffLocation,
+      selectedDate: input.selectedDate,
+      isDateFlexible: input.isDateFlexible,
+      itemQuantities: input.itemQuantities
+    });
+
     const breakdown: PricingBreakdown = {
       basePrice: 0,
       itemValue: 0,
@@ -407,8 +416,9 @@ class PricingService {
   }
 
   private calculateCarryingCost(input: PricingInput, breakdown: PricingBreakdown) {
-    const pickupFloors = input.elevatorPickup ? 0 : Math.max(0, input.floorPickup - 1);
-    const dropoffFloors = input.elevatorDropoff ? 0 : Math.max(0, input.floorDropoff - 1);
+    // If elevator is available, count half the floors (rounded up), else full
+    const pickupFloors = input.elevatorPickup ? Math.ceil(Math.max(0, input.floorPickup - 1) / 2) : Math.max(0, input.floorPickup - 1);
+    const dropoffFloors = input.elevatorDropoff ? Math.ceil(Math.max(0, input.floorDropoff - 1) / 2) : Math.max(0, input.floorDropoff - 1);
     const totalFloors = pickupFloors + dropoffFloors;
 
     breakdown.breakdown.carrying.floors = totalFloors;
