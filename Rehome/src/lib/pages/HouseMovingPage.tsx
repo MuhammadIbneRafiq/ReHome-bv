@@ -46,6 +46,7 @@ const HouseMovingPage = () => {
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
+    const [carryingService, setCarryingService] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<ItemQuantities>({});
     const [isStudent, setIsStudent] = useState(false);
     const [studentId, setStudentId] = useState<File | null>(null);
@@ -90,8 +91,8 @@ const HouseMovingPage = () => {
                 selectedDate: selectedDateRange.start,
                 isDateFlexible: isDateFlexible,
                 itemQuantities: itemQuantities,
-                floorPickup: parseInt(floorPickup) || 0,
-                floorDropoff: parseInt(floorDropoff) || 0,
+                floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
+                floorDropoff: carryingService ? (parseInt(floorDropoff) || 0) : 0,
                 elevatorPickup,
                 elevatorDropoff,
                 assemblyItems: disassemblyItems,
@@ -136,11 +137,11 @@ const HouseMovingPage = () => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, isStudent, studentId]);
+    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, carryingService, isStudent, studentId]);
 
     const nextStep = () => {
         // Validate date selection in step 4
-        if (step === 4 && !isDateFlexible || (!selectedDateRange.start || !selectedDateRange.end)) {
+        if (step === 4 && !isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) {
             toast.error("Please select a date or indicate that your date is flexible.");
             return;
         }
@@ -820,8 +821,57 @@ const HouseMovingPage = () => {
                                                         />
                                                     </Switch>
                                                 </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                                        <div className="flex items-start">
+                                            <div className="flex-shrink-0">
+                                                <FaPlus className="h-6 w-6 text-orange-600" />
+                                            </div>
+                                            <div className="ml-3 flex-grow">
+                                                <div className="flex justify-between">
+                                                    <label htmlFor="carrying-toggle" className="font-medium text-gray-900">Carrying Service</label>
+                                                    <span className="text-gray-700">
+                                                        {carryingService && (parseInt(floorPickup) > 0 || parseInt(floorDropoff) > 0) 
+                                                          ? `€${pricingBreakdown?.carryingCost?.toFixed(2) || 'Calculating...'}`
+                                                          : '€0'
+                                                        }
+                                                    </span>
+                                                </div>
+                                                <p className="text-gray-500 text-sm mt-1">
+                                                    Professional carrying service for items up and down floors
+                                                </p>
+                                                <div className="mt-2">
+                                                    <Switch
+                                                        checked={carryingService}
+                                                        onChange={setCarryingService}
+                                                        className={`${carryingService ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+                                                        id="carrying-toggle"
+                                                    >
+                                                        <span
+                                                            style={{
+                                                                transform: (carryingService) ? 'translateX(24px)' : 'translateX(4px)',
+                                                                transition: 'transform 0.2s'
+                                                            }}
+                                                            className="inline-block h-4 w-4 rounded-full bg-white"
+                                                        />
+                                                    </Switch>
+                                                </div>
                                                 
-
+                                                {carryingService && (
+                                                    <div className="mt-4 ml-2 space-y-2">
+                                                        <p className="text-sm text-gray-600">
+                                                            Carrying service will be calculated based on:
+                                                        </p>
+                                                        <ul className="text-sm text-gray-600 space-y-1">
+                                                            <li>• Pickup floor: {floorPickup || '0'} {elevatorPickup ? '(with elevator - 50% discount)' : ''}</li>
+                                                            <li>• Dropoff floor: {floorDropoff || '0'} {elevatorDropoff ? '(with elevator - 50% discount)' : ''}</li>
+                                                            <li>• Items selected and their weight/points</li>
+                                                        </ul>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -1052,6 +1102,10 @@ const HouseMovingPage = () => {
                                                 <li className="flex justify-between text-sm">
                                                     <span className="text-gray-600">Extra Helper</span>
                                                     <span className="text-gray-900">{extraHelper ? "Yes" : "No"}</span>
+                                                </li>
+                                                <li className="flex justify-between text-sm">
+                                                    <span className="text-gray-600">Carrying Service</span>
+                                                    <span className="text-gray-900">{carryingService ? "Yes" : "No"}</span>
                                                 </li>
                                                 <li className="flex justify-between text-sm">
                                                     <span className="text-gray-600">Student Discount</span>

@@ -39,11 +39,13 @@ const ItemMovingPage = () => {
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
+    const [carryingService, setCarryingService] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
     const [pickupType, setPickupType] = useState<'private' | 'store' | null>(null);
     const [customItem, setCustomItem] = useState('');
     const [isStudent, setIsStudent] = useState(false);
     const [studentId, setStudentId] = useState<File | null>(null);
+    const [storeProofPhoto, setStoreProofPhoto] = useState<File | null>(null);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({});
     const [extraHelperItems] = useState<{ [key: string]: boolean }>({});
@@ -58,6 +60,11 @@ const ItemMovingPage = () => {
         setStudentId(file || null);
     };
 
+    const handleStoreProofUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        setStoreProofPhoto(file || null);
+    };
+
     const calculatePrice = async () => {
         const pricingInput = {
             serviceType: 'item-transport' as const,
@@ -66,8 +73,8 @@ const ItemMovingPage = () => {
             selectedDate: selectedDateRange.start,
             isDateFlexible,
             itemQuantities,
-            floorPickup: parseInt(floorPickup) || 0,
-            floorDropoff: parseInt(floorDropoff) || 0,
+            floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
+            floorDropoff: carryingService ? (parseInt(floorDropoff) || 0) : 0,
             elevatorPickup,
             elevatorDropoff,
             assemblyItems: disassemblyItems,
@@ -109,11 +116,11 @@ const ItemMovingPage = () => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, isStudent, studentId]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, isStudent, studentId]);
 
     const nextStep = () => {
         // Validate date selection in step 4
-        if (step === 4 && !isDateFlexible || (!selectedDateRange.start || !selectedDateRange.end)) {
+        if (step === 4 && !isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) {
             toast.error("Please select a date or indicate that your date is flexible.");
             return;
         }
@@ -146,6 +153,11 @@ const ItemMovingPage = () => {
             const phoneRegex = /^\+?[1-9]\d{1,14}$/;
             if (!phoneRegex.test(contactInfo.phone)) {
                 toast.error("Please enter a valid phone number.");
+                return;
+            }
+            // Validate store proof photo if pickup type is store
+            if (pickupType === 'store' && !storeProofPhoto) {
+                toast.error("Please upload proof of purchase/ownership for store items.");
                 return;
             }
             // Check if terms and conditions are agreed to
@@ -218,6 +230,12 @@ const ItemMovingPage = () => {
             return false;
         }
         
+        // Validate store proof photo if pickup type is store
+        if (pickupType === 'store' && !storeProofPhoto) {
+            console.log('❌ Store proof photo validation failed');
+            return false;
+        }
+        
         // Check if terms and conditions are agreed to
         if (!agreedToTerms) {
             console.log('❌ Terms agreement validation failed');
@@ -259,6 +277,7 @@ const ItemMovingPage = () => {
             preferredTimeSpan,
             customItem,
             studentId: studentId ? studentId.name : null,
+            storeProofPhoto: storeProofPhoto ? storeProofPhoto.name : null,
             // Complete order summary for email
             orderSummary: {
                 pickupDetails: {
@@ -956,6 +975,40 @@ const ItemMovingPage = () => {
                                     </div>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Carrying Service</h3>
+                                        <div className="flex items-center mb-4">
+                                            <input
+                                                id="carrying-service"
+                                                type="checkbox"
+                                                checked={carryingService}
+                                                onChange={(e) => setCarryingService(e.target.checked)}
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="carrying-service" className="ml-2 block text-sm text-gray-700">
+                                                I need professional carrying service for items up and down floors
+                                            </label>
+                                        </div>
+                                        
+                                        {carryingService && (
+                                            <div className="ml-6 space-y-3">
+                                                <p className="text-sm text-gray-600">
+                                                    Carrying service will be calculated based on:
+                                                </p>
+                                                <ul className="text-sm text-gray-600 space-y-1">
+                                                    <li>• Pickup floor: {floorPickup || '0'} {elevatorPickup ? '(with elevator - 50% discount)' : ''}</li>
+                                                    <li>• Dropoff floor: {floorDropoff || '0'} {elevatorDropoff ? '(with elevator - 50% discount)' : ''}</li>
+                                                    <li>• Items selected and their weight/points</li>
+                                                </ul>
+                                                {pricingBreakdown?.carryingCost && pricingBreakdown.carryingCost > 0 && (
+                                                    <p className="text-sm font-medium text-orange-600">
+                                                        Estimated carrying cost: €{pricingBreakdown.carryingCost.toFixed(2)}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="text-md font-medium text-gray-800 mb-3">Student Discount</h3>
                                         <div className="flex items-center mb-4">
                                             <input
@@ -1062,6 +1115,40 @@ const ItemMovingPage = () => {
                                         </div>
                                     </div>
                                     
+                                    {/* Store Proof Photo Upload - Only show if pickup type is store */}
+                                    {pickupType === 'store' && (
+                                        <div className="mt-6">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Proof of Purchase/Ownership *
+                                            </label>
+                                            <p className="text-sm text-gray-600 mb-3">
+                                                Please upload a photo of your receipt, invoice, or proof of ownership for the items from the store.
+                                            </p>
+                                            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                                <div className="space-y-1 text-center">
+                                                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                    <div className="flex text-sm text-gray-600">
+                                                        <label htmlFor="store-proof-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-orange-600 hover:text-orange-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-orange-500">
+                                                            <span>Upload a file</span>
+                                                            <input id="store-proof-upload" name="store-proof-upload" type="file" className="sr-only" onChange={handleStoreProofUpload} accept="image/*" />
+                                                        </label>
+                                                        <p className="pl-1">or drag and drop</p>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500">
+                                                        PNG, JPG, GIF up to 10MB
+                                                    </p>
+                                                    {storeProofPhoto && (
+                                                        <p className="text-sm text-green-600">
+                                                            Proof uploaded: {storeProofPhoto.name}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="mt-4">
                                         <div className="flex items-center">
                                             <input
@@ -1146,7 +1233,11 @@ const ItemMovingPage = () => {
                                                     <span className="font-medium">€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
                                                 </li>
                                             )}
-                                            {pricingBreakdown?.carryingCost && pricingBreakdown.carryingCost > 0 && (
+                                            <li className="flex justify-between">
+                                                <span>Carrying Service</span>
+                                                <span className="font-medium">{carryingService ? "Yes" : "No"}</span>
+                                            </li>
+                                            {carryingService && pricingBreakdown?.carryingCost && pricingBreakdown.carryingCost > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>Floor Carrying Cost</span>
                                                     <span className="font-medium">€{pricingBreakdown.carryingCost.toFixed(2)}</span>
@@ -1176,6 +1267,12 @@ const ItemMovingPage = () => {
                                                 <p className="text-gray-500">Phone:</p>
                                                 <p className="font-medium">{contactInfo.phone}</p>
                                             </div>
+                                            {pickupType === 'store' && (
+                                                <div>
+                                                    <p className="text-gray-500">Store Proof:</p>
+                                                    <p className="font-medium">{storeProofPhoto ? storeProofPhoto.name : 'Not uploaded'}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                     
@@ -1209,6 +1306,12 @@ const ItemMovingPage = () => {
                                                     <span className="mr-2">{!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone) ? '❌' : '✅'}</span>
                                                     <span>Phone Format: {!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone) ? 'Invalid phone format' : 'Valid'}</span>
                                                 </div>
+                                                {pickupType === 'store' && (
+                                                    <div className={`flex items-center ${!storeProofPhoto ? 'text-red-600' : 'text-green-600'}`}>
+                                                        <span className="mr-2">{!storeProofPhoto ? '❌' : '✅'}</span>
+                                                        <span>Store Proof: {!storeProofPhoto ? 'Please upload proof of purchase/ownership' : 'Uploaded'}</span>
+                                                    </div>
+                                                )}
                                                 <div className={`flex items-center ${!agreedToTerms ? 'text-red-600' : 'text-green-600'}`}>
                                                     <span className="mr-2">{!agreedToTerms ? '❌' : '✅'}</span>
                                                     <span>Terms Agreement: {!agreedToTerms ? 'Please agree to terms and conditions' : 'Agreed'}</span>
