@@ -153,44 +153,93 @@ export const getLocationCoordinates = async (location: string): Promise<Coordina
     'den bosch': { lat: 51.6906, lon: 5.2936 }
   };
   
-  // Check for exact and partial city matches
+  // Enhanced address parsing for Dutch addresses
   const searchQuery = location.toLowerCase().trim().replace(/\s+/g, ' ');
-  const cityPart = searchQuery.split(',')[0].trim(); // Get city part before comma
   
-  // 1. Exact match
-  if (cityDatabase[searchQuery]) {
-    const coords = cityDatabase[searchQuery];
-    console.log('✅ Exact match found:', location, '→', coords);
-    coordinatesCache.set(cacheKey, coords);
-    cacheTimestamps.set(cacheKey, now);
-    return coords;
+  // Extract potential city names from different parts of the address
+  const addressParts = searchQuery.split(',').map(part => part.trim());
+  const potentialCities = [];
+  
+  // Add all parts as potential cities
+  potentialCities.push(...addressParts);
+  
+  // Extract city from common Dutch address patterns
+  for (const part of addressParts) {
+    // Pattern: "5706 NG Helmond" or "5706ng helmond"
+    const postcodeMatch = part.match(/\d{4}\s*[a-z]{2}\s+(.+)/i);
+    if (postcodeMatch) {
+      potentialCities.push(postcodeMatch[1].trim());
+    }
+    
+    // Pattern: Numbers followed by city name
+    const numberCityMatch = part.match(/^\d+\s+(.+)/);
+    if (numberCityMatch) {
+      potentialCities.push(numberCityMatch[1].trim());
+    }
+    
+    // Split on spaces and take potential city words
+    const words = part.split(/\s+/);
+    for (let i = 0; i < words.length; i++) {
+      // Single words that might be cities
+      if (words[i].length > 3 && !/^\d+$/.test(words[i]) && !/^[0-9]+[a-z]{2}$/i.test(words[i])) {
+        potentialCities.push(words[i]);
+      }
+      
+      // Two-word combinations
+      if (i < words.length - 1) {
+        const twoWords = `${words[i]} ${words[i + 1]}`;
+        if (twoWords.length > 5 && !/^\d/.test(twoWords)) {
+          potentialCities.push(twoWords);
+        }
+      }
+    }
   }
   
-  // 2. Partial match
-  for (const [city, coords] of Object.entries(cityDatabase)) {
-    if (cityPart.includes(city) || city.includes(cityPart)) {
-      console.log('✅ Partial match found:', location, '→', city, coords);
+  console.log('🔍 Potential cities extracted:', potentialCities);
+  
+  // 1. Exact match
+  for (const city of potentialCities) {
+    if (cityDatabase[city]) {
+      const coords = cityDatabase[city];
+      console.log('✅ Exact match found:', location, '→', city, coords);
       coordinatesCache.set(cacheKey, coords);
       cacheTimestamps.set(cacheKey, now);
       return coords;
     }
   }
   
-  // 3. Fuzzy match for common variations
-  const variations = [
-    cityPart.replace(/\s/g, ''),
-    cityPart.replace(/ij/g, 'y'),
-    cityPart.replace(/y/g, 'ij'),
-    cityPart.replace(/\s+/g, '-')
-  ];
-  
-  for (const variation of variations) {
-    for (const [city, coords] of Object.entries(cityDatabase)) {
-      if (city.includes(variation) || variation.includes(city)) {
-        console.log('✅ Fuzzy match found:', location, '→', city, coords);
+  // 2. Partial match
+  for (const cityName of potentialCities) {
+    for (const [dbCity, coords] of Object.entries(cityDatabase)) {
+      if ((cityName.length >= 3 && dbCity.includes(cityName)) || 
+          (dbCity.length >= 3 && cityName.includes(dbCity))) {
+        console.log('✅ Partial match found:', location, '→', dbCity, coords);
         coordinatesCache.set(cacheKey, coords);
         cacheTimestamps.set(cacheKey, now);
         return coords;
+      }
+    }
+  }
+  
+  // 3. Fuzzy match for common variations
+  for (const cityName of potentialCities) {
+    const variations = [
+      cityName.replace(/\s/g, ''),
+      cityName.replace(/ij/g, 'y'),
+      cityName.replace(/y/g, 'ij'),
+      cityName.replace(/\s+/g, '-'),
+      cityName.replace(/\s+/g, '')
+    ];
+    
+    for (const variation of variations) {
+      for (const [dbCity, coords] of Object.entries(cityDatabase)) {
+        if ((variation.length >= 3 && dbCity.includes(variation)) || 
+            (dbCity.length >= 3 && variation.includes(dbCity))) {
+          console.log('✅ Fuzzy match found:', location, '→', dbCity, coords);
+          coordinatesCache.set(cacheKey, coords);
+          cacheTimestamps.set(cacheKey, now);
+          return coords;
+        }
       }
     }
   }

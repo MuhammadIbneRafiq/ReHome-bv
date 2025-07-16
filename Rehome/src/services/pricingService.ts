@@ -72,6 +72,7 @@ export interface PricingInput {
   serviceType: 'house-moving' | 'item-transport';
   pickupLocation: string;
   dropoffLocation: string;
+  distanceKm?: number; // Calculated distance between locations
   selectedDate: string;
   isDateFlexible: boolean;
   itemQuantities: { [key: string]: number };
@@ -184,6 +185,9 @@ class PricingService {
     try {
       let baseResult;
       
+      // Check if we have a calculated distance for long-distance moves
+      const isLongDistanceMove = input.distanceKm && input.distanceKm > 50;
+      
       if (input.isDateFlexible) {
         // For flexible dates, apply early booking discount (50% off normal rate)
         const city = await this.findClosestCity(input.pickupLocation);
@@ -193,19 +197,38 @@ class PricingService {
           return;
         }
         
-        const normalRate = cityBaseCharges[city]?.normal || 0;
+        let normalRate = cityBaseCharges[city]?.normal || 0;
+        
+        // For long distance moves, adjust base rate based on distance
+        if (isLongDistanceMove && input.distanceKm) {
+          // Increase base rate for longer distances to account for fuel and time
+          const distanceMultiplier = Math.min(1.5, 1 + (input.distanceKm - 50) / 100); // Max 50% increase
+          normalRate = Math.round(normalRate * distanceMultiplier);
+          console.log('🔍 [PRICING DEBUG] Long distance adjustment:', {
+            originalRate: cityBaseCharges[city]?.normal,
+            distanceKm: input.distanceKm,
+            multiplier: distanceMultiplier,
+            adjustedRate: normalRate
+          });
+        }
+        
         const baseCharge = Math.round(normalRate * 0.5);
         const distanceFromCenter = await this.calculateDistanceFromCityCenter(input.pickupLocation, city);
         
         let finalCharge = baseCharge;
         let chargeType = `${city} flexible date (50% off)`;
         
-        // Apply extra charge if beyond 8km from city center
-        if (distanceFromCenter > 8) {
+        // For long distance moves, don't apply the city center extra charge
+        if (!isLongDistanceMove && distanceFromCenter > 8) {
           const extraKm = distanceFromCenter - 8;
           const extraCharge = Math.round(extraKm * 3); // €3 per km beyond 8km
           finalCharge += extraCharge;
           chargeType += ` (+€${extraCharge} for ${Math.round(extraKm)}km beyond city center)`;
+        }
+        
+        // Add long distance indicator if applicable
+        if (isLongDistanceMove) {
+          chargeType += ` (long distance: ${Math.round(input.distanceKm!)}km)`;
         }
         
         baseResult = {
@@ -223,7 +246,7 @@ class PricingService {
         }
         
         const date = new Date(input.selectedDate);
-        baseResult = await this.calculateBaseCharge(input.pickupLocation, date);
+        baseResult = await this.calculateBaseCharge(input.pickupLocation, date, input.distanceKm);
       }
       
       breakdown.basePrice = baseResult.charge;
@@ -250,7 +273,11 @@ class PricingService {
     }
 
     try {
-      const distanceResult = await this.calculateDistanceCost(input.pickupLocation, input.dropoffLocation);
+      const distanceResult = await this.calculateDistanceCost(
+        input.pickupLocation, 
+        input.dropoffLocation, 
+        input.distanceKm
+      );
       
       breakdown.distanceCost = distanceResult.cost;
       breakdown.breakdown.distance.distanceKm = distanceResult.distance;
@@ -278,7 +305,7 @@ class PricingService {
   /**
    * Calculate base charge based on location and date
    */
-  async calculateBaseCharge(pickup: string, date?: Date): Promise<{ charge: number; type: string; city: string; distance: number }> {
+  async calculateBaseCharge(pickup: string, date?: Date, distanceKm?: number): Promise<{ charge: number; type: string; city: string; distance: number }> {
     // No pricing without both pickup location and date
     if (!pickup || !date) {
       return { charge: 0, type: 'No estimate available', city: '', distance: 0 };
@@ -299,7 +326,7 @@ class PricingService {
     // Check if it's an empty day for early booking discount
     const isEmptyDay = await this.isEmptyCalendarDay(date);
     
-    // Determine base charge
+    // Determine base charge (without distance adjustments - distance is handled separately)
     let baseCharge: number;
     let chargeType: string;
     
@@ -318,7 +345,7 @@ class PricingService {
       chargeType = `${city} normal rate`;
     }
     
-    // Apply extra charge if beyond 8km from city center
+    // Apply city center extra charge if beyond 8km from city center
     if (distanceFromCenter > 8) {
       const extraKm = distanceFromCenter - 8;
       const extraCharge = Math.round(extraKm * 3); // €3 per km beyond 8km
@@ -415,12 +442,20 @@ class PricingService {
   /**
    * Calculate distance cost between pickup and dropoff
    */
-  async calculateDistanceCost(pickup: string, dropoff: string): Promise<{ cost: number; distance: number; type: string }> {
+  async calculateDistanceCost(pickup: string, dropoff: string, providedDistance?: number): Promise<{ cost: number; distance: number; type: string }> {
     if (!pickup || !dropoff) {
       return { cost: 0, distance: 0, type: 'Enter both locations' };
     }
 
-    const distance = await this.calculateDistance(pickup, dropoff);
+    // Use provided distance if available, otherwise calculate it
+    let distance: number;
+    if (providedDistance !== undefined && providedDistance > 0) {
+      distance = providedDistance;
+      console.log('🔍 [PRICING DEBUG] Using provided distance:', distance, 'km');
+    } else {
+      distance = await this.calculateDistance(pickup, dropoff);
+      console.log('🔍 [PRICING DEBUG] Calculated distance:', distance, 'km');
+    }
     
     let cost = 0;
     let type = '';
@@ -432,8 +467,13 @@ class PricingService {
       cost = Math.round(distance * 0.7);
       type = `Medium distance (${Math.round(distance)}km × €0.70)`;
     } else {
-      cost = Math.round(distance * 0.5);
-      type = `Long distance (${Math.round(distance)}km × €0.50)`;
+      // For long distance moves (>50km), use a different pricing structure
+      // Base cost for first 50km + additional cost for remaining distance
+      const baseCost = Math.round(50 * 0.7); // €0.70 per km for first 50km
+      const additionalKm = distance - 50;
+      const additionalCost = Math.round(additionalKm * 0.5); // €0.50 per km for additional distance
+      cost = baseCost + additionalCost;
+      type = `Long distance: €${baseCost} (first 50km) + €${additionalCost} (${Math.round(additionalKm)}km additional)`;
     }
     
     return { 

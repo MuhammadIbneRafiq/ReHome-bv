@@ -5,7 +5,6 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { itemCategories, getItemPoints } from '../../lib/constants';
 import { useTranslation } from 'react-i18next';
-import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
@@ -25,6 +24,193 @@ interface ItemQuantities {
 
 interface PriceSummaryProps {
     pricingBreakdown: PricingBreakdown | null;
+}
+
+// Google Places Autocomplete input component using new Places API
+function GooglePlacesAutocomplete({ 
+  value, 
+  onChange, 
+  placeholder,
+  onPlaceSelect 
+}: { 
+  value: string, 
+  onChange: (val: string, place?: any) => void, 
+  placeholder?: string,
+  onPlaceSelect?: (place: any) => void 
+}) {
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
+
+  // Function to get place details including coordinates from placeId
+  const getPlaceDetails = async (placeId: string) => {
+    try {
+      const response = await fetch(
+        'https://places.googleapis.com/v1/places/' + placeId,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': 'location,displayName,formattedAddress'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Place details response:', data);
+        return {
+          placeId,
+          coordinates: data.location ? {
+            lat: data.location.latitude,
+            lng: data.location.longitude
+          } : null,
+          formattedAddress: data.formattedAddress,
+          displayName: data.displayName?.text
+        };
+      } else {
+        console.error('Place details API error:', response.status, response.statusText);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting place details:', error);
+      return null;
+    }
+  };
+
+  const searchPlaces = async (query: string) => {
+    if (query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Use the new Places API v1 autocomplete endpoint
+      const response = await fetch(
+        'https://places.googleapis.com/v1/places:autocomplete',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
+          },
+          body: JSON.stringify({
+            input: query,
+            locationBias: {
+              circle: {
+                center: {
+                  latitude: 52.3676,
+                  longitude: 4.9041
+                },
+                radius: 50000.0
+              }
+            },
+            languageCode: 'en',
+            regionCode: 'NL',
+            includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
+            includedRegionCodes: ['nl']
+          })
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Places API response:', data);
+        
+        if (data.suggestions) {
+          const placeSuggestions = data.suggestions
+            .filter((suggestion: any) => suggestion.placePrediction)
+            .map((suggestion: any) => ({
+              text: suggestion.placePrediction.text?.text || 'Unknown address',
+              placeId: suggestion.placePrediction.placeId,
+              structuredFormat: suggestion.placePrediction.structuredFormat
+            }));
+          setSuggestions(placeSuggestions);
+          setShowSuggestions(true);
+        }
+      } else {
+        console.error('Places API error:', response.status, response.statusText);
+        const errorData = await response.text();
+        console.error('Error details:', errorData);
+      }
+    } catch (error) {
+      console.error('Places API error:', error);
+      // Fallback to simple input
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSuggestionClick = async (suggestion: any) => {
+    onChange(suggestion.text);
+    
+    if (onPlaceSelect) {
+      // Get place details with coordinates
+      const placeDetails = await getPlaceDetails(suggestion.placeId);
+      const placeWithDetails = {
+        ...suggestion,
+        ...placeDetails
+      };
+      onPlaceSelect(placeWithDetails);
+    }
+    
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    onChange(newValue);
+    
+    // Debounce the search
+    const timeoutId = setTimeout(() => {
+      searchPlaces(newValue);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  };
+
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={handleInputChange}
+        placeholder={placeholder || 'Enter address'}
+        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+      />
+      
+      {isLoading && (
+        <div className="absolute right-2 top-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
+        </div>
+      )}
+
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+          {suggestions.map((suggestion, index) => (
+            <div
+              key={index}
+              className="px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0"
+              onClick={() => handleSuggestionClick(suggestion)}
+            >
+              <div className="flex items-start">
+                <div className="text-sm text-gray-900">{suggestion.text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const HouseMovingPage = () => {
@@ -58,6 +244,74 @@ const HouseMovingPage = () => {
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+    const [pickupPlace, setPickupPlace] = useState<any>(null);
+    const [dropoffPlace, setDropoffPlace] = useState<any>(null);
+    const [distanceKm, setDistanceKm] = useState<number | null>(null);
+
+    // Function to calculate road distance using Google Distance Matrix API via backend proxy
+    const calculateRoadDistance = async (place1: any, place2: any): Promise<number> => {
+        if (!place1?.coordinates || !place2?.coordinates) {
+            return 0;
+        }
+
+        try {
+            console.log('🛣️ Calculating road distance between:', place1.text, 'and', place2.text);
+            
+            // Use a backend proxy to avoid CORS issues
+            const response = await fetch('/api/calculate-distance', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    origin: `${place1.coordinates.lat},${place1.coordinates.lng}`,
+                    destination: `${place2.coordinates.lat},${place2.coordinates.lng}`,
+                    originPlaceId: place1.placeId,
+                    destinationPlaceId: place2.placeId
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.distance) {
+                    const distanceKm = data.distance / 1000; // Convert meters to kilometers
+                    const provider = data.provider || 'Unknown';
+                    console.log(`✅ Road distance calculated via ${provider}:`, distanceKm.toFixed(2), 'km');
+                    return distanceKm;
+                }
+            }
+        } catch (error) {
+            console.log('⚠️ Road distance calculation failed, falling back to straight-line distance:', error);
+        }
+
+        // Fallback to straight-line distance calculation
+        return calculateStraightLineDistance(place1, place2);
+    };
+
+    // Fallback function for straight-line distance calculation
+    const calculateStraightLineDistance = (place1: any, place2: any): number => {
+        if (!place1?.coordinates || !place2?.coordinates) {
+            return 0;
+        }
+
+        const R = 6371; // Radius of the Earth in kilometers
+        const lat1 = place1.coordinates.lat;
+        const lon1 = place1.coordinates.lng;
+        const lat2 = place2.coordinates.lat;
+        const lon2 = place2.coordinates.lng;
+
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distance = R * c; // Distance in kilometers
+        
+        console.log('📏 Calculated straight-line distance:', distance.toFixed(2), 'km between', place1.text, 'and', place2.text);
+        return distance;
+    };
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
         const file = event.target.files?.[0];
@@ -65,29 +319,25 @@ const HouseMovingPage = () => {
     };
 
     const calculatePrice = async () => {
-        console.log('🔍 [UI DEBUG] House moving calculatePrice called with:', {
-            firstLocation,
-            secondLocation,
-            selectedDateRange,
-            isDateFlexible,
-            itemQuantities,
-            floorPickup,
-            floorDropoff,
-            elevatorPickup,
-            elevatorDropoff
-        });
 
         if (!firstLocation || !secondLocation) {
-            console.log('🔍 [UI DEBUG] Missing locations, setting pricing to null');
             setPricingBreakdown(null);
             return;
         }
 
         try {
+            // Calculate road distance if we have coordinates from Google Places
+            let roadDistance = 0;
+            if (pickupPlace?.coordinates && dropoffPlace?.coordinates) {
+                roadDistance = await calculateRoadDistance(pickupPlace, dropoffPlace);
+                setDistanceKm(roadDistance);
+            }
+
             const input: PricingInput = {
                 serviceType: 'house-moving',
                 pickupLocation: firstLocation,
                 dropoffLocation: secondLocation,
+                distanceKm: roadDistance, // Use road distance from Google Maps
                 selectedDate: selectedDateRange.start,
                 isDateFlexible: isDateFlexible,
                 itemQuantities: itemQuantities,
@@ -102,14 +352,15 @@ const HouseMovingPage = () => {
                 isEarlyBooking: false // This would be determined by checking calendar availability
             };
 
-            console.log('🔍 [UI DEBUG] House moving pricing input prepared:', input);
-
             // Use async pricing calculation
             const result = await pricingService.calculatePricing(input);
-            console.log('🔍 [UI DEBUG] House moving pricing breakdown received:', result);
             setPricingBreakdown(result);
+            
+            // Update distance state from pricing service result if we didn't calculate road distance
+            if (!roadDistance && result?.breakdown?.distance?.distanceKm) {
+                setDistanceKm(result.breakdown.distance.distanceKm);
+            }
         } catch (error) {
-            console.error('🔍 [UI DEBUG] Error calculating house moving pricing:', error);
             setPricingBreakdown(null);
         }
     };
@@ -132,12 +383,12 @@ const HouseMovingPage = () => {
         return () => clearTimeout(debounceTimer);
     }, [firstLocation, secondLocation, selectedDateRange, isDateFlexible]);
 
-    // Immediate price calculation for non-location changes
+    // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, carryingService, isStudent, studentId]);
+    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, carryingService, isStudent, studentId, pickupPlace, dropoffPlace]);
 
     const nextStep = () => {
         // Validate date selection in step 4
@@ -257,8 +508,8 @@ const HouseMovingPage = () => {
         }
 
         const payload = {
-            firstLocation,
-            secondLocation,
+            firstLocation: firstLocation,
+            secondLocation: secondLocation,
             itemQuantities,
             floorPickup,
             floorDropoff,
@@ -532,15 +783,17 @@ const HouseMovingPage = () => {
                             {step === 1 && (
                                 <div className="space-y-6">
                                     <div>
-                                        <LocationAutocomplete
-                                            label="Pickup Address"
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Address</label>
+                                        <GooglePlacesAutocomplete
                                             value={firstLocation}
-                                            onChange={(value) => setFirstLocation(value)}
+                                            onChange={setFirstLocation}
                                             placeholder="Enter pickup address"
-                                            required
-                                            countryCode="nl"
+                                            onPlaceSelect={(place) => {
+                                                setPickupPlace(place);
+                                                console.log('🎯 Pickup place selected with coordinates:', place);
+                                            }}
                                         />
-                                        
+                                        {/* Floor and elevator toggles remain unchanged */}
                                         <div className="mt-3">
                                             <label className="block text-sm font-medium text-gray-700">
                                                 Floor (Enter 0 for ground floor)
@@ -554,7 +807,6 @@ const HouseMovingPage = () => {
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                             />
                                         </div>
-                                        
                                         <div className="mt-2">
                                             <div className="flex items-center">
                                                 <Switch
@@ -574,17 +826,18 @@ const HouseMovingPage = () => {
                                             </div>
                                         </div>
                                     </div>
-
                                     <div>
-                                        <LocationAutocomplete
-                                            label="Dropoff Address"
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Address</label>
+                                        <GooglePlacesAutocomplete
                                             value={secondLocation}
-                                            onChange={(value) => setSecondLocation(value)}
+                                            onChange={setSecondLocation}
                                             placeholder="Enter dropoff address"
-                                            required
-                                            countryCode="nl"
+                                            onPlaceSelect={(place) => {
+                                                setDropoffPlace(place);
+                                                console.log('🎯 Dropoff place selected with coordinates:', place);
+                                            }}
                                         />
-                                        
+                                        {/* Floor and elevator toggles remain unchanged */}
                                         <div className="mt-3">
                                             <label className="block text-sm font-medium text-gray-700">
                                                 Floor (Enter 0 for ground floor)
@@ -593,15 +846,11 @@ const HouseMovingPage = () => {
                                                 type="number"
                                                 min="0"
                                                 value={floorDropoff}
-                                                onChange={(e) => {
-                                                    console.log('🔍 [UI DEBUG] House moving floor dropoff input changed:', { oldValue: floorDropoff, newValue: e.target.value });
-                                                    setFloorDropoff(e.target.value);
-                                                }}
+                                                onChange={(e) => setFloorDropoff(e.target.value)}
                                                 placeholder="Floor number"
                                                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                             />
                                         </div>
-                                        
                                         <div className="mt-2">
                                             <div className="flex items-center">
                                                 <Switch
@@ -621,6 +870,26 @@ const HouseMovingPage = () => {
                                             </div>
                                         </div>
                                     </div>
+                                    
+                                    {/* Distance Display */}
+                                    {distanceKm !== null && (
+                                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                                            <div className="flex items-center">
+                                                <FaInfoCircle className="h-5 w-5 text-blue-500 mr-2" />
+                                                <div>
+                                                    <p className="text-sm font-medium text-blue-900">
+                                                        Distance: {distanceKm.toFixed(1)} km
+                                                    </p>
+                                                    <p className="text-xs text-blue-700">
+                                                        {pickupPlace?.coordinates && dropoffPlace?.coordinates 
+                                                            ? "Road distance calculated via Google Maps"
+                                                            : "Distance estimated from location names"
+                                                        }
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
