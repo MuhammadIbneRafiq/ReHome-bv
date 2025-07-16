@@ -32,6 +32,13 @@ export const API_ENDPOINTS = {
     SPECIAL_REQUEST: `${API_BASE_URL}/api/special-request`,
   },
 
+  // Item Donation Services
+  DONATION: {
+    ITEM_REQUEST: `${API_BASE_URL}/api/item-donation-requests`,
+    LIST_REQUESTS: `${API_BASE_URL}/api/item-donation-requests`,
+    UPDATE_STATUS: (id: string) => `${API_BASE_URL}/api/item-donation-requests/${id}/status`,
+  },
+
   // File Upload
   UPLOAD: {
     PHOTOS: `${API_BASE_URL}/api/upload`,
