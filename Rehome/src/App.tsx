@@ -35,6 +35,7 @@ import PrivacyPage from "./lib/pages/PrivacyPage";
 import CookiesPage from "./lib/pages/CookiesPage";
 import AuthCallback from "./hooks/AuthCallback";
 import GoogleOAuthCallback from "./components/GoogleOAuthCallback";
+import TestNSFW from "./components/TestNSFW";
 
 // const usePostData = <T,>(endpoint: string) => {
 //   return useMutation<T, Error, T>(
@@ -100,6 +101,7 @@ const App = () => {
                         <Route path="/cookies" element={<CookiesPage />} />
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/register" element={<SignupPage />} />
+                        <Route path="/test-nsfw" element={<TestNSFW />} />
                       </Routes>
                     </main>
                     <ToastContainer

@@ -48,7 +48,7 @@ const ItemMovingPage = () => {
     const [storeProofPhoto, setStoreProofPhoto] = useState<File | null>(null);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({});
-    const [extraHelperItems] = useState<{ [key: string]: boolean }>({});
+    const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
@@ -198,6 +198,21 @@ const ItemMovingPage = () => {
 
     const handlePhoneChange = (value: string, isValid: boolean) => {
         setContactInfo(prev => ({ ...prev, phone: value, isPhoneValid: isValid }));
+    };
+
+    const handleExtraHelperItemToggle = (itemId: string) => {
+        setExtraHelperItems(prev => {
+            const newState = {
+                ...prev,
+                [itemId]: !prev[itemId]
+            };
+            
+            // Automatically set extraHelper based on whether any items need extra help
+            const hasAnyExtraHelper = Object.values(newState).some(Boolean);
+            setExtraHelper(hasAnyExtraHelper);
+            
+            return newState;
+        });
     };
 
     const isFormValid = () => {
@@ -965,13 +980,55 @@ const ItemMovingPage = () => {
                                                 id="extra-helper"
                                                 type="checkbox"
                                                 checked={extraHelper}
-                                                onChange={(e) => setExtraHelper(e.target.checked)}
-                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                disabled={Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0}
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded disabled:opacity-50"
                                             />
                                             <label htmlFor="extra-helper" className="ml-2 block text-sm text-gray-700">
-                                                I need an extra helper for my move (+€50)
+                                                I need an extra helper for my move
+                                                {pricingBreakdown?.extraHelperCost ? (
+                                                    <span className="text-orange-600 font-medium"> (+€{pricingBreakdown.extraHelperCost.toFixed(0)})</span>
+                                                ) : (
+                                                    <span className="text-gray-500"> (€45-€60 based on items)</span>
+                                                )}
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
+                                                    <span className="text-gray-400 text-xs block"> - Select items first</span>
+                                                )}
                                             </label>
                                         </div>
+                                        
+                                        {extraHelper && Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length > 0 && (
+                                            <div className="ml-6 space-y-3">
+                                                <p className="text-sm text-gray-600">
+                                                    Select which items need extra help:
+                                                </p>
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                    const quantity: number = itemQuantities[itemId];
+                                                    
+                                                    // Find the item data to get the proper name
+                                                    const itemData = itemCategories
+                                                        .flatMap(category => category.items)
+                                                        .find(item => item.id === itemId);
+                                                    const itemName = itemData ? itemData.name : itemId;
+                                                    
+                                                    return (
+                                                        <div key={index} className="flex items-center justify-between">
+                                                            <div className="flex items-center">
+                                                                <input
+                                                                    id={`extra-helper-${itemId}`}
+                                                                    type="checkbox"
+                                                                    checked={extraHelperItems[itemId] || false}
+                                                                    onChange={() => handleExtraHelperItemToggle(itemId)}
+                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor={`extra-helper-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                    {itemName} ({quantity}x)
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">

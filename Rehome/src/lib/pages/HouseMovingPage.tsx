@@ -799,11 +799,14 @@ const HouseMovingPage = () => {
                                                 <div className="flex justify-between">
                                                     <label htmlFor="extra-helper-toggle" className="font-medium text-gray-900">Extra Helper</label>
                                                     <span className="text-gray-700">
-                                                        €35
+                                                        {pricingBreakdown?.extraHelperCost ? 
+                                                            `€${pricingBreakdown.extraHelperCost.toFixed(0)}` : 
+                                                            '€45-€60'
+                                                        }
                                                     </span>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
-                                                    Add an extra helper for heavy or numerous items
+                                                    Add an extra helper for heavy or numerous items (€45 for small moves, €60 for large moves)
                                                 </p>
                                                 <div className="mt-2">
                                                     <Switch

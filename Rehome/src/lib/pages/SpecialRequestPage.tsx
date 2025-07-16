@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { FaCheckCircle, FaWarehouse, FaBroom, FaGlobe } from 'react-icons/fa';
+import { FaWarehouse, FaBroom, FaGlobe, FaCheckCircle } from 'react-icons/fa';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
+import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
 
 type ServiceFieldsType = {
   [key: string]: string[];
@@ -47,12 +48,7 @@ const SpecialRequestPage = () => {
     setFields((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files);
-      setPhotos(files);
-    }
-  };
+
 
   const handlePhoneChange = (value: string) => {
     setContactInfo(prev => ({ ...prev, phone: value }));
@@ -328,15 +324,18 @@ const SpecialRequestPage = () => {
                     {/* Photo Upload */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Upload Photos
+                        Upload Photos *
                       </label>
-                      <input
-                        type="file"
-                        multiple
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                        required
+                      <NSFWFileUpload
+                        value={photos}
+                        onChange={setPhotos}
+                        onRemove={(index) => {
+                          const newPhotos = [...photos];
+                          newPhotos.splice(index, 1);
+                          setPhotos(newPhotos);
+                        }}
+                        required={true}
+                        disabled={isLoading}
                       />
                       <p className="text-xs text-gray-500 mt-1">
                         Please upload at least one photo to help us understand your request better.

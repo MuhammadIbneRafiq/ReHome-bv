@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import API_ENDPOINTS from '../api/config';
 import { PRICING_TYPES } from '../../types/marketplace';
+import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
 
 interface FurnitureItem {
     id: string;
@@ -166,13 +167,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
         setSubcategory(''); // Reset subcategory when category changes
     };
 
-    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        setUploadError(null);
-        if (e.target.files) {
-            const files = Array.from(e.target.files);
-            setPhotos(files);
-        }
-    };
+
 
     const removeExistingImage = (indexToRemove: number) => {
         // Warn if trying to remove the last existing photo and no new photos are added
@@ -578,21 +573,17 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                     <label htmlFor="photos" className="block text-sm font-medium text-gray-700">
                         Add New Photos {existingImages.length === 0 ? '*' : '(Optional)'}
                     </label>
-                    <input
-                        type="file"
-                        id="photos"
-                        multiple
-                        onChange={handlePhotoChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                    <NSFWFileUpload
+                        value={photos}
+                        onChange={setPhotos}
+                        onRemove={(index) => {
+                            const newPhotos = [...photos];
+                            newPhotos.splice(index, 1);
+                            setPhotos(newPhotos);
+                        }}
+                        required={existingImages.length === 0}
+                        disabled={uploading || submitting}
                     />
-                    {existingImages.length === 0 && (
-                        <p className="text-sm text-gray-600 mt-1">
-                            * At least one photo is required for your listing
-                        </p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1">
-                        Images will be automatically optimized for web
-                    </p>
                     {uploading && <p className="text-blue-600 text-sm mt-1">Uploading images...</p>}
                     {uploadError && <p className="text-red-500 text-sm mt-1">{uploadError}</p>}
                 </div>

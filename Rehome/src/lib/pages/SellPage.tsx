@@ -4,6 +4,7 @@ import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PRICING_TYPES } from '../../types/marketplace';
 import useUserStore from '../../services/state/useUserSessionStore';
 import { FaTimes } from 'react-icons/fa';
+import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
 
 // Location suggestion interface (same as in LocationAutocomplete)
 interface LocationSuggestion {
@@ -54,7 +55,6 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
     const [flexibleDateEnd] = useState('');
     const [preferredDate] = useState('');
     
-    const [imageUrls] = useState<string[]>([]); // State for the image URLS, array.
     const [uploading, setUploading] = useState(false); // Loading state for upload
     const [submitting, setSubmitting] = useState(false); // Loading state for submit
     const [uploadError, setUploadError] = useState<string | null>(null); // Error state for upload
@@ -235,14 +235,6 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                 console.error('Error recording terms acceptance:', error);
                 // Don't prevent the user from continuing if logging fails
             }
-        }
-    };
-
-    const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        setUploadError(null); 
-        if (e.target.files) {
-            const files = Array.from(e.target.files);
-            setPhotos(files);
         }
     };
 
@@ -688,25 +680,19 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                     <label htmlFor="photos" className="block text-sm font-medium text-gray-700">
                         Photos *
                     </label>
-                    <p className="text-sm text-gray-600 mb-2">
-                        At least one photo is required. Images will be automatically optimized for web.
-                    </p>
-                    <input
-                        type="file"
-                        id="photos"
-                        multiple  // Allow multiple file selection (optional)
-                        onChange={handlePhotoChange}
-                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100"
+                    <NSFWFileUpload
+                        value={photos}
+                        onChange={setPhotos}
+                        onRemove={(index) => {
+                            const newPhotos = [...photos];
+                            newPhotos.splice(index, 1);
+                            setPhotos(newPhotos);
+                        }}
+                        required={true}
+                        disabled={uploading || submitting}
                     />
                     {uploading && <p className="text-blue-600 text-sm mt-1">Uploading images...</p>}
                     {uploadError && <p className="text-orange-600 text-sm mt-1">{uploadError}</p>}
-                    {imageUrls.length > 0 && ( // Display image preview if imageUrl is available
-                        <div className="mt-2">
-                            {imageUrls.map((url, index) => (
-                                <img key={index} src={url} alt={`Preview ${index}`} className="inline-block h-16 w-16 rounded-md mr-2" />
-                            ))}
-                        </div>
-                    )}
                 </div>
 
                 {/* Location */}
