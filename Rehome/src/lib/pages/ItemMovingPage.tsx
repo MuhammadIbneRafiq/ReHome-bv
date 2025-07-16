@@ -983,6 +983,7 @@ const ItemMovingPage = () => {
                                                 id="extra-helper"
                                                 type="checkbox"
                                                 checked={extraHelper}
+                                                onChange={(e) => setExtraHelper(e.target.checked)}
                                                 disabled={Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0}
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded disabled:opacity-50"
                                             />
