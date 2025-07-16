@@ -391,9 +391,35 @@ const HouseMovingPage = () => {
                             }
                         </div>
                     )}
-                    <div className="flex justify-between">
-                        <span>Items:</span>
-                        <span>€{pricingBreakdown.itemValue.toFixed(2)}</span>
+                    {/* Items Section - Show detailed breakdown */}
+                    <div className="border-t pt-3">
+                        <div className="flex justify-between font-medium">
+                            <span>Items:</span>
+                            <span>€{pricingBreakdown.itemValue.toFixed(2)}</span>
+                        </div>
+                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length > 0 && (
+                            <div className="mt-2 space-y-1">
+                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
+                                    const quantity = itemQuantities[itemId];
+                                    const itemData = itemCategories
+                                        .flatMap(category => category.items)
+                                        .find(item => item.id === itemId);
+                                    const itemName = itemData ? itemData.name : itemId;
+                                    const points = getItemPoints(itemId);
+                                    const itemCost = points * quantity * 2; // €2 per point for house moving
+                                    
+                                    return (
+                                        <div key={index} className="flex justify-between text-xs text-gray-600 ml-4">
+                                            <span>{itemName} ({quantity}x)</span>
+                                            <span>€{itemCost.toFixed(2)}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
+                            <div className="text-xs text-gray-500 ml-4">No items selected</div>
+                        )}
                     </div>
                     {pricingBreakdown.distanceCost > 0 && (
                         <div className="flex justify-between">
