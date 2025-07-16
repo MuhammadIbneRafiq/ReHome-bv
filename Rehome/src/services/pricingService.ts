@@ -246,7 +246,7 @@ class PricingService {
         }
         
         const date = new Date(input.selectedDate);
-        baseResult = await this.calculateBaseCharge(input.pickupLocation, date, input.distanceKm);
+        baseResult = await this.calculateBaseCharge(input.pickupLocation, date);
       }
       
       breakdown.basePrice = baseResult.charge;
@@ -305,12 +305,11 @@ class PricingService {
   /**
    * Calculate base charge based on location and date
    */
-  async calculateBaseCharge(pickup: string, date?: Date, distanceKm?: number): Promise<{ charge: number; type: string; city: string; distance: number }> {
+  async calculateBaseCharge(pickup: string, date?: Date): Promise<{ charge: number; type: string; city: string; distance: number }> {
     // No pricing without both pickup location and date
     if (!pickup || !date) {
       return { charge: 0, type: 'No estimate available', city: '', distance: 0 };
     }
-
     // Find closest supported city
     const city = await this.findClosestCity(pickup);
     if (!city) {
