@@ -26,8 +26,8 @@ export const pricingConfig = {
   
   // Extra helper pricing
   extraHelperPricing: {
-    smallMove: { threshold: 30, price: 45 }, // Up to 30 points = €45
-    bigMove: { price: 60 } // Over 30 points = €60
+    smallMove: { threshold: 30, price: 30 }, // Up to 30 items = €30
+    bigMove: { price: 60 } // Over 30 items = €60
   },
   
   // City range and extra distance pricing

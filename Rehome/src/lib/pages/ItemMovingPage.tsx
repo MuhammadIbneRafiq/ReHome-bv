@@ -975,6 +975,9 @@ const ItemMovingPage = () => {
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="text-md font-medium text-gray-800 mb-3">Extra Helper</h3>
+                                        <p className="text-sm text-gray-600 mb-3">
+                                            Dynamic pricing based on number of items
+                                        </p>
                                         <div className="flex items-center mb-4">
                                             <input
                                                 id="extra-helper"
@@ -988,7 +991,7 @@ const ItemMovingPage = () => {
                                                 {pricingBreakdown?.extraHelperCost ? (
                                                     <span className="text-orange-600 font-medium"> (+€{pricingBreakdown.extraHelperCost.toFixed(0)})</span>
                                                 ) : (
-                                                    <span className="text-gray-500"> (€45-€60 based on items)</span>
+                                                    <span className="text-gray-500"> (€30-€60 based on items)</span>
                                                 )}
                                                 {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
                                                     <span className="text-gray-400 text-xs block"> - Select items first</span>
@@ -1266,12 +1269,23 @@ const ItemMovingPage = () => {
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
                                         <h4 className="text-md font-medium text-gray-800 mb-3">Items</h4>
                                         <ul className="space-y-2 text-sm">
-                                            {Object.keys(itemQuantities).map((item, index) => (
-                                                <li key={index} className="flex justify-between">
-                                                    <span>{item.replace(/-/g, ' - ')}</span>
-                                                    <span className="font-medium">x{itemQuantities[item]}</span>
-                                                </li>
-                                            ))}
+                                            {Object.keys(itemQuantities).map((itemId, index) => {
+                                                const quantity = itemQuantities[itemId];
+                                                const itemData = itemCategories
+                                                    .flatMap(category => category.items)
+                                                    .find(item => item.id === itemId);
+                                                const itemName = itemData ? itemData.name : itemId;
+                                                
+                                                return (
+                                                    <li key={index} className="flex justify-between">
+                                                        <span className="text-gray-600">
+                                                            {itemName}
+                                                            {extraHelperItems[itemId] && <span className="ml-1 text-orange-600">(Extra Helper)</span>}
+                                                        </span>
+                                                        <span className="font-medium">x{quantity}</span>
+                                                    </li>
+                                                );
+                                            })}
                                         </ul>
                                     </div>
                                     

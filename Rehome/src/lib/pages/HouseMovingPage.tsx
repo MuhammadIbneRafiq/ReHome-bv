@@ -51,7 +51,7 @@ const HouseMovingPage = () => {
     const [isStudent, setIsStudent] = useState(false);
     const [studentId, setStudentId] = useState<File | null>(null);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
-    const [extraHelperItems] = useState<{[key: string]: boolean}>({});
+    const [extraHelperItems, setExtraHelperItems] = useState<{[key: string]: boolean}>({});
     const [disassemblyItems, setDisassemblyItems] = useState<{[key: string]: boolean}>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
@@ -214,6 +214,21 @@ const HouseMovingPage = () => {
 
     const handlePhoneChange = (value: string, isValid: boolean) => {
         setContactInfo(prev => ({ ...prev, phone: value, isPhoneValid: isValid }));
+    };
+
+    const handleExtraHelperItemToggle = (itemId: string) => {
+        setExtraHelperItems(prev => {
+            const newState = {
+                ...prev,
+                [itemId]: !prev[itemId]
+            };
+            
+            // Automatically set extraHelper based on whether any items need extra help
+            const hasAnyExtraHelper = Object.values(newState).some(Boolean);
+            setExtraHelper(hasAnyExtraHelper);
+            
+            return newState;
+        });
     };
 
     const isFormValid = () => {
@@ -801,18 +816,19 @@ const HouseMovingPage = () => {
                                                     <span className="text-gray-700">
                                                         {pricingBreakdown?.extraHelperCost ? 
                                                             `€${pricingBreakdown.extraHelperCost.toFixed(0)}` : 
-                                                            '€45-€60'
+                                                            '€30-€60'
                                                         }
                                                     </span>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
-                                                    Add an extra helper for heavy or numerous items (€45 for small moves, €60 for large moves)
+                                                    Add an extra helper for heavy or numerous items
                                                 </p>
                                                 <div className="mt-2">
                                                     <Switch
                                                         checked={extraHelper}
                                                         onChange={setExtraHelper}
-                                                        className={`${extraHelper ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
+                                                        disabled={Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0}
+                                                        className={`${extraHelper ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50`}
                                                         id="extra-helper-toggle"
                                                     >
                                                         <span
@@ -824,6 +840,46 @@ const HouseMovingPage = () => {
                                                         />
                                                     </Switch>
                                                 </div>
+                                                
+                                                {extraHelper && Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length > 0 && (
+                                                    <div className="mt-4 ml-2 space-y-3">
+                                                        <p className="text-sm text-gray-600">
+                                                            Select which items need extra help:
+                                                        </p>
+                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                            const quantity: number = itemQuantities[itemId];
+                                                            
+                                                            // Find the item data to get the proper name
+                                                            const itemData = itemCategories
+                                                                .flatMap(category => category.items)
+                                                                .find(item => item.id === itemId);
+                                                            const itemName = itemData ? itemData.name : itemId;
+                                                            
+                                                            return (
+                                                                <div key={index} className="flex items-center justify-between">
+                                                                    <div className="flex items-center">
+                                                                        <input
+                                                                            id={`extra-helper-${itemId}`}
+                                                                            type="checkbox"
+                                                                            checked={extraHelperItems[itemId] || false}
+                                                                            onChange={() => handleExtraHelperItemToggle(itemId)}
+                                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                        />
+                                                                        <label htmlFor={`extra-helper-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                            {itemName} ({quantity}x)
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                                
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
+                                                    <p className="text-sm text-gray-400 mt-2">
+                                                        Select items first to enable extra helper
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

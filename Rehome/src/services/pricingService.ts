@@ -548,22 +548,21 @@ class PricingService {
       return;
     }
 
-    // Calculate total points for items that need extra helper
-    let totalPoints = 0;
+    // Calculate total quantity for items that need extra helper
+    let totalQuantity = 0;
     for (const [itemId, needsHelper] of Object.entries(input.extraHelperItems)) {
       if (needsHelper && input.itemQuantities[itemId] > 0) {
-        const points = getItemPoints(itemId);
         const quantity = input.itemQuantities[itemId];
-        totalPoints += points * quantity;
+        totalQuantity += quantity;
       }
     }
 
-    const category = totalPoints <= pricingConfig.extraHelperPricing.smallMove.threshold ? 'small' : 'big';
+    const category = totalQuantity <= pricingConfig.extraHelperPricing.smallMove.threshold ? 'small' : 'big';
     const cost = category === 'small' 
       ? pricingConfig.extraHelperPricing.smallMove.price 
       : pricingConfig.extraHelperPricing.bigMove.price;
 
-    breakdown.breakdown.extraHelper.totalPoints = totalPoints;
+    breakdown.breakdown.extraHelper.totalPoints = totalQuantity;
     breakdown.breakdown.extraHelper.category = category;
     breakdown.breakdown.extraHelper.cost = cost;
     breakdown.extraHelperCost = cost;
