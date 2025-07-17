@@ -1,15 +1,15 @@
 // Pricing Configuration - These values should be controlled from backend/admin panel
 export const pricingConfig = {
   // Base multipliers
-  houseMovingItemMultiplier: 2, // €2 per point for house moving
-  itemTransportMultiplier: 1, // €1 per point for item transport
+  houseMovingItemMultiplier: 2, // €2.3 per point for house moving
+  itemTransportMultiplier: 1, // €1.5 per point for item transport
   addonMultiplier: 3, // €3 per point for add-ons
   
   // Distance pricing
   distancePricing: {
     smallDistance: { threshold: 10, rate: 0 }, // Below 10km = free
-    mediumDistance: { threshold: 50, rate: 0.7 }, // 10-50km = €0.7/km
-    longDistance: { rate: 0.5 } // Over 50km = €0.5/km
+    mediumDistance: { threshold: 50, rate: 0.7 }, // 10-50km = €2.5/km
+    longDistance: { rate: 0.5 } // Over 50km = €1.4/km
   },
   
   // Carrying multipliers (per floor)
@@ -26,8 +26,8 @@ export const pricingConfig = {
   
   // Extra helper pricing
   extraHelperPricing: {
-    smallMove: { threshold: 30, price: 30 }, // Up to 30 items = €30
-    bigMove: { price: 60 } // Over 30 items = €60
+    smallMove: { threshold: 30, price: 30 }, // Up to 20 items = €30
+    bigMove: { price: 60 } // Over 20 items = €60
   },
   
   // City range and extra distance pricing
