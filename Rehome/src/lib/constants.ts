@@ -37,7 +37,7 @@ export const pricingConfig = {
   },
   
   // Early booking discount
-  earlyBookingDiscount: 0.5, // 50% discount for empty calendar days
+  earlyBookingDiscount: 0.5, // 0% discount for empty calendar days
   
   // Student discount
   studentDiscount: 0.1 // 10% discount
