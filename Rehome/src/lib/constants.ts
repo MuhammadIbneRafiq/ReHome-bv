@@ -20,8 +20,8 @@ export const pricingConfig = {
   
   // Assembly multipliers
   assemblyMultipliers: {
-    lowValue: { threshold: 6, multiplier: 0.5 }, // Items ≤6 points
-    highValue: { multiplier: 0.7 } // Items ≥7 points
+    lowValue: { threshold: 6, multiplier: 1.80 }, // Items ≤6 points
+    highValue: { multiplier: 4.2 } // Items ≥7 points
   },
   
   // Extra helper pricing
