@@ -1,4 +1,5 @@
 import * as tf from '@tensorflow/tfjs';
+import * as nsfwjs from 'nsfwjs';
 
 export interface NSFWCheckResult {
   isSafe: boolean;
@@ -6,6 +7,14 @@ export interface NSFWCheckResult {
   category?: string;
   message: string;
   processingTime?: number;
+  details?: {
+    predictions?: Array<{
+      className: string;
+      probability: number;
+    }>;
+    topPrediction?: string;
+    modelConfidence?: number;
+  };
 }
 
 interface CheckResult {
@@ -17,11 +26,12 @@ interface CheckResult {
 class NSFWFilterService {
   private isInitialized = false;
   private initializationPromise: Promise<void> | null = null;
+  private nsfwModel: any = null;
   private imageCache = new Map<string, NSFWCheckResult>();
   private readonly CACHE_SIZE = 100; // Limit cache size
 
   /**
-   * Initialize a lightweight NSFW detection model
+   * Initialize the NSFW detection model
    */
   private async initialize(): Promise<void> {
     if (this.isInitialized) return;
@@ -32,17 +42,20 @@ class NSFWFilterService {
 
     this.initializationPromise = new Promise(async (resolve, reject) => {
       try {
-        console.log('🔍 Initializing lightweight NSFW filter...');
+        console.log('🔍 Initializing NSFW detection model...');
         
-        // Use a simple heuristic-based approach for speed
-        // This is much faster than loading a heavy ML model
+        // Initialize TensorFlow.js
         await tf.ready();
         
+        // Load the NSFW model
+        console.log('📦 Loading NSFW model...');
+        this.nsfwModel = await nsfwjs.load();
+        
         this.isInitialized = true;
-        console.log('✅ NSFW filter initialized successfully (heuristic mode)');
+        console.log('✅ NSFW model loaded successfully!');
         resolve();
       } catch (error) {
-        console.error('❌ Failed to initialize NSFW filter:', error);
+        console.error('❌ Failed to initialize NSFW model:', error);
         reject(error);
       }
     });
@@ -58,159 +71,135 @@ class NSFWFilterService {
   }
 
   /**
-   * Fast heuristic-based content analysis
+   * Analyze image using the NSFW model
    */
-  private async analyzeImageHeuristic(file: File): Promise<NSFWCheckResult> {
+  private async analyzeImageWithModel(file: File): Promise<NSFWCheckResult> {
     const startTime = performance.now();
 
     return new Promise((resolve) => {
       const img = new Image();
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      img.onload = () => {
+      
+      img.onload = async () => {
         try {
-          // Resize for faster processing
-          const maxSize = 128;
-          const scale = Math.min(maxSize / img.width, maxSize / img.height);
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
+          console.log(`🔍 Analyzing image with NSFW model: ${file.name}`);
           
-          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-          
-          // Get image data for analysis
-          const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
-          if (!imageData) {
-            throw new Error('Could not get image data');
-          }
-
-          // Fast heuristic analysis
-          const result = this.performHeuristicAnalysis(imageData);
+          // Get predictions from the model
+          const predictions = await this.nsfwModel.classify(img);
           const processingTime = performance.now() - startTime;
-
-          resolve({
-            ...result,
-            processingTime
-          });
+          
+          console.log('📊 NSFW Model Predictions:', predictions);
+          
+          // Sort predictions by probability (highest first)
+          const sortedPredictions = predictions.sort((a: any, b: any) => b.probability - a.probability);
+          const topPrediction = sortedPredictions[0];
+          
+          console.log(`🎯 Top prediction: ${topPrediction.className} (${(topPrediction.probability * 100).toFixed(1)}%)`);
+          
+          // // Define safe categories
+          // const safeCategories = ['Neutral', 'Drawing'];
+          // const unsafeCategories = ['Porn', 'Sexy', 'Hentai'];
+          
+          // Determine if image is safe
+          const isSafe = this.determineImageSafety(sortedPredictions);
+          
+          const result: NSFWCheckResult = {
+            isSafe,
+            confidence: topPrediction.probability,
+            category: topPrediction.className,
+            message: isSafe 
+              ? `✅ Image appears safe (${topPrediction.className}: ${(topPrediction.probability * 100).toFixed(1)}%)`
+              : `🚫 Image may contain inappropriate content (${topPrediction.className}: ${(topPrediction.probability * 100).toFixed(1)}%)`,
+            processingTime,
+            details: {
+              predictions: sortedPredictions.map((p: any) => ({
+                className: p.className,
+                probability: Math.round(p.probability * 1000) / 10 // Round to 1 decimal
+              })),
+              topPrediction: topPrediction.className,
+              modelConfidence: Math.round(topPrediction.probability * 1000) / 10
+            }
+          };
+          
+          console.log(`🚦 Decision: ${isSafe ? '✅ SAFE' : '🚫 UNSAFE'} - ${result.message}`);
+          
+          // Clean up
+          URL.revokeObjectURL(img.src);
+          
+          resolve(result);
         } catch (error) {
-          console.error('Error in heuristic analysis:', error);
+          console.error('❌ Error during model analysis:', error);
           const processingTime = performance.now() - startTime;
+          
+          // Clean up
+          URL.revokeObjectURL(img.src);
+          
+          // If model fails, allow upload but log the error
           resolve({
             isSafe: true,
             message: '⚠️ Content check unavailable - upload allowed',
-            processingTime
+            processingTime,
+            details: {
+              predictions: [],
+              topPrediction: 'Error',
+              modelConfidence: 0
+            }
           });
         }
       };
 
       img.onerror = () => {
         const processingTime = performance.now() - startTime;
+        console.error('❌ Failed to load image for analysis');
+        
         resolve({
           isSafe: true,
           message: '⚠️ Could not analyze image - upload allowed',
-          processingTime
+          processingTime,
+          details: {
+            predictions: [],
+            topPrediction: 'Error',
+            modelConfidence: 0
+          }
         });
       };
 
+      // Load the image
       img.src = URL.createObjectURL(file);
     });
   }
 
   /**
-   * Fast heuristic analysis based on color patterns and skin detection
+   * Determine if image is safe based on model predictions
    */
-  private performHeuristicAnalysis(imageData: ImageData): Omit<NSFWCheckResult, 'processingTime'> {
-    const data = imageData.data;
-    const width = imageData.width;
-    const height = imageData.height;
+  private determineImageSafety(predictions: any[]): boolean {
+    // Get probabilities for each category
+    const neutral = predictions.find(p => p.className === 'Neutral')?.probability || 0;
+    const drawing = predictions.find(p => p.className === 'Drawing')?.probability || 0;
+    const sexy = predictions.find(p => p.className === 'Sexy')?.probability || 0;
+    const porn = predictions.find(p => p.className === 'Porn')?.probability || 0;
+    const hentai = predictions.find(p => p.className === 'Hentai')?.probability || 0;
     
-    let skinPixels = 0;
-    let totalPixels = 0;
-    let skinRegions = 0;
+    // Calculate safe vs unsafe probabilities
+    const safeScore = neutral + drawing;
+    const unsafeScore = sexy + porn + hentai;
     
-    // Sample every 4th pixel for speed (16x faster)
-    for (let i = 0; i < data.length; i += 16) {
-      const r = data[i];
-      const g = data[i + 1];
-      const b = data[i + 2];
-      
-      totalPixels++;
-      
-      // Simple skin tone detection
-      if (this.isSkinTone(r, g, b)) {
-        skinPixels++;
-        
-        // Check if this forms a region with nearby skin pixels
-        const x = Math.floor((i / 4) % width);
-        const y = Math.floor((i / 4) / width);
-        if (this.hasNearbySkinPixels(data, x, y, width, height)) {
-          skinRegions++;
-        }
-      }
-    }
+    console.log(`📊 Safety Analysis:`);
+    console.log(`   Safe (Neutral + Drawing): ${(safeScore * 100).toFixed(1)}%`);
+    console.log(`   Unsafe (Sexy + Porn + Hentai): ${(unsafeScore * 100).toFixed(1)}%`);
     
-    const skinPercentage = (skinPixels / totalPixels) * 100;
-    const regionDensity = (skinRegions / skinPixels) * 100;
+    // Conservative thresholds for furniture platform
+    const SAFE_THRESHOLD = 0.6; // 60% confidence in safe categories
+    const UNSAFE_THRESHOLD = 0.15; // 15% confidence in unsafe categories
     
-    // Conservative thresholds - err on the side of caution
-    const SKIN_THRESHOLD = 35; // % of skin-colored pixels
-    const REGION_THRESHOLD = 25; // % of skin pixels in regions
+    // Image is safe if:
+    // 1. High confidence in safe categories, OR
+    // 2. Low confidence in unsafe categories AND not clearly unsafe
+    const isSafe = safeScore >= SAFE_THRESHOLD || 
+                   (unsafeScore < UNSAFE_THRESHOLD && safeScore > unsafeScore);
     
-    const isSafe = skinPercentage < SKIN_THRESHOLD || regionDensity < REGION_THRESHOLD;
+    console.log(`🎯 Safety decision: ${isSafe ? 'SAFE' : 'UNSAFE'} (Safe: ${(safeScore * 100).toFixed(1)}%, Unsafe: ${(unsafeScore * 100).toFixed(1)}%)`);
     
-    if (isSafe) {
-      return {
-        isSafe: true,
-        confidence: Math.max(0.7, 1 - skinPercentage / 100),
-        message: '✅ Image appears safe for upload'
-      };
-    } else {
-      return {
-        isSafe: false,
-        confidence: Math.min(0.8, skinPercentage / 100),
-        category: 'potentially_inappropriate',
-        message: '🚫 Image may contain inappropriate content'
-      };
-    }
-  }
-
-  /**
-   * Simple skin tone detection
-   */
-  private isSkinTone(r: number, g: number, b: number): boolean {
-    // Multiple skin tone ranges for different ethnicities
-    return (
-      // Light skin tones
-      (r > 95 && g > 40 && b > 20 && r > g && r > b && r - g > 15) ||
-      // Medium skin tones  
-      (r > 80 && g > 50 && b > 30 && r > g && g > b) ||
-      // Darker skin tones
-      (r > 60 && g > 40 && b > 25 && r >= g && g >= b)
-    );
-  }
-
-  /**
-   * Check for nearby skin pixels to detect regions
-   */
-  private hasNearbySkinPixels(data: Uint8ClampedArray, x: number, y: number, width: number, height: number): boolean {
-    const radius = 2;
-    let nearbyCount = 0;
-    
-    for (let dy = -radius; dy <= radius; dy++) {
-      for (let dx = -radius; dx <= radius; dx++) {
-        const nx = x + dx;
-        const ny = y + dy;
-        
-        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-          const index = (ny * width + nx) * 4;
-          if (this.isSkinTone(data[index], data[index + 1], data[index + 2])) {
-            nearbyCount++;
-          }
-        }
-      }
-    }
-    
-    return nearbyCount >= 3; // At least 3 nearby skin pixels
+    return isSafe;
   }
 
   /**
@@ -224,14 +213,14 @@ class NSFWFilterService {
       const hash = this.generateImageHash(file);
       if (this.imageCache.has(hash)) {
         const cached = this.imageCache.get(hash)!;
-        console.log(`🔍 Using cached result for: ${file.name} (${cached.processingTime?.toFixed(1)}ms)`);
+        console.log(`🔍 Using cached result for: ${file.name}`);
         return cached;
       }
       
-      console.log(`🔍 Analyzing image: ${file.name}`);
+      console.log(`🔍 Analyzing new image: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
       
-      // Perform analysis
-      const result = await this.analyzeImageHeuristic(file);
+      // Perform analysis with the model
+      const result = await this.analyzeImageWithModel(file);
       
       // Cache result (with size limit)
       if (this.imageCache.size >= this.CACHE_SIZE) {
@@ -239,8 +228,6 @@ class NSFWFilterService {
         this.imageCache.delete(firstKey);
       }
       this.imageCache.set(hash, result);
-      
-      console.log(`🔍 Analysis complete: ${file.name} (${result.processingTime?.toFixed(1)}ms) - ${result.isSafe ? 'SAFE' : 'UNSAFE'}`);
       
       return result;
     } catch (error) {
@@ -250,7 +237,12 @@ class NSFWFilterService {
       return {
         isSafe: true,
         message: '⚠️ Content check unavailable - upload allowed',
-        processingTime: 0
+        processingTime: 0,
+        details: {
+          predictions: [],
+          topPrediction: 'Error',
+          modelConfidence: 0
+        }
       };
     }
   }
@@ -260,7 +252,7 @@ class NSFWFilterService {
    */
   async checkMultipleImages(files: File[]): Promise<CheckResult> {
     const startTime = performance.now();
-    console.log(`🔍 Checking ${files.length} images...`);
+    console.log(`🔍 Checking ${files.length} images with NSFW model...`);
     
     // Process files in parallel for speed
     const results = await Promise.all(
@@ -293,7 +285,8 @@ class NSFWFilterService {
    */
   getUnsafeImageMessage(unsafeFiles: { file: File; result: NSFWCheckResult }[]): string {
     if (unsafeFiles.length === 1) {
-      return `🚫 "${unsafeFiles[0].file.name}" may contain inappropriate content. Please choose a different image.`;
+      const result = unsafeFiles[0].result;
+      return `🚫 "${unsafeFiles[0].file.name}" may contain inappropriate content (${result.details?.topPrediction}: ${result.details?.modelConfidence}%). Please choose a different image.`;
     } else {
       const fileNames = unsafeFiles.map(({ file }) => `"${file.name}"`).join(', ');
       return `🚫 The following images may contain inappropriate content: ${fileNames}. Please choose different images.`;
