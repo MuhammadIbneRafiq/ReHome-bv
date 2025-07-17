@@ -248,43 +248,13 @@ const HouseMovingPage = () => {
     const [dropoffPlace, setDropoffPlace] = useState<any>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
 
-    // Function to calculate road distance using Google Distance Matrix API via backend proxy
-    const calculateRoadDistance = async (place1: any, place2: any): Promise<number> => {
+    // Calculate distance using straight-line calculation (reliable, no API dependencies)
+    const calculateDistance = (place1: any, place2: any): number => {
         if (!place1?.coordinates || !place2?.coordinates) {
             return 0;
         }
 
-        try {
-            console.log('🛣️ Calculating road distance between:', place1.text, 'and', place2.text);
-            
-            // Use a backend proxy to avoid CORS issues
-            const response = await fetch('/api/calculate-distance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    origin: `${place1.coordinates.lat},${place1.coordinates.lng}`,
-                    destination: `${place2.coordinates.lat},${place2.coordinates.lng}`,
-                    originPlaceId: place1.placeId,
-                    destinationPlaceId: place2.placeId
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (data.distance) {
-                    const distanceKm = data.distance / 1000; // Convert meters to kilometers
-                    const provider = data.provider || 'Unknown';
-                    console.log(`✅ Road distance calculated via ${provider}:`, distanceKm.toFixed(2), 'km');
-                    return distanceKm;
-                }
-            }
-        } catch (error) {
-            console.log('⚠️ Road distance calculation failed, falling back to straight-line distance:', error);
-        }
-
-        // Fallback to straight-line distance calculation
+        console.log('📏 Calculating distance between:', place1.text || place1.formattedAddress, 'and', place2.text || place2.formattedAddress);
         return calculateStraightLineDistance(place1, place2);
     };
 
@@ -326,18 +296,18 @@ const HouseMovingPage = () => {
         }
 
         try {
-            // Calculate road distance if we have coordinates from Google Places
-            let roadDistance = 0;
+            // Calculate distance if we have coordinates from Google Places
+            let calculatedDistance = 0;
             if (pickupPlace?.coordinates && dropoffPlace?.coordinates) {
-                roadDistance = await calculateRoadDistance(pickupPlace, dropoffPlace);
-                setDistanceKm(roadDistance);
+                calculatedDistance = calculateDistance(pickupPlace, dropoffPlace);
+                setDistanceKm(calculatedDistance);
             }
 
             const input: PricingInput = {
                 serviceType: 'house-moving',
                 pickupLocation: firstLocation,
                 dropoffLocation: secondLocation,
-                distanceKm: roadDistance, // Use road distance from Google Maps
+                distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateRange.start,
                 isDateFlexible: isDateFlexible,
                 itemQuantities: itemQuantities,
@@ -356,8 +326,8 @@ const HouseMovingPage = () => {
             const result = await pricingService.calculatePricing(input);
             setPricingBreakdown(result);
             
-            // Update distance state from pricing service result if we didn't calculate road distance
-            if (!roadDistance && result?.breakdown?.distance?.distanceKm) {
+            // Update distance state from pricing service result if we didn't calculate distance
+            if (!calculatedDistance && result?.breakdown?.distance?.distanceKm) {
                 setDistanceKm(result.breakdown.distance.distanceKm);
             }
         } catch (error) {
@@ -507,21 +477,47 @@ const HouseMovingPage = () => {
             return;
         }
 
+        // Prepare furniture items array for backend
+        const furnitureItems = Object.entries(itemQuantities)
+            .filter(([_, quantity]) => quantity > 0)
+            .map(([itemId, quantity]) => ({
+                name: itemId.replace(/-/g, ' - '),
+                quantity,
+                points: getItemPoints(itemId) * quantity,
+                value: getItemPoints(itemId) * quantity * 2 // €2 per point for house moving
+            }));
+
+        // Calculate total item points
+        const totalItemPoints = Object.entries(itemQuantities)
+            .filter(([_, quantity]) => quantity > 0)
+            .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
+
+        // Calculate final distance for backend
+        const finalDistance = distanceKm || (pickupPlace?.coordinates && dropoffPlace?.coordinates 
+            ? calculateDistance(pickupPlace, dropoffPlace) : 0);
+
+        // Prepare payload in the format expected by backend
         const payload = {
-            firstLocation: firstLocation,
-            secondLocation: secondLocation,
-            itemQuantities,
-            floorPickup,
-            floorDropoff,
-            disassembly,
+            pickupType: 'house',
+            furnitureItems,
+            customItem: '',
+            floorPickup: parseInt(floorPickup) || 0,
+            floorDropoff: parseInt(floorDropoff) || 0,
             contactInfo,
             estimatedPrice: pricingBreakdown?.total || 0,
             selectedDateRange,
             isDateFlexible,
-            pricingBreakdown,
-            // Additional order summary details for email
-            preferredTimeSpan,
-            studentId: studentId ? studentId.name : null,
+            basePrice: pricingBreakdown?.basePrice || 0,
+            itemPoints: totalItemPoints,
+            carryingCost: pricingBreakdown?.carryingCost || 0,
+            disassemblyCost: pricingBreakdown?.assemblyCost || 0,
+            distanceCost: pricingBreakdown?.distanceCost || 0,
+            extraHelperCost: pricingBreakdown?.extraHelperCost || 0,
+            distanceKm: finalDistance, // Pre-calculated distance
+            firstlocation: firstLocation,
+            secondlocation: secondLocation,
+            firstlocation_coords: pickupPlace?.coordinates,
+            secondlocation_coords: dropoffPlace?.coordinates,
             // Complete order summary for email
             orderSummary: {
                 pickupDetails: {
@@ -542,14 +538,7 @@ const HouseMovingPage = () => {
                         preferredTimeSpan === 'evening' ? 'Evening (16:00 - 20:00)' : 'Anytime'
                     ) : 'Not specified'
                 },
-                items: Object.entries(itemQuantities)
-                    .filter(([_, quantity]) => quantity > 0)
-                    .map(([itemId, quantity]) => ({
-                        name: itemId.replace(/-/g, ' - '),
-                        quantity,
-                        points: getItemPoints(itemId) * quantity,
-                        value: getItemPoints(itemId) * quantity * 1 // €1 per point
-                    })),
+                items: furnitureItems,
                 additionalServices: {
                     assembly: (pricingBreakdown?.assemblyCost ?? 0) > 0 ? (pricingBreakdown?.assemblyCost ?? 0) : 0,
                     extraHelper: (pricingBreakdown?.extraHelperCost ?? 0) > 0 ? (pricingBreakdown?.extraHelperCost ?? 0) : 0,
@@ -880,11 +869,11 @@ const HouseMovingPage = () => {
                                                     <p className="text-sm font-medium text-blue-900">
                                                         Distance: {distanceKm.toFixed(1)} km
                                                     </p>
-                                                    <p className="text-xs text-blue-700">
-                                                        {pickupPlace?.coordinates && dropoffPlace?.coordinates 
-                                                            ? "Road distance calculated via Google Maps"
-                                                            : "Distance estimated from location names"
-                                                        }
+                                                                                        <p className="text-xs text-blue-700">
+                                        {pickupPlace?.coordinates && dropoffPlace?.coordinates 
+                                            ? "Straight-line distance calculated from coordinates"
+                                            : "Distance estimated from location names"
+                                        }
                                                     </p>
                                                 </div>
                                             </div>
