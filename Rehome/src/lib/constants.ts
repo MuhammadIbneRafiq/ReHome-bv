@@ -81,7 +81,7 @@ export const furnitureItems = [
   { id: 'fridge-small', name: 'Small Fridge/ Freezer', category: 'Appliances', points: 4 },
   
   // Others
-  { id: 'box', name: 'Box', category: 'Others', points: 0.3 },
+  { id: 'box', name: 'Box / Bag', category: 'Others', points: 0.3 },
   { id: 'luggage', name: 'Luggage', category: 'Others', points: 0.5 },
   { id: 'bike', name: 'Bike', category: 'Others', points: 6 },
   { id: 'mirror', name: 'Mirror', category: 'Others', points: 2 },
