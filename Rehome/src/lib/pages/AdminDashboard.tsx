@@ -7,6 +7,7 @@ import { cityBaseCharges } from '../constants';
 import { PricingConfig, CityBasePrice, CreatePricingConfigRequest } from '../../types/pricing';
 import { pricingAdminService } from '../../services/pricingAdminService';
 import BiddingManagement from '../../components/admin/BiddingManagement';
+import API_ENDPOINTS, { getAuthHeaders } from '../api/config';
 
 // Furniture item interface
 interface FurnitureItem {
@@ -29,6 +30,7 @@ interface TransportRequest {
   date: string;
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
+  type: 'item-moving' | 'house-moving'; // ADDED
 }
 
 // City schedule interface
@@ -158,36 +160,49 @@ const AdminDashboard = () => {
   
   // Fetch transport requests
   const fetchTransportRequests = async () => {
-    // Simulated data for now - would connect to Supabase in production
-    setTransportRequests([
-      {
-        id: '1',
-        created_at: '2023-06-01',
-        customer_email: 'john.doe@example.com',
-        customer_name: 'John Doe',
-        city: 'Amsterdam',
-        date: '2023-06-10',
-        status: 'pending'
-      },
-      {
-        id: '2',
-        created_at: '2023-06-02',
-        customer_email: 'jane.smith@example.com',
-        customer_name: 'Jane Smith',
-        city: 'Rotterdam',
-        date: '2023-06-12',
-        status: 'confirmed'
-      },
-      {
-        id: '3',
-        created_at: '2023-06-03',
-        customer_email: 'bob.johnson@example.com',
-        customer_name: 'Bob Johnson',
-        city: 'Utrecht',
-        date: '2023-06-15',
-        status: 'completed'
-      }
-    ]);
+    setIsLoading(true);
+    try {
+      const headers = getAuthHeaders(localStorage.getItem('accessToken') || '');
+      // Fetch both item-moving and house-moving requests
+      const [itemRes, houseRes] = await Promise.all([
+        fetch(API_ENDPOINTS.MOVING.ITEM_REQUEST, { headers }),
+        fetch(API_ENDPOINTS.MOVING.HOUSE_REQUEST, { headers })
+      ]);
+      const [itemData, houseData] = await Promise.all([
+        itemRes.ok ? itemRes.json() : [],
+        houseRes.ok ? houseRes.json() : []
+      ]);
+      // Normalize and combine
+      const itemMoving = (itemData || []).map((req: any) => ({
+        id: req.id?.toString() || '',
+        created_at: req.created_at || '',
+        customer_email: req.email || req.customer_email || '',
+        customer_name: (req.firstname || '') + (req.lastname ? ' ' + req.lastname : ''),
+        city: req.firstlocation || req.city || '',
+        date: req.selecteddate || req.selecteddate_start || req.created_at || '',
+        status: req.status || 'pending',
+        notes: req.notes || '',
+        type: 'item-moving',
+      }));
+      const houseMoving = (houseData || []).map((req: any) => ({
+        id: req.id?.toString() || '',
+        created_at: req.created_at || '',
+        customer_email: req.email || req.customer_email || '',
+        customer_name: (req.firstname || '') + (req.lastname ? ' ' + req.lastname : ''),
+        city: req.firstlocation || req.city || '',
+        date: req.selecteddate || req.selecteddate_start || req.created_at || '',
+        status: req.status || 'pending',
+        notes: req.notes || '',
+        type: 'house-moving',
+      }));
+      setTransportRequests([...itemMoving, ...houseMoving]);
+    } catch (error) {
+      setTransportRequests([]);
+      toast.error('Failed to fetch transport requests');
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   // Fetch pricing data
@@ -764,6 +779,7 @@ const AdminDashboard = () => {
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">City</th>
@@ -775,6 +791,13 @@ const AdminDashboard = () => {
                         <tbody className="bg-white divide-y divide-gray-200">
                           {filteredTransportRequests.map((request) => (
                             <tr key={request.id}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  request.type === 'house-moving' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                                }`}>
+                                  {request.type === 'house-moving' ? 'House Moving' : 'Item Moving'}
+                                </span>
+                              </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-gray-900">{request.customer_name}</div>
                               </td>
@@ -801,7 +824,28 @@ const AdminDashboard = () => {
                                 <button className="text-indigo-600 hover:text-indigo-900 mr-2">
                                   <FaEdit className="inline" />
                                 </button>
-                                <button className="text-red-600 hover:text-red-900">
+                                <button
+                                  className="text-red-600 hover:text-red-900"
+                                  onClick={async () => {
+                                    if (!window.confirm('Are you sure you want to delete this request?')) return;
+                                    try {
+                                      const headers = getAuthHeaders(localStorage.getItem('accessToken') || '');
+                                      let url = '';
+                                      if (request.type === 'item-moving') {
+                                        url = `${API_ENDPOINTS.MOVING.ITEM_REQUEST}/${request.id}`;
+                                      } else if (request.type === 'house-moving') {
+                                        url = `${API_ENDPOINTS.MOVING.HOUSE_REQUEST}/${request.id}`;
+                                      }
+                                      const res = await fetch(url, { method: 'DELETE', headers });
+                                      if (!res.ok) throw new Error('Failed to delete request');
+                                      toast.success('Request deleted successfully!');
+                                      fetchTransportRequests();
+                                    } catch (err) {
+                                      toast.error('Failed to delete request');
+                                    }
+                                  }}
+                                  title="Delete request"
+                                >
                                   <FaTrash className="inline" />
                                 </button>
                               </td>
