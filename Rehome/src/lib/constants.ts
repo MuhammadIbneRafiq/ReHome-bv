@@ -14,8 +14,8 @@ export const pricingConfig = {
   
   // Carrying multipliers (per floor)
   carryingMultipliers: {
-    lowValue: { threshold: 6, multiplier: 0.2 }, // Items ≤6 points
-    highValue: { multiplier: 0.4 } // Items ≥7 points
+    lowValue: { threshold: 6, multiplier: 0.015 }, // Items ≤6 points
+    highValue: { multiplier: 0.040 } // Items ≥7 points
   },
   
   // Assembly multipliers
