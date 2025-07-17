@@ -1,27 +1,9 @@
 import React, { useState } from 'react';
 import API_ENDPOINTS from '../api/config';
-import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PRICING_TYPES } from '../../types/marketplace';
 import useUserStore from '../../services/state/useUserSessionStore';
 import { FaTimes } from 'react-icons/fa';
 import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
-
-// Location suggestion interface (same as in LocationAutocomplete)
-interface LocationSuggestion {
-    display_name: string;
-    lat: string;
-    lon: string;
-    place_id: string;
-    address?: {
-        house_number?: string;
-        road?: string;
-        city?: string;
-        postcode?: string;
-        country?: string;
-    };
-}
-
-
 
 const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) => {
     // Get current user from the store
@@ -60,9 +42,9 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
     const [uploadError, setUploadError] = useState<string | null>(null); // Error state for upload
     const [submitError, setSubmitError] = useState<string | null>(null); // Error state for submit
     const [cityName, setCityName] = useState(''); // Added city name.
-    const [locationCoords, setLocationCoords] = useState<{lat: number, lon: number} | null>(null);
-    const [isLocationLoading, setIsLocationLoading] = useState(false);
-    
+    const [addressError, setAddressError] = useState<string | null>(null); // Address length error
+    const [locationCoords] = useState<{lat: number, lon: number} | null>(null);
+
     // Terms and Conditions agreement state
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
@@ -171,25 +153,6 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
         setCategory(e.target.value);
         setSubcategory(''); // Reset subcategory when category changes
     };
-
-    // Handle location change with coordinates
-    const handleLocationChange = async (value: string, suggestion?: LocationSuggestion) => {
-        setCityName(value);
-        setIsLocationLoading(true);
-
-        if (suggestion) {
-            setLocationCoords({
-                lat: parseFloat(suggestion.lat),
-                lon: parseFloat(suggestion.lon)
-            });
-        } else if (value === '') {
-            setLocationCoords(null);
-        }
-        
-        setIsLocationLoading(false);
-    };
-
-
 
     // Handle Terms of Service viewing
     const handleViewTerms = async () => {
@@ -698,26 +661,30 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                 {/* Location */}
                 <div>
                     <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-                        Location *
+                        Address *
                     </label>
-                    <LocationAutocomplete
+                    <input
+                        type="text"
+                        id="location"
                         value={cityName}
-                        onChange={handleLocationChange}
-                        placeholder="Enter city or address"
-                        countryCode="nl"
-                        className="mt-1"
+                        onChange={(e) => {
+                            const value = e.target.value;
+                            setCityName(value);
+                            if (value.length > 100) {
+                                setAddressError('Address cannot exceed 100 characters.');
+                            } else {
+                                setAddressError(null);
+                            }
+                        }}
+                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border ${addressError ? 'border-red-500' : ''}`}
+                        placeholder="Enter your address (street, city, etc.)"
+                        required
+                        maxLength={100}
                     />
-                    {isLocationLoading && (
-                        <div className="flex items-center mt-1">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-500 mr-2"></div>
-                            <span className="text-sm text-gray-500">Verifying location...</span>
-                        </div>
-                    )}
-                    {locationCoords && (
-                        <p className="text-xs text-green-600 mt-1">
-                            ✓ Location verified with OpenStreetMap
-                        </p>
-                    )}
+                    <div className="flex justify-between items-center mt-1">
+                        <span className="text-xs text-gray-500">{cityName.length}/100 characters</span>
+                        {addressError && <span className="text-xs text-red-500">{addressError}</span>}
+                    </div>
                 </div>
 
                 {/* Pricing Options */}
@@ -868,8 +835,8 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                 <div>
                     <button
                         type="submit"
-                        disabled={submitting}
-                        className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 ${submitting ? 'opacity-75 cursor-not-allowed' : ''}`}
+                        disabled={submitting || !!addressError}
+                        className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 ${submitting || addressError ? 'opacity-75 cursor-not-allowed' : ''}`}
                     >
                         {submitting ? 'Submitting...' : 'Submit Listing'}
                     </button>
