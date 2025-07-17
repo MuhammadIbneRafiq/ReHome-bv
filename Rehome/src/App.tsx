@@ -4,7 +4,6 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import Navbar from "./components/Navbar";
 import { LanguageProvider } from "./hooks/useLanguage";
 import ProtectedRoute from "./components/ProtectedRoute";
-import AdminRoute from "./components/AdminRoute";
 import { CartProvider } from "./contexts/CartContext";
 import { DynamicModalProvider } from "./components/ui/DynamicModal";
 import AuthErrorHandler from "./components/AuthErrorHandler";
@@ -36,6 +35,7 @@ import CookiesPage from "./lib/pages/CookiesPage";
 import AuthCallback from "./hooks/AuthCallback";
 import GoogleOAuthCallback from "./components/GoogleOAuthCallback";
 import TestNSFW from "./components/TestNSFW";
+import RequireAdmin from "./components/RequireAdmin";
 
 // const usePostData = <T,>(endpoint: string) => {
 //   return useMutation<T, Error, T>(
@@ -87,9 +87,9 @@ const App = () => {
                           </ProtectedRoute>
                         } />
                         <Route path="/admin" element={
-                          <AdminRoute>
+                          <RequireAdmin>
                             <AdminDashboard />
-                          </AdminRoute>
+                          </RequireAdmin>
                         } />
                         <Route path="/auth/callback" element={<AuthCallback />} />
                         <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />

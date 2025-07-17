@@ -19,6 +19,14 @@ export const AuthErrorHandler: React.FC<AuthErrorHandlerProps> = ({ children }) 
         
         // Check for auth errors in API responses
         if (response.status === 401 || response.status === 403) {
+          const url = args[0] as string;
+          
+          // Don't redirect to login for admin API endpoints - they just mean "not admin"
+          if (url.includes('/api/admin/')) {
+            console.log('Admin API 401/403 - user not admin, but still authenticated');
+            return response;
+          }
+          
           const responseData = await response.clone().json().catch(() => ({}));
           
           if (responseData.error && 

@@ -238,17 +238,6 @@ export const getUserBidForItem = async (itemId: number | string, userEmail: stri
     }
 };
 
-// Get all bids by user
-export const getBidsByUser = async (userEmail: string): Promise<BidWithItemDetails[]> => {
-    try {
-        const data = await apiCall(`/api/bids/user/${encodeURIComponent(userEmail)}`);
-        return data || [];
-    } catch (error) {
-        console.error('Error fetching user bids:', error);
-        return [];
-    }
-};
-
 // Admin functions
 export const getAllBidsForAdmin = async (): Promise<BidWithItemDetails[]> => {
     try {
@@ -257,93 +246,6 @@ export const getAllBidsForAdmin = async (): Promise<BidWithItemDetails[]> => {
     } catch (error) {
         console.error('Error fetching all bids:', error);
         return [];
-    }
-};
-
-// Approve a bid (admin only)
-export const approveBid = async (bidId: string, adminEmail: string, adminNotes?: string): Promise<boolean> => {
-    try {
-        // Check if user is admin
-        if (!isAdmin(adminEmail)) {
-            toast.error('Admin access required');
-            return false;
-        }
-
-        const result = await apiCall(`/api/admin/bids/${bidId}/approve`, {
-            method: 'PUT',
-            body: JSON.stringify({ admin_notes: adminNotes }),
-        });
-
-        if (result.success) {
-            toast.success(result.message || 'Bid approved successfully!');
-            return true;
-        } else {
-            toast.error(result.error || 'Failed to approve bid');
-            return false;
-        }
-    } catch (error) {
-        console.error('Error approving bid:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to approve bid');
-        return false;
-    }
-};
-
-// Reject a bid (admin only)
-export const rejectBid = async (bidId: string, adminEmail: string, adminNotes?: string): Promise<boolean> => {
-    try {
-        // Check if user is admin
-        if (!isAdmin(adminEmail)) {
-            toast.error('Admin access required');
-            return false;
-        }
-
-        const result = await apiCall(`/api/admin/bids/${bidId}/reject`, {
-            method: 'PUT',
-            body: JSON.stringify({ admin_notes: adminNotes }),
-        });
-
-        if (result.success) {
-            toast.success(result.message || 'Bid rejected successfully!');
-            return true;
-        } else {
-            toast.error(result.error || 'Failed to reject bid');
-            return false;
-        }
-    } catch (error) {
-        console.error('Error rejecting bid:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to reject bid');
-        return false;
-    }
-};
-
-// Create bid confirmation for ReHome items
-export const createBidConfirmation = async (
-    itemId: number, 
-    bidderEmail: string, 
-    bidId: string
-): Promise<BidConfirmation | null> => {
-    try {
-        const orderNumber = `RH-BID-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
-        
-        const { data, error } = await supabase
-            .from('marketplace_bid_confirmations')
-            .insert([{
-                item_id: itemId,
-                bidder_email: bidderEmail,
-                bid_id: bidId,
-                confirmation_status: 'pending',
-                order_number: orderNumber,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
-
-        if (error) throw error;
-        return data;
-    } catch (error) {
-        console.error('Error creating bid confirmation:', error);
-        return null;
     }
 };
 

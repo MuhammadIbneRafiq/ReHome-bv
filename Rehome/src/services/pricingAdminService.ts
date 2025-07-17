@@ -12,6 +12,37 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rehome-backend.vercel.app';
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('accessToken');
+  console.log('🔐 PricingAdminService - Token being sent:', token?.substring(0, 50) + '...');
+  console.log('🔐 PricingAdminService - Token exists:', !!token);
+  
+  // Decode and log the JWT to see what's in it
+  if (token) {
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1]));
+        console.log('🔐 JWT payload:', { 
+          email: payload.email, 
+          role: payload.role, 
+          exp: payload.exp ? new Date(payload.exp * 1000) : 'No expiry'
+        });
+      }
+    } catch (e) {
+      console.log('🔐 Failed to decode JWT:', e);
+    }
+  }
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  };
+  
+  console.log('🔐 Request headers:', headers);
+  return headers;
+};
+
 class PricingAdminService {  
   /**
    * Get all pricing configurations
@@ -20,10 +51,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-configs`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add auth headers when implemented
-        }
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -46,9 +74,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-configs`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(config)
       });
 
@@ -70,9 +96,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-configs/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updates)
       });
 
@@ -94,9 +118,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-configs/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -119,9 +141,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/city-prices`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -144,9 +164,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/city-prices/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updates)
       });
 
@@ -170,9 +188,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-multipliers`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -195,9 +211,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/pricing-multipliers/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updates)
       });
 
@@ -221,9 +235,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/furniture-items`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -246,9 +258,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/furniture-items`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(item)
       });
 
@@ -270,9 +280,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/furniture-items/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(updates)
       });
 
@@ -294,9 +302,7 @@ class PricingAdminService {
     try {
       const response = await fetch(`${API_BASE_URL}/api/admin/furniture-items/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
