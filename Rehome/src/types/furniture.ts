@@ -13,7 +13,7 @@ export type FurnitureItem = {
     sold: boolean;
     status?: string; // New status field: available, reserved, sold
     isrehome: boolean;
-    condition?: string; // Condition rating (1-5)
+    condition_rating?: number; // Condition rating (1-5)
     category?: string; // Main category (Furniture, Electronics, etc.)
     subcategory?: string; // Subcategory (Sofa, Table, etc.)
     dimensions?: {

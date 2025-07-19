@@ -1753,7 +1753,7 @@ const ItemMovingPage = () => {
                                     {/* Extra Information Field */}
                                     <div className="mt-6">
                                         <label htmlFor="extra-instructions" className="block text-sm font-medium text-gray-700 mb-2">
-                                            Extra Information/ Instructions for our Team
+                                            Extra Information/ Instructions for our Team e.g. parking opportunities for the driver, instructions on how to access the building/ room
                                         </label>
                                         <textarea
                                             id="extra-instructions"

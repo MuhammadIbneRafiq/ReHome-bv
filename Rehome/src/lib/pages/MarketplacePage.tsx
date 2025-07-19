@@ -22,6 +22,7 @@ import { useCart } from '../../contexts/CartContext';
 import TransportationServicePopup from '../../components/ui/TransportationServicePopup';
 import useTransportationPopup from '../../hooks/useTransportationPopup';
 import ReHomeCheckoutModal from '../../components/marketplace/ReHomeCheckoutModal';
+import { getConditionLabel } from '../utils';
 
 // Helper function to get the first valid image URL
 const getFirstImageUrl = (item: any): string => {
@@ -578,6 +579,11 @@ const MarketplacePage = () => {
                                                 
                                                 <h3 className="text-sm font-semibold text-gray-800 mt-1">{translatedItem.name}</h3>
                                                 <p className="text-gray-600 text-xs line-clamp-2 h-8">{translatedItem.description}</p>
+                                                {translatedItem.condition_rating && (
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Condition: {getConditionLabel(translatedItem.condition_rating.toString())}
+                                                    </p>
+                                                )}
                                                 <div className="flex justify-between items-center mt-2">
                                                     <p className="text-red-500 font-bold text-xs">
                                                         {translatedItem.price === 0 ? 'Free' : `€${translatedItem.price}`}

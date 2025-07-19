@@ -19,6 +19,7 @@ import ShareButton from './ui/ShareButton';
 import LazyImage from './ui/LazyImage';
 import TransportationServicePopup from './ui/TransportationServicePopup';
 import useTransportationPopup from '../hooks/useTransportationPopup';
+import { getConditionLabel } from '../lib/utils';
 
 interface ItemDetailsModalProps {
   isOpen?: boolean; // Made optional since DynamicModal handles this
@@ -38,7 +39,7 @@ interface ItemDetailsModalProps {
     pricing_type?: string; // Added pricing_type field
     category?: string; // Added category field
     subcategory?: string; // Added subcategory field
-    condition?: string; // Added condition field
+    condition_rating?: number; // Added condition_rating field
     dimensions?: { // Added dimensions field
       height?: number;
       width?: number;
@@ -714,25 +715,10 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       {/* <h3 className="text-lg font-semibold mb-2">Product Details</h3> */}
                       {/* Product meta fields */}
                       <ul className="mb-2">
-                        {item.category && (
-                          <li><span className="font-medium">Category:</span> {item.category}</li>
-                        )}
-                        {item.subcategory && (
-                          <li><span className="font-medium">Subcategory:</span> {item.subcategory}</li>
-                        )}
                         {/* Condition label mapping */}
-                        {item.condition && (
+                        {item.condition_rating && (
                           <li>
-                            <span className="font-medium">Condition:</span> {(() => {
-                              const conditionLabels: Record<string, string> = {
-                                '1': 'Like New - Almost no signs of use, very well maintained',
-                                '2': 'Excellent - Minimal wear, barely noticeable imperfections',
-                                '3': 'Good - Visible signs of wear (scratches, small dents), but fully functional',
-                                '4': 'Fair - Heavily used with noticeable wear, may need minor repairs',
-                                '5': 'Poor/Broken - Significant damage or functional issues, may require major repairs',
-                              };
-                              return conditionLabels[item.condition] || item.condition;
-                            })()}
+                            <span className="font-medium">Condition:</span> {getConditionLabel(item.condition_rating.toString())}
                           </li>
                         )}
                         {/* Dimensions (from item.dimensions or direct fields) */}

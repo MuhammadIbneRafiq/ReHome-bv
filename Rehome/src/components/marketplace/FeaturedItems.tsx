@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '../../lib/api/config';
 import logoImage from "../../assets/logorehome.png";
 import AddToCartButton from './AddToCartButton';
 import LazyImage from '../ui/LazyImage';
+import { getConditionLabel } from '../../lib/utils';
 
 interface FeaturedItemsProps {
   maxItems?: number;
@@ -244,7 +245,9 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
-                      <p className="text-xs text-gray-500">{item.category} • {item.subcategory}</p>
+                      {item.condition_rating && (
+                        <p className="text-xs text-gray-500">Condition: {getConditionLabel(item.condition_rating.toString())}</p>
+                      )}
                     </div>
                     <p className="text-lg font-semibold text-orange-600">
                       {item.price === 0 ? 'Free' : `€${item.price}`}

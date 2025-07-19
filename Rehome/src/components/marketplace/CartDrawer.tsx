@@ -4,6 +4,7 @@ import { useCart } from '../../contexts/CartContext';
 import logoImage from "../../assets/logorehome.png";
 import ReHomeCheckoutModal from './ReHomeCheckoutModal';
 import OrderSuccessModal from './OrderSuccessModal';
+import { getConditionLabel } from '../../lib/utils';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -144,7 +145,9 @@ const CartDrawer: React.FC<CartDrawerProps> = ({ isOpen, onClose }) => {
                     {/* Item Details */}
                     <div className="ml-4 flex-grow">
                       <h3 className="text-sm font-medium">{item.name}</h3>
-                      <p className="text-xs text-gray-500">{item.category} • {item.subcategory}</p>
+                      {item.condition_rating && (
+                        <p className="text-xs text-gray-500">Condition: {getConditionLabel(item.condition_rating.toString())}</p>
+                      )}
                       <div className="flex justify-between items-center mt-1">
                         <span className="text-orange-600 font-medium">{formatPrice(item.price)}</span>
                         {!item.isrehome && (
