@@ -17,6 +17,8 @@ import {
 } from '../services/biddingService';
 import ShareButton from './ui/ShareButton';
 import LazyImage from './ui/LazyImage';
+import TransportationServicePopup from './ui/TransportationServicePopup';
+import useTransportationPopup from '../hooks/useTransportationPopup';
 
 interface ItemDetailsModalProps {
   isOpen?: boolean; // Made optional since DynamicModal handles this
@@ -95,6 +97,18 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   const [showBidMessageModal, setShowBidMessageModal] = useState(false);
   const [bidMessage, setBidMessage] = useState('');
 
+  // Transportation service popup
+  const {
+    shouldShow: showTransportationPopup,
+    markAsShown: markTransportationPopupAsShown,
+    markAsDontShowAgain: markTransportationPopupDontShowAgain,
+    startPopupTimer
+  } = useTransportationPopup({
+    minIntervalHours: 8, // Show at most once every 8 hours
+    maxShowsPerDay: 1, // Maximum 1 time per day for item details
+    showAfterSeconds: 60 // Show after 60 seconds of viewing item details
+  });
+
   // Load bidding data when modal opens - ONLY for non-ReHome items with bidding
   useEffect(() => {
     if (item && !item.isrehome && user?.email && item.pricing_type === 'bidding') {
@@ -140,6 +154,14 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
       setLoadingBids(false);
     };
   }, []);
+
+  // Start transportation popup timer when modal opens
+  useEffect(() => {
+    if (isOpen && item) {
+      const cleanup = startPopupTimer();
+      return cleanup;
+    }
+  }, [isOpen, item, startPopupTimer]);
 
   // Since we're using AnimatePresence in parent, we don't need conditional return here
   // The component should always render when called, but handle null item gracefully
@@ -915,6 +937,13 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
               </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Transportation Service Popup */}
+            <TransportationServicePopup
+              isOpen={showTransportationPopup}
+              onClose={markTransportationPopupAsShown}
+              onDontShowAgain={markTransportationPopupDontShowAgain}
+            />
           </motion.div>
         </motion.div>
       )}

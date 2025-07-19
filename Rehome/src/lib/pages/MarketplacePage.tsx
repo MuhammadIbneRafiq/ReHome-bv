@@ -19,6 +19,8 @@ import ShareButton from '@/components/ui/ShareButton';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import LazyImage from '@/components/ui/LazyImage';
 import { useCart } from '../../contexts/CartContext';
+import TransportationServicePopup from '../../components/ui/TransportationServicePopup';
+import useTransportationPopup from '../../hooks/useTransportationPopup';
 
 // Helper function to get the first valid image URL
 const getFirstImageUrl = (item: FurnitureItem): string => {
@@ -119,6 +121,18 @@ const MarketplacePage = () => {
         hasPreviousPage: false
     });
 
+    // Transportation service popup
+    const {
+        shouldShow: showTransportationPopup,
+        markAsShown: markTransportationPopupAsShown,
+        markAsDontShowAgain: markTransportationPopupDontShowAgain,
+        startPopupTimer
+    } = useTransportationPopup({
+        minIntervalHours: 6, // Show at most once every 6 hours
+        maxShowsPerDay: 2, // Maximum 2 times per day
+        showAfterSeconds: 45 // Show after 45 seconds of browsing
+    });
+
     useEffect(() => {
         let isCancelled = false;
 
@@ -198,6 +212,14 @@ const MarketplacePage = () => {
             isCancelled = true;
         };
     }, [currentPage]);
+
+    // Start transportation popup timer when page loads
+    useEffect(() => {
+        if (!loading && furnitureItems.length > 0) {
+            const cleanup = startPopupTimer();
+            return cleanup;
+        }
+    }, [loading, furnitureItems.length, startPopupTimer]);
 
     const addToCart = (itemId: string) => {
         // Check if item is from ReHome
@@ -930,6 +952,13 @@ const MarketplacePage = () => {
                 </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Transportation Service Popup */}
+            <TransportationServicePopup
+                isOpen={showTransportationPopup}
+                onClose={markTransportationPopupAsShown}
+                onDontShowAgain={markTransportationPopupDontShowAgain}
+            />
         </div>
     );
 };

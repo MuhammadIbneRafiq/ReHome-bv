@@ -1700,42 +1700,7 @@ const ItemMovingPage = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    
-                                    {/* Validation Status */}
-                                    {step === 6 && (
-                                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                                            <h4 className="text-md font-medium text-blue-800 mb-2">Fill in the following fields:</h4>
-                                            <div className="space-y-1 text-sm">
-                                                <div className={`flex items-center ${!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end) ? 'text-red-600' : 'text-green-600'}`}>
-                                                    <span className="mr-2">{!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end) ? '❌' : '✅'}</span>
-                                                    <span>Date Selection: {!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end) ? 'Please select start and end dates' : 'Valid'}</span>
-                                                </div>
-                                                <div className={`flex items-center ${!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || !contactInfo.email.trim() || !contactInfo.phone.trim() ? 'text-red-600' : 'text-green-600'}`}>
-                                                    <span className="mr-2">{!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || !contactInfo.email.trim() || !contactInfo.phone.trim() ? '❌' : '✅'}</span>
-                                                    <span>Contact Information: {!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || !contactInfo.email.trim() || !contactInfo.phone.trim() ? 'Please fill all contact fields' : 'Complete'}</span>
-                                                </div>
-                                                <div className={`flex items-center ${!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) ? 'text-red-600' : 'text-green-600'}`}>
-                                                    <span className="mr-2">{!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) ? '❌' : '✅'}</span>
-                                                    <span>Email Format: {!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) ? 'Invalid email format' : 'Valid'}</span>
-                                                </div>
-                                                <div className={`flex items-center ${!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone) ? 'text-red-600' : 'text-green-600'}`}>
-                                                    <span className="mr-2">{!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone) ? '❌' : '✅'}</span>
-                                                    <span>Phone Format: {!/^\+?[1-9]\d{1,14}$/.test(contactInfo.phone) ? 'Invalid phone format' : 'Valid'}</span>
-                                                </div>
-                                                {pickupType === 'store' && (
-                                                    <div className={`flex items-center ${!storeProofPhoto ? 'text-red-600' : 'text-green-600'}`}>
-                                                        <span className="mr-2">{!storeProofPhoto ? '❌' : '✅'}</span>
-                                                        <span>Store Proof: {!storeProofPhoto ? 'Please upload proof of purchase/ownership' : 'Uploaded'}</span>
-                                                    </div>
-                                                )}
-                                                <div className={`flex items-center ${!agreedToTerms ? 'text-red-600' : 'text-green-600'}`}>
-                                                    <span className="mr-2">{!agreedToTerms ? '❌' : '✅'}</span>
-                                                    <span>Terms Agreement: {!agreedToTerms ? 'Please agree to terms and conditions' : 'Agreed'}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
+                            
                                     {/* Extra Information Field */}
                                     <div className="mt-6">
                                         <label htmlFor="extra-instructions" className="block text-sm font-medium text-gray-700 mb-2">

@@ -79,9 +79,9 @@ const OrderConfirmationModal = ({ isOpen, onClose, orderNumber, isReHomeOrder, i
                 <FaShoppingCart className="text-blue-500" />
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">Want More Items?</h3>
+                <h3 className="text-sm font-medium text-blue-800">Need furniture for your new home?</h3>
                 <p className="text-sm text-blue-700 mt-1">
-                  Visit our marketplace to add more items to your cart. We can provide a combined offer for multiple services!
+                  Visit our marketplace to browse our listings. We can provide a combined offer for our services and deliver the item on your moving date.
                 </p>
                 <button
                   onClick={() => {
