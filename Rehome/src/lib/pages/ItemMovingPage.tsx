@@ -1038,26 +1038,7 @@ const ItemMovingPage = () => {
                                             </div>
                                         </div>
                                     )}
-                                    
-                                    {/* Distance Display */}
-                                    {distanceKm !== null && (
-                                        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                                            <div className="flex items-center">
-                                                <FaInfoCircle className="h-5 w-5 text-blue-500 mr-2" />
-                                                <div>
-                                                    <p className="text-sm font-medium text-blue-900">
-                                                        Distance: {distanceKm.toFixed(1)} km
-                                                    </p>
-                                                                                        <p className="text-xs text-blue-700">
-                                        {pickupPlace?.coordinates && dropoffPlace?.coordinates 
-                                            ? "Straight-line distance calculated from coordinates"
-                                            : "Distance estimated from location names"
-                                        }
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                                                                     
                                 </div>
                             )}
 
