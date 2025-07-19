@@ -23,7 +23,7 @@ import ContactUsPage from "./lib/pages/ContactUsPage";
 import AboutUsPage from "./lib/pages/AboutUsPage";
 import SellerDashboard from "./lib/pages/SellerDashboard";
 import SpecialRequestPage from "./lib/pages/SpecialRequestPage";
-import AdminDashboard from "./lib/pages/AdminDashboard";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import MessagesPage from "./lib/pages/MessagesPage";
 import HouseMovingLearnMore from "./lib/pages/HouseMovingLearnMore";
 import ItemTransportLearnMore from "./lib/pages/ItemTransportLearnMore";

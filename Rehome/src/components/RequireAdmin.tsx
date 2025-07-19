@@ -1,9 +1,13 @@
 import React from "react";
 import useUserSessionStore from "../services/state/useUserSessionStore";
 
+// Keep in sync with AdminRoute.tsx and Navbar.tsx
 const ADMIN_EMAILS = [
-  "muhammadibnerafiq123@gmail.com",
-  "info@rehomebv.com",
+  'muhammadibnerafiq123@gmail.com',
+  'testnewuser12345@gmail.com', // Test account with admin access
+  'egzmanagement@gmail.com',
+  'samuel.stroehle8@gmail.com',
+  'info@rehomebv.com'
 ];
 
 export default function RequireAdmin({ children }: { children: React.ReactNode }) {

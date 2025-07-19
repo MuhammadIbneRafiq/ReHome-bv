@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { motion } from 'framer-motion';
+import { FaDatabase, FaHistory, FaSearch, FaEdit, FaTrash, FaPlus, FaSave, FaTimes } from 'react-icons/fa';
 import { supabase } from "../../lib/supabaseClient";
 import useUserSessionStore from "../../services/state/useUserSessionStore";
 
 const tables = [
   "profiles",
-  "admin_users",
+  "admin_users", 
   "furniture_items",
   "city_base_charges",
   "city_day_data",
@@ -18,7 +20,7 @@ const tables = [
 function EditableCell({ value, onChange, required }: { value: any; onChange: (v: any) => void; required?: boolean }) {
   return (
     <input
-      style={{ width: "100%", border: required ? "2px solid #f00" : "1px solid #ccc", padding: 2 }}
+      className={`w-full px-2 py-1 border rounded ${required ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
       value={value ?? ""}
       onChange={e => onChange(e.target.value)}
     />
@@ -29,8 +31,9 @@ const PAGE_SIZE = 20;
 
 export default function AdminDashboard() {
   const { user, role } = useUserSessionStore();
-  const [tab, setTab] = useState<'data' | 'audit'>('data');
-  // Data tables state (existing)
+  const [activeTab, setActiveTab] = useState<'data' | 'audit'>('data');
+  
+  // Data tables state
   const [data, setData] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +55,7 @@ export default function AdminDashboard() {
   const [auditPage, setAuditPage] = useState(1);
   const [auditTotal, setAuditTotal] = useState(0);
 
-  // Helper: get required fields (for demo, assume all fields except id/_id are required)
+  // Helper: get required fields
   const getRequiredFields = (row: any) => {
     if (!row) return [];
     return Object.keys(row).filter(k => !k.endsWith("id") && k !== "id" && k !== "created_at" && k !== "updated_at");
@@ -76,7 +79,6 @@ export default function AdminDashboard() {
   const fetchTable = async (table: string, searchValue = "", pageNum = 1) => {
     let query = supabase.from(table).select("*", { count: "exact" });
     if (searchValue && data[table]?.[0]) {
-      // Search all string fields
       const fields = Object.keys(data[table][0]).filter(
         (k) => typeof data[table][0][k] === "string"
       );
@@ -154,22 +156,23 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Fetch audit logs on tab switch or search/page change
+  // Fetch audit logs on tab switch
   useEffect(() => {
-    if (tab === 'audit') fetchAuditLogs(auditSearch, auditPage);
-    // eslint-disable-next-line
-  }, [tab, auditSearch, auditPage]);
+    if (activeTab === 'audit') fetchAuditLogs(auditSearch, auditPage);
+  }, [activeTab, auditSearch, auditPage]);
 
-  // CRUD handlers (with validation, RBAC, audit, confirmation)
+  // CRUD handlers
   const handleEdit = (table: string, idx: number) => {
     setEditRow({ ...editRow, [table]: idx });
     setEditData({ ...editData, [table]: { ...data[table][idx] } });
     setActionMessage({ ...actionMessage, [table]: "" });
     setValidation({ ...validation, [table]: {} });
   };
+
   const handleEditChange = (table: string, key: string, value: any) => {
     setEditData({ ...editData, [table]: { ...editData[table], [key]: value } });
   };
+
   const handleEditSave = async (table: string, idx: number) => {
     if (role !== "admin" && role !== "editor") {
       setActionMessage({ ...actionMessage, [table]: "You do not have permission to edit." });
@@ -184,7 +187,7 @@ export default function AdminDashboard() {
       setActionMessage({ ...actionMessage, [table]: "No id field found" });
       return;
     }
-    // Validate required fields
+    
     const requiredFields = getRequiredFields(row);
     const missing: any = {};
     requiredFields.forEach(f => { if (!row[f]) missing[f] = true; });
@@ -194,6 +197,7 @@ export default function AdminDashboard() {
       setActionMessage({ ...actionMessage, [table]: "Please fill all required fields." });
       return;
     }
+    
     const oldRow = data[table][idx];
     const { error } = await supabase.from(table).update(row).eq(idKey, row[idKey]);
     if (error) {
@@ -206,6 +210,7 @@ export default function AdminDashboard() {
     }
     setActionLoading({ ...actionLoading, [table]: false });
   };
+
   const handleDelete = async (table: string, idx: number) => {
     if (role !== "admin") {
       setActionMessage({ ...actionMessage, [table]: "You do not have permission to delete." });
@@ -231,9 +236,11 @@ export default function AdminDashboard() {
     }
     setActionLoading({ ...actionLoading, [table]: false });
   };
+
   const handleAddChange = (table: string, key: string, value: any) => {
     setAddData({ ...addData, [table]: { ...addData[table], [key]: value } });
   };
+
   const handleAdd = async (table: string) => {
     if (role !== "admin" && role !== "editor") {
       setActionMessage({ ...actionMessage, [table]: "You do not have permission to add." });
@@ -246,7 +253,7 @@ export default function AdminDashboard() {
       setActionLoading({ ...actionLoading, [table]: false });
       return;
     }
-    // Validate required fields
+    
     const requiredFields = getRequiredFields(row);
     const missing: any = {};
     requiredFields.forEach(f => { if (!row[f]) missing[f] = true; });
@@ -256,6 +263,7 @@ export default function AdminDashboard() {
       setActionMessage({ ...actionMessage, [table]: "Please fill all required fields." });
       return;
     }
+    
     const { data: inserted, error } = await supabase.from(table).insert(row).select();
     if (error) {
       setActionMessage({ ...actionMessage, [table]: error.message });
@@ -268,219 +276,361 @@ export default function AdminDashboard() {
     setActionLoading({ ...actionLoading, [table]: false });
   };
 
-  // Search and pagination handlers for data tables (unchanged)
   const handleSearchChange = (table: string, value: string) => {
     setSearch({ ...search, [table]: value });
     setPage({ ...page, [table]: 1 });
     fetchTable(table, value, 1);
   };
+
   const handlePageChange = (table: string, newPage: number) => {
     setPage({ ...page, [table]: newPage });
     fetchTable(table, search[table], newPage);
   };
 
-  // Audit logs search/pagination handlers
   const handleAuditSearchChange = (value: string) => {
     setAuditSearch(value);
     setAuditPage(1);
   };
+
   const handleAuditPageChange = (newPage: number) => {
     setAuditPage(newPage);
   };
 
-  if (loading) return <div style={{ padding: 32 }}>Loading data from Supabase...</div>;
-  if (error) return <div style={{ color: "red", padding: 32 }}>Error: {error}</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+        <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-orange-50 flex flex-col pt-24 items-center justify-center">
+        <div className="text-red-500 text-xl">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: 32 }}>
-      <h1>Admin Dashboard (Full CRUD, Audit, RBAC, Validation)</h1>
-      <div style={{ marginBottom: 24 }}>
-        <button onClick={() => setTab('data')} style={{ marginRight: 8, fontWeight: tab === 'data' ? 'bold' : undefined }}>Data Tables</button>
-        <button onClick={() => setTab('audit')} style={{ fontWeight: tab === 'audit' ? 'bold' : undefined }}>Audit Logs</button>
-      </div>
-      {tab === 'data' ? (
-        <>
-          {/* Existing data tables code here (unchanged) */}
-          {tables.map((table) => (
-            <div key={table} style={{ marginBottom: 40 }}>
-              <h2>{table}</h2>
-              <div style={{ marginBottom: 8 }}>
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  value={search[table] || ""}
-                  onChange={e => handleSearchChange(table, e.target.value)}
-                  style={{ padding: 4, width: 200, marginRight: 8 }}
-                />
-                <span>
-                  Page {page[table] || 1} of {Math.ceil((total[table] || 1) / PAGE_SIZE)}
-                </span>
-                <button
-                  onClick={() => handlePageChange(table, (page[table] || 1) - 1)}
-                  disabled={(page[table] || 1) <= 1}
-                  style={{ marginLeft: 8 }}
-                >
-                  Prev
-                </button>
-                <button
-                  onClick={() => handlePageChange(table, (page[table] || 1) + 1)}
-                  disabled={(page[table] || 1) >= Math.ceil((total[table] || 1) / PAGE_SIZE)}
-                  style={{ marginLeft: 4 }}
-                >
-                  Next
-                </button>
-              </div>
-              {actionMessage[table] && (
-                <div style={{ color: actionMessage[table].includes("success") ? "green" : "red", marginBottom: 8 }}>
-                  {actionMessage[table]}
+    <div className="min-h-screen bg-orange-50 pt-24">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">Admin Dashboard</h1>
+          <p className="text-gray-600">Manage database tables, audit logs, and system data</p>
+        </motion.div>
+
+        {/* Tab Navigation */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-white rounded-lg p-2 shadow-lg">
+            <button
+              onClick={() => setActiveTab('data')}
+              className={`flex items-center px-6 py-3 rounded-md font-medium transition-colors ${
+                activeTab === 'data'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FaDatabase className="mr-2" />
+              Data Tables
+            </button>
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`flex items-center px-6 py-3 rounded-md font-medium transition-colors ml-2 ${
+                activeTab === 'audit'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FaHistory className="mr-2" />
+              Audit Logs
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        {activeTab === 'data' ? (
+          <div className="space-y-8">
+            {tables.map((table) => (
+              <motion.div
+                key={table}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-lg shadow-lg overflow-hidden"
+              >
+                <div className="bg-gray-50 px-6 py-4 border-b">
+                  <h2 className="text-xl font-semibold text-gray-800 capitalize">
+                    {table.replace(/_/g, ' ')}
+                  </h2>
                 </div>
-              )}
-              {data[table]?.error ? (
-                <div style={{ color: "red" }}>Error: {data[table].error}</div>
-              ) : (
-                <>
-                  <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8 }}>
-                    <thead>
-                      <tr>
-                        {data[table]?.[0] &&
-                          Object.keys(data[table][0]).map((col) => (
-                            <th key={col} style={{ border: "1px solid #ccc", padding: 4 }}>{col}</th>
+                
+                <div className="p-6">
+                  {/* Search and Pagination */}
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="relative">
+                      <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        value={search[table] || ""}
+                        onChange={e => handleSearchChange(table, e.target.value)}
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-gray-600">
+                        Page {page[table] || 1} of {Math.ceil((total[table] || 1) / PAGE_SIZE)}
+                      </span>
+                      <button
+                        onClick={() => handlePageChange(table, (page[table] || 1) - 1)}
+                        disabled={(page[table] || 1) <= 1}
+                        className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+                      >
+                        Prev
+                      </button>
+                      <button
+                        onClick={() => handlePageChange(table, (page[table] || 1) + 1)}
+                        disabled={(page[table] || 1) >= Math.ceil((total[table] || 1) / PAGE_SIZE)}
+                        className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Action Message */}
+                  {actionMessage[table] && (
+                    <div className={`mb-4 p-3 rounded ${
+                      actionMessage[table].includes("success") 
+                        ? "bg-green-100 text-green-700" 
+                        : "bg-red-100 text-red-700"
+                    }`}>
+                      {actionMessage[table]}
+                    </div>
+                  )}
+
+                  {/* Table */}
+                  {data[table]?.error ? (
+                    <div className="text-red-500">Error: {data[table].error}</div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            {data[table]?.[0] &&
+                              Object.keys(data[table][0]).map((col) => (
+                                <th key={col} className="border border-gray-300 px-4 py-2 text-left font-medium">
+                                  {col}
+                                </th>
+                              ))}
+                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data[table]?.map((row: any, i: number) => (
+                            <tr key={i} className="hover:bg-gray-50">
+                              {Object.entries(row).map(([col, val]) => (
+                                <td key={col} className="border border-gray-300 px-4 py-2">
+                                  {editRow[table] === i ? (
+                                    <EditableCell
+                                      value={editData[table][col]}
+                                      onChange={v => handleEditChange(table, col, v)}
+                                      required={validation[table]?.[col]}
+                                    />
+                                  ) : (
+                                    <span className="truncate block max-w-xs">{String(val)}</span>
+                                  )}
+                                </td>
+                              ))}
+                              <td className="border border-gray-300 px-4 py-2">
+                                {editRow[table] === i ? (
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => handleEditSave(table, i)}
+                                      disabled={actionLoading[table]}
+                                      className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                                    >
+                                      <FaSave className="mr-1" />
+                                      {actionLoading[table] ? "Saving..." : "Save"}
+                                    </button>
+                                    <button
+                                      onClick={() => setEditRow({ ...editRow, [table]: null })}
+                                      disabled={actionLoading[table]}
+                                      className="flex items-center px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600"
+                                    >
+                                      <FaTimes className="mr-1" />
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex space-x-2">
+                                    {(role === "admin" || role === "editor") && (
+                                      <button
+                                        onClick={() => handleEdit(table, i)}
+                                        disabled={actionLoading[table]}
+                                        className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                      >
+                                        <FaEdit className="mr-1" />
+                                        Edit
+                                      </button>
+                                    )}
+                                    {role === "admin" && (
+                                      <button
+                                        onClick={() => handleDelete(table, i)}
+                                        disabled={actionLoading[table]}
+                                        className="flex items-center px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                                      >
+                                        <FaTrash className="mr-1" />
+                                        {actionLoading[table] ? "Deleting..." : "Delete"}
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
                           ))}
-                        <th>Actions</th>
+                          {/* Add new row */}
+                          {data[table]?.[0] && (role === "admin" || role === "editor") && (
+                            <tr className="bg-blue-50">
+                              {Object.keys(data[table][0]).map((col) => (
+                                <td key={col} className="border border-gray-300 px-4 py-2">
+                                  <EditableCell
+                                    value={addData[table]?.[col] ?? ""}
+                                    onChange={v => handleAddChange(table, col, v)}
+                                    required={validation[table]?.[col]}
+                                  />
+                                </td>
+                              ))}
+                              <td className="border border-gray-300 px-4 py-2">
+                                <button
+                                  onClick={() => handleAdd(table)}
+                                  disabled={actionLoading[table]}
+                                  className="flex items-center px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  <FaPlus className="mr-1" />
+                                  {actionLoading[table] ? "Adding..." : "Add"}
+                                </button>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          /* Audit Logs Tab */
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-lg shadow-lg overflow-hidden"
+          >
+            <div className="bg-gray-50 px-6 py-4 border-b">
+              <h2 className="text-xl font-semibold text-gray-800">Audit Logs</h2>
+            </div>
+            
+            <div className="p-6">
+              {/* Search and Pagination */}
+              <div className="flex justify-between items-center mb-4">
+                <div className="relative">
+                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search audit logs..."
+                    value={auditSearch}
+                    onChange={e => handleAuditSearchChange(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-600">
+                    Page {auditPage} of {Math.ceil((auditTotal || 1) / PAGE_SIZE)}
+                  </span>
+                  <button
+                    onClick={() => handleAuditPageChange(auditPage - 1)}
+                    disabled={auditPage <= 1}
+                    className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => handleAuditPageChange(auditPage + 1)}
+                    disabled={auditPage >= Math.ceil((auditTotal || 1) / PAGE_SIZE)}
+                    className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+
+              {/* Audit Table */}
+              {auditLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500"></div>
+                  <span className="ml-2">Loading audit logs...</span>
+                </div>
+              ) : auditError ? (
+                <div className="text-red-500 p-4">{auditError}</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">Timestamp</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">Admin</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">Action</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">Table</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">Record ID</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">Old Values</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">New Values</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {data[table]?.map((row: any, i: number) => (
-                        <tr key={i}>
-                          {Object.entries(row).map(([col, val]) => (
-                            <td key={col} style={{ border: "1px solid #eee", padding: 4 }}>
-                              {editRow[table] === i ? (
-                                <EditableCell
-                                  value={editData[table][col]}
-                                  onChange={v => handleEditChange(table, col, v)}
-                                  required={validation[table]?.[col]}
-                                />
-                              ) : (
-                                String(val)
-                              )}
-                            </td>
-                          ))}
-                          <td>
-                            {editRow[table] === i ? (
-                              <>
-                                <button onClick={() => handleEditSave(table, i)} disabled={actionLoading[table]}>
-                                  {actionLoading[table] ? "Saving..." : "Save"}
-                                </button>
-                                <button onClick={() => setEditRow({ ...editRow, [table]: null })} disabled={actionLoading[table]}>Cancel</button>
-                              </>
-                            ) : (
-                              <>
-                                {(role === "admin" || role === "editor") && (
-                                  <button onClick={() => handleEdit(table, i)} disabled={actionLoading[table]}>Edit</button>
-                                )}
-                                {role === "admin" && (
-                                  <button onClick={() => handleDelete(table, i)} disabled={actionLoading[table]}>
-                                    {actionLoading[table] ? "Deleting..." : "Delete"}
-                                  </button>
-                                )}
-                              </>
-                            )}
+                      {auditLogs.map((log, i) => (
+                        <tr key={i} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2">{log.created_at}</td>
+                          <td className="border border-gray-300 px-4 py-2">{log.admin_id}</td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              log.action === 'insert' ? 'bg-green-100 text-green-800' :
+                              log.action === 'update' ? 'bg-blue-100 text-blue-800' :
+                              log.action === 'delete' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {log.action}
+                            </span>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">{log.table_name}</td>
+                          <td className="border border-gray-300 px-4 py-2">{log.record_id}</td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <pre className="whitespace-pre-wrap text-xs max-w-xs overflow-auto">
+                              {log.old_values}
+                            </pre>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <pre className="whitespace-pre-wrap text-xs max-w-xs overflow-auto">
+                              {log.new_values}
+                            </pre>
                           </td>
                         </tr>
                       ))}
-                      {/* Add new row */}
-                      {data[table]?.[0] && (role === "admin" || role === "editor") && (
-                        <tr>
-                          {Object.keys(data[table][0]).map((col) => (
-                            <td key={col} style={{ border: "1px solid #eee", padding: 4 }}>
-                              <EditableCell
-                                value={addData[table]?.[col] ?? ""}
-                                onChange={v => handleAddChange(table, col, v)}
-                                required={validation[table]?.[col]}
-                              />
-                            </td>
-                          ))}
-                          <td>
-                            <button onClick={() => handleAdd(table)} disabled={actionLoading[table]}>
-                              {actionLoading[table] ? "Adding..." : "Add"}
-                            </button>
-                          </td>
-                        </tr>
-                      )}
                     </tbody>
                   </table>
-                </>
+                </div>
               )}
             </div>
-          ))}
-        </>
-      ) : (
-        <div>
-          <h2>Audit Logs</h2>
-          <div style={{ marginBottom: 8 }}>
-            <input
-              type="text"
-              placeholder="Search audit logs..."
-              value={auditSearch}
-              onChange={e => handleAuditSearchChange(e.target.value)}
-              style={{ padding: 4, width: 200, marginRight: 8 }}
-            />
-            <span>
-              Page {auditPage} of {Math.ceil((auditTotal || 1) / PAGE_SIZE)}
-            </span>
-            <button
-              onClick={() => handleAuditPageChange(auditPage - 1)}
-              disabled={auditPage <= 1}
-              style={{ marginLeft: 8 }}
-            >
-              Prev
-            </button>
-            <button
-              onClick={() => handleAuditPageChange(auditPage + 1)}
-              disabled={auditPage >= Math.ceil((auditTotal || 1) / PAGE_SIZE)}
-              style={{ marginLeft: 4 }}
-            >
-              Next
-            </button>
-          </div>
-          {auditLoading ? (
-            <div>Loading audit logs...</div>
-          ) : auditError ? (
-            <div style={{ color: "red" }}>{auditError}</div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 8 }}>
-              <thead>
-                <tr>
-                  <th style={{ border: "1px solid #ccc", padding: 4 }}>Timestamp</th>
-                  <th style={{ border: "1px solid #ccc", padding: 4 }}>Admin</th>
-                  <th style={{ border: "1px solid #ccc", padding: 4 }}>Action</th>
-                  <th style={{ border: "1px solid #ccc", padding: 4 }}>Table</th>
-                  <th style={{ border: "1px solid #ccc", padding: 4 }}>Record ID</th>
-                  <th style={{ border: "1px solid #ccc", padding: 4 }}>Old Values</th>
-                  <th style={{ border: "1px solid #ccc", padding: 4 }}>New Values</th>
-                </tr>
-              </thead>
-              <tbody>
-                {auditLogs.map((log, i) => (
-                  <tr key={i}>
-                    <td style={{ border: "1px solid #eee", padding: 4 }}>{log.created_at}</td>
-                    <td style={{ border: "1px solid #eee", padding: 4 }}>{log.admin_id}</td>
-                    <td style={{ border: "1px solid #eee", padding: 4 }}>{log.action}</td>
-                    <td style={{ border: "1px solid #eee", padding: 4 }}>{log.table_name}</td>
-                    <td style={{ border: "1px solid #eee", padding: 4 }}>{log.record_id}</td>
-                    <td style={{ border: "1px solid #eee", padding: 4 }}>
-                      <pre style={{ whiteSpace: "pre-wrap", maxWidth: 200, overflow: "auto" }}>{log.old_values}</pre>
-                    </td>
-                    <td style={{ border: "1px solid #eee", padding: 4 }}>
-                      <pre style={{ whiteSpace: "pre-wrap", maxWidth: 200, overflow: "auto" }}>{log.new_values}</pre>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 } 
