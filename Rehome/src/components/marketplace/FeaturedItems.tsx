@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FurnitureItem } from '../../types/furniture';
-import { categories } from '../../services/marketplace';
+import { MARKETPLACE_CATEGORIES } from '../../constants/marketplaceConstants';
 import { API_ENDPOINTS } from '../../lib/api/config';
 import logoImage from "../../assets/logorehome.png";
 import AddToCartButton from './AddToCartButton';
@@ -196,13 +196,13 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
             <span className="text-sm font-medium text-gray-700 self-center mr-2">
               Filter:
             </span>
-            {categories.map(category => (
+            {MARKETPLACE_CATEGORIES.map(category => (
               <button
-                key={category}
-                onClick={() => toggleCategoryExclusion(category)}
-                className={getCategoryButtonClass(category)}
+                key={category.name}
+                onClick={() => toggleCategoryExclusion(category.name)}
+                className={getCategoryButtonClass(category.name)}
               >
-                {category}
+                {category.name}
               </button>
             ))}
           </div>

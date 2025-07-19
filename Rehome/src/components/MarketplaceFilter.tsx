@@ -1,4 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { MARKETPLACE_CATEGORIES, CONDITION_OPTIONS } from '../constants/marketplaceConstants';
+
 interface FilterProps {
   items: any[];
   onFilterChange: (filteredItems: any[]) => void;
@@ -96,95 +98,9 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   // Pricing type filter
   const [selectedPricingType, setSelectedPricingType] = useState<string>('');
   
-  // Main categories and subcategories based on requirements
-  const categories = [
-    { 
-      name: 'Bathroom Furniture', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Sofa\'s and Chairs', 
-      subcategories: [
-        'Sofa',
-        'Armchairs',
-        'Office Chair/ Bureuaustoel',
-        'Chairs',
-        'Kussens'
-      ] 
-    },
-    { 
-      name: 'Kasten', 
-      subcategories: [
-        'Closet (Kleidingkast)',
-        'Bookcase (Boekenkast)',
-        'Drawer/ Dressoir',
-        'TV Tables'
-      ] 
-    },
-    { 
-      name: 'Bedroom', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Tables', 
-      subcategories: [
-        'Office Table (Bureau)',
-        'Dining Table',
-        'Sidetables',
-        'Coffee Table'
-      ] 
-    },
-    { 
-      name: 'Appliances', 
-      subcategories: [
-        'Washing Machine',
-        'Fridge',
-        'Freezer',
-        'Others'
-      ] 
-    },
-    { 
-      name: 'Mirrors', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Lamps', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Carpets', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Curtains', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Plants', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Vazes', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Kitchen equipment', 
-      subcategories: [] 
-    },
-    { 
-      name: 'Others', 
-      subcategories: [] 
-    }
-  ];
-  
-  // Condition options as per requirements
-  const conditions = [
-    { value: '1', label: 'Like New - Almost no signs of use, very well maintained' },
-    { value: '2', label: 'Excellent - Minimal wear, barely noticeable imperfections' },
-    { value: '3', label: 'Good - Visible signs of wear (scratches, small dents), but fully functional' },
-    { value: '4', label: 'Fair - Heavily used with noticeable wear, may need minor repairs' },
-    { value: '5', label: 'Poor/Broken - Significant damage or functional issues, may require major repairs' }
-  ];
+  // Use categories and conditions from constants
+  const categories = MARKETPLACE_CATEGORIES;
+  const conditions = CONDITION_OPTIONS;
 
   // Analyze data to set up filter options
   useEffect(() => {

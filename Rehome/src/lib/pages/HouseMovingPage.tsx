@@ -930,20 +930,7 @@ const HouseMovingPage = () => {
                             )}
 
 
-                            {step === 2 && (
-                                <div className="mb-8">
-                                    <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg shadow-sm">
-                                        <h2 className="text-xl font-bold mb-2 text-blue-800">Smart Booking Tips for Minimum Price</h2>
-                                        <div className="text-gray-800 space-y-2">
-                                            <p>Before you continue the booking process, take a look at the information below. This can help you during the process to customize the move for your needs while keeping the cost as low as possible.</p>
-                                            <p><strong>Smart Scheduling = Lower Prices</strong><br />Our pricing depends on route efficiency. If we're already scheduled in your area on your selected day, your price can be significantly lower. So if you are not tied to a specific date, make sure to check through different options.</p>
-                                            <p><strong>Is your date flexible?</strong><br />Selecting a date range or let us suggest a moving date can unlock major savings.</p>
-                                            <p><strong>Customise your move and Save</strong><br />Need help with stair carrying or furniture assembly? Our add-on services are here to assist you beyond the transport alone.<br />To keep the cost low, select these add-on services only for the items where it's truly needed. You can select for each item if you require our assistance. If you only need transport, leave them unchecked and benefit from the cheapest price.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
+                        
                             {/* Step 2: Date & Time Selection */}
                             {step === 2 && (
                                 <div className="space-y-6">
@@ -1093,7 +1080,7 @@ const HouseMovingPage = () => {
                                     </div>
                                     {/* Upload photo/video option */}
                                     <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo/video (optional)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo (optional)</label>
                                         <input type="file" accept="image/*,video/*" multiple className="block w-full text-sm text-gray-500" />
                                     </div>
                                 </div>
