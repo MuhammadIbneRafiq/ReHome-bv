@@ -98,16 +98,16 @@ export default function TermsPage() {
               <div>
                 <h3 className="text-lg font-semibold mb-2">3. Moving Services</h3>
                 <p className="text-gray-600">
-                  Moving services are provided by vetted third-party providers. 
+                  Moving services are provided by third-party providers. 
                   Pricing is calculated based on distance, item complexity, and additional services requested. 
-                  Insurance coverage details are provided upon booking confirmation.
+                  No insurance coverage is provided for the items as of now.
                 </p>
               </div>
 
               <div>
                 <h3 className="text-lg font-semibold mb-2">4. Payment Terms</h3>
                 <p className="text-gray-600">
-                  Payment processing is handled securely through our integrated payment systems. 
+                  Payment arrangements are made directly between users and service providers. 
                   Service fees are clearly disclosed before transaction completion. 
                   Refunds are processed according to our refund policy.
                 </p>
@@ -142,9 +142,48 @@ export default function TermsPage() {
               <div>
                 <h3 className="text-lg font-semibold mb-2">8. Contact Information</h3>
                 <p className="text-gray-600">
-                  For questions about these Terms, contact us at legal@rehome.nl or 
+                  For questions about these Terms, contact us at info@rehomebv.com or 
                   visit our Contact Us page for additional support options.
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Company Information - Required by Dutch Law */}
+          <div className="bg-orange-100 rounded-lg p-6 mt-8">
+            <h3 className="text-lg font-semibold mb-4">Company Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="font-medium text-gray-700">Company Name:</p>
+                <p className="text-gray-600">ReHome B.V.</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Legal Form:</p>
+                <p className="text-gray-600">BV (Besloten Vennootschap)</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Registered Address:</p>
+                <p className="text-gray-600">Stedekestraat 74, 5041 DN Tilburg</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Chamber of Commerce (KvK):</p>
+                <p className="text-gray-600">96235004</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">VAT Number:</p>
+                <p className="text-gray-600">NL867525010B01</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Contact Email:</p>
+                <p className="text-gray-600">info@rehomebv.com</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Contact Phone:</p>
+                <p className="text-gray-600">+31 6 45839273</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">VAT Information:</p>
+                <p className="text-gray-600">VAT is included in the price estimate for our services and in the prices for our furniture listings</p>
               </div>
             </div>
           </div>

@@ -57,7 +57,7 @@ const MarketplacePage = () => {
         return items;
     };
     
-    const { items: cart, addItem, removeItem, updateQuantity: updateCartQuantity, clearCart } = useCart();
+    const { items: cart, addItem, removeItem, updateQuantity: updateCartQuantity } = useCart();
 
     // Get the item ID from URL query parameter
     const searchParams = new URLSearchParams(window.location.search);

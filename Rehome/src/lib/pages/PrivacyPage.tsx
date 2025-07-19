@@ -162,7 +162,7 @@ export default function PrivacyPage() {
                 <h3 className="text-lg font-semibold mb-2">8. Contact Us</h3>
                 <p className="text-gray-600">
                   For privacy-related questions or to exercise your rights, contact our 
-                  Data Protection Officer at privacy@rehome.nl or use our Contact Us page.
+                  Data Protection Officer at info@rehomebv.com or use our Contact Us page.
                 </p>
               </div>
             </div>
@@ -172,9 +172,9 @@ export default function PrivacyPage() {
           <div className="bg-orange-100 rounded-lg p-6 mt-8">
             <h3 className="text-lg font-semibold mb-2">Data Protection Officer</h3>
             <p className="text-gray-600">
-              Email: privacy@rehome.nl<br />
-              Address: ReHome B.V., Amsterdam, Netherlands<br />
-              Phone: +31 6 1234 5678
+              Email: info@rehomebv.com<br />
+              Address: ReHome B.V., Stedekestraat 74, 5041 DN Tilburg, Netherlands<br />
+              Phone: +31 6 45839273
             </p>
           </div>
         </div>
