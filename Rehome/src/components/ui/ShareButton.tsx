@@ -41,7 +41,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
       try {
         const shareData: ShareData = {
           title,
-          text: description,
+          text: `${title}\n\n${description}\n\n${url}`,
           url: url
         };
         

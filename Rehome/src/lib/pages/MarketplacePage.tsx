@@ -41,6 +41,20 @@ const MarketplacePage = () => {
     const [cart, setCart] = useState<{id: string, quantity: number}[]>([]);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
+    const [sortOption, setSortOption] = useState<'latest' | 'priceLowHigh' | 'priceHighLow'>('latest');
+
+    // Sorting logic
+    const getSortedItems = () => {
+        let items = [...filteredItems];
+        if (sortOption === 'priceLowHigh') {
+            items.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+        } else if (sortOption === 'priceHighLow') {
+            items.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+        } else if (sortOption === 'latest') {
+            items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        } 
+        return items;
+    };
     
     const { clearCart } = useCart();
 
@@ -561,6 +575,21 @@ const MarketplacePage = () => {
                     </div>
                 </div>
                 
+                {/* Sort Dropdown */}
+                <div className="flex justify-end mb-4">
+                  <label htmlFor="sort" className="mr-2 font-medium">Sort by:</label>
+                  <select
+                    id="sort"
+                    value={sortOption}
+                    onChange={e => setSortOption(e.target.value as any)}
+                    className="border rounded px-2 py-1"
+                  >
+                    <option value="latest">Latest Listings</option>
+                    <option value="priceLowHigh">Price: Low to High</option>
+                    <option value="priceHighLow">Price: High to Low</option>
+                  </select>
+                </div>
+
                 <StableLoader isLoading={loading} minLoadingTime={300}>
                     {error ? (
                         <div className="text-center text-red-500">{error}</div>
@@ -581,11 +610,11 @@ const MarketplacePage = () => {
                             <div className="md:col-span-2 bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4">
                                 <h2 className="text-xl font-semibold text-white mb-2">{t('marketplace.featuredItems')}</h2>
                                 
-                                {filteredItems.length === 0 ? (
+                                {getSortedItems().length === 0 ? (
                                     <p className="text-white py-4 text-center">{t('marketplace.noResults')}</p>
                                 ) : (
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {filteredItems.map((item) => {
+                                        {getSortedItems().map((item) => {
                                             const translatedItem = { ...item, ...translateFurnitureItem(item) };
                                             const imageUrl = getFirstImageUrl(translatedItem);
                                             

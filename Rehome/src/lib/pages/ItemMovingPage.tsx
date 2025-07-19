@@ -242,6 +242,48 @@ const ItemMovingPage = () => {
     const [pickupPlace, setPickupPlace] = useState<any>(null);
     const [dropoffPlace, setDropoffPlace] = useState<any>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
+    const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome'>('fixed');
+    const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({});
+
+    // Add state for select all functionality
+    const [selectAllAssembly, setSelectAllAssembly] = useState(false);
+    const [selectAllCarrying, setSelectAllCarrying] = useState(false);
+    const [extraInstructions, setExtraInstructions] = useState('');
+
+    // Add handlers for select all functionality
+    const handleSelectAllAssembly = (checked: boolean) => {
+        setSelectAllAssembly(checked);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const newDisassemblyItems: { [key: string]: boolean } = {};
+        selectedItems.forEach(itemId => {
+            newDisassemblyItems[itemId] = checked;
+        });
+        setDisassemblyItems(newDisassemblyItems);
+    };
+
+    const handleSelectAllCarrying = (checked: boolean) => {
+        setSelectAllCarrying(checked);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const newCarryingItems: { [key: string]: boolean } = {};
+        selectedItems.forEach(itemId => {
+            newCarryingItems[itemId] = checked;
+        });
+        setCarryingServiceItems(newCarryingItems);
+    };
+
+    // Update disassembly items when individual items change
+    useEffect(() => {
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => disassemblyItems[itemId]);
+        setSelectAllAssembly(allSelected);
+    }, [disassemblyItems, itemQuantities]);
+
+    // Update carrying items when individual items change
+    useEffect(() => {
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => carryingServiceItems[itemId]);
+        setSelectAllCarrying(allSelected);
+    }, [carryingServiceItems, itemQuantities]);
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -318,7 +360,8 @@ const ItemMovingPage = () => {
                 extraHelperItems,
                 isStudent,
                 hasStudentId: !!studentId,
-                isEarlyBooking: false
+                isEarlyBooking: false,
+                carryingServiceItems,
             };
 
             const breakdown = await pricingService.calculateItemTransportPricing(pricingInput);
@@ -776,15 +819,7 @@ const ItemMovingPage = () => {
                                     {/* Elevator discount explanation */}
                                     {((elevatorPickup && parseInt(floorPickup) > 1) || (elevatorDropoff && parseInt(floorDropoff) > 1)) && (
                                         <div className="text-xs text-green-700 ml-6">
-                                            <span>
-                                                Elevator discount applied:
-                                                {elevatorPickup && parseInt(floorPickup) > 1 && (
-                                                    <> Pickup floors reduced from {parseInt(floorPickup) - 1} to {Math.ceil((parseInt(floorPickup) - 1) / 2)}.</>
-                                                )}
-                                                {elevatorDropoff && parseInt(floorDropoff) > 1 && (
-                                                    <> Dropoff floors reduced from {parseInt(floorDropoff) - 1} to {Math.ceil((parseInt(floorDropoff) - 1) / 2)}.</>
-                                                )}
-                                            </span>
+                                            <span>Elevator discount applied.</span>
                                         </div>
                                     )}
                                     {pricingBreakdown.breakdown.carrying.itemBreakdown.map((item, index) => (
@@ -1013,64 +1048,90 @@ const ItemMovingPage = () => {
                                 </div>
                             )}
 
+                            {/* Smart Booking Tips for Minimum Price - show after step 1, before step 2 */}
+                            {step === 2 && (
+                                <div className="mb-8">
+                                    <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg shadow-sm">
+                                        <h2 className="text-xl font-bold mb-2 text-blue-800">Smart Booking Tips for Minimum Price</h2>
+                                        <div className="text-gray-800 space-y-2">
+                                            <p>Before you continue the booking process, take a look at the information below. This can help you during the process to customize the move for your needs while keeping the cost as low as possible.</p>
+                                            <p><strong>Smart Scheduling = Lower Prices</strong><br />Our pricing depends on route efficiency. If we're already scheduled in your area on your selected day, your price can be significantly lower. So if you are not tied to a specific date, make sure to check through different options.</p>
+                                            <p><strong>Is your date flexible?</strong><br />Selecting a date range or let us suggest a moving date can unlock major savings.</p>
+                                            <p><strong>Customise your move and Save</strong><br />Need help with stair carrying or furniture assembly? Our add-on services are here to assist you beyond the transport alone.<br />To keep the cost low, select these add-on services only for the items where it's truly needed. You can select for each item if you require our assistance. If you only need transport, leave them unchecked and benefit from the cheapest price.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Step 2: Date & Time */}
                             {step === 2 && (
                                 <div className="space-y-6">
                                     <p className="text-sm text-gray-600 mb-4">
                                         Select your preferred date and time for pickup and delivery.
                                     </p>
-                                    
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Select range of Start Date</label>
-                                        <input
-                                            type="date"
-                                            value={selectedDateRange.start}
+                                    {/* Date Option Dropdown */}
+                                    <div className="mb-4">
+                                        <label htmlFor="date-option" className="block text-sm font-medium text-gray-700 mb-1">Date Option</label>
+                                        <select
+                                            id="date-option"
+                                            value={dateOption}
                                             onChange={e => {
-                                                const val = e.target.value;
-                                                const year = val.split('-')[0];
-                                                if (year.length <= 4) setSelectedDateRange(r => ({ ...r, start: val, end: isDateFlexible ? r.end : val }));
+                                                setDateOption(e.target.value as any);
+                                                if (e.target.value === 'rehome') setSelectedDateRange({ start: '', end: '' });
                                             }}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                            min={new Date().toISOString().split('T')[0]}
-                                            required
-                                            disabled={isDateFlexible}
-                                        />
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                        >
+                                            <option value="flexible">Flexible date range</option>
+                                            <option value="fixed">Fixed date</option>
+                                            <option value="rehome">Let ReHome choose</option>
+                                        </select>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                        <input
-                                            type="date"
-                                            value={selectedDateRange.end}
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                const year = val.split('-')[0];
-                                                if (year.length <= 4) setSelectedDateRange(r => ({ ...r, end: val }));
-                                            }}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                            min={selectedDateRange.start || new Date().toISOString().split('T')[0]}
-                                            required
-                                            disabled={isDateFlexible}
-                                        />
-                                    </div>
-                                    <div className="mt-2 text-xs text-blue-600">
-                                        If your date is fixed, set both start and end date to the same day.
-                                    </div>
-                                    <div className="flex items-center mt-2">
-                                        <input
-                                            type="checkbox"
-                                            id="date-flexibility"
-                                            checked={isDateFlexible}
-                                            onChange={(e) => {
-                                                setIsDateFlexible(e.target.checked);
-                                                if (e.target.checked) setSelectedDateRange({ start: '', end: '' });
-                                            }}
-                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                        />
-                                        <label htmlFor="date-flexibility" className="ml-2 block text-sm text-gray-600">
-                                            My schedule is flexible
-                                        </label>
-                                    </div>
-                                    
+                                    {/* Show date pickers based on option */}
+                                    {dateOption === 'flexible' && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={selectedDateRange.start}
+                                                    onChange={e => setSelectedDateRange(r => ({ ...r, start: e.target.value }))}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={selectedDateRange.end}
+                                                    onChange={e => setSelectedDateRange(r => ({ ...r, end: e.target.value }))}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    min={selectedDateRange.start || new Date().toISOString().split('T')[0]}
+                                                    required
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                    {dateOption === 'fixed' && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                            <input
+                                                type="date"
+                                                value={selectedDateRange.start}
+                                                onChange={e => setSelectedDateRange(r => ({ ...r, start: e.target.value, end: e.target.value }))}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                min={new Date().toISOString().split('T')[0]}
+                                                required
+                                            />
+                                        </div>
+                                    )}
+                                    {dateOption === 'rehome' && (
+                                        <div className="p-3 bg-blue-50 rounded text-blue-700 text-sm">
+                                            ReHome will suggest the most efficient and cost-effective moving date for you.
+                                        </div>
+                                    )}
+                                    {/* Preferred Time Slot remains as before */}
                                     <div className="mt-4">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                             Preferred Time Slot
@@ -1087,15 +1148,9 @@ const ItemMovingPage = () => {
                                             <option value="anytime">Anytime</option>
                                         </select>
                                     </div>
-                                    
-                                    {/* <div className="mt-6 p-4 bg-blue-50 rounded-md border border-blue-200">
-                                        <h3 className="text-sm font-medium text-blue-800 flex items-center">
-                                            <FaInfoCircle className="mr-2" /> Pricing Information
-                                        </h3>
-                                        <p className="mt-1 text-sm text-blue-700">
-                                            Weekday rates apply Monday through Friday. Weekend rates (Saturday/Sunday) have a 15% surcharge.
-                                        </p>
-                                    </div> */}
+                                    <div className="mt-2 text-xs text-blue-600">
+                                        If your date is fixed, set both start and end date to the same day.
+                                    </div>
                                 </div>
                             )}
                             
@@ -1107,16 +1162,16 @@ const ItemMovingPage = () => {
                                     </p>
                                     
                                     <div className="space-y-6">
+                                        {/* Add 'Box/Bag' to the first category if not present */}
                                         {itemCategories.map((category, index) => (
                                             <div key={index} className="border border-gray-200 rounded-lg p-4">
                                                 <h3 className="text-md font-medium text-gray-800 mb-3">{category.name}</h3>
                                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                                    {category.items.map((item, itemIndex) => {
+                                                    {[...category.items, ...(index === 0 && !category.items.some(i => i.id === 'box-bag') ? [{ id: 'box-bag', name: 'Box/Bag' }] : [])].map((item, itemIndex) => {
                                                         const itemKey = item.id;
                                                         const points = getItemPoints(itemKey);
                                                         const quantity = itemQuantities[itemKey] || 0;
-                                                        const itemValue = points * quantity * 1; // €1 per point for item transport
-                                                        
+                                                        const itemValue = points * quantity * 1;
                                                         return (
                                                             <div key={itemIndex} className="flex items-center justify-between py-3 px-3 bg-gray-50 rounded-md">
                                                                 <div className="flex-1">
@@ -1133,18 +1188,12 @@ const ItemMovingPage = () => {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => decrementItem(itemKey)}
-                                                                        className={`w-8 h-8 flex items-center justify-center rounded-full border ${
-                                                                            quantity > 0
-                                                                                ? 'border-orange-500 text-orange-500 hover:bg-orange-50'
-                                                                                : 'border-gray-300 text-gray-300 cursor-not-allowed'
-                                                                        }`}
+                                                                        className={`w-8 h-8 flex items-center justify-center rounded-full border ${quantity > 0 ? 'border-orange-500 text-orange-500 hover:bg-orange-50' : 'border-gray-300 text-gray-300 cursor-not-allowed'}`}
                                                                         disabled={quantity === 0}
                                                                     >
                                                                         <FaMinus className="h-3 w-3" />
                                                                     </button>
-                                                                    <span className="text-sm w-6 text-center">
-                                                                        {quantity}
-                                                                    </span>
+                                                                    <span className="text-sm w-6 text-center">{quantity}</span>
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => incrementItem(itemKey)}
@@ -1160,34 +1209,24 @@ const ItemMovingPage = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    
+                                    {/* Extra Information field */}
                                     <div className="mt-6">
-                                        <label htmlFor="custom-item" className="block text-sm font-medium text-gray-700">
-                                            Add a custom item (if not listed above)
+                                        <label htmlFor="extra-info" className="block text-sm font-medium text-gray-700">
+                                            Extra Information
                                         </label>
-                                        <div className="mt-1 flex rounded-md shadow-sm">
-                                            <input
-                                                type="text"
-                                                id="custom-item"
-                                                value={customItem}
-                                                onChange={(e) => setCustomItem(e.target.value)}
-                                                placeholder="Enter item name"
-                                                className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-l-md border-gray-300 focus:ring-orange-500 focus:border-orange-500 sm:text-sm"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    if (customItem.trim()) {
-                                                        incrementItem(`Custom-${customItem.trim()}`);
-                                                        setCustomItem('');
-                                                    }
-                                                }}
-                                                disabled={!customItem.trim()}
-                                                className="inline-flex items-center px-4 py-2 border border-transparent rounded-r-md shadow-sm text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                                            >
-                                                Add
-                                            </button>
-                                        </div>
+                                        <textarea
+                                            id="extra-info"
+                                            value={customItem}
+                                            onChange={(e) => setCustomItem(e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            rows={3}
+                                            placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list"
+                                        />
+                                    </div>
+                                    {/* Upload photo/video option */}
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo/video (optional)</label>
+                                        <input type="file" accept="image/*,video/*" multiple className="block w-full text-sm text-gray-500" />
                                     </div>
                                 </div>
                             )}
@@ -1210,7 +1249,7 @@ const ItemMovingPage = () => {
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             />
                                             <label htmlFor="disassembly-service" className="ml-2 block text-sm text-gray-700">
-                                                I need items disassembled and/or reassembled
+                                                Do you need our help with assembly/ disassembly of some Items?
                                             </label>
                                         </div>
                                         
@@ -1219,15 +1258,23 @@ const ItemMovingPage = () => {
                                                 <p className="text-sm text-gray-600">
                                                     Select which items need disassembly/reassembly:
                                                 </p>
+                                                {/* Select All checkbox */}
+                                                <div className="flex items-center mb-2">
+                                                    <input
+                                                        id="select-all-assembly"
+                                                        type="checkbox"
+                                                        checked={selectAllAssembly}
+                                                        onChange={(e) => handleSelectAllAssembly(e.target.checked)}
+                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                    />
+                                                    <label htmlFor="select-all-assembly" className="ml-2 block text-sm font-medium text-gray-700">
+                                                        Select All
+                                                    </label>
+                                                </div>
                                                 {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
                                                     const quantity: number = itemQuantities[itemId];
-                                                    
-                                                    // Find the item data to get the proper name
-                                                    const itemData = itemCategories
-                                                        .flatMap(category => category.items)
-                                                        .find(item => item.id === itemId);
+                                                    const itemData = itemCategories.flatMap(category => category.items).find(item => item.id === itemId);
                                                     const itemName = itemData ? itemData.name : itemId;
-                                                    
                                                     return (
                                                         <div key={index} className="flex items-center justify-between">
                                                             <div className="flex items-center">
@@ -1255,7 +1302,7 @@ const ItemMovingPage = () => {
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="text-md font-medium text-gray-800 mb-3">Extra Helper</h3>
                                         <p className="text-sm text-gray-600 mb-3">
-                                            Dynamic pricing based on number of items
+                                            Add an extra helper for heavy or numerous items
                                         </p>
                                         <div className="flex items-center mb-4">
                                             <input
@@ -1267,15 +1314,7 @@ const ItemMovingPage = () => {
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded disabled:opacity-50"
                                             />
                                             <label htmlFor="extra-helper" className="ml-2 block text-sm text-gray-700">
-                                                I need an extra helper for my move
-                                                {pricingBreakdown?.extraHelperCost ? (
-                                                    <span className="text-orange-600 font-medium"> (+€{pricingBreakdown.extraHelperCost.toFixed(0)})</span>
-                                                ) : (
-                                                    <span className="text-gray-500"> (€30-€60 based on items)</span>
-                                                )}
-                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
-                                                    <span className="text-gray-400 text-xs block"> - Select items first</span>
-                                                )}
+                                                Do you require an extra helper in addition to our 1-helper standard package?
                                             </label>
                                         </div>
                                         
@@ -1286,13 +1325,8 @@ const ItemMovingPage = () => {
                                                 </p>
                                                 {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
                                                     const quantity: number = itemQuantities[itemId];
-                                                    
-                                                    // Find the item data to get the proper name
-                                                    const itemData = itemCategories
-                                                        .flatMap(category => category.items)
-                                                        .find(item => item.id === itemId);
+                                                    const itemData = itemCategories.flatMap(category => category.items).find(item => item.id === itemId);
                                                     const itemName = itemData ? itemData.name : itemId;
-                                                    
                                                     return (
                                                         <div key={index} className="flex items-center justify-between">
                                                             <div className="flex items-center">
@@ -1325,25 +1359,50 @@ const ItemMovingPage = () => {
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             />
                                             <label htmlFor="carrying-service" className="ml-2 block text-sm text-gray-700">
-                                                I need professional carrying service for items up and down floors
+                                                Do you need our help with carrying items up or downstairs
                                             </label>
                                         </div>
                                         
                                         {carryingService && (
                                             <div className="ml-6 space-y-3">
                                                 <p className="text-sm text-gray-600">
-                                                    Carrying service will be calculated based on:
+                                                    Select which items need help with carrying:
                                                 </p>
-                                                <ul className="text-sm text-gray-600 space-y-1">
-                                                    <li>• Pickup floor: {floorPickup || '0'} {elevatorPickup ? '(with elevator - 50% discount)' : ''}</li>
-                                                    <li>• Dropoff floor: {floorDropoff || '0'} {elevatorDropoff ? '(with elevator - 50% discount)' : ''}</li>
-                                                    <li>• Items selected and their weight/points</li>
-                                                </ul>
-                                                {pricingBreakdown?.carryingCost && pricingBreakdown.carryingCost > 0 && (
-                                                    <p className="text-sm font-medium text-orange-600">
-                                                        Estimated carrying cost: €{pricingBreakdown.carryingCost.toFixed(2)}
-                                                    </p>
-                                                )}
+                                                {/* Select All checkbox */}
+                                                <div className="flex items-center mb-2">
+                                                    <input
+                                                        id="select-all-carrying"
+                                                        type="checkbox"
+                                                        checked={selectAllCarrying}
+                                                        onChange={(e) => handleSelectAllCarrying(e.target.checked)}
+                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                    />
+                                                    <label htmlFor="select-all-carrying" className="ml-2 block text-sm font-medium text-gray-700">
+                                                        Select All
+                                                    </label>
+                                                </div>
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                    const quantity: number = itemQuantities[itemId];
+                                                    const itemData = itemCategories.flatMap(category => category.items).find(item => item.id === itemId);
+                                                    const itemName = itemData ? itemData.name : itemId;
+                                                    return (
+                                                        <div key={index} className="flex items-center justify-between">
+                                                            <div className="flex items-center">
+                                                                <input
+                                                                    id={`carrying-service-${itemId}`}
+                                                                    type="checkbox"
+                                                                    checked={carryingServiceItems[itemId] || false}
+                                                                    onChange={e => setCarryingServiceItems({ ...carryingServiceItems, [itemId]: e.target.checked })}
+                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor={`carrying-service-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                    {itemName} ({quantity}x)
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                                <p className="text-xs text-gray-500 mt-2">The price will be calculated with the multipliers for floor levels as laid out before.</p>
                                             </div>
                                         )}
                                     </div>
@@ -1670,6 +1729,21 @@ const ItemMovingPage = () => {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Extra Information Field */}
+                                    <div className="mt-6">
+                                        <label htmlFor="extra-instructions" className="block text-sm font-medium text-gray-700 mb-2">
+                                            Extra Information/ Instructions for our Team
+                                        </label>
+                                        <textarea
+                                            id="extra-instructions"
+                                            value={extraInstructions}
+                                            onChange={(e) => setExtraInstructions(e.target.value)}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            rows={4}
+                                            placeholder="E.g. parking opportunities for the driver, instructions on how to access the building/ room"
+                                        />
+                                    </div>
                                 </div>
                             )}
 
@@ -1738,6 +1812,18 @@ const ItemMovingPage = () => {
                 isReHomeOrder={false}
                 isMovingRequest={true}
             />
+
+            {/* What's Next Section */}
+            <div className="bg-orange-50 p-4 rounded-lg mt-6">
+              <h3 className="text-lg font-bold text-orange-700 mb-2">What's Next?</h3>
+              <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                <li>1️⃣ Review – We will review your request and match it with our schedule.</li>
+                <li>2️⃣ Contact – You will receive a final quote and proposal via email or WhatsApp.</li>
+                <li>3️⃣ Arrange – If the proposed date/time does not work for you, please contact us via WhatsApp or Email with a screenshot of the mail. We will work together to find a suitable date.</li>
+                <li>4️⃣ Confirmation – Once we agree on a date and time, we will send you a confirmation email with an invoice.</li>
+                <li>5️⃣ Completion – We will carry out the service as scheduled. You can pay by card after the service was carried out or later by bank transfer.</li>
+              </ol>
+            </div>
         </div>
     );
 };

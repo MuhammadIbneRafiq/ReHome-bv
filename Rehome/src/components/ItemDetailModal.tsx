@@ -34,6 +34,18 @@ interface ItemDetailsModalProps {
     seller_email: string;
     isrehome?: boolean;
     pricing_type?: string; // Added pricing_type field
+    category?: string; // Added category field
+    subcategory?: string; // Added subcategory field
+    condition?: string; // Added condition field
+    dimensions?: { // Added dimensions field
+      height?: number;
+      width?: number;
+      depth?: number;
+    };
+    // Direct dimension fields (alternative to dimensions object)
+    height_cm?: number;
+    width_cm?: number;
+    depth_cm?: number;
   } | null;
   onAddToCart?: (itemId: string) => void;
   onMarkAsSold?: (itemId: string) => void;
@@ -677,7 +689,44 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     </div>
 
                     <div className="prose text-gray-600">
-                      <h3 className="text-lg font-semibold mb-2">Product Details</h3>
+                      {/* <h3 className="text-lg font-semibold mb-2">Product Details</h3> */}
+                      {/* Product meta fields */}
+                      <ul className="mb-2">
+                        {item.category && (
+                          <li><span className="font-medium">Category:</span> {item.category}</li>
+                        )}
+                        {item.subcategory && (
+                          <li><span className="font-medium">Subcategory:</span> {item.subcategory}</li>
+                        )}
+                        {/* Condition label mapping */}
+                        {item.condition && (
+                          <li>
+                            <span className="font-medium">Condition:</span> {(() => {
+                              const conditionLabels: Record<string, string> = {
+                                '1': 'Like New - Almost no signs of use, very well maintained',
+                                '2': 'Excellent - Minimal wear, barely noticeable imperfections',
+                                '3': 'Good - Visible signs of wear (scratches, small dents), but fully functional',
+                                '4': 'Fair - Heavily used with noticeable wear, may need minor repairs',
+                                '5': 'Poor/Broken - Significant damage or functional issues, may require major repairs',
+                              };
+                              return conditionLabels[item.condition] || item.condition;
+                            })()}
+                          </li>
+                        )}
+                        {/* Dimensions (from item.dimensions or direct fields) */}
+                        {(item.height_cm || item.width_cm || item.depth_cm) && (
+                          <li>
+                            <span className="font-medium">Dimensions:</span>
+                            <span className="ml-1">
+                              {item.height_cm ? `${item.height_cm}cm` : ''}
+                              {item.height_cm && item.width_cm ? ' x ' : ''}
+                              {item.width_cm ? `${item.width_cm}cm` : ''}
+                              {(item.height_cm || item.width_cm) && item.depth_cm ? ' x ' : ''}
+                              {item.depth_cm ? `${item.depth_cm}cm` : ''}
+                            </span>
+                          </li>
+                        )}
+                      </ul>
                       <p className="whitespace-pre-line">{description}</p>
                     </div>
                   </div>

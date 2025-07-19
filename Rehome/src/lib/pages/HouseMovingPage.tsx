@@ -247,6 +247,13 @@ const HouseMovingPage = () => {
     const [pickupPlace, setPickupPlace] = useState<any>(null);
     const [dropoffPlace, setDropoffPlace] = useState<any>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
+    const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome'>('fixed');
+    // 1. Add state for carryingServiceItems
+    const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({});
+    // Add state for select all functionality and extra instructions
+    const [selectAllAssembly, setSelectAllAssembly] = useState(false);
+    const [selectAllCarrying, setSelectAllCarrying] = useState(false);
+    const [extraInstructions, setExtraInstructions] = useState('');
 
     // Calculate distance using straight-line calculation (reliable, no API dependencies)
     const calculateDistance = (place1: any, place2: any): number => {
@@ -351,14 +358,49 @@ const HouseMovingPage = () => {
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDateRange, isDateFlexible]);
+    }, [firstLocation, secondLocation, selectedDateRange, isDateFlexible, carryingServiceItems]);
 
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, carryingService, isStudent, studentId, pickupPlace, dropoffPlace]);
+    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, carryingService, isStudent, studentId, pickupPlace, dropoffPlace, carryingServiceItems]);
+
+    // Add handlers for select all functionality
+    const handleSelectAllAssembly = (checked: boolean) => {
+        setSelectAllAssembly(checked);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const newDisassemblyItems: { [key: string]: boolean } = {};
+        selectedItems.forEach(itemId => {
+            newDisassemblyItems[itemId] = checked;
+        });
+        setDisassemblyItems(newDisassemblyItems);
+    };
+
+    const handleSelectAllCarrying = (checked: boolean) => {
+        setSelectAllCarrying(checked);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const newCarryingItems: { [key: string]: boolean } = {};
+        selectedItems.forEach(itemId => {
+            newCarryingItems[itemId] = checked;
+        });
+        setCarryingServiceItems(newCarryingItems);
+    };
+
+    // Update disassembly items when individual items change
+    useEffect(() => {
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => disassemblyItems[itemId]);
+        setSelectAllAssembly(allSelected);
+    }, [disassemblyItems, itemQuantities]);
+
+    // Update carrying items when individual items change
+    useEffect(() => {
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => carryingServiceItems[itemId]);
+        setSelectAllCarrying(allSelected);
+    }, [carryingServiceItems, itemQuantities]);
 
     const nextStep = () => {
         // Validate date selection in step 4
@@ -682,15 +724,7 @@ const HouseMovingPage = () => {
                     {/* Elevator discount explanation */}
                     {pricingBreakdown.carryingCost > 0 && ((elevatorPickup && parseInt(floorPickup) > 1) || (elevatorDropoff && parseInt(floorDropoff) > 1)) && (
                         <div className="text-xs text-green-700 ml-6">
-                            <span>
-                                Elevator discount applied:
-                                {elevatorPickup && parseInt(floorPickup) > 1 && (
-                                    <> Pickup floors reduced from {parseInt(floorPickup) - 1} to {Math.ceil((parseInt(floorPickup) - 1) / 2)}.</>
-                                )}
-                                {elevatorDropoff && parseInt(floorDropoff) > 1 && (
-                                    <> Dropoff floors reduced from {parseInt(floorDropoff) - 1} to {Math.ceil((parseInt(floorDropoff) - 1) / 2)}.</>
-                                )}
-                            </span>
+                            <span>Elevator discount applied.</span>
                         </div>
                     )}
                     {pricingBreakdown.assemblyCost > 0 && (
@@ -882,58 +916,85 @@ const HouseMovingPage = () => {
                                 </div>
                             )}
 
+                            {/* Smart Booking Tips for Minimum Price - show after step 1, before step 2 */}
+                            {step === 2 && (
+                                <div className="mb-8">
+                                    <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg shadow-sm">
+                                        <h2 className="text-xl font-bold mb-2 text-blue-800">Smart Booking Tips for Minimum Price</h2>
+                                        <div className="text-gray-800 space-y-2">
+                                            <p>Before you continue the booking process, take a look at the information below. This can help you during the process to customize the move for your needs while keeping the cost as low as possible.</p>
+                                            <p><strong>Smart Scheduling = Lower Prices</strong><br />Our pricing depends on route efficiency. If we’re already scheduled in your area on your selected day, your price can be significantly lower. So if you are not tied to a specific date, make sure to check through different options.</p>
+                                            <p><strong>Is your date flexible?</strong><br />Selecting a date range or let us suggest a moving date can unlock major savings.</p>
+                                            <p><strong>Customise your move and Save</strong><br />Need help with stair carrying or furniture assembly? Our add-on services are here to assist you beyond the transport alone.<br />To keep the cost low, select these add-on services only for the items where it’s truly needed. You can select for each item if you require our assistance. If you only need transport, leave them unchecked and benefit from the cheapest price.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Step 2: Date & Time Selection */}
                             {step === 2 && (
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Select range of Start Date</label>
-                                        <input
-                                            type="date"
-                                            value={selectedDateRange.start}
+                                        <label htmlFor="date-option" className="block text-sm font-medium text-gray-700 mb-1">Date Option</label>
+                                        <select
+                                            id="date-option"
+                                            value={dateOption}
                                             onChange={e => {
-                                                const val = e.target.value;
-                                                const year = val.split('-')[0];
-                                                if (year.length <= 4) setSelectedDateRange(r => ({ ...r, start: val, end: isDateFlexible ? r.end : val }));
+                                                setDateOption(e.target.value as any);
+                                                if (e.target.value === 'rehome') setSelectedDateRange({ start: '', end: '' });
                                             }}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                            min={new Date().toISOString().split('T')[0]}
-                                            required
-                                            disabled={isDateFlexible}
-                                        />
+                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                        >
+                                            <option value="flexible">Flexible date range</option>
+                                            <option value="fixed">Fixed date</option>
+                                            <option value="rehome">Let ReHome choose</option>
+                                        </select>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                        <input
-                                            type="date"
-                                            value={selectedDateRange.end}
-                                            onChange={e => {
-                                                const val = e.target.value;
-                                                const year = val.split('-')[0];
-                                                if (year.length <= 4) setSelectedDateRange(r => ({ ...r, end: val }));
-                                            }}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                            min={selectedDateRange.start || new Date().toISOString().split('T')[0]}
-                                            required
-                                            disabled={isDateFlexible}
-                                        />
-                                    </div>
-                                    <div className="mt-2 flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            id="flexible-date"
-                                            checked={isDateFlexible}
-                                            onChange={e => {
-                                                setIsDateFlexible(e.target.checked);
-                                                if (e.target.checked) setSelectedDateRange({ start: '', end: '' });
-                                            }}
-                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                        />
-                                        <label htmlFor="flexible-date" className="ml-2 block text-sm text-gray-700">
-                                            My date is flexible, ReHome can suggest a suitable date
-                                        </label>
-                                    </div>
-                                    
-                                    <div>
+                                    {dateOption === 'flexible' && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={selectedDateRange.start}
+                                                    onChange={e => setSelectedDateRange(r => ({ ...r, start: e.target.value }))}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={selectedDateRange.end}
+                                                    onChange={e => setSelectedDateRange(r => ({ ...r, end: e.target.value }))}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    min={selectedDateRange.start || new Date().toISOString().split('T')[0]}
+                                                    required
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                    {dateOption === 'fixed' && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                                            <input
+                                                type="date"
+                                                value={selectedDateRange.start}
+                                                onChange={e => setSelectedDateRange(r => ({ ...r, start: e.target.value, end: e.target.value }))}
+                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                min={new Date().toISOString().split('T')[0]}
+                                                required
+                                            />
+                                        </div>
+                                    )}
+                                    {dateOption === 'rehome' && (
+                                        <div className="p-3 bg-blue-50 rounded text-blue-700 text-sm">
+                                            ReHome will suggest the most efficient and cost-effective moving date for you.
+                                        </div>
+                                    )}
+                                    <div className="mt-4">
                                         <label className="block text-sm font-medium text-gray-700">
                                             Preferred Time Span
                                         </label>
@@ -997,15 +1058,22 @@ const HouseMovingPage = () => {
                                         </div>
                                     ))}
                                     
+                                    {/* Extra Information field */}
                                     <div className="mt-6">
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Special instructions for your items (optional)
+                                        <label htmlFor="extra-info" className="block text-sm font-medium text-gray-700">
+                                            Extra Information
                                         </label>
                                         <textarea
+                                            id="extra-info"
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                             rows={3}
-                                            placeholder="e.g., Fragile items, special handling requirements, etc."
-                                        ></textarea>
+                                            placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list"
+                                        />
+                                    </div>
+                                    {/* Upload photo/video option */}
+                                    <div className="mt-4">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo/video (optional)</label>
+                                        <input type="file" accept="image/*,video/*" multiple className="block w-full text-sm text-gray-500" />
                                     </div>
                                 </div>
                             )}
@@ -1025,15 +1093,9 @@ const HouseMovingPage = () => {
                                             <div className="ml-3 flex-grow">
                                                 <div className="flex justify-between">
                                                     <label htmlFor="disassembly-toggle" className="font-medium text-gray-900">Disassembly & Reassembly</label>
-                                                    <span className="text-gray-700">
-                                                        {disassembly && Object.values(disassemblyItems).filter(Boolean).length > 0
-                                                          ? `€${Math.max(20, Object.values(disassemblyItems).filter(Boolean).length * 5)}`
-                                                          : '€20'
-                                                        }
-                                                    </span>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
-                                                    We'll disassemble furniture at pickup and reassemble at dropoff
+                                                    Do you need our help with assembly/ disassembly of some Items?
                                                 </p>
                                                 <div className="mt-2">
                                                     <Switch
@@ -1057,6 +1119,19 @@ const HouseMovingPage = () => {
                                                         <p className="text-sm text-gray-600">
                                                             Select which items need disassembly & reassembly:
                                                         </p>
+                                                        {/* Select All checkbox */}
+                                                        <div className="flex items-center mb-2">
+                                                            <input
+                                                                id="select-all-assembly"
+                                                                type="checkbox"
+                                                                checked={selectAllAssembly}
+                                                                onChange={(e) => handleSelectAllAssembly(e.target.checked)}
+                                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                            />
+                                                            <label htmlFor="select-all-assembly" className="ml-2 block text-sm font-medium text-gray-700">
+                                                                Select All
+                                                            </label>
+                                                        </div>
                                                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
                                                             const itemData = itemCategories
                                                                 .find(category => category.items.some(i => i.id === itemId));
@@ -1097,15 +1172,9 @@ const HouseMovingPage = () => {
                                             <div className="ml-3 flex-grow">
                                                 <div className="flex justify-between">
                                                     <label htmlFor="extra-helper-toggle" className="font-medium text-gray-900">Extra Helper</label>
-                                                    <span className="text-gray-700">
-                                                        {pricingBreakdown?.extraHelperCost ? 
-                                                            `€${pricingBreakdown.extraHelperCost.toFixed(0)}` : 
-                                                            '€30-€60'
-                                                        }
-                                                    </span>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
-                                                    Add an extra helper for heavy or numerous items
+                                                    Do you require an extra helper in addition to our 1-helper standard package?
                                                 </p>
                                                 <div className="mt-2">
                                                     <Switch
@@ -1176,15 +1245,9 @@ const HouseMovingPage = () => {
                                             <div className="ml-3 flex-grow">
                                                 <div className="flex justify-between">
                                                     <label htmlFor="carrying-toggle" className="font-medium text-gray-900">Carrying Service</label>
-                                                    <span className="text-gray-700">
-                                                        {carryingService && (parseInt(floorPickup) > 0 || parseInt(floorDropoff) > 0) 
-                                                          ? `€${pricingBreakdown?.carryingCost?.toFixed(2) || 'Calculating...'}`
-                                                          : '€0'
-                                                        }
-                                                    </span>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
-                                                    Professional carrying service for items up and down floors
+                                                    Do you need our help with carrying items up or downstairs
                                                 </p>
                                                 <div className="mt-2">
                                                     <Switch
@@ -1206,13 +1269,40 @@ const HouseMovingPage = () => {
                                                 {carryingService && (
                                                     <div className="mt-4 ml-2 space-y-2">
                                                         <p className="text-sm text-gray-600">
-                                                            Carrying service will be calculated based on:
+                                                            Select which items need help with carrying:
                                                         </p>
-                                                        <ul className="text-sm text-gray-600 space-y-1">
-                                                            <li>• Pickup floor: {floorPickup || '0'} {elevatorPickup ? '(with elevator - 50% discount)' : ''}</li>
-                                                            <li>• Dropoff floor: {floorDropoff || '0'} {elevatorDropoff ? '(with elevator - 50% discount)' : ''}</li>
-                                                            <li>• Items selected and their weight/points</li>
-                                                        </ul>
+                                                        {/* Select All checkbox */}
+                                                        <div className="flex items-center mb-2">
+                                                            <input
+                                                                id="select-all-carrying"
+                                                                type="checkbox"
+                                                                checked={selectAllCarrying}
+                                                                onChange={(e) => handleSelectAllCarrying(e.target.checked)}
+                                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                            />
+                                                            <label htmlFor="select-all-carrying" className="ml-2 block text-sm font-medium text-gray-700">
+                                                                Select All
+                                                            </label>
+                                                        </div>
+                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
+                                                            const itemData = itemCategories.find(category => category.items.some(i => i.id === itemId));
+                                                            const itemName = itemData ? itemData.items.find(i => i.id === itemId)?.name : itemId;
+                                                            return (
+                                                                <div key={index} className="flex items-center">
+                                                                    <input
+                                                                        id={`carrying-service-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={carryingServiceItems[itemId] || false}
+                                                                        onChange={e => setCarryingServiceItems({ ...carryingServiceItems, [itemId]: e.target.checked })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`carrying-service-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({itemQuantities[itemId]}x)
+                                                                    </label>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        <p className="text-xs text-gray-500 mt-2">The price will be calculated with the multipliers for floor levels as laid out before.</p>
                                                     </div>
                                                 )}
                                             </div>
@@ -1480,13 +1570,15 @@ const HouseMovingPage = () => {
                                         <div className="flex">
                                             <FaInfoCircle className="h-5 w-5 text-green-500" />
                                             <div className="ml-3">
-                                                <h3 className="text-sm font-medium text-green-800">Next Steps</h3>
+                                                <h3 className="text-sm font-medium text-green-800">Extra Information/ Instructions for our Team</h3>
                                                 <div className="mt-2 text-sm text-green-700">
-                                                    <p>
-                                                        After submitting your request, you'll receive a confirmation email. 
-                                                        Our team will review your requirements and contact you within 24 hours 
-                                                        to confirm all details. Payment will be processed after confirmation.
-                                                    </p>
+                                                    <textarea
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                        rows={3}
+                                                        placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list"
+                                                        value={extraInstructions}
+                                                        onChange={(e) => setExtraInstructions(e.target.value)}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
@@ -1556,6 +1648,17 @@ const HouseMovingPage = () => {
                 isReHomeOrder={false}
                 isMovingRequest={true}
             />
+            {/* What's Next Section */}
+            <div className="bg-orange-50 p-4 rounded-lg mt-6">
+              <h3 className="text-lg font-bold text-orange-700 mb-2">What's Next?</h3>
+              <ol className="list-decimal list-inside space-y-2 text-gray-700">
+                <li>1️⃣ Review – We will review your request and match it with our schedule.</li>
+                <li>2️⃣ Contact – You will receive a final quote and proposal via email or WhatsApp.</li>
+                <li>3️⃣ Arrange – If the proposed date/time does not work for you, please contact us via WhatsApp or Email with a screenshot of the mail. We will work together to find a suitable date.</li>
+                <li>4️⃣ Confirmation – Once we agree on a date and time, we will send you a confirmation email with an invoice.</li>
+                <li>5️⃣ Completion – We will carry out the service as scheduled. You can pay by card after the service was carried out or later by bank transfer.</li>
+              </ol>
+            </div>
         </div>
     );
 };
