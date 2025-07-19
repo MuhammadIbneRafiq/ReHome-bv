@@ -384,6 +384,7 @@ const HouseMovingPage = () => {
                 elevatorDropoff,
                 assemblyItems: disassemblyItems,
                 extraHelperItems,
+                carryingServiceItems, // Add carrying service items
                 isStudent,
                 hasStudentId: !!studentId,
                 isEarlyBooking: false // This would be determined by checking calendar availability
@@ -425,7 +426,7 @@ const HouseMovingPage = () => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, carryingService, isStudent, studentId, pickupPlace, dropoffPlace, carryingServiceItems]);
+    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, carryingService, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace]);
 
     // Add handlers for select all functionality
     const handleSelectAllAssembly = (checked: boolean) => {
@@ -577,6 +578,34 @@ const HouseMovingPage = () => {
             setExtraHelperItems(newExtraHelperItems);
         }
     }, [itemQuantities, extraHelper]);
+
+    // Update carrying service items when carrying service is toggled
+    useEffect(() => {
+        if (carryingService) {
+            // When carrying service is enabled, automatically select all items that have quantities > 0
+            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+            const newCarryingItems: { [key: string]: boolean } = {};
+            selectedItems.forEach(itemId => {
+                newCarryingItems[itemId] = true;
+            });
+            setCarryingServiceItems(newCarryingItems);
+        } else {
+            // When carrying service is disabled, clear all selections
+            setCarryingServiceItems({});
+        }
+    }, [carryingService, itemQuantities]);
+
+    // Update carrying service when items change (if carrying service is enabled)
+    useEffect(() => {
+        if (carryingService) {
+            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+            const newCarryingItems: { [key: string]: boolean } = {};
+            selectedItems.forEach(itemId => {
+                newCarryingItems[itemId] = true;
+            });
+            setCarryingServiceItems(newCarryingItems);
+        }
+    }, [itemQuantities, carryingService]);
 
     const isFormValid = () => {
         if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) return false;
@@ -1273,7 +1302,7 @@ const HouseMovingPage = () => {
                                                     <label htmlFor="carrying-toggle" className="font-medium text-gray-900">Carrying Service</label>
                                                 </div>
                                                 <p className="text-gray-500 text-sm mt-1">
-                                                    Do you need our help with carrying items up or downstairs
+                                                    Do you need our help with carrying items up or downstairs?
                                                 </p>
                                                 <div className="mt-2">
                                                     <Switch
@@ -1328,7 +1357,6 @@ const HouseMovingPage = () => {
                                                                 </div>
                                                             );
                                                         })}
-                                                        <p className="text-xs text-gray-500 mt-2">The price will be calculated with the multipliers for floor levels as laid out before.</p>
                                                     </div>
                                                 )}
                                             </div>

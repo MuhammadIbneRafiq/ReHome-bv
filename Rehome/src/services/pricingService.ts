@@ -82,6 +82,7 @@ export interface PricingInput {
   elevatorDropoff: boolean;
   assemblyItems: { [key: string]: boolean };
   extraHelperItems: { [key: string]: boolean };
+  carryingServiceItems?: { [key: string]: boolean }; // New field for carrying service items
   isStudent: boolean;
   hasStudentId: boolean;
   isEarlyBooking?: boolean; // For empty calendar days
@@ -496,9 +497,11 @@ class PricingService {
   }
 
   private calculateCarryingCost(input: PricingInput, breakdown: PricingBreakdown) {
-    // If elevator is available, count half the floors (rounded up), else full
-    const pickupFloors = input.elevatorPickup ? Math.ceil(Math.max(0, input.floorPickup - 1) / 2) : Math.max(0, input.floorPickup - 1);
-    const dropoffFloors = input.elevatorDropoff ? Math.ceil(Math.max(0, input.floorDropoff - 1) / 2) : Math.max(0, input.floorDropoff - 1);
+    // Calculate floors based on new elevator logic:
+    // - If elevator is available, count as 1 floor (same effort as 1 level)
+    // - If no elevator, count actual floors above ground level
+    const pickupFloors = input.elevatorPickup ? 1 : Math.max(0, input.floorPickup - 1);
+    const dropoffFloors = input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff - 1);
     const totalFloors = pickupFloors + dropoffFloors;
 
     breakdown.breakdown.carrying.floors = totalFloors;
@@ -516,22 +519,30 @@ class PricingService {
       cost: number;
     }> = [];
 
+    // Use carryingServiceItems if provided, otherwise use all items with quantities > 0
+    const itemsToCarry = input.carryingServiceItems || {};
+    
     for (const [itemId, quantity] of Object.entries(input.itemQuantities)) {
       if (quantity > 0) {
-        const points = getItemPoints(itemId);
-        const multiplier = points <= pricingConfig.carryingMultipliers.lowValue.threshold
-          ? pricingConfig.carryingMultipliers.lowValue.multiplier
-          : pricingConfig.carryingMultipliers.highValue.multiplier;
+        // Check if this item needs carrying service
+        const needsCarrying = itemsToCarry[itemId] || false;
         
-        const itemCarryingPoints = points * multiplier * totalFloors * quantity;
-        totalCarryingPoints += itemCarryingPoints;
+        if (needsCarrying) {
+          const points = getItemPoints(itemId);
+          const multiplier = points <= pricingConfig.carryingMultipliers.lowValue.threshold
+            ? pricingConfig.carryingMultipliers.lowValue.multiplier
+            : pricingConfig.carryingMultipliers.highValue.multiplier;
+          
+          const itemCarryingPoints = points * multiplier * totalFloors * quantity;
+          totalCarryingPoints += itemCarryingPoints;
 
-        itemBreakdown.push({
-          itemId,
-          points: points * quantity,
-          multiplier: multiplier * totalFloors,
-          cost: itemCarryingPoints * pricingConfig.addonMultiplier
-        });
+          itemBreakdown.push({
+            itemId,
+            points: points * quantity,
+            multiplier: multiplier * totalFloors,
+            cost: itemCarryingPoints * pricingConfig.addonMultiplier
+          });
+        }
       }
     }
 

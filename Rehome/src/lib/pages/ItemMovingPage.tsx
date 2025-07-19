@@ -460,7 +460,7 @@ const ItemMovingPage = () => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, isStudent, studentId, pickupPlace, dropoffPlace]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace]);
 
     const nextStep = () => {
         // Show booking tips after step 1 (locations)
@@ -582,6 +582,34 @@ const ItemMovingPage = () => {
             setExtraHelperItems(newExtraHelperItems);
         }
     }, [itemQuantities, extraHelper]);
+
+    // Update carrying service items when carrying service is toggled
+    useEffect(() => {
+        if (carryingService) {
+            // When carrying service is enabled, automatically select all items that have quantities > 0
+            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+            const newCarryingItems: { [key: string]: boolean } = {};
+            selectedItems.forEach(itemId => {
+                newCarryingItems[itemId] = true;
+            });
+            setCarryingServiceItems(newCarryingItems);
+        } else {
+            // When carrying service is disabled, clear all selections
+            setCarryingServiceItems({});
+        }
+    }, [carryingService, itemQuantities]);
+
+    // Update carrying service when items change (if carrying service is enabled)
+    useEffect(() => {
+        if (carryingService) {
+            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+            const newCarryingItems: { [key: string]: boolean } = {};
+            selectedItems.forEach(itemId => {
+                newCarryingItems[itemId] = true;
+            });
+            setCarryingServiceItems(newCarryingItems);
+        }
+    }, [itemQuantities, carryingService]);
 
     const isFormValid = () => {
         // Debug logging to identify which validation is failing
@@ -1387,7 +1415,7 @@ const ItemMovingPage = () => {
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             />
                                             <label htmlFor="carrying-service" className="ml-2 block text-sm text-gray-700">
-                                                Do you need our help with carrying items up or downstairs
+                                                Do you need our help with carrying items up or downstairs?
                                             </label>
                                         </div>
                                         
@@ -1430,7 +1458,6 @@ const ItemMovingPage = () => {
                                                         </div>
                                                     );
                                                 })}
-                                                <p className="text-xs text-gray-500 mt-2">The price will be calculated with the multipliers for floor levels as laid out before.</p>
                                             </div>
                                         )}
                                     </div>
