@@ -1,11 +1,222 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FaTimes, FaInfoCircle, FaCheckCircle } from 'react-icons/fa';
 import { Switch } from "@headlessui/react";
 import { useCart } from '../../contexts/CartContext';
-import LocationAutocomplete from '../ui/LocationAutocomplete';
 import pricingService, { PricingInput } from '../../services/pricingService';
 import { toast } from 'react-toastify';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
+
+// TypeScript declarations for Google Maps API
+declare global {
+    interface Window {
+        google: any;
+    }
+}
+
+// Google Places Autocomplete component
+function GooglePlacesAutocomplete({ 
+  value, 
+  onChange, 
+  placeholder,
+  onPlaceSelect 
+}: { 
+  value: string, 
+  onChange: (val: string, place?: any) => void, 
+  placeholder?: string,
+  onPlaceSelect?: (place: any) => void 
+}) {
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handle clicks outside the dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+        setSuggestions([]);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Function to get place details including coordinates from placeId
+  const getPlaceDetails = async (placeId: string) => {
+    try {
+      const response = await fetch(
+        'https://places.googleapis.com/v1/places/' + placeId,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': 'location,displayName,formattedAddress'
+          }
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          placeId,
+          coordinates: data.location ? {
+            lat: data.location.latitude,
+            lng: data.location.longitude
+          } : null,
+          formattedAddress: data.formattedAddress,
+          displayName: data.displayName?.text
+        };
+      } else {
+        console.error('Place details API error:', response.status, response.statusText);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error getting place details:', error);
+      return null;
+    }
+  };
+
+  const searchPlaces = async (query: string) => {
+    if (query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(
+        'https://places.googleapis.com/v1/places:autocomplete',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': apiKey,
+            'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
+          },
+          body: JSON.stringify({
+            input: query,
+            locationBias: {
+              circle: {
+                center: {
+                  latitude: 52.3676,
+                  longitude: 4.9041
+                },
+                radius: 50000.0
+              }
+            },
+            languageCode: 'en',
+            regionCode: 'NL',
+            includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
+            includedRegionCodes: ['nl']
+          })
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.suggestions) {
+          const placeSuggestions = data.suggestions
+            .filter((suggestion: any) => suggestion.placePrediction)
+            .map((suggestion: any) => ({
+              text: suggestion.placePrediction.text?.text || 'Unknown address',
+              placeId: suggestion.placePrediction.placeId,
+              structuredFormat: suggestion.placePrediction.structuredFormat
+            }));
+          setSuggestions(placeSuggestions);
+          setShowSuggestions(true);
+        }
+      } else {
+        console.error('Places API error:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Places API error:', error);
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSuggestionClick = async (suggestion: any) => {
+    // Immediately close dropdown and clear suggestions
+    setShowSuggestions(false);
+    setSuggestions([]);
+    
+    // Update the input value
+    onChange(suggestion.text);
+    
+    if (onPlaceSelect) {
+      const placeDetails = await getPlaceDetails(suggestion.placeId);
+      const placeWithDetails = {
+        ...suggestion,
+        ...placeDetails
+      };
+      onPlaceSelect(placeWithDetails);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    onChange(newValue);
+    
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Set new timeout
+    const timeoutId = setTimeout(() => {
+      searchPlaces(newValue);
+    }, 300);
+    
+    setSearchTimeout(timeoutId);
+  };
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Delivery Address *
+      </label>
+      <input
+        type="text"
+        value={value}
+        onChange={handleInputChange}
+        placeholder={placeholder || "💡 Start typing street name, city, or postal code"}
+        className="w-full p-3 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
+        required
+      />
+      
+      {isLoading && (
+        <div className="absolute right-3 top-10">
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
+        </div>
+      )}
+
+      {showSuggestions && suggestions.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+          {suggestions.map((suggestion, index) => (
+            <div
+              key={index}
+              className="px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0"
+              onClick={() => handleSuggestionClick(suggestion)}
+            >
+              <div className="text-sm text-gray-900">{suggestion.text}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ReHomeCheckoutModalProps {
   isOpen: boolean;
@@ -46,6 +257,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [floor, setFloor] = useState('');
   const [elevatorAvailable, setElevatorAvailable] = useState(false);
+  const [setDeliveryPlace] = useState<any>(null);
   
   // Item assistance selections
   const [itemAssistance, setItemAssistance] = useState<ItemAssistanceState>({});
@@ -63,42 +275,103 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     setBaseTotal(total);
   }, [rehomeItems]);
 
-  // Initialize item assistance state
+  // Initialize item assistance state - preserve existing selections
   useEffect(() => {
-    const assistanceState: ItemAssistanceState = {};
-    rehomeItems.forEach(item => {
-      assistanceState[item.id] = {
-        needsCarrying: false,
-        needsAssembly: false,
-      };
+    console.log('🏗️ Initializing item assistance state for items:', rehomeItems.map(i => i.id));
+    setItemAssistance(prev => {
+      console.log('🔄 Previous assistance state:', prev);
+      const assistanceState: ItemAssistanceState = { ...prev }; // Keep existing selections
+      rehomeItems.forEach(item => {
+        // Only initialize if item doesn't exist in state
+        if (!assistanceState[item.id]) {
+          console.log('➕ Adding new item to assistance state:', item.id);
+          assistanceState[item.id] = {
+            needsCarrying: false,
+            needsAssembly: false,
+          };
+        } else {
+          console.log('✅ Item already exists in state:', item.id, assistanceState[item.id]);
+        }
+      });
+      console.log('🎯 Final assistance state:', assistanceState);
+      return assistanceState;
     });
-    setItemAssistance(assistanceState);
   }, [rehomeItems]);
 
-  // Calculate additional costs when assistance options change
-  useEffect(() => {
-    if (deliveryAddress && step >= 2) {
-      calculateAdditionalCosts();
-    }
-  }, [itemAssistance, deliveryAddress, floor, elevatorAvailable]);
-
   const calculateAdditionalCosts = async () => {
-    if (!deliveryAddress) return;
+    if (!deliveryAddress) {
+      setPricingBreakdown(null);
+      return;
+    }
 
     try {
-      // Create item quantities for pricing service
+      // Create item quantities for pricing service based on ReHome items
       const itemQuantities: { [key: string]: number } = {};
       const assemblyItems: { [key: string]: boolean } = {};
+      const carryingServiceItems: { [key: string]: boolean } = {};
       
       rehomeItems.forEach(item => {
-        const itemKey = `${item.category?.toLowerCase() || ''}-${item.name.toLowerCase().replace(/\s+/g, '-')}`;
-        itemQuantities[itemKey] = item.quantity;
-        assemblyItems[itemKey] = itemAssistance[item.id]?.needsAssembly || false;
+        // Map ReHome items to furniture item IDs based on category and subcategory
+        let furnitureItemId = 'big-furniture'; // Default fallback
+        
+        if (item.category && item.subcategory) {
+          const categoryLower = item.category.toLowerCase();
+          const subcategoryLower = item.subcategory.toLowerCase();
+          
+          // Map common furniture types to pricing service IDs
+          if (categoryLower.includes('sofa') || subcategoryLower.includes('sofa')) {
+            furnitureItemId = subcategoryLower.includes('3') ? 'sofa-3p' : 'sofa-2p';
+          } else if (categoryLower.includes('bed') || subcategoryLower.includes('bed')) {
+            furnitureItemId = subcategoryLower.includes('2') ? 'bed-2p' : 'bed-1p';
+          } else if (categoryLower.includes('chair') || subcategoryLower.includes('chair')) {
+            furnitureItemId = subcategoryLower.includes('office') ? 'office-chair' : 'chair';
+          } else if (categoryLower.includes('table') || subcategoryLower.includes('table')) {
+            if (subcategoryLower.includes('dining')) furnitureItemId = 'dining-table';
+            else if (subcategoryLower.includes('coffee')) furnitureItemId = 'coffee-table';
+            else if (subcategoryLower.includes('side')) furnitureItemId = 'side-table';
+            else furnitureItemId = 'office-table';
+          } else if (categoryLower.includes('closet') || subcategoryLower.includes('closet')) {
+            furnitureItemId = subcategoryLower.includes('3') ? 'closet-3d' : 'closet-2d';
+          } else if (categoryLower.includes('storage') || subcategoryLower.includes('storage')) {
+            if (subcategoryLower.includes('bookcase')) furnitureItemId = 'bookcase';
+            else if (subcategoryLower.includes('dressoir') || subcategoryLower.includes('drawer')) furnitureItemId = 'dressoir';
+            else if (subcategoryLower.includes('tv')) furnitureItemId = 'tv-table';
+            else furnitureItemId = 'cloth-rack';
+          } else if (categoryLower.includes('appliance') || subcategoryLower.includes('appliance')) {
+            if (subcategoryLower.includes('washing')) furnitureItemId = 'washing-machine';
+            else if (subcategoryLower.includes('dryer')) furnitureItemId = 'dryer';
+            else if (subcategoryLower.includes('fridge') || subcategoryLower.includes('freezer')) {
+              furnitureItemId = subcategoryLower.includes('big') ? 'fridge-big' : 'fridge-small';
+            } else furnitureItemId = 'small-appliance';
+          } else if (categoryLower.includes('mattress')) {
+            furnitureItemId = subcategoryLower.includes('2') ? 'mattress-2p' : 'mattress-1p';
+          } else if (categoryLower.includes('lamp')) {
+            furnitureItemId = 'standing-lamp';
+          } else if (categoryLower.includes('mirror')) {
+            furnitureItemId = 'mirror';
+          } else if (categoryLower.includes('tv')) {
+            furnitureItemId = 'tv';
+          } else if (categoryLower.includes('computer')) {
+            furnitureItemId = 'computer';
+          } else if (categoryLower.includes('bike')) {
+            furnitureItemId = 'bike';
+          } else if (categoryLower.includes('box') || categoryLower.includes('bag')) {
+            furnitureItemId = 'box';
+          } else if (categoryLower.includes('luggage')) {
+            furnitureItemId = 'luggage';
+          } else if (categoryLower.includes('small')) {
+            furnitureItemId = 'small-furniture';
+          }
+        }
+        
+        itemQuantities[furnitureItemId] = (itemQuantities[furnitureItemId] || 0) + item.quantity;
+        assemblyItems[furnitureItemId] = assemblyItems[furnitureItemId] || (itemAssistance[item.id]?.needsAssembly || false);
+        carryingServiceItems[furnitureItemId] = carryingServiceItems[furnitureItemId] || (itemAssistance[item.id]?.needsCarrying || false);
       });
 
       const pricingInput: PricingInput = {
         serviceType: 'item-transport',
-        pickupLocation: 'Amsterdam', // Default pickup location for ReHome items
+        pickupLocation: 'Amsterdam, Netherlands', // Default pickup location for ReHome items
         dropoffLocation: deliveryAddress,
         selectedDate: new Date().toISOString().split('T')[0],
         isDateFlexible: false,
@@ -109,6 +382,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
         elevatorDropoff: elevatorAvailable,
         assemblyItems,
         extraHelperItems: {}, // Not applicable for ReHome delivery
+        carryingServiceItems, // Add carrying service items
         isStudent: false,
         hasStudentId: false,
         isEarlyBooking: false,
@@ -122,6 +396,26 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     }
   };
 
+  // Debounced price calculation for address changes
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (deliveryAddress && deliveryAddress.trim().length > 3 && step >= 2) {
+        calculateAdditionalCosts();
+      } else {
+        setPricingBreakdown(null);
+      }
+    }, 400);
+
+    return () => clearTimeout(debounceTimer);
+  }, [deliveryAddress, step]);
+
+  // Immediate price calculation for other changes
+  useEffect(() => {
+    if (deliveryAddress && step >= 2) {
+      calculateAdditionalCosts();
+    }
+  }, [itemAssistance, floor, elevatorAvailable]);
+
   const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setContactInfo(prev => ({
       ...prev,
@@ -134,14 +428,29 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   };
 
   const toggleItemAssistance = (itemId: string, type: 'carrying' | 'assembly') => {
-    setItemAssistance(prev => ({
-      ...prev,
-      [itemId]: {
-        ...prev[itemId],
-        needsCarrying: type === 'carrying' ? !prev[itemId]?.needsCarrying : prev[itemId]?.needsCarrying || false,
-        needsAssembly: type === 'assembly' ? !prev[itemId]?.needsAssembly : prev[itemId]?.needsAssembly || false,
-      }
-    }));
+    console.log('🔧 Toggling assistance for item:', itemId, 'type:', type);
+    
+    setItemAssistance(prev => {
+      console.log('📋 Previous state:', prev);
+      const currentState = prev[itemId] || { needsCarrying: false, needsAssembly: false };
+      console.log('📍 Current item state:', currentState);
+      
+      const newState = {
+        ...currentState,
+        needsCarrying: type === 'carrying' ? !currentState.needsCarrying : currentState.needsCarrying,
+        needsAssembly: type === 'assembly' ? !currentState.needsAssembly : currentState.needsAssembly,
+      };
+      
+      console.log('✨ New item state:', newState);
+      
+      const newFullState = {
+        ...prev,
+        [itemId]: newState
+      };
+      
+      console.log('🎯 Full new state:', newFullState);
+      return newFullState;
+    });
   };
 
   const isStep1Valid = () => {
@@ -303,13 +612,14 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
 
               <div className="space-y-4">
                 <div>
-                  <LocationAutocomplete
-                    label="Delivery Address *"
+                  <GooglePlacesAutocomplete
                     value={deliveryAddress}
                     onChange={setDeliveryAddress}
-                    placeholder="Enter delivery address"
-                    required
-                    countryCode="nl"
+                    placeholder="💡 Start typing street name, city, or postal code"
+                    onPlaceSelect={(place) => {
+                      setDeliveryPlace(place);
+                      console.log('🎯 Delivery place selected with coordinates:', place);
+                    }}
                   />
                 </div>
 
@@ -365,10 +675,16 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                 <div className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold mr-3">
                   3
                 </div>
-                <h3 className="text-lg font-semibold">Additional Services</h3>
+                <h3 className="text-lg font-semibold">Delivery add-ons</h3>
               </div>
 
               <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <div className="text-sm text-blue-700">
+                    <p className="font-medium">Our standard delivery is to the ground floor and certain items may be disassembled (see description of our listing).</p>
+                  </div>
+                </div>
+                
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h4 className="font-medium text-gray-900 mb-3">Your Items</h4>
                   <div className="space-y-3">
@@ -392,31 +708,51 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                             </div>
                           </div>
 
-                          <div className="space-y-2">
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id={`carrying-${item.id}`}
-                                checked={assistanceState.needsCarrying}
-                                onChange={() => toggleItemAssistance(item.id, 'carrying')}
-                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                              />
-                              <label htmlFor={`carrying-${item.id}`} className="ml-2 text-sm text-gray-700">
-                                Require carrying assistance
-                              </label>
+                          <div className="space-y-3">
+                            <div>
+                              <h5 className="font-medium text-gray-800 mb-2">1. Need help with assembly?</h5>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    id={`assembly-${item.id}`}
+                                    checked={assistanceState.needsAssembly}
+                                    onChange={() => toggleItemAssistance(item.id, 'assembly')}
+                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                  />
+                                  <label htmlFor={`assembly-${item.id}`} className="ml-2 text-sm text-gray-700">
+                                    Assembly assistance for {item.name}
+                                  </label>
+                                </div>
+                                {pricingBreakdown?.assemblyCost > 0 && assistanceState.needsAssembly && (
+                                  <span className="text-sm font-medium text-orange-600">
+                                    €{(pricingBreakdown.assemblyCost / Object.values(itemAssistance).filter(state => state.needsAssembly).length).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
 
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id={`assembly-${item.id}`}
-                                checked={assistanceState.needsAssembly}
-                                onChange={() => toggleItemAssistance(item.id, 'assembly')}
-                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                              />
-                              <label htmlFor={`assembly-${item.id}`} className="ml-2 text-sm text-gray-700">
-                                Require assembly assistance
-                              </label>
+                            <div>
+                              <h5 className="font-medium text-gray-800 mb-2">2. Need help with carrying upstairs?</h5>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    id={`carrying-${item.id}`}
+                                    checked={assistanceState.needsCarrying}
+                                    onChange={() => toggleItemAssistance(item.id, 'carrying')}
+                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                  />
+                                  <label htmlFor={`carrying-${item.id}`} className="ml-2 text-sm text-gray-700">
+                                    Carrying assistance to floor {floor || 0} for {item.name}
+                                  </label>
+                                </div>
+                                {pricingBreakdown?.carryingCost > 0 && assistanceState.needsCarrying && (
+                                  <span className="text-sm font-medium text-orange-600">
+                                    €{(pricingBreakdown.carryingCost / Object.values(itemAssistance).filter(state => state.needsCarrying).length).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -451,7 +787,10 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                     <div className="border-t border-orange-300 pt-2 mt-2">
                       <div className="flex justify-between font-semibold text-base">
                         <span>Total:</span>
-                        <span>{formatPrice(getTotalCost())}</span>
+                        <span>
+                          {formatPrice(getTotalCost())
+                          }
+                        </span>
                       </div>
                     </div>
                   </div>

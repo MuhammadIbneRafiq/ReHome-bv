@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaTruck, FaTimes, FaArrowRight, FaInfoCircle } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
@@ -12,19 +12,8 @@ interface TransportationServicePopupProps {
 const TransportationServicePopup: React.FC<TransportationServicePopupProps> = ({
   isOpen,
   onClose,
-  onDontShowAgain
 }) => {
-  const [showDontShowOption, setShowDontShowOption] = useState(false);
 
-  // Show "Don't show again" option after 3 seconds
-  useEffect(() => {
-    if (isOpen) {
-      const timer = setTimeout(() => {
-        setShowDontShowOption(true);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -92,11 +81,11 @@ const TransportationServicePopup: React.FC<TransportationServicePopupProps> = ({
 
               <div className="flex space-x-3 pt-2">
                 <Link
-                  to="/item-moving"
+                  to="/item-transport"
                   onClick={onClose}
                   className="flex-1 bg-orange-600 text-white py-3 px-4 rounded-lg font-medium text-sm hover:bg-orange-700 transition-colors flex items-center justify-center space-x-2"
                 >
-                  <span>Get Quote</span>
+                  <span>Item Transport</span>
                   <FaArrowRight className="w-3 h-3" />
                 </Link>
                 <button
@@ -108,24 +97,7 @@ const TransportationServicePopup: React.FC<TransportationServicePopupProps> = ({
               </div>
             </div>
 
-            {/* Don't show again option */}
-            <AnimatePresence>
-              {showDontShowOption && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-4 pt-4 border-t border-gray-200"
-                >
-                  <button
-                    onClick={onDontShowAgain}
-                    className="text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                  >
-                    Don't show this again
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          
           </div>
         </motion.div>
       </motion.div>

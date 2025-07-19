@@ -21,9 +21,10 @@ import LazyImage from '@/components/ui/LazyImage';
 import { useCart } from '../../contexts/CartContext';
 import TransportationServicePopup from '../../components/ui/TransportationServicePopup';
 import useTransportationPopup from '../../hooks/useTransportationPopup';
+import ReHomeCheckoutModal from '../../components/marketplace/ReHomeCheckoutModal';
 
 // Helper function to get the first valid image URL
-const getFirstImageUrl = (item: FurnitureItem): string => {
+const getFirstImageUrl = (item: any): string => {
     if (item.image_url && item.image_url.length > 0) return item.image_url[0];
     if (item.image_urls && item.image_urls.length > 0) return item.image_urls[0];
     return 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
@@ -40,8 +41,6 @@ const MarketplacePage = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<FurnitureItem | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [cart, setCart] = useState<{id: string, quantity: number}[]>([]);
-    const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
     const [sortOption, setSortOption] = useState<'latest' | 'priceLowHigh' | 'priceHighLow'>('latest');
 
@@ -58,7 +57,7 @@ const MarketplacePage = () => {
         return items;
     };
     
-    const { clearCart } = useCart();
+    const { items: cart, addItem, removeItem, updateQuantity: updateCartQuantity, clearCart } = useCart();
 
     // Get the item ID from URL query parameter
     const searchParams = new URLSearchParams(window.location.search);
@@ -109,6 +108,9 @@ const MarketplacePage = () => {
     const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
     const [orderNumber, setOrderNumber] = useState('');
     const [isReHomeOrder] = useState(false);
+    
+    // ReHome checkout modal state
+    const [showReHomeCheckout, setShowReHomeCheckout] = useState(false);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -231,24 +233,13 @@ const MarketplacePage = () => {
 
         setIsModalOpen(true);
         setTimeout(() => {
-            setCart(prev => {
-                const existingItem = prev.find(cartItem => cartItem.id === itemId);
-                if (existingItem) {
-                    return prev.map(cartItem => 
-                        cartItem.id === itemId 
-                            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-                            : cartItem
-                    );
-                } else {
-                    return [...prev, { id: itemId, quantity: 1 }];
-                }
-            });
+            addItem(item);
             toast.success('Item added to cart! Check your cart at the bottom right.');
         }, 500); // Simulate a delay
     };
 
     const removeFromCart = (itemId: string) => {
-        setCart(prev => prev.filter(item => item.id !== itemId));
+        removeItem(itemId);
     };
 
     const updateQuantity = (itemId: string, newQuantity: number) => {
@@ -256,19 +247,12 @@ const MarketplacePage = () => {
             removeFromCart(itemId);
             return;
         }
-        setCart(prev => 
-            prev.map(item => 
-                item.id === itemId 
-                    ? { ...item, quantity: newQuantity }
-                    : item
-            )
-        );
+        updateCartQuantity(itemId, newQuantity);
     };
 
     const getTotalPrice = () => {
         return cart.reduce((total, cartItem) => {
-            const item = furnitureItems.find(item => item.id === cartItem.id);
-            return total + (item ? item.price * cartItem.quantity : 0);
+            return total + (cartItem.price * cartItem.quantity);
         }, 0);
     };
 
@@ -276,113 +260,27 @@ const MarketplacePage = () => {
         return cart.reduce((total, item) => total + item.quantity, 0);
     };
 
-    const handleCheckout = async () => {
-        setCheckoutLoading(true);
-        try {
-            const cartItems = cart.map(cartItem => {
-                const furnitureItem = furnitureItems.find(item => item.id === cartItem.id);
-                return {
-                    ...furnitureItem,
-                    quantity: cartItem.quantity
-                };
-            });
-            const totalAmount = getTotalPrice();
-            // Generate a unique order number
-            const orderNumber = `RH-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
-            setOrderNumber(orderNumber);
-            console.log('user data looks like this',user);
-            const userData = localStorage.getItem('user_info');
-            const name = userData ? JSON.parse(userData)?.name : '';
-            console.log('Parsed userData:', userData ? JSON.parse(userData) : 'null');
-            console.log('Extracted name:', name);
-            
-            // Prepare order data
-            const orderData = {
-                items: cartItems,
-                totalAmount: totalAmount,
-                orderNumber,
-                contactInfo: {
-                    email: user?.email || localStorage.getItem('userEmail') || '',
-                    firstName: name || '',
-                    lastName: '',
-                    phone: '', // Add phone field
-                },
-                deliveryAddress: 'To be provided', // Add required deliveryAddress
-                floor: 0, // Add floor field
-                elevatorAvailable: false, // Add elevatorAvailable field
-                baseTotal: totalAmount, // Add baseTotal field
-                assistanceCosts: 0, // Add assistanceCosts field
-                pricingBreakdown: { // Add pricingBreakdown object
-                    carryingCost: 0,
-                    assemblyCost: 0
-                },
-                createdAt: new Date().toISOString(),
-            };
-            
-            console.log('Order data being sent:', JSON.stringify(orderData, null, 2));
-            // Actually send the order to the backend
-            console.log('Sending request to:', API_ENDPOINTS.REHOME_ORDERS.CREATE);
-            console.log('Request headers:', {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')?.substring(0, 20)}...`,
-            });
-            
-            const response = await fetch(API_ENDPOINTS.REHOME_ORDERS.CREATE, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-                },
-                body: JSON.stringify(orderData),
-            });
-            
-            console.log('Response status:', response.status);
-            console.log('Response ok:', response.ok);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.log('Error response body:', errorText);
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
-            }
-            if (response.ok) {
-                // Send confirmation email
-                try {
-                    console.log('📧 Sending confirmation email for order:', orderNumber);
-                    const emailResponse = await fetch(API_ENDPOINTS.EMAIL.REHOME_ORDER_CONFIRMATION, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            orderNumber,
-                            items: cartItems,
-                            totalAmount,
-                            customerInfo: orderData.contactInfo
-                        }),
-                    });
-
-                    if (emailResponse.ok) {
-                        console.log('✅ Confirmation email sent successfully');
-                    } else {
-                        console.error('❌ Failed to send confirmation email:', emailResponse.status);
-                    }
-                } catch (emailError) {
-                    console.error('❌ Error sending confirmation email:', emailError);
-                }
-
-                clearCart();
-                setIsCartDrawerOpen(false);
-                setShowOrderConfirmation(true);
-                toast.success(`Order created successfully! Check your email for confirmation. Order #${orderData.orderNumber}`);
-            } else {
-                toast.error('Failed to create order. Please try again.');
-            }
-        } catch (error) {
-            console.error('Checkout error:', error);
-            toast.error('Failed to place order. Please try again.');
-        } finally {
-            setCheckoutLoading(false);
+    // Handle opening ReHome checkout modal
+    const handleCheckout = () => {
+        // Filter only ReHome items for checkout
+        const rehomeItems = cart.filter(cartItem => cartItem.isrehome);
+        
+        if (rehomeItems.length === 0) {
+            toast.error('Only ReHome items can be checked out through our system. Contact sellers directly for user listings.');
+            return;
         }
+
+        // Open the ReHome checkout modal
+        setShowReHomeCheckout(true);
+        setIsCartDrawerOpen(false);
+    };
+
+    // Handle order completion from ReHome checkout
+    const handleOrderComplete = (orderNumber: string) => {
+        setOrderNumber(orderNumber);
+        setShowReHomeCheckout(false);
+        setShowOrderConfirmation(true);
+        toast.success(`Order created successfully! Check your email for confirmation. Order #${orderNumber}`);
     };
 
     const openModal = (item: FurnitureItem) => {
@@ -576,6 +474,13 @@ const MarketplacePage = () => {
                     />
                 )}
             </AnimatePresence>
+            
+            {/* ReHome Checkout Modal */}
+            <ReHomeCheckoutModal
+                isOpen={showReHomeCheckout}
+                onClose={() => setShowReHomeCheckout(false)}
+                onOrderComplete={handleOrderComplete}
+            />
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-3xl font-bold text-gray-900 mb-6">{t('marketplace.title')}</h1>
@@ -811,27 +716,30 @@ const MarketplacePage = () => {
                         {/* Cart Content */}
                         <div className="flex flex-col h-[calc(100%-14rem)] overflow-y-auto p-4">
                             {cart.map(cartItem => {
-                                const item = furnitureItems.find(item => item.id === cartItem.id);
-                                if (!item) return null;
-                                const imageUrl = getFirstImageUrl(item);
+                                const imageUrl = getFirstImageUrl(cartItem);
                                 
                                 return (
-                                    <div key={item.id} className="border-b border-gray-200 py-4">
+                                    <div key={cartItem.id} className="border-b border-gray-200 py-4">
                                         <div className="flex mb-2">
                                             <LazyImage 
                                                 src={imageUrl}
-                                                alt={item.name}
+                                                alt={cartItem.name}
                                                 className="w-20 h-20 object-cover rounded"
                                                 priority={false}
                                             />
                                             <div className="ml-4 flex-1">
-                                                <h3 className="font-semibold">{item.name}</h3>
+                                                <h3 className="font-semibold">{cartItem.name}</h3>
                                                 <p className="text-orange-600 font-medium">
-                                                    {item.price === 0 ? 'Free' : `€${item.price}`}
+                                                    {cartItem.price === 0 ? 'Free' : `€${cartItem.price}`}
                                                 </p>
+                                                {!cartItem.isrehome && (
+                                                    <p className="text-xs text-gray-500 mt-1">
+                                                        Contact seller directly for this item
+                                                    </p>
+                                                )}
                                             </div>
                                             <button 
-                                                onClick={() => removeFromCart(item.id)}
+                                                onClick={() => removeFromCart(cartItem.id)}
                                                 className="text-gray-400 hover:text-red-500"
                                             >
                                                 <FaTrash />
@@ -842,14 +750,14 @@ const MarketplacePage = () => {
                                         <div className="flex justify-end items-center">
                                             <div className="flex items-center border rounded-md">
                                                 <button 
-                                                    onClick={() => updateQuantity(item.id, cartItem.quantity - 1)}
+                                                    onClick={() => updateQuantity(cartItem.id, cartItem.quantity - 1)}
                                                     className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
                                                 >
                                                     <FaMinus size={10} />
                                                 </button>
                                                 <span className="px-3 py-1 text-sm">{cartItem.quantity}</span>
                                                 <button 
-                                                    onClick={() => updateQuantity(item.id, cartItem.quantity + 1)}
+                                                    onClick={() => updateQuantity(cartItem.id, cartItem.quantity + 1)}
                                                     className="px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
                                                 >
                                                     <FaPlus size={10} />
@@ -867,13 +775,20 @@ const MarketplacePage = () => {
                                 <span className="text-gray-600">Total ({getTotalItems()} items)</span>
                                 <span className="font-semibold">€{getTotalPrice().toFixed(2)}</span>
                             </div>
-                            <button 
-                                className="w-full bg-orange-500 text-white p-2 rounded-md hover:bg-orange-600 transition-colors font-medium disabled:bg-gray-300"
-                                onClick={handleCheckout}
-                                disabled={checkoutLoading}
-                            >
-                                {checkoutLoading ? 'Processing...' : 'Proceed to Checkout'}
-                            </button>
+                            
+                            {/* Show different buttons based on cart contents */}
+                            {cart.some(cartItem => cartItem.isrehome) ? (
+                                <button 
+                                    className="w-full bg-orange-500 text-white p-2 rounded-md hover:bg-orange-600 transition-colors font-medium"
+                                    onClick={handleCheckout}
+                                >
+                                    Proceed to Checkout
+                                </button>
+                            ) : (
+                                <div className="text-center text-sm text-gray-600">
+                                    Only ReHome items can be checked out through our system
+                                </div>
+                            )}
                         </div>
                     </div>
                 </>
