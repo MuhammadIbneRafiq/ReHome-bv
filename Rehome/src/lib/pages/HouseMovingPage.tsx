@@ -1036,27 +1036,27 @@ const HouseMovingPage = () => {
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 {category.items.map((item) => {
                                                     const itemId = item.id;
+                                                    const quantity = itemQuantities[itemId] || 0;
+                                                    
                                                     return (
                                                         <div key={itemId} className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
                                                             <span className="text-gray-800">{item.name}</span>
-                                                            <div className="flex items-center">
+                                                            <div className="flex items-center space-x-2">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => decrementItem(itemId)}
-                                                                    disabled={!itemQuantities[itemId]}
-                                                                    className={`p-1 rounded-full ${
-                                                                        !itemQuantities[itemId] ? 'text-gray-300' : 'text-orange-600 hover:bg-orange-100'
-                                                                    }`}
+                                                                    className={`w-8 h-8 flex items-center justify-center rounded-full border ${quantity > 0 ? 'border-orange-500 text-orange-500 hover:bg-orange-50' : 'border-gray-300 text-gray-300 cursor-not-allowed'}`}
+                                                                    disabled={quantity === 0}
                                                                 >
-                                                                    <FaMinus className="h-4 w-4" />
+                                                                    <FaMinus className="h-3 w-3" />
                                                                 </button>
-                                                                <span className="w-8 text-center">{itemQuantities[itemId] || 0}</span>
+                                                                <span className="text-sm w-6 text-center">{quantity}</span>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => incrementItem(itemId)}
-                                                                    className="p-1 rounded-full text-orange-600 hover:bg-orange-100"
+                                                                    className="w-8 h-8 flex items-center justify-center rounded-full border border-orange-500 text-orange-500 hover:bg-orange-50"
                                                                 >
-                                                                    <FaPlus className="h-4 w-4" />
+                                                                    <FaPlus className="h-3 w-3" />
                                                                 </button>
                                                             </div>
                                                         </div>
