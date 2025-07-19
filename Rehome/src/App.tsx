@@ -37,20 +37,10 @@ import GoogleOAuthCallback from "./components/GoogleOAuthCallback";
 import TestNSFW from "./components/TestNSFW";
 import RequireAdmin from "./components/RequireAdmin";
 
-// const usePostData = <T,>(endpoint: string) => {
-//   return useMutation<T, Error, T>(
-//     async (payload: T) => {
-//       const { data } = await axios.post<T>(`${import.meta.env.VITE_API_URL}/${endpoint}`, payload);
-//       return data;
-//     }
-//   );
-// };
-
 // ✅ Main App Component
 const App = () => {
   const queryClient = new QueryClient();
 
-  // Get Google Client ID from environment variables
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || process.env.REACT_APP_GOOGLE_CLIENT_ID;
 
   return (
