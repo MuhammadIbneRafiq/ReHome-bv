@@ -9,6 +9,7 @@ import pricingService, { PricingBreakdown, PricingInput } from '../../services/p
 import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
+import BookingTipsModal from '../../components/ui/BookingTipsModal';
 
 interface ContactInfo {
     firstName: string;
@@ -244,6 +245,7 @@ const HouseMovingPage = () => {
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+    const [showBookingTips, setShowBookingTips] = useState(false);
     const [pickupPlace, setPickupPlace] = useState<any>(null);
     const [dropoffPlace, setDropoffPlace] = useState<any>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
@@ -403,6 +405,12 @@ const HouseMovingPage = () => {
     }, [carryingServiceItems, itemQuantities]);
 
     const nextStep = () => {
+        // Show booking tips after step 1 (locations)
+        if (step === 1) {
+            setShowBookingTips(true);
+            return;
+        }
+
         // Validate date selection in step 4
         if (step === 4 && !isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) {
             toast.error("Please select a date or indicate that your date is flexible.");
@@ -451,6 +459,11 @@ const HouseMovingPage = () => {
 
     const prevStep = () => {
         if (step > 1) setStep(step - 1);
+    };
+
+    const handleContinueFromTips = () => {
+        setShowBookingTips(false);
+        setStep(2); // Move to date selection step
     };
 
     const incrementItem = (itemId: string) => {
@@ -916,16 +929,16 @@ const HouseMovingPage = () => {
                                 </div>
                             )}
 
-                            {/* Smart Booking Tips for Minimum Price - show after step 1, before step 2 */}
+
                             {step === 2 && (
                                 <div className="mb-8">
                                     <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg shadow-sm">
                                         <h2 className="text-xl font-bold mb-2 text-blue-800">Smart Booking Tips for Minimum Price</h2>
                                         <div className="text-gray-800 space-y-2">
                                             <p>Before you continue the booking process, take a look at the information below. This can help you during the process to customize the move for your needs while keeping the cost as low as possible.</p>
-                                            <p><strong>Smart Scheduling = Lower Prices</strong><br />Our pricing depends on route efficiency. If we’re already scheduled in your area on your selected day, your price can be significantly lower. So if you are not tied to a specific date, make sure to check through different options.</p>
+                                            <p><strong>Smart Scheduling = Lower Prices</strong><br />Our pricing depends on route efficiency. If we're already scheduled in your area on your selected day, your price can be significantly lower. So if you are not tied to a specific date, make sure to check through different options.</p>
                                             <p><strong>Is your date flexible?</strong><br />Selecting a date range or let us suggest a moving date can unlock major savings.</p>
-                                            <p><strong>Customise your move and Save</strong><br />Need help with stair carrying or furniture assembly? Our add-on services are here to assist you beyond the transport alone.<br />To keep the cost low, select these add-on services only for the items where it’s truly needed. You can select for each item if you require our assistance. If you only need transport, leave them unchecked and benefit from the cheapest price.</p>
+                                            <p><strong>Customise your move and Save</strong><br />Need help with stair carrying or furniture assembly? Our add-on services are here to assist you beyond the transport alone.<br />To keep the cost low, select these add-on services only for the items where it's truly needed. You can select for each item if you require our assistance. If you only need transport, leave them unchecked and benefit from the cheapest price.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -940,8 +953,16 @@ const HouseMovingPage = () => {
                                             id="date-option"
                                             value={dateOption}
                                             onChange={e => {
-                                                setDateOption(e.target.value as any);
-                                                if (e.target.value === 'rehome') setSelectedDateRange({ start: '', end: '' });
+                                                const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome';
+                                                setDateOption(newDateOption);
+                                                
+                                                // Set isDateFlexible ONLY when "Let ReHome choose" is selected
+                                                if (newDateOption === 'rehome') {
+                                                    setIsDateFlexible(true);
+                                                    setSelectedDateRange({ start: '', end: '' });
+                                                } else {
+                                                    setIsDateFlexible(false);
+                                                }
                                             }}
                                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                         >
@@ -1648,7 +1669,14 @@ const HouseMovingPage = () => {
                 isReHomeOrder={false}
                 isMovingRequest={true}
             />
-            {/* What's Next Section */}
+
+            {/* Booking Tips Modal */}
+            <BookingTipsModal
+                isOpen={showBookingTips}
+                onContinue={handleContinueFromTips}
+                serviceType="house-moving"
+            />
+            {/* What's Next Section
             <div className="bg-orange-50 p-4 rounded-lg mt-6">
               <h3 className="text-lg font-bold text-orange-700 mb-2">What's Next?</h3>
               <ol className="list-decimal list-inside space-y-2 text-gray-700">
@@ -1658,7 +1686,7 @@ const HouseMovingPage = () => {
                 <li>4️⃣ Confirmation – Once we agree on a date and time, we will send you a confirmation email with an invoice.</li>
                 <li>5️⃣ Completion – We will carry out the service as scheduled. You can pay by card after the service was carried out or later by bank transfer.</li>
               </ol>
-            </div>
+            </div> */}
         </div>
     );
 };
