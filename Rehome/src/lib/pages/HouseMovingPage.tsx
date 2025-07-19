@@ -1131,7 +1131,7 @@ const HouseMovingPage = () => {
                                     </div>
                                     {/* Upload photo/video option */}
                                     <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo (optional)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo(s) of your items(optional)</label>
                                         <input type="file" accept="image/*,video/*" multiple className="block w-full text-sm text-gray-500" />
                                     </div>
                                 </div>
@@ -1253,37 +1253,6 @@ const HouseMovingPage = () => {
                                                     </Switch>
                                                 </div>
                                                 
-                                                {extraHelper && Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length > 0 && (
-                                                    <div className="mt-4 ml-2 space-y-3">
-                                                        <p className="text-sm text-gray-600">
-                                                            All selected items will receive extra helper assistance:
-                                                        </p>
-                                                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
-                                                            const quantity: number = itemQuantities[itemId];
-                                                            
-                                                            // Find the item data to get the proper name
-                                                            const itemData = itemCategories
-                                                                .flatMap(category => category.items)
-                                                                .find(item => item.id === itemId);
-                                                            const itemName = itemData ? itemData.name : itemId;
-                                                            
-                                                            return (
-                                                                <div key={index} className="flex items-center justify-between">
-                                                                    <div className="flex items-center">
-                                                                        <div className="h-4 w-4 text-orange-600 flex items-center justify-center">
-                                                                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                        </div>
-                                                                        <span className="ml-2 block text-sm text-gray-700">
-                                                                            {itemName} ({quantity}x)
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
                                                 
                                                 {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
                                                     <p className="text-sm text-gray-400 mt-2">

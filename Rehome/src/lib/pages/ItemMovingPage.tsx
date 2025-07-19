@@ -1281,7 +1281,7 @@ const ItemMovingPage = () => {
                                     </div>
                                     {/* Upload photo/video option */}
                                     <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo (optional)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo(s) of your items(optional)</label>
                                         <input type="file" accept="image/*,video/*" multiple className="block w-full text-sm text-gray-500" />
                                     </div>
                                 </div>
