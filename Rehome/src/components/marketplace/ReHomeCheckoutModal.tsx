@@ -5,6 +5,7 @@ import { useCart } from '../../contexts/CartContext';
 import pricingService, { PricingInput } from '../../services/pricingService';
 import { toast } from 'react-toastify';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
+import { API_ENDPOINTS } from '../../lib/api/config';
 
 // TypeScript declarations for Google Maps API
 declare global {
@@ -493,7 +494,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       };
 
       // Save order to backend
-      const response = await fetch('/api/rehome-orders', {
+      const response = await fetch(API_ENDPOINTS.REHOME_ORDERS.CREATE, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
