@@ -11,6 +11,13 @@ import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import BookingTipsModal from '../../components/ui/BookingTipsModal';
 
+// TypeScript declarations for Google Maps API
+declare global {
+    interface Window {
+        google: any;
+    }
+}
+
 interface ContactInfo {
     firstName: string;
     lastName: string;
@@ -257,14 +264,65 @@ const HouseMovingPage = () => {
     const [selectAllCarrying, setSelectAllCarrying] = useState(false);
     const [extraInstructions, setExtraInstructions] = useState('');
 
-    // Calculate distance using straight-line calculation (reliable, no API dependencies)
-    const calculateDistance = (place1: any, place2: any): number => {
+    // Load Google Maps API if not already loaded
+    const loadGoogleMapsAPI = (): Promise<void> => {
+        return new Promise((resolve, reject) => {
+            if (window.google && window.google.maps) {
+                resolve();
+                return;
+            }
+
+            const script = document.createElement('script');
+            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+            script.async = true;
+            script.defer = true;
+            
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Google Maps API'));
+            
+            document.head.appendChild(script);
+        });
+    };
+
+    // Calculate distance using Google Maps Distance Matrix API with fallback to straight-line
+    const calculateDistance = async (place1: any, place2: any): Promise<number> => {
         if (!place1?.coordinates || !place2?.coordinates) {
             return 0;
         }
 
         console.log('📏 Calculating distance between:', place1.text || place1.formattedAddress, 'and', place2.text || place2.formattedAddress);
-        return calculateStraightLineDistance(place1, place2);
+        
+        try {
+            // Ensure Google Maps API is loaded
+            await loadGoogleMapsAPI();
+            
+            // Use Distance Matrix API for accurate driving distance
+            return new Promise((resolve) => {
+                const service = new google.maps.DistanceMatrixService();
+                const origins = [new google.maps.LatLng(place1.coordinates.lat, place1.coordinates.lng)];
+                const destinations = [new google.maps.LatLng(place2.coordinates.lat, place2.coordinates.lng)];
+
+                service.getDistanceMatrix({
+                    origins,
+                    destinations,
+                    travelMode: google.maps.TravelMode.DRIVING,
+                    unitSystem: google.maps.UnitSystem.METRIC,
+                }, (response, status) => {
+                    if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK') {
+                        const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
+                        console.log('📏 Distance Matrix API distance:', distanceKm.toFixed(2), 'km');
+                        resolve(distanceKm);
+                    } else {
+                        console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
+                        resolve(calculateStraightLineDistance(place1, place2));
+                    }
+                });
+            });
+        } catch (error) {
+            console.warn('⚠️ Error loading Google Maps API, falling back to straight-line calculation:', error);
+            return calculateStraightLineDistance(place1, place2);
+        }
     };
 
     // Fallback function for straight-line distance calculation
@@ -288,6 +346,7 @@ const HouseMovingPage = () => {
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         const distance = R * c; // Distance in kilometers
         
+        console.log('📏 Calculated straight-line distance:', distance.toFixed(2), 'km between', place1.text, 'and', place2.text);
         return distance;
     };
 
@@ -307,7 +366,7 @@ const HouseMovingPage = () => {
             // Calculate distance if we have coordinates from Google Places
             let calculatedDistance = 0;
             if (pickupPlace?.coordinates && dropoffPlace?.coordinates) {
-                calculatedDistance = calculateDistance(pickupPlace, dropoffPlace);
+                calculatedDistance = await calculateDistance(pickupPlace, dropoffPlace);
                 setDistanceKm(calculatedDistance);
             }
 
@@ -546,9 +605,9 @@ const HouseMovingPage = () => {
             .filter(([_, quantity]) => quantity > 0)
             .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
 
-        // Calculate final distance for backend
+        // Use already calculated distance from state, or fallback to straight-line if needed
         const finalDistance = distanceKm || (pickupPlace?.coordinates && dropoffPlace?.coordinates 
-            ? calculateDistance(pickupPlace, dropoffPlace) : 0);
+            ? calculateStraightLineDistance(pickupPlace, dropoffPlace) : 0);
 
         // Prepare payload in the format expected by backend
         const payload = {
@@ -999,9 +1058,7 @@ const HouseMovingPage = () => {
                                             <option value="flexible">Flexible (Any time)</option>
                                         </select>
                                     </div>
-                                    <div className="mt-2 text-xs text-blue-600">
-  If your date is fixed, set both start and end date to the same day.
-</div>
+                                
                                 </div>
                             )}
                             
