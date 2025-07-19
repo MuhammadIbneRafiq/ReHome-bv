@@ -550,20 +550,33 @@ const HouseMovingPage = () => {
         setContactInfo(prev => ({ ...prev, phone: value, isPhoneValid: isValid }));
     };
 
-    const handleExtraHelperItemToggle = (itemId: string) => {
-        setExtraHelperItems(prev => {
-            const newState = {
-                ...prev,
-                [itemId]: !prev[itemId]
-            };
-            
-            // Automatically set extraHelper based on whether any items need extra help
-            const hasAnyExtraHelper = Object.values(newState).some(Boolean);
-            setExtraHelper(hasAnyExtraHelper);
-            
-            return newState;
-        });
-    };
+    // Update extra helper items when extra helper is toggled
+    useEffect(() => {
+        if (extraHelper) {
+            // When extra helper is enabled, automatically select all items that have quantities > 0
+            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+            const newExtraHelperItems: { [key: string]: boolean } = {};
+            selectedItems.forEach(itemId => {
+                newExtraHelperItems[itemId] = true;
+            });
+            setExtraHelperItems(newExtraHelperItems);
+        } else {
+            // When extra helper is disabled, clear all selections
+            setExtraHelperItems({});
+        }
+    }, [extraHelper, itemQuantities]);
+
+    // Update extra helper when items change (if extra helper is enabled)
+    useEffect(() => {
+        if (extraHelper) {
+            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+            const newExtraHelperItems: { [key: string]: boolean } = {};
+            selectedItems.forEach(itemId => {
+                newExtraHelperItems[itemId] = true;
+            });
+            setExtraHelperItems(newExtraHelperItems);
+        }
+    }, [itemQuantities, extraHelper]);
 
     const isFormValid = () => {
         if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) return false;
@@ -1243,7 +1256,7 @@ const HouseMovingPage = () => {
                                                 {extraHelper && Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length > 0 && (
                                                     <div className="mt-4 ml-2 space-y-3">
                                                         <p className="text-sm text-gray-600">
-                                                            Select which items need extra help:
+                                                            All selected items will receive extra helper assistance:
                                                         </p>
                                                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
                                                             const quantity: number = itemQuantities[itemId];
@@ -1257,16 +1270,14 @@ const HouseMovingPage = () => {
                                                             return (
                                                                 <div key={index} className="flex items-center justify-between">
                                                                     <div className="flex items-center">
-                                                                        <input
-                                                                            id={`extra-helper-${itemId}`}
-                                                                            type="checkbox"
-                                                                            checked={extraHelperItems[itemId] || false}
-                                                                            onChange={() => handleExtraHelperItemToggle(itemId)}
-                                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                        />
-                                                                        <label htmlFor={`extra-helper-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        <div className="h-4 w-4 text-orange-600 flex items-center justify-center">
+                                                                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                            </svg>
+                                                                        </div>
+                                                                        <span className="ml-2 block text-sm text-gray-700">
                                                                             {itemName} ({quantity}x)
-                                                                        </label>
+                                                                        </span>
                                                                     </div>
                                                                 </div>
                                                             );
