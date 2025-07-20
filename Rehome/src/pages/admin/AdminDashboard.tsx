@@ -114,8 +114,13 @@ const AdminDashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
-  // const [scheduleData, setScheduleData] = useState<{ [key: string]: string[] }>({});
+  const [scheduleData, setScheduleData] = useState<{ [key: string]: string[] }>({});
   const [showCitySelector, setShowCitySelector] = useState(false);
+  // Bulk assign modal state
+  const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
+  const [bulkAssignStartDate, setBulkAssignStartDate] = useState('');
+  const [bulkAssignEndDate, setBulkAssignEndDate] = useState('');
+  const [bulkAssignCities, setBulkAssignCities] = useState<string[]>([]);
 
   // Enhanced calendar state for time blocks
   // const [selectedDateForBlocks, setSelectedDateForBlocks] = useState<Date | null>(null);
@@ -158,10 +163,10 @@ const AdminDashboard = () => {
     loadTimeBlocksFromSupabase();
   }, []);
 
-  // Update calendar when time blocks change
+  // Update calendar when time blocks or schedule data change
   useEffect(() => {
     setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
-  }, [currentMonth, timeBlocks]);
+  }, [currentMonth, timeBlocks, scheduleData]);
 
   // Generate calendar days with time block support
   const generateCalendarDaysWithTimeBlocks = (month: Date) => {
@@ -174,11 +179,16 @@ const AdminDashboard = () => {
       const dayTimeBlocks = timeBlocks[dateKey] || [];
       const allCitiesForDay = dayTimeBlocks.flatMap(block => block.cities);
       
+      // Get assigned cities from city_schedules table
+      const assignedCitiesFromSchedule = scheduleData[dateKey] || [];
+      
       return {
         date: day,
-        assignedCities: [...new Set(allCitiesForDay)], // Remove duplicates
+        assignedCities: [...new Set([...allCitiesForDay, ...assignedCitiesFromSchedule])], // Combine both sources
         isToday: isToday(day),
-        isCurrentMonth: isSameMonth(day, month)
+        isCurrentMonth: isSameMonth(day, month),
+        isPast: day < new Date(new Date().setHours(0, 0, 0, 0)),
+        isFuture: day > new Date(new Date().setHours(23, 59, 59, 999))
       };
     });
   };
@@ -238,7 +248,7 @@ const AdminDashboard = () => {
         scheduleMap[dateKey].push(item.city);
       });
 
-      // setScheduleData(scheduleMap); // Commented out - scheduleData is not used
+      setScheduleData(scheduleMap);
     } catch (error) {
       console.error('Error loading schedule data:', error);
     }
@@ -286,12 +296,9 @@ const AdminDashboard = () => {
     if (!selectedDate) return;
 
     const dateKey = format(selectedDate, 'yyyy-MM-dd');
-    // setScheduleData(prev => ({
-    //   ...prev,
-    //   [dateKey]: selectedCities
-    // })); // Commented out - scheduleData is not used
-
     await saveScheduleData(dateKey, selectedCities);
+    await loadScheduleData();
+    setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
     setShowCitySelector(false);
   };
 
@@ -1094,6 +1101,49 @@ const AdminDashboard = () => {
     }
     
     setShowRequestDetails(true);
+  };
+
+  // Handle bulk city assignment
+  const handleBulkAssignCities = async () => {
+    if (!bulkAssignStartDate || !bulkAssignEndDate || bulkAssignCities.length === 0) {
+      toast.error('Please select a start date, end date, and at least one city.');
+      return;
+    }
+
+    // Validate dates are in 2025
+    const start = new Date(bulkAssignStartDate);
+    const end = new Date(bulkAssignEndDate);
+    
+    if (start.getFullYear() !== 2025 || end.getFullYear() !== 2025) {
+      toast.error('Please select dates within 2025.');
+      return;
+    }
+
+    if (start > end) {
+      toast.error('Start date must be before end date.');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const days = eachDayOfInterval({ start, end });
+      for (const day of days) {
+        const dateKey = format(day, 'yyyy-MM-dd');
+        await saveScheduleData(dateKey, bulkAssignCities);
+      }
+      toast.success('Cities assigned to selected date range!');
+      setShowBulkAssignModal(false);
+      setBulkAssignStartDate('');
+      setBulkAssignEndDate('');
+      setBulkAssignCities([]);
+      await loadScheduleData();
+      setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
+    } catch (error) {
+      toast.error('Failed to assign cities to date range');
+      console.error(error);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (isLoading) {
@@ -1950,6 +2000,92 @@ const AdminDashboard = () => {
                     >
                       Next
                     </button>
+                    <button
+                      onClick={() => setShowBulkAssignModal(true)}
+                      className="px-3 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 ml-2"
+                    >
+                      Bulk Assign Cities
+                    </button>
+                  </div>
+                </div>
+                {/* Bulk Assign Modal */}
+                {showBulkAssignModal && (
+                  <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+                      <h4 className="text-lg font-semibold mb-4">Bulk Assign Cities to Date Range</h4>
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium mb-1">Start Date</label>
+                        <input
+                          type="date"
+                          value={bulkAssignStartDate}
+                          onChange={e => setBulkAssignStartDate(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded"
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium mb-1">End Date</label>
+                        <input
+                          type="date"
+                          value={bulkAssignEndDate}
+                          onChange={e => setBulkAssignEndDate(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded"
+                        />
+                      </div>
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium mb-1">Cities</label>
+                        <div className="flex flex-wrap gap-2">
+                          {allCities.map(city => (
+                            <span
+                              key={city}
+                              onClick={() => setBulkAssignCities(prev => prev.includes(city) ? prev.filter(c => c !== city) : [...prev, city])}
+                              className={`px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
+                                bulkAssignCities.includes(city)
+                                  ? 'bg-orange-500 text-white'
+                                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                              }`}
+                            >
+                              {city}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex justify-end space-x-2 mt-4">
+                        <button
+                          onClick={handleBulkAssignCities}
+                          disabled={isUpdating}
+                          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                        >
+                          {isUpdating ? 'Assigning...' : 'Assign Cities'}
+                        </button>
+                        <button
+                          onClick={() => setShowBulkAssignModal(false)}
+                          className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {/* Calendar Legend */}
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex flex-wrap gap-4 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-orange-500 rounded"></div>
+                      <span>Today</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                      <span>Past</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-blue-50 border border-blue-200 rounded"></div>
+                      <span>Future</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-orange-100 rounded"></div>
+                      <span>Assigned Cities</span>
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-7 gap-1 mb-4">
@@ -1961,25 +2097,34 @@ const AdminDashboard = () => {
                 </div>
                 <div className="grid grid-cols-7 gap-1">
                   {calendarDays.map((day, index) => (
-                    <div
-                      key={index}
-                      onClick={() => handleDateClick(day)}
-                      className={`p-2 rounded-md cursor-pointer text-center ${
-                        day.isToday ? 'bg-orange-500 text-white font-bold' :
-                        day.isCurrentMonth ? 'hover:bg-gray-100' : 'text-gray-400'
-                      }`}
-                    >
-                      {day.date.getDate()}
-                      {day.assignedCities.length > 0 && (
-                        <div className="mt-1 text-xs text-gray-600">
-                          {day.assignedCities.map((city, cityIndex) => (
-                            <span key={cityIndex} className="mr-1">
-                              {city}
-                            </span>
-                          ))}
+                                          <div
+                        key={index}
+                        onClick={() => handleDateClick(day)}
+                        className={`p-2 rounded-md cursor-pointer text-center border min-h-[80px] ${
+                          day.isToday ? 'bg-orange-500 text-white font-bold border-orange-500' :
+                          day.isPast ? 'bg-gray-100 border-gray-300' :
+                          day.isFuture ? 'bg-blue-50 border-blue-200' :
+                          day.isCurrentMonth ? 'hover:bg-gray-100 border-gray-200' : 'text-gray-400 border-gray-100'
+                        }`}
+                      >
+                        <div className={`text-sm ${day.isPast ? 'text-gray-500' : ''}`}>
+                          {day.date.getDate()}
                         </div>
-                      )}
-                    </div>
+                        {day.assignedCities.length > 0 && (
+                          <div className="mt-1 flex flex-wrap justify-center gap-1">
+                            {day.assignedCities.slice(0, 2).map((city, cityIndex) => (
+                              <span key={cityIndex} className="bg-orange-100 text-orange-800 px-1 py-0.5 rounded-full text-xs font-medium">
+                                {city}
+                              </span>
+                            ))}
+                            {day.assignedCities.length > 2 && (
+                              <span className="bg-orange-200 text-orange-800 px-1 py-0.5 rounded-full text-xs font-medium">
+                                +{day.assignedCities.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                   ))}
                 </div>
                 {showCitySelector && selectedDate && (

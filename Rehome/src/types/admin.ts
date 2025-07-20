@@ -80,6 +80,8 @@ export interface TransportRequest {
     assignedCities: string[];
     isToday: boolean;
     isCurrentMonth: boolean;
+    isPast: boolean;
+    isFuture: boolean;
   }
   
   // Time block interface
