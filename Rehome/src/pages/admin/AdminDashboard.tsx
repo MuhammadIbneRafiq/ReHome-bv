@@ -6,120 +6,8 @@ import { toast } from 'react-toastify';
 import { supabase } from "../../lib/supabaseClient";
 import useUserSessionStore from "../../services/state/useUserSessionStore";
 import { cityBaseCharges } from "../../lib/constants";
-
-
-// Transportation request interface
-interface TransportRequest {
-  id: string;
-  created_at: string;
-  customer_email: string;
-  customer_name: string;
-  city: string;
-  date: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
-  notes?: string;
-  type: 'item-moving' | 'house-moving';
-  // Additional fields from Supabase
-  pickuptype?: string;
-  furnitureitems?: any[];
-  customitem?: string;
-  floorpickup?: number;
-  floordropoff?: number;
-  firstname?: string;
-  lastname?: string;
-  phone?: string;
-  estimatedprice?: number;
-  selecteddate?: string;
-  isdateflexible?: boolean;
-  baseprice?: number;
-  itempoints?: number;
-  carryingcost?: number;
-  disassemblycost?: number;
-  distancecost?: number;
-  extrahelpercost?: number;
-  selecteddate_start?: string;
-  selecteddate_end?: string;
-  firstlocation?: string;
-  secondlocation?: string;
-  firstlocation_coords?: any;
-  secondlocation_coords?: any;
-  calculated_distance_km?: number;
-  calculated_duration_seconds?: number;
-  calculated_duration_text?: string;
-  distance_provider?: string;
-  disassembly?: boolean;
-  elevatorpickup?: boolean;
-  elevatordropoff?: boolean;
-  extrahelper?: boolean;
-  carryingservice?: boolean;
-  isstudent?: boolean;
-  studentid?: string;
-  preferredtimespan?: string;
-  updated_at?: string;
-}
-
-
-
-// Pricing interfaces
-interface PricingConfig {
-  id: string;
-  type: string;
-  category: string;
-  name: string;
-  description: string;
-  value: number;
-  unit: string;
-  active: boolean;
-  created_at: string;
-}
-
-interface CityPrice {
-  id: string;
-  city_name: string;
-  normal: number;
-  city_day: number;
-  day_of_week: string;
-  created_at: string;
-}
-
-interface PricingMultiplier {
-  id: string;
-  name: string;
-  value: number;
-  category: string;
-  active: boolean;
-  created_at: string;
-}
-
-// Marketplace interfaces
-interface MarketplaceItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  status: 'available' | 'reserved' | 'sold';
-  seller_email: string;
-  created_at: string;
-  images: string[];
-}
-
-// Calendar day interface
-interface CalendarDay {
-  date: Date;
-  assignedCities: string[];
-  isToday: boolean;
-  isCurrentMonth: boolean;
-}
-
-// Time block interface
-interface TimeBlock {
-  id: string;
-  startTime: string;
-  endTime: string;
-  cities: string[];
-  discountPercentage: number;
-}
+import pricingConfigData from "../../lib/pricingConfig.json";
+import { CityPrice, MarketplaceItem, CalendarDay, TimeBlock, TransportRequest } from '../../types/admin';
 
 const AdminDashboard = () => {
   const { user, role } = useUserSessionStore();
@@ -178,9 +66,12 @@ const AdminDashboard = () => {
   const [showFilters, setShowFilters] = useState(false);
   
   // Pricing management state
-  const [pricingConfigs, setPricingConfigs] = useState<PricingConfig[]>([]);
   const [cityPrices, setCityPrices] = useState<CityPrice[]>([]);
-  const [pricingMultipliers, setPricingMultipliers] = useState<PricingMultiplier[]>([]);
+  
+  // JSON-based pricing config state
+  const [jsonPricingConfig, setJsonPricingConfig] = useState(pricingConfigData);
+  const [editingJsonConfig, setEditingJsonConfig] = useState<string | null>(null);
+  const [editJsonConfigData, setEditJsonConfigData] = useState<any>({});
   
   // Marketplace management state
   const [marketplaceItems, setMarketplaceItems] = useState<MarketplaceItem[]>([]);
@@ -240,36 +131,15 @@ const AdminDashboard = () => {
   // const [editingTimeBlock, setEditingTimeBlock] = useState<string | null>(null);
 
   // Pricing editing state  
-  const [editingPricingConfig, setEditingPricingConfig] = useState<string | null>(null);
   const [editingCityPrice, setEditingCityPrice] = useState<string | null>(null);
-  const [editingMultiplier, setEditingMultiplier] = useState<string | null>(null);
-  const [editPricingConfigData, setEditPricingConfigData] = useState<any>({});
   const [editCityPriceData, setEditCityPriceData] = useState<any>({});
-  const [editMultiplierData, setEditMultiplierData] = useState<any>({});
-  const [newPricingConfig, setNewPricingConfig] = useState({
-    type: 'base_price',
-    category: 'house_moving',
-    name: '',
-    description: '',
-    value: 0,
-    unit: '€',
-    active: true
-  });
   const [newCityPrice, setNewCityPrice] = useState({
     city_name: '',
     normal: 0,
     city_day: 0,
     day_of_week: 1
   });
-  const [newMultiplier, setNewMultiplier] = useState({
-    name: '',
-    value: 0,
-    category: 'house_moving',
-    active: true
-  });
-  const [showAddPricingForm, setShowAddPricingForm] = useState(false);
   const [showAddCityForm, setShowAddCityForm] = useState(false);
-  const [showAddMultiplierForm, setShowAddMultiplierForm] = useState(false);
 
   // Transportation request detail state
   const [selectedTransportRequest, setSelectedTransportRequest] = useState<TransportRequest | null>(null);
@@ -312,104 +182,6 @@ const AdminDashboard = () => {
       };
     });
   };
-
-  // Handle time block management (commented out to fix build)
-  // const handleDateClickForBlocks = (day: CalendarDay) => {
-  //   setSelectedDateForBlocks(day.date);
-  //   const dateKey = format(day.date, 'yyyy-MM-dd');
-  //   setTimeBlocks(prev => ({
-  //     ...prev,
-  //     [dateKey]: prev[dateKey] || []
-  //   }));
-  //   setShowTimeBlockEditor(true);
-  // };
-
-  // const addTimeBlock = () => {
-  //   if (!selectedDateForBlocks) return;
-    
-  //   const dateKey = format(selectedDateForBlocks, 'yyyy-MM-dd');
-  //   const newBlock: TimeBlock = {
-  //     ...currentTimeBlock,
-  //     id: Date.now().toString()
-  //   };
-
-  //   setTimeBlocks(prev => ({
-  //     ...prev,
-  //     [dateKey]: [...(prev[dateKey] || []), newBlock]
-  //   }));
-
-  //   // Reset form
-  //   setCurrentTimeBlock({
-  //     id: '',
-  //     startTime: '08:00',
-  //     endTime: '15:00',
-  //     cities: [],
-  //     discountPercentage: 20
-  //   });
-  // };
-
-  // const updateTimeBlock = (blockId: string, updatedBlock: TimeBlock) => {
-  //   if (!selectedDateForBlocks) return;
-    
-  //   const dateKey = format(selectedDateForBlocks, 'yyyy-MM-dd');
-  //   setTimeBlocks(prev => ({
-  //     ...prev,
-  //     [dateKey]: prev[dateKey]?.map(block => 
-  //       block.id === blockId ? updatedBlock : block
-  //     ) || []
-  //   }));
-  // };
-
-  // const deleteTimeBlock = (blockId: string) => {
-  //   if (!selectedDateForBlocks) return;
-    
-  //   const dateKey = format(selectedDateForBlocks, 'yyyy-MM-dd');
-  //   setTimeBlocks(prev => ({
-  //     ...prev,
-  //     [dateKey]: prev[dateKey]?.filter(block => block.id !== blockId) || []
-  //   }));
-  // };
-
-  // const saveTimeBlocksToSupabase = async () => {
-  //   if (!selectedDateForBlocks) return;
-
-  //   try {
-  //     const dateKey = format(selectedDateForBlocks, 'yyyy-MM-dd');
-  //     const blocksForDate = timeBlocks[dateKey] || [];
-
-  //     // Delete existing time blocks for this date
-  //     await supabase
-  //       .from('time_blocks')
-  //       .delete()
-  //       .eq('date', dateKey);
-
-  //     // Insert new time blocks
-  //     if (blocksForDate.length > 0) {
-  //       const timeBlockEntries = blocksForDate.map(block => ({
-  //         date: dateKey,
-  //         start_time: block.startTime,
-  //         end_time: block.endTime,
-  //         cities: block.cities,
-  //         discount_percentage: block.discountPercentage,
-  //         created_at: new Date().toISOString()
-  //       }));
-
-  //       const { error } = await supabase
-  //         .from('time_blocks')
-  //         .insert(timeBlockEntries);
-
-  //       if (error) {
-  //         toast.error('Failed to save time blocks');
-  //         console.error('Save error:', error);
-  //       } else {
-  //         toast.success('Time blocks saved successfully');
-  //       }
-  //     }
-  //   } catch (error) {
-  //     toast.error('Failed to save time blocks');
-  //     console.error('Save error:', error);
-  //   }
-  // };
 
   const loadTimeBlocksFromSupabase = async () => {
     try {
@@ -475,11 +247,7 @@ const AdminDashboard = () => {
   // Save schedule data to Supabase
   const saveScheduleData = async (date: string, cities: string[]) => {
     try {
-      // First, delete existing entries for this date
-      await supabase
-        .from('city_schedules')
-        .delete()
-        .eq('date', date);
+
 
       // Then insert new entries
       if (cities.length > 0) {
@@ -573,21 +341,15 @@ const AdminDashboard = () => {
   const fetchTransportRequests = async () => {
     try {
       // Fetch from Supabase tables
-      const { data: itemMovingData, error: itemError } = await supabase
+      const { data: itemMovingData } = await supabase
         .from('item_moving')
         .select('*')
         .order('created_at', { ascending: false });
 
-      const { data: houseMovingData, error: houseError } = await supabase
+      const { data: houseMovingData } = await supabase
         .from('house_moving')
         .select('*')
         .order('created_at', { ascending: false });
-
-      if (itemError) console.error('Error fetching item moving:', itemError);
-      if (houseError) console.error('Error fetching house moving:', houseError);
-
-      console.log('itemMovingData', itemMovingData);
-      console.log('houseMovingData', houseMovingData);
 
       // Normalize and combine data
       const itemMoving = (itemMovingData || []).map((req: any) => ({
@@ -696,40 +458,32 @@ const AdminDashboard = () => {
     }
   };
   
-  // Fetch pricing data
+  // Fetch pricing data - 
   const fetchPricingData = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      };
+      const { data: cityPrices } = await supabase
+        .from('city_base_charges')
+        .select('*')
+        .order('created_at', { ascending: false });
+      console.log(cityPrices)
+      const citydata = (cityPrices || []).map((req: any) => ({
+          id: req.id?.toString() || '',
+          created_at: req.created_at || '',
+          city_name: req.city_name || '',
+          normal: req.normal || '',
+          city_day: req.city_day || '',
+          day_of_week: req.day_of_week || '',
+      }));
 
-      // Fetch pricing configs
-      const configsResponse = await fetch('https://rehome-backend.vercel.app/api/admin/pricing-configs', { headers });
-      if (configsResponse.ok) {
-        const configsData = await configsResponse.json();
-        setPricingConfigs(configsData.configs || []);
-      }
 
-      // Fetch city prices
-      const citiesResponse = await fetch('https://rehome-backend.vercel.app/api/admin/city-prices', { headers });
-      if (citiesResponse.ok) {
-        const citiesData = await citiesResponse.json();
-        setCityPrices(citiesData.cities || []);
-      }
-
-      // Fetch pricing multipliers
-      const multipliersResponse = await fetch('https://rehome-backend.vercel.app/api/admin/pricing-multipliers', { headers });
-      if (multipliersResponse.ok) {
-        const multipliersData = await multipliersResponse.json();
-        setPricingMultipliers(multipliersData.multipliers || []);
-      }
+      setCityPrices(citydata || []);
     } catch (error) {
-      console.error('Error fetching pricing data:', error);
+      console.error('Error fetching city base charges:', error);
     }
   };
-  
+
+      
+
   // Fetch marketplace data
   const fetchMarketplaceData = async () => {
     try {
@@ -802,19 +556,7 @@ const AdminDashboard = () => {
   //   return matchesSearch && matchesStatus && matchesCategory && matchesPriceRange;
   // });
 
-  // Filter pricing configs based on search and filters
-  const filteredPricingConfigs = pricingConfigs.filter(config => {
-    const matchesSearch = config.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         config.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         config.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = typeFilter === 'all' || config.category === typeFilter;
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && config.active) ||
-                         (statusFilter === 'inactive' && !config.active);
-    
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+
 
   // Filter furniture items based on search and filters
   const filteredFurnitureItems = furnitureItemsData.filter(item => {
@@ -835,8 +577,7 @@ const AdminDashboard = () => {
   // Get unique categories for filter dropdown
   const uniqueCategories = [...new Set([
     ...marketplaceItems.map(i => i.category).filter(Boolean),
-    ...furnitureItemsData.map(i => i.category).filter(Boolean),
-    ...pricingConfigs.map(p => p.category).filter(Boolean)
+    ...furnitureItemsData.map(i => i.category).filter(Boolean)
   ])];
 
   // Clear all filters function
@@ -925,190 +666,38 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle edit marketplace item
-      const handleEditMarketplaceItem = (item: MarketplaceItem) => {
-      // setEditingMarketplaceItem(item.id); // Commented out - editingMarketplaceItem is not used
-      // setEditMarketplaceData({
-      //   name: item.name,
-      //   description: item.description,
-      //   price: item.price,
-      //   category: item.category,
-      //   status: item.status
-      // }); // Commented out - editMarketplaceData is not used
-      console.log('Edit item:', item);
-    };
 
-  // Handle save marketplace item (commented out - unused)
-  // const handleSaveMarketplaceItem = async (item: MarketplaceItem) => {
+  // // Handle delete marketplace item
+  // const handleDeleteMarketplaceItem = async (item: MarketplaceItem) => {
+  //   if (!window.confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
+  //     return;
+  //   }
+
   //   setIsUpdating(true);
   //   try {
   //     const { error } = await supabase
   //       .from('marketplace_furniture')
-  //       .update({
-  //         name: editMarketplaceData.name,
-  //         description: editMarketplaceData.description,
-  //         price: editMarketplaceData.price,
-  //         category: editMarketplaceData.category,
-  //         status: editMarketplaceData.status
-  //       })
+  //       .delete()
   //       .eq('id', item.id);
 
   //     if (error) {
-  //       toast.error('Failed to update item');
-  //       console.error('Update error:', error);
+  //       toast.error('Failed to delete item');
+  //       console.error('Delete error:', error);
   //     } else {
-  //       toast.success('Item updated successfully');
-  //       setEditingMarketplaceItem(null);
+  //       toast.success('Item deleted successfully');
   //       fetchMarketplaceData(); // Refresh data
   //     }
   //   } catch (error) {
-  //     toast.error('Failed to update item');
-  //     console.error('Update error:', error);
+  //     toast.error('Failed to delete item');
+  //     console.error('Delete error:', error);
   //   } finally {
   //     setIsUpdating(false);
   //   }
   // };
 
-  // Handle delete marketplace item
-  const handleDeleteMarketplaceItem = async (item: MarketplaceItem) => {
-    if (!window.confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
-      return;
-    }
 
-    setIsUpdating(true);
-    try {
-      const { error } = await supabase
-        .from('marketplace_furniture')
-        .delete()
-        .eq('id', item.id);
 
-      if (error) {
-        toast.error('Failed to delete item');
-        console.error('Delete error:', error);
-      } else {
-        toast.success('Item deleted successfully');
-        fetchMarketplaceData(); // Refresh data
-      }
-    } catch (error) {
-      toast.error('Failed to delete item');
-      console.error('Delete error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Handle edit pricing config
-  const handleEditPricingConfig = (config: PricingConfig) => {
-    setEditingPricingConfig(config.id);
-    setEditPricingConfigData({
-      type: config.type,
-      category: config.category,
-      name: config.name,
-      description: config.description,
-      value: config.value,
-      unit: config.unit,
-      active: config.active
-    });
-  };
-
-  // Handle save pricing config
-  const handleSavePricingConfig = async (config: PricingConfig) => {
-    setIsUpdating(true);
-    try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/pricing-configs/${config.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(editPricingConfigData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update pricing config');
-      }
-
-      toast.success('Pricing config updated successfully');
-      setEditingPricingConfig(null);
-      fetchPricingData(); // Refresh data
-    } catch (error) {
-      toast.error('Failed to update pricing config');
-      console.error('Update error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Handle delete pricing config
-  const handleDeletePricingConfig = async (config: PricingConfig) => {
-    if (!window.confirm('Are you sure you want to delete this pricing config? This action cannot be undone.')) {
-      return;
-    }
-
-    setIsUpdating(true);
-    try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/pricing-configs/${config.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete pricing config');
-      }
-
-      toast.success('Pricing config deleted successfully');
-      fetchPricingData(); // Refresh data
-    } catch (error) {
-      toast.error('Failed to delete pricing config');
-      console.error('Delete error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Handle add pricing config
-  const handleAddPricingConfig = async () => {
-    setIsUpdating(true);
-    try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch('https://rehome-backend.vercel.app/api/admin/pricing-configs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(newPricingConfig)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add pricing config');
-      }
-
-      toast.success('Pricing config added successfully');
-      setShowAddPricingForm(false);
-      setNewPricingConfig({
-        type: 'base_price',
-        category: 'house_moving',
-        name: '',
-        description: '',
-        value: 0,
-        unit: '€',
-        active: true
-      });
-      fetchPricingData(); // Refresh data
-    } catch (error) {
-      toast.error('Failed to add pricing config');
-      console.error('Add error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Handle edit city price
+  // Handle edit city price NEEDS UPDATING
   const handleEditCityPrice = (city: CityPrice) => {
     setEditingCityPrice(city.id);
     setEditCityPriceData({
@@ -1119,27 +708,19 @@ const AdminDashboard = () => {
     });
   };
 
-  // Handle save city price
+  // Handle save city price - Client side only
   const handleSaveCityPrice = async (city: CityPrice) => {
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/city-prices/${city.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(editCityPriceData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update city price');
-      }
+      // Update local state directly
+      setCityPrices(prev => prev.map(c => 
+        c.id === city.id 
+          ? { ...c, ...editCityPriceData }
+          : c
+      ));
 
       toast.success('City price updated successfully');
       setEditingCityPrice(null);
-      fetchPricingData(); // Refresh data
     } catch (error) {
       toast.error('Failed to update city price');
       console.error('Update error:', error);
@@ -1169,7 +750,6 @@ const AdminDashboard = () => {
       }
 
       toast.success('City price deleted successfully');
-      fetchPricingData(); // Refresh data
     } catch (error) {
       toast.error('Failed to delete city price');
       console.error('Delete error:', error);
@@ -1178,23 +758,19 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle add city price
+  // Handle add city price - Client side only
   const handleAddCityPrice = async () => {
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch('https://rehome-backend.vercel.app/api/admin/city-prices', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(newCityPrice)
-      });
+      // Add to local state directly
+      const newCity: CityPrice = {
+        id: Date.now().toString(),
+        ...newCityPrice,
+        day_of_week: String(newCityPrice.day_of_week), // <-- convert to string
+        created_at: new Date().toISOString()
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to add city price');
-      }
+      setCityPrices(prev => [...prev, newCity]);
 
       toast.success('City price added successfully');
       setShowAddCityForm(false);
@@ -1204,7 +780,6 @@ const AdminDashboard = () => {
         city_day: 0,
         day_of_week: 1
       });
-      fetchPricingData(); // Refresh data
     } catch (error) {
       toast.error('Failed to add city price');
       console.error('Add error:', error);
@@ -1213,106 +788,41 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle edit multiplier
-  const handleEditMultiplier = (multiplier: PricingMultiplier) => {
-    setEditingMultiplier(multiplier.id);
-    setEditMultiplierData({
-      name: multiplier.name,
-      value: multiplier.value,
-      category: multiplier.category,
-      active: multiplier.active
+
+  // Ha
+
+
+
+  // JSON-based pricing config functions
+  const handleEditJsonConfig = (configKey: string, subKey: string) => {
+    setEditingJsonConfig(`${configKey}.${subKey}`);
+    setEditJsonConfigData({
+      ...(jsonPricingConfig as any)[configKey][subKey]
     });
   };
 
-  // Handle save multiplier
-  const handleSaveMultiplier = async (multiplier: PricingMultiplier) => {
+  const handleSaveJsonConfig = async (configKey: string, subKey: string) => {
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/pricing-multipliers/${multiplier.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(editMultiplierData)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update multiplier');
-      }
-
-      toast.success('Multiplier updated successfully');
-      setEditingMultiplier(null);
-      fetchPricingData(); // Refresh data
-    } catch (error) {
-      toast.error('Failed to update multiplier');
-      console.error('Update error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Handle delete multiplier
-  const handleDeleteMultiplier = async (multiplier: PricingMultiplier) => {
-    if (!window.confirm('Are you sure you want to delete this multiplier? This action cannot be undone.')) {
-      return;
-    }
-
-    setIsUpdating(true);
-    try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/pricing-multipliers/${multiplier.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
+      // Update the local state directly
+      const updatedConfig = {
+        ...jsonPricingConfig,
+        [configKey]: {
+          ...(jsonPricingConfig as any)[configKey],
+          [subKey]: editJsonConfigData
         }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete multiplier');
-      }
-
-      toast.success('Multiplier deleted successfully');
-      fetchPricingData(); // Refresh data
+      };
+      
+      setJsonPricingConfig(updatedConfig);
+      
+      toast.success('Configuration updated successfully');
+      setEditingJsonConfig(null);
+      
+      console.log('Updated config:', updatedConfig);
+      
     } catch (error) {
-      toast.error('Failed to delete multiplier');
-      console.error('Delete error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-  // Handle add multiplier
-  const handleAddMultiplier = async () => {
-    setIsUpdating(true);
-    try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch('https://rehome-backend.vercel.app/api/admin/pricing-multipliers', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(newMultiplier)
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to add multiplier');
-      }
-
-      toast.success('Multiplier added successfully');
-      setShowAddMultiplierForm(false);
-      setNewMultiplier({
-        name: '',
-        value: 0,
-        category: 'house_moving',
-        active: true
-      });
-      fetchPricingData(); // Refresh data
-    } catch (error) {
-      toast.error('Failed to add multiplier');
-      console.error('Add error:', error);
+      toast.error('Failed to update configuration');
+      console.error('Update error:', error);
     } finally {
       setIsUpdating(false);
     }
@@ -1387,23 +897,18 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle add furniture item
+  // Handle add furniture item - Client side only
   const handleAddFurnitureItem = async () => {
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch('https://rehome-backend.vercel.app/api/admin/furniture-items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(newFurnitureItem)
-      });
+      // Add to local state directly
+      const newItem = {
+        id: Date.now().toString(),
+        ...newFurnitureItem,
+        created_at: new Date().toISOString()
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to add furniture item');
-      }
+      setFurnitureItemsData(prev => [...prev, newItem]);
 
       toast.success('Furniture item added successfully');
       setShowAddFurnitureForm(false);
@@ -1412,7 +917,6 @@ const AdminDashboard = () => {
         category: 'Bedroom',
         points: 0
       });
-      fetchFurnitureItemsData(); // Refresh data
     } catch (error) {
       toast.error('Failed to add furniture item');
       console.error('Add error:', error);
@@ -1421,45 +925,44 @@ const AdminDashboard = () => {
     }
   };
 
-  // Enhanced marketplace management functions
-  const handleAddAdminListing = async () => {
-    setIsUpdating(true);
-    try {
-      const { error } = await supabase
-        .from('marketplace_furniture')
-        .insert([{
-          name: newAdminListing.name,
-          description: newAdminListing.description,
-          price: newAdminListing.price,
-          category: newAdminListing.category,
-          status: newAdminListing.status,
-          seller_email: user?.email || 'admin@rehome.com',
-          images: newAdminListing.images,
-          created_at: new Date().toISOString()
-        }]);
+  // // Enhanced marketplace management functions - Client side only
+  // const handleAddAdminListing = async () => {
+  //   setIsUpdating(true);
+  //   try {
+  //     const newListing: MarketplaceItem = {
+  //       id: Date.now().toString(),
+  //       name: newAdminListing.name,
+  //       description: newAdminListing.description,
+  //       price: newAdminListing.price,
+  //       category: newAdminListing.category,
+  //       status: newAdminListing.status,
+  //       seller_email: user?.email || 'admin@rehome.com',
+  //       images: newAdminListing.images,
+  //       created_at: new Date().toISOString()
+  //     };
 
-      if (error) {
-        throw new Error('Failed to add listing');
-      }
+  //     if (error) {
+  //       throw new Error('Failed to add listing');
+  //     }
 
-      toast.success('Listing added successfully');
-      setShowAddListingForm(false);
-      setNewAdminListing({
-        name: '',
-        description: '',
-        price: 0,
-        category: 'Living Room',
-        status: 'available',
-        images: []
-      });
-      fetchAdminListings();
-    } catch (error) {
-      toast.error('Failed to add listing');
-      console.error('Add error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  //     toast.success('Listing added successfully');
+  //     setShowAddListingForm(false);
+  //     setNewAdminListing({
+  //       name: '',
+  //       description: '',
+  //       price: 0,
+  //       category: 'Living Room',
+  //       status: 'available',
+  //       images: []
+  //     });
+  //     fetchAdminListings();
+  //   } catch (error) {
+  //     toast.error('Failed to add listing');
+  //     console.error('Add error:', error);
+  //   } finally {
+  //     setIsUpdating(false);
+  //   }
+  // };
 
   const fetchAdminListings = async () => {
     try {
@@ -1499,52 +1002,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // const fetchIncomingRequests = async () => {
-  //   try {
-  //     const { data, error } = await supabase
-  //       .from('marketplace_requests')
-  //       .select(`
-  //         *,
-  //         marketplace_furniture (
-  //           name,
-  //           price
-  //         )
-  //       `)
-  //       .eq('marketplace_furniture.seller_email', user?.email || 'admin@rehome.com')
-  //       .order('created_at', { ascending: false });
-
-  //     if (error) {
-  //       console.error('Error fetching requests:', error);
-  //       return;
-  //     }
-
-  //     setIncomingRequests(data || []);
-  //   } catch (error) {
-  //     console.error('Error fetching requests:', error);
-  //   }
-  // };
-
-  // const handleRequestResponse = async (requestId: string, status: 'accepted' | 'rejected') => {
-  //   setIsUpdating(true);
-  //   try {
-  //     const { error } = await supabase
-  //       .from('marketplace_requests')
-  //       .update({ status })
-  //       .eq('id', requestId);
-
-  //     if (error) {
-  //       throw new Error('Failed to update request');
-  //     }
-
-  //     toast.success(`Request ${status} successfully`);
-  //     fetchIncomingRequests();
-  //   } catch (error) {
-  //     toast.error('Failed to update request');
-  //     console.error('Update error:', error);
-  //   } finally {
-  //     setIsUpdating(false);
-  //   }
-  // };
 
   const deleteUserListing = async (listingId: string) => {
     if (!window.confirm('Are you sure you want to delete this user listing? This action cannot be undone.')) {
@@ -1572,47 +1029,47 @@ const AdminDashboard = () => {
     }
   };
 
-  const markItemAsSold = async (itemId: string, salePrice: number) => {
-    setIsUpdating(true);
-    try {
-      // Update item status
-      const { error: updateError } = await supabase
-        .from('marketplace_furniture')
-        .update({ status: 'sold' })
-        .eq('id', itemId);
+  // const markItemAsSold = async (itemId: string, salePrice: number) => {
+  //   setIsUpdating(true);
+  //   try {
+  //     // Update item status
+  //     const { error: updateError } = await supabase
+  //       .from('marketplace_furniture')
+  //       .update({ status: 'sold' })
+  //       .eq('id', itemId);
 
-      if (updateError) {
-        throw new Error('Failed to mark as sold');
-      }
+  //     if (updateError) {
+  //       throw new Error('Failed to mark as sold');
+  //     }
 
-      // Add to sales history
-      const item = adminListings.find(i => i.id === itemId);
-      if (item) {
-        const { error: salesError } = await supabase
-          .from('sales_history')
-          .insert([{
-            item_id: itemId,
-            item_name: item.name,
-            buyer_email: 'direct_sale',
-            sale_price: salePrice,
-            original_price: item.price,
-            sale_date: new Date().toISOString()
-          }]);
+  //     // Add to sales history
+  //     const item = adminListings.find(i => i.id === itemId);
+  //     if (item) {
+  //       const { error: salesError } = await supabase
+  //         .from('sales_history')
+  //         .insert([{
+  //           item_id: itemId,
+  //           item_name: item.name,
+  //           buyer_email: 'direct_sale',
+  //           sale_price: salePrice,
+  //           original_price: item.price,
+  //           sale_date: new Date().toISOString()
+  //         }]);
 
-        if (salesError) {
-          console.error('Error adding to sales history:', salesError);
-        }
-      }
+  //       if (salesError) {
+  //         console.error('Error adding to sales history:', salesError);
+  //       }
+  //     }
 
-      toast.success('Item marked as sold');
-      fetchAdminListings();
-    } catch (error) {
-      toast.error('Failed to mark as sold');
-      console.error('Update error:', error);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+  //     toast.success('Item marked as sold');
+  //     fetchAdminListings();
+  //   } catch (error) {
+  //     toast.error('Failed to mark as sold');
+  //     console.error('Update error:', error);
+  //   } finally {
+  //     setIsUpdating(false);
+  //   }
+  // };
 
   // Show detailed view of transportation request
   const handleViewRequestDetails = async (request: TransportRequest) => {
@@ -2327,7 +1784,7 @@ const AdminDashboard = () => {
                           className="mt-4 w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
                           rows={3}
                         />
-                        <div className="mt-3 flex space-x-2">
+                        {/* <div className="mt-3 flex space-x-2">
                           <button
                             onClick={handleAddAdminListing}
                             disabled={isUpdating}
@@ -2341,7 +1798,7 @@ const AdminDashboard = () => {
                           >
                             Cancel
                           </button>
-                        </div>
+                        </div> */}
                       </div>
                     )}
 
@@ -2382,30 +1839,9 @@ const AdminDashboard = () => {
                                 {format(new Date(item.created_at), 'yyyy-MM-dd')}
                               </td>
                               <td className="border border-gray-300 px-4 py-2">
-                                <div className="flex space-x-1">
-                                  <button
-                                    onClick={() => handleEditMarketplaceItem(item)}
-                                    className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                  >
-                                    <FaEdit className="mr-1" />
-                                    Edit
-                                  </button>
-                                  {item.status !== 'sold' && (
-                                    <button
-                                      onClick={() => markItemAsSold(item.id, item.price)}
-                                      className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                                    >
-                                      Mark Sold
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => handleDeleteMarketplaceItem(item)}
-                                    className="flex items-center px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                  >
-                                    <FaTrash className="mr-1" />
-                                    Delete
-                                  </button>
-                                </div>
+                                <p className="text-xs text-gray-500">
+                                  Delete, Edit in web dashboard, not here
+                                </p>
                               </td>
                             </tr>
                           ))}
@@ -2585,202 +2021,496 @@ const AdminDashboard = () => {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">Pricing Management</h2>
                 <div className="space-y-8">
-                  {/* Pricing Configs */}
+                  
+                  {/* JSON-based Pricing Configs */}
                   <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">Pricing Configurations</h3>
-                      <button
-                        onClick={() => setShowAddPricingForm(!showAddPricingForm)}
-                        className="flex items-center px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                      >
-                        <FaPlus className="mr-1" />
-                        Add Config
-                      </button>
-                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Core Pricing Configuration</h3>
                     
-                    {/* Add Pricing Config Form */}
-                    {showAddPricingForm && (
-                      <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-3">Add New Pricing Configuration</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <input
-                            type="text"
-                            placeholder="Name"
-                            value={newPricingConfig.name}
-                            onChange={(e) => setNewPricingConfig({...newPricingConfig, name: e.target.value})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                          <select
-                            value={newPricingConfig.category}
-                            onChange={(e) => setNewPricingConfig({...newPricingConfig, category: e.target.value})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          >
-                            <option value="house_moving">House Moving</option>
-                            <option value="item_transport">Item Transport</option>
-                            <option value="marketplace">Marketplace</option>
-                          </select>
-                          <input
-                            type="number"
-                            placeholder="Value"
-                            value={newPricingConfig.value}
-                            onChange={(e) => setNewPricingConfig({...newPricingConfig, value: parseFloat(e.target.value)})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                          <input
-                            type="text"
-                            placeholder="Unit (€, %, etc.)"
-                            value={newPricingConfig.unit}
-                            onChange={(e) => setNewPricingConfig({...newPricingConfig, unit: e.target.value})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
+                    {/* Distance Pricing */}
+                    <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-700 mb-3">Distance Pricing</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Small Distance</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Threshold (km)</label>
+                              {editingJsonConfig === 'distancePricing.smallDistance' ? (
+                                <input
+                                  type="number"
+                                  value={editJsonConfigData.threshold}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.distancePricing.smallDistance.threshold}</span>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500">Rate (€/km)</label>
+                              {editingJsonConfig === 'distancePricing.smallDistance' ? (
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={editJsonConfigData.rate}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, rate: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.distancePricing.smallDistance.rate}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'distancePricing.smallDistance' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('distancePricing', 'smallDistance')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('distancePricing', 'smallDistance')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
                         </div>
-                        <div className="mt-3 flex space-x-2">
-                          <button
-                            onClick={handleAddPricingConfig}
-                            disabled={isUpdating}
-                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                          >
-                            {isUpdating ? 'Adding...' : 'Add Config'}
-                          </button>
-                          <button
-                            onClick={() => setShowAddPricingForm(false)}
-                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                          >
-                            Cancel
-                          </button>
+                        
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Medium Distance</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Threshold (km)</label>
+                              {editingJsonConfig === 'distancePricing.mediumDistance' ? (
+                                <input
+                                  type="number"
+                                  value={editJsonConfigData.threshold}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.distancePricing.mediumDistance.threshold}</span>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500">Rate (€/km)</label>
+                              {editingJsonConfig === 'distancePricing.mediumDistance' ? (
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={editJsonConfigData.rate}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, rate: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.distancePricing.mediumDistance.rate}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'distancePricing.mediumDistance' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('distancePricing', 'mediumDistance')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('distancePricing', 'mediumDistance')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Long Distance</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Rate (€/km)</label>
+                              {editingJsonConfig === 'distancePricing.longDistance' ? (
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={editJsonConfigData.rate}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, rate: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.distancePricing.longDistance.rate}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'distancePricing.longDistance' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('distancePricing', 'longDistance')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('distancePricing', 'longDistance')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
                         </div>
                       </div>
-                    )}
+                    </div>
 
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">NAME</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">CATEGORY</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">VALUE</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">UNIT</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredPricingConfigs.map((config, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingPricingConfig === config.id ? (
-                                  <input
-                                    type="text"
-                                    value={editPricingConfigData.name}
-                                    onChange={(e) => setEditPricingConfigData({...editPricingConfigData, name: e.target.value})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  />
-                                ) : (
-                                  config.name
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingPricingConfig === config.id ? (
-                                  <select
-                                    value={editPricingConfigData.category}
-                                    onChange={(e) => setEditPricingConfigData({...editPricingConfigData, category: e.target.value})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  >
-                                    <option value="house_moving">House Moving</option>
-                                    <option value="item_transport">Item Transport</option>
-                                    <option value="marketplace">Marketplace</option>
-                                  </select>
-                                ) : (
-                                  config.category
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingPricingConfig === config.id ? (
-                                  <input
-                                    type="number"
-                                    value={editPricingConfigData.value}
-                                    onChange={(e) => setEditPricingConfigData({...editPricingConfigData, value: parseFloat(e.target.value)})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  />
-                                ) : (
-                                  config.value
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingPricingConfig === config.id ? (
-                                  <input
-                                    type="text"
-                                    value={editPricingConfigData.unit}
-                                    onChange={(e) => setEditPricingConfigData({...editPricingConfigData, unit: e.target.value})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  />
-                                ) : (
-                                  config.unit
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingPricingConfig === config.id ? (
-                                  <select
-                                    value={editPricingConfigData.active ? 'true' : 'false'}
-                                    onChange={(e) => setEditPricingConfigData({...editPricingConfigData, active: e.target.value === 'true'})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  >
-                                    <option value="true">Active</option>
-                                    <option value="false">Inactive</option>
-                                  </select>
-                                ) : (
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    config.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {config.active ? 'Active' : 'Inactive'}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingPricingConfig === config.id ? (
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleSavePricingConfig(config)}
-                                      disabled={isUpdating}
-                                      className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs"
-                                    >
-                                      <FaSave className="mr-1" />
-                                      {isUpdating ? 'Saving...' : 'Save'}
-                                    </button>
-                                    <button
-                                      onClick={() => setEditingPricingConfig(null)}
-                                      disabled={isUpdating}
-                                      className="flex items-center px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
-                                    >
-                                      <FaTimes className="mr-1" />
-                                      Cancel
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleEditPricingConfig(config)}
-                                      className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                    >
-                                      <FaEdit className="mr-1" />
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeletePricingConfig(config)}
-                                      className="flex items-center px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                    >
-                                      <FaTrash className="mr-1" />
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    {/* Carrying Multipliers */}
+                    <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-700 mb-3">Carrying Multipliers (per floor)</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Low Value Items (≤6 points)</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Threshold (points)</label>
+                              {editingJsonConfig === 'carryingMultipliers.lowValue' ? (
+                                <input
+                                  type="number"
+                                  value={editJsonConfigData.threshold}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.carryingMultipliers.lowValue.threshold}</span>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500">Multiplier</label>
+                              {editingJsonConfig === 'carryingMultipliers.lowValue' ? (
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={editJsonConfigData.multiplier}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.carryingMultipliers.lowValue.multiplier}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'carryingMultipliers.lowValue' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('carryingMultipliers', 'lowValue')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('carryingMultipliers', 'lowValue')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">High Value Items (≥7 points)</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Multiplier</label>
+                              {editingJsonConfig === 'carryingMultipliers.highValue' ? (
+                                <input
+                                  type="number"
+                                  step="0.001"
+                                  value={editJsonConfigData.multiplier}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.carryingMultipliers.highValue.multiplier}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'carryingMultipliers.highValue' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('carryingMultipliers', 'highValue')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('carryingMultipliers', 'highValue')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Assembly Multipliers */}
+                    <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-700 mb-3">Assembly Multipliers</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Low Value Items (≤6 points)</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Threshold (points)</label>
+                              {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
+                                <input
+                                  type="number"
+                                  value={editJsonConfigData.threshold}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.lowValue.threshold}</span>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500">Multiplier</label>
+                              {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editJsonConfigData.multiplier}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.lowValue.multiplier}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('assemblyMultipliers', 'lowValue')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('assemblyMultipliers', 'lowValue')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">High Value Items (≥7 points)</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Multiplier</label>
+                              {editingJsonConfig === 'assemblyMultipliers.highValue' ? (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editJsonConfigData.multiplier}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.highValue.multiplier}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'assemblyMultipliers.highValue' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('assemblyMultipliers', 'highValue')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('assemblyMultipliers', 'highValue')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Extra Helper Pricing */}
+                    <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-700 mb-3">Extra Helper Pricing</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Small Move (≤30 items)</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Threshold (items)</label>
+                              {editingJsonConfig === 'extraHelperPricing.smallMove' ? (
+                                <input
+                                  type="number"
+                                  value={editJsonConfigData.threshold}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.extraHelperPricing.smallMove.threshold}</span>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500">Price (€)</label>
+                              {editingJsonConfig === 'extraHelperPricing.smallMove' ? (
+                                <input
+                                  type="number"
+                                  value={editJsonConfigData.price}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, price: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.extraHelperPricing.smallMove.price}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'extraHelperPricing.smallMove' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('extraHelperPricing', 'smallMove')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('extraHelperPricing', 'smallMove')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Big Move (&gt;30 items)</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Price (€)</label>
+                              {editingJsonConfig === 'extraHelperPricing.bigMove' ? (
+                                <input
+                                  type="number"
+                                  value={editJsonConfigData.price}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, price: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.extraHelperPricing.bigMove.price}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'extraHelperPricing.bigMove' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('extraHelperPricing', 'bigMove')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('extraHelperPricing', 'bigMove')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
+
+
 
                   {/* City Prices */}
                   <div>
@@ -2967,186 +2697,6 @@ const AdminDashboard = () => {
                       </table>
                     </div>
                   </div>
-
-                  {/* Pricing Multipliers */}
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">Pricing Multipliers</h3>
-                      <button
-                        onClick={() => setShowAddMultiplierForm(!showAddMultiplierForm)}
-                        className="flex items-center px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                      >
-                        <FaPlus className="mr-1" />
-                        Add Multiplier
-                      </button>
-                    </div>
-
-                    {/* Add Multiplier Form */}
-                    {showAddMultiplierForm && (
-                      <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-3">Add New Pricing Multiplier</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <input
-                            type="text"
-                            placeholder="Name"
-                            value={newMultiplier.name}
-                            onChange={(e) => setNewMultiplier({...newMultiplier, name: e.target.value})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder="Value"
-                            value={newMultiplier.value}
-                            onChange={(e) => setNewMultiplier({...newMultiplier, value: parseFloat(e.target.value)})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                          <select
-                            value={newMultiplier.category}
-                            onChange={(e) => setNewMultiplier({...newMultiplier, category: e.target.value})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          >
-                            <option value="house_moving">House Moving</option>
-                            <option value="item_transport">Item Transport</option>
-                            <option value="marketplace">Marketplace</option>
-                          </select>
-                        </div>
-                        <div className="mt-3 flex space-x-2">
-                          <button
-                            onClick={handleAddMultiplier}
-                            disabled={isUpdating}
-                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                          >
-                            {isUpdating ? 'Adding...' : 'Add Multiplier'}
-                          </button>
-                          <button
-                            onClick={() => setShowAddMultiplierForm(false)}
-                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">NAME</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">VALUE</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">CATEGORY</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {pricingMultipliers.map((multiplier, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMultiplier === multiplier.id ? (
-                                  <input
-                                    type="text"
-                                    value={editMultiplierData.name}
-                                    onChange={(e) => setEditMultiplierData({...editMultiplierData, name: e.target.value})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  />
-                                ) : (
-                                  multiplier.name
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMultiplier === multiplier.id ? (
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={editMultiplierData.value}
-                                    onChange={(e) => setEditMultiplierData({...editMultiplierData, value: parseFloat(e.target.value)})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  />
-                                ) : (
-                                  multiplier.value
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMultiplier === multiplier.id ? (
-                                  <select
-                                    value={editMultiplierData.category}
-                                    onChange={(e) => setEditMultiplierData({...editMultiplierData, category: e.target.value})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  >
-                                    <option value="house_moving">House Moving</option>
-                                    <option value="item_transport">Item Transport</option>
-                                    <option value="marketplace">Marketplace</option>
-                                  </select>
-                                ) : (
-                                  multiplier.category
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMultiplier === multiplier.id ? (
-                                  <select
-                                    value={editMultiplierData.active ? 'true' : 'false'}
-                                    onChange={(e) => setEditMultiplierData({...editMultiplierData, active: e.target.value === 'true'})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  >
-                                    <option value="true">Active</option>
-                                    <option value="false">Inactive</option>
-                                  </select>
-                                ) : (
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    multiplier.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {multiplier.active ? 'Active' : 'Inactive'}
-                                  </span>
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMultiplier === multiplier.id ? (
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleSaveMultiplier(multiplier)}
-                                      disabled={isUpdating}
-                                      className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs"
-                                    >
-                                      <FaSave className="mr-1" />
-                                      {isUpdating ? 'Saving...' : 'Save'}
-                                    </button>
-                                    <button
-                                      onClick={() => setEditingMultiplier(null)}
-                                      disabled={isUpdating}
-                                      className="flex items-center px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
-                                    >
-                                      <FaTimes className="mr-1" />
-                                      Cancel
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleEditMultiplier(multiplier)}
-                                      className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                    >
-                                      <FaEdit className="mr-1" />
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteMultiplier(multiplier)}
-                                      className="flex items-center px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                    >
-                                      <FaTrash className="mr-1" />
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
                   {/* Distance Pricing Configuration */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Distance Pricing Configuration</h3>

@@ -1,3 +1,5 @@
+import pricingConfigData from './pricingConfig.json';
+
 // Pricing Configuration - These values should be controlled from backend/admin panel
 export const pricingConfig = {
   // Base multipliers
@@ -6,29 +8,16 @@ export const pricingConfig = {
   addonMultiplier: 3, // €3 per point for add-ons
   
   // Distance pricing
-  distancePricing: {
-    smallDistance: { threshold: 10, rate: 0 }, // Below 10km = free
-    mediumDistance: { threshold: 50, rate: 0.7 }, // 10-50km = €2.5/km
-    longDistance: { rate: 0.5 } // Over 50km = €1.4/km
-  },
+  distancePricing: pricingConfigData.distancePricing,
   
   // Carrying multipliers (per floor)
-  carryingMultipliers: {
-    lowValue: { threshold: 6, multiplier: 0.015 }, // Items ≤6 points
-    highValue: { multiplier: 0.040 } // Items ≥7 points
-  },
+  carryingMultipliers: pricingConfigData.carryingMultipliers,
   
   // Assembly multipliers
-  assemblyMultipliers: {
-    lowValue: { threshold: 6, multiplier: 1.80 }, // Items ≤6 points
-    highValue: { multiplier: 4.2 } // Items ≥7 points
-  },
+  assemblyMultipliers: pricingConfigData.assemblyMultipliers,
   
   // Extra helper pricing
-  extraHelperPricing: {
-    smallMove: { threshold: 30, price: 30 }, // Up to 20 items = €30
-    bigMove: { price: 60 } // Over 20 items = €60
-  },
+  extraHelperPricing: pricingConfigData.extraHelperPricing,
   
   // City range and extra distance pricing
   cityRange: {
