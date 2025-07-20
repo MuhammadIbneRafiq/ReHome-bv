@@ -87,7 +87,6 @@ export const useAuth = () => {
       setLoading(true);
       // Check for both token names to ensure backward compatibility
       const accessToken = localStorage.getItem("accessToken") 
-      console.log('accessToken', accessToken);
       if (!accessToken) {
         logout();
         setLoading(false);
@@ -104,7 +103,6 @@ export const useAuth = () => {
             
             // Check if token is expired
             if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-              console.log("Access Token has expired");
               logout(true, "Your session has expired. Please sign in again.");
               setLoading(false);
               return;
@@ -126,10 +124,8 @@ export const useAuth = () => {
                 duration: 10000,
               });
             }
-            console.log('decoded loojs like this', decoded);
             // Extract user data from token
             const tokenData = (decoded as any);
-            console.log('tokenData', tokenData);
             userData = {
               email: tokenData.email,
               sub: tokenData.sub,
@@ -137,7 +133,6 @@ export const useAuth = () => {
               phone_verified: tokenData.phone_verified || true,
               role: tokenData.role || 'user'
             };
-            console.log('Using JWT token data:', userData);
           } catch (jwtError) {
             console.error("Error decoding JWT token:", jwtError);
           }

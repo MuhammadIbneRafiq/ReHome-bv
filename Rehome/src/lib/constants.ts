@@ -259,12 +259,28 @@ export const getCityFromPostalCode = (postalCode: string): string | null => {
 
 // Helper function to check if a date is a city day
 export const isCityDay = (city: string, date: Date): boolean => {
-  if (!cityDayData[city]) return false;
+  if (!cityDayData[city]) {
+    console.log('🔍 [CITY DAY DEBUG] City not found in cityDayData:', city);
+    return false;
+  }
   
   // JavaScript Date.getDay(): 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
   // Our system: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday, 7=Sunday
   const jsDay = date.getDay();
   const ourDay = jsDay === 0 ? 7 : jsDay; // Convert Sunday from 0 to 7
   
-  return cityDayData[city].includes(ourDay);
+  const isCityDay = cityDayData[city].includes(ourDay);
+  
+  console.log('🔍 [CITY DAY DEBUG] City day check:', {
+    city,
+    date: isNaN(date.getTime()) ? 'Invalid Date' : date.toISOString(),
+    dateLocal: isNaN(date.getTime()) ? 'Invalid Date' : date.toLocaleDateString(),
+    dayName: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][jsDay],
+    jsDay,
+    ourDay,
+    cityDays: cityDayData[city],
+    isCityDay
+  });
+  
+  return isCityDay;
 };

@@ -43,7 +43,7 @@ function GooglePlacesAutocomplete({
   const [isLoading, setIsLoading] = useState(false);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
 
-  // Function to get place details including coordinates from placeId
+  // Function to get place details including coordinates and address components from placeId
   const getPlaceDetails = async (placeId: string) => {
     try {
       const response = await fetch(
@@ -53,7 +53,7 @@ function GooglePlacesAutocomplete({
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'location,displayName,formattedAddress'
+            'X-Goog-FieldMask': 'location,displayName,formattedAddress,addressComponents'
           }
         }
       );
@@ -61,6 +61,30 @@ function GooglePlacesAutocomplete({
       if (response.ok) {
         const data = await response.json();
         console.log('Place details response:', data);
+        
+        // Extract city from address components
+        let city = null;
+        if (data.addressComponents) {
+          // Look for locality (city) in address components
+          console.log(data.addressComponents)
+          const localityComponent = data.addressComponents.find((component: any) => 
+            component.types && component.types.includes('locality')
+          );
+          if (localityComponent) {
+            city = localityComponent.longText;
+          }
+          
+          // If no locality found, try administrative_area_level_1 (province/state)
+          if (!city) {
+            const adminComponent = data.addressComponents.find((component: any) => 
+              component.types && component.types.includes('administrative_area_level_1')
+            );
+            if (adminComponent) {
+              city = adminComponent.longText;
+            }
+          }
+        }
+        
         return {
           placeId,
           coordinates: data.location ? {
@@ -68,7 +92,8 @@ function GooglePlacesAutocomplete({
             lng: data.location.longitude
           } : null,
           formattedAddress: data.formattedAddress,
-          displayName: data.displayName?.text
+          displayName: data.displayName?.text,
+          city: city
         };
       } else {
         console.error('Place details API error:', response.status, response.statusText);
@@ -229,6 +254,8 @@ const ItemMovingPage = () => {
     const [floorDropoff, setFloorDropoff] = useState('');
 
     const [selectedDateRange, setSelectedDateRange] = useState({ start: '', end: '' });
+    const [pickupDate, setPickupDate] = useState('');
+    const [dropoffDate, setDropoffDate] = useState('');
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
@@ -404,12 +431,25 @@ const ItemMovingPage = () => {
                 setDistanceKm(calculatedDistance);
             }
 
+            console.log('🔍 [PRICING DEBUG] Calculating price with dates:', {
+                dateOption,
+                pickupDate,
+                dropoffDate,
+                pickupDateObj: pickupDate ? new Date(pickupDate) : null,
+                dropoffDateObj: dropoffDate ? new Date(dropoffDate) : null,
+                isDateFlexible,
+                pickupPlace: pickupPlace?.city,
+                dropoffPlace: dropoffPlace?.city
+            });
+
             const pricingInput = {
                 serviceType: 'item-transport' as const,
                 pickupLocation: firstLocation,
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateRange.start,
+                pickupDate: dateOption === 'fixed' ? pickupDate : '',
+                dropoffDate: dateOption === 'fixed' ? dropoffDate : '',
                 isDateFlexible,
                 itemQuantities,
                 floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
@@ -422,9 +462,26 @@ const ItemMovingPage = () => {
                 hasStudentId: !!studentId,
                 isEarlyBooking: false,
                 carryingServiceItems,
+                pickupPlace: pickupPlace,
+                dropoffPlace: dropoffPlace,
             };
+            
+            console.log('🔍 [PRICING DEBUG] Input for same date calculation:', {
+                pickupDate: pricingInput.pickupDate,
+                dropoffDate: pricingInput.dropoffDate,
+                pickupCity: pickupPlace?.city,
+                dropoffCity: dropoffPlace?.city,
+                isSameDate: pricingInput.pickupDate === pricingInput.dropoffDate
+            });
 
             const breakdown = await pricingService.calculateItemTransportPricing(pricingInput);
+            
+            console.log('🔍 [UI DEBUG] Setting pricing breakdown:', {
+                basePrice: breakdown?.basePrice,
+                total: breakdown?.total,
+                fullBreakdown: breakdown
+            });
+            
             setPricingBreakdown(breakdown);
             
             // Update distance state from pricing service result if we didn't calculate distance
@@ -453,14 +510,14 @@ const ItemMovingPage = () => {
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDateRange.start, isDateFlexible]);
+    }, [firstLocation, secondLocation, selectedDateRange.start, pickupDate, dropoffDate, isDateFlexible]);
 
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace, pickupDate, dropoffDate, dateOption]);
 
     const nextStep = () => {
         // Show booking tips after step 1 (locations)
@@ -470,8 +527,8 @@ const ItemMovingPage = () => {
         }
 
         // Validate date selection in step 4
-        if (step === 4 && !isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) {
-            toast.error("Please select a date or indicate that your date is flexible.");
+        if (step === 4 && !isDateFlexible && dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
+            toast.error("Please select both pickup and dropoff dates or indicate that your date is flexible.");
             return;
         }
 
@@ -616,11 +673,13 @@ const ItemMovingPage = () => {
         console.log('🔍 Form validation check:');
         console.log('- isDateFlexible:', isDateFlexible);
         console.log('- selectedDateRange:', selectedDateRange);
+        console.log('- pickupDate:', pickupDate);
+        console.log('- dropoffDate:', dropoffDate);
         console.log('- contactInfo:', contactInfo);
         console.log('- agreedToTerms:', agreedToTerms);
         
-        if (!isDateFlexible && (!selectedDateRange.start || !selectedDateRange.end)) {
-            console.log('❌ Date validation failed - missing start or end date');
+        if (!isDateFlexible && dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
+            console.log('❌ Date validation failed - missing pickup or dropoff date');
             return false;
         }
         if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
@@ -719,7 +778,10 @@ const ItemMovingPage = () => {
                     elevator: elevatorDropoff
                 },
                 schedule: {
-                    date: isDateFlexible ? 'Flexible' : new Date(selectedDateRange.start).toLocaleDateString(),
+                    date: isDateFlexible ? 'Flexible' : 
+                          dateOption === 'fixed' && pickupDate && dropoffDate ? 
+                          `Pickup: ${new Date(pickupDate).toLocaleDateString()}, Dropoff: ${new Date(dropoffDate).toLocaleDateString()}` :
+                          new Date(selectedDateRange.start).toLocaleDateString(),
                     time: preferredTimeSpan ? (
                         preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
                         preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
@@ -812,7 +874,7 @@ const ItemMovingPage = () => {
         }
 
         // Check if we have valid base pricing (location + date provided)
-        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && (isDateFlexible || selectedDateRange.start);
+        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && (isDateFlexible || selectedDateRange.start || (dateOption === 'fixed' && pickupDate && dropoffDate));
         
         if (!hasValidBasePricing) {
             return (
@@ -820,7 +882,7 @@ const ItemMovingPage = () => {
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
                     <p className="text-gray-500">
                         {!firstLocation || !secondLocation ? "Enter both pickup and dropoff locations" : 
-                         !isDateFlexible && !selectedDateRange.start ? "Select a date to see base pricing" : 
+                         !isDateFlexible && !selectedDateRange.start && !(dateOption === 'fixed' && pickupDate && dropoffDate) ? "Select a date to see base pricing" : 
                          "Calculating pricing..."}
                     </p>
                 </div>
@@ -851,15 +913,44 @@ const ItemMovingPage = () => {
                     {/* Base Price */}
                     <div className="flex justify-between">
                         <span>Base Price:</span>
-                        <span>€{pricingBreakdown.basePrice.toFixed(2)}</span>
+                        <span>€{pricingBreakdown.breakdown.baseCharge.originalPrice.toFixed(2)}</span>
                     </div>
+
                     {pricingBreakdown.breakdown.baseCharge.city && (
                         <div className="text-xs text-gray-500 ml-4">
-                            {pricingBreakdown.breakdown.baseCharge.city} - {
-                                isDateFlexible ? "Flexible date (50% off)" :
-                                pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
-                                pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
-                            }
+                            {/* Show detailed breakdown for separate pickup/dropoff dates */}
+                            {dateOption === 'fixed' && pickupDate && dropoffDate && pricingBreakdown.breakdown.baseCharge.city.includes('/') ? (
+                                <div className="space-y-1">
+                                    <div>
+                                        {pricingBreakdown.breakdown.baseCharge.city} - {
+                                            isDateFlexible ? "Flexible dates (50% off)" :
+                                            pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
+                                            pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rates" : "Mixed rates"
+                                        }
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                        Pickup: {new Date(pickupDate).toLocaleDateString('en-US', { weekday: 'short' })} | 
+                                        Dropoff: {new Date(dropoffDate).toLocaleDateString('en-US', { weekday: 'short' })}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    {pickupPlace?.city && dropoffPlace?.city ? 
+                                        `${pickupPlace.city} → ${dropoffPlace.city}` : 
+                                        pricingBreakdown.breakdown.baseCharge.city
+                                    } - {
+                                        isDateFlexible ? "Flexible date (50% off)" :
+                                        pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
+                                        pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
+                                    }
+                                    {dateOption === 'fixed' && pickupDate && dropoffDate && (
+                                        <div className="text-xs text-gray-400">
+                                            Pickup: {new Date(pickupDate).toLocaleDateString('en-US', { weekday: 'short' })} | 
+                                            Dropoff: {new Date(dropoffDate).toLocaleDateString('en-US', { weekday: 'short' })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -1071,7 +1162,12 @@ const ItemMovingPage = () => {
                                         placeholder="Enter pickup address"
                                         onPlaceSelect={(place) => {
                                             setPickupPlace(place);
-                                            console.log('🎯 Pickup place selected with coordinates:', place);
+                                            console.log('🎯 Pickup place selected:', {
+                                                text: place.text,
+                                                city: place.city,
+                                                coordinates: place.coordinates,
+                                                formattedAddress: place.formattedAddress
+                                            });
                                         }}
                                     />
                                 </div>
@@ -1108,7 +1204,12 @@ const ItemMovingPage = () => {
                                         placeholder="Enter dropoff address"
                                         onPlaceSelect={(place) => {
                                             setDropoffPlace(place);
-                                            console.log('🎯 Dropoff place selected with coordinates:', place);
+                                            console.log('🎯 Dropoff place selected:', {
+                                                text: place.text,
+                                                city: place.city,
+                                                coordinates: place.coordinates,
+                                                formattedAddress: place.formattedAddress
+                                            });
                                         }}
                                     />
                                 </div>
@@ -1161,6 +1262,8 @@ const ItemMovingPage = () => {
                                                 if (newDateOption === 'rehome') {
                                                     setIsDateFlexible(true);
                                                     setSelectedDateRange({ start: '', end: '' });
+                                                    setPickupDate('');
+                                                    setDropoffDate('');
                                                 } else {
                                                     setIsDateFlexible(false);
                                                 }
@@ -1180,7 +1283,11 @@ const ItemMovingPage = () => {
                                                 <input
                                                     type="date"
                                                     value={selectedDateRange.start}
-                                                    onChange={e => setSelectedDateRange(r => ({ ...r, start: e.target.value }))}
+                                                    onChange={e => {
+                                                        setSelectedDateRange(r => ({ ...r, start: e.target.value }));
+                                                        setPickupDate('');
+                                                        setDropoffDate('');
+                                                    }}
                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                                     min={new Date().toISOString().split('T')[0]}
                                                     required
@@ -1191,7 +1298,11 @@ const ItemMovingPage = () => {
                                                 <input
                                                     type="date"
                                                     value={selectedDateRange.end}
-                                                    onChange={e => setSelectedDateRange(r => ({ ...r, end: e.target.value }))}
+                                                    onChange={e => {
+                                                        setSelectedDateRange(r => ({ ...r, end: e.target.value }));
+                                                        setPickupDate('');
+                                                        setDropoffDate('');
+                                                    }}
                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                                     min={selectedDateRange.start || new Date().toISOString().split('T')[0]}
                                                     required
@@ -1200,17 +1311,38 @@ const ItemMovingPage = () => {
                                         </>
                                     )}
                                     {dateOption === 'fixed' && (
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                                            <input
-                                                type="date"
-                                                value={selectedDateRange.start}
-                                                onChange={e => setSelectedDateRange(r => ({ ...r, start: e.target.value, end: e.target.value }))}
-                                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                min={new Date().toISOString().split('T')[0]}
-                                                required
-                                            />
-                                        </div>
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={pickupDate}
+                                                    onChange={e => {
+                                                        console.log('🔍 [DATE DEBUG] Pickup date changed:', e.target.value);
+                                                        setPickupDate(e.target.value);
+                                                        setSelectedDateRange({ start: '', end: '' });
+                                                    }}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={dropoffDate}
+                                                    onChange={e => {
+                                                        console.log('🔍 [DATE DEBUG] Dropoff date changed:', e.target.value);
+                                                        setDropoffDate(e.target.value);
+                                                        setSelectedDateRange({ start: '', end: '' });
+                                                    }}
+                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                                    min={pickupDate || new Date().toISOString().split('T')[0]}
+                                                    required
+                                                />
+                                            </div>
+                                        </>
                                     )}
                                     {dateOption === 'rehome' && (
                                         <div className="p-3 bg-blue-50 rounded text-blue-700 text-sm">
@@ -1648,7 +1780,12 @@ const ItemMovingPage = () => {
                                             {isDateFlexible ? (
                                                 <p><span className="text-gray-500">Date:</span> <span className="font-medium">Flexible</span></p>
                                             ) : (
-                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">{new Date(selectedDateRange.start).toLocaleDateString()}</span></p>
+                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">
+                            {isDateFlexible ? 'Flexible' : 
+                             dateOption === 'fixed' && pickupDate && dropoffDate ? 
+                             `Pickup: ${new Date(pickupDate).toLocaleDateString()}, Dropoff: ${new Date(dropoffDate).toLocaleDateString()}` :
+                             new Date(selectedDateRange.start).toLocaleDateString()}
+                        </span></p>
                                             )}
                                             {preferredTimeSpan && (
                                                 <p className="mt-1"><span className="text-gray-500">Time:</span> <span className="font-medium">

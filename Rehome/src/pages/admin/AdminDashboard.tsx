@@ -8,7 +8,6 @@ import useUserSessionStore from "../../services/state/useUserSessionStore";
 import { cityBaseCharges } from "../../lib/constants";
 
 
-
 // Transportation request interface
 interface TransportRequest {
   id: string;
@@ -20,6 +19,43 @@ interface TransportRequest {
   status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   notes?: string;
   type: 'item-moving' | 'house-moving';
+  // Additional fields from Supabase
+  pickuptype?: string;
+  furnitureitems?: any[];
+  customitem?: string;
+  floorpickup?: number;
+  floordropoff?: number;
+  firstname?: string;
+  lastname?: string;
+  phone?: string;
+  estimatedprice?: number;
+  selecteddate?: string;
+  isdateflexible?: boolean;
+  baseprice?: number;
+  itempoints?: number;
+  carryingcost?: number;
+  disassemblycost?: number;
+  distancecost?: number;
+  extrahelpercost?: number;
+  selecteddate_start?: string;
+  selecteddate_end?: string;
+  firstlocation?: string;
+  secondlocation?: string;
+  firstlocation_coords?: any;
+  secondlocation_coords?: any;
+  calculated_distance_km?: number;
+  calculated_duration_seconds?: number;
+  calculated_duration_text?: string;
+  distance_provider?: string;
+  disassembly?: boolean;
+  elevatorpickup?: boolean;
+  elevatordropoff?: boolean;
+  extrahelper?: boolean;
+  carryingservice?: boolean;
+  isstudent?: boolean;
+  studentid?: string;
+  preferredtimespan?: string;
+  updated_at?: string;
 }
 
 
@@ -68,10 +104,6 @@ interface MarketplaceItem {
   images: string[];
 }
 
-
-
-
-
 // Calendar day interface
 interface CalendarDay {
   date: Date;
@@ -93,7 +125,6 @@ const AdminDashboard = () => {
   const { user, role } = useUserSessionStore();
   const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items'>('transport');
 
-  // Check if user has admin role
   const ADMIN_EMAILS = [
     'muhammadibnerafiq123@gmail.com',
     'testnewuser12345@gmail.com',
@@ -169,7 +200,7 @@ const AdminDashboard = () => {
     images: [] as string[]
   });
   const [showAddListingForm, setShowAddListingForm] = useState(false);
-  const [marketplaceTab, setMarketplaceTab] = useState<'inventory' | 'requests' | 'supervision' | 'sales'>('inventory');
+  const [marketplaceTab, setMarketplaceTab] = useState<'inventory' | 'supervision' | 'sales'>('inventory');
 
   // Items management state
   const [furnitureItemsData, setFurnitureItemsData] = useState<any[]>([]);
@@ -543,29 +574,69 @@ const AdminDashboard = () => {
     try {
       // Fetch from Supabase tables
       const { data: itemMovingData, error: itemError } = await supabase
-        .from('item_moving_requests')
+        .from('item_moving')
         .select('*')
         .order('created_at', { ascending: false });
 
       const { data: houseMovingData, error: houseError } = await supabase
-        .from('house_moving_requests')
+        .from('house_moving')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (itemError) console.error('Error fetching item moving:', itemError);
       if (houseError) console.error('Error fetching house moving:', houseError);
 
+      console.log('itemMovingData', itemMovingData);
+      console.log('houseMovingData', houseMovingData);
+
       // Normalize and combine data
       const itemMoving = (itemMovingData || []).map((req: any) => ({
         id: req.id?.toString() || '',
         created_at: req.created_at || '',
-        customer_email: req.email || req.customer_email || '',
+        customer_email: req.email || '',
         customer_name: (req.firstname || '') + (req.lastname ? ' ' + req.lastname : ''),
-        city: req.firstlocation || req.city || '',
+        city: req.firstlocation || '',
         date: req.selecteddate || req.selecteddate_start || req.created_at || '',
         status: req.status || 'pending',
         notes: req.notes || '',
         type: 'item-moving' as const,
+        // Additional fields from Supabase
+        pickuptype: req.pickuptype,
+        furnitureitems: req.furnitureitems,
+        customitem: req.customitem,
+        floorpickup: req.floorpickup,
+        floordropoff: req.floordropoff,
+        firstname: req.firstname,
+        lastname: req.lastname,
+        phone: req.phone,
+        estimatedprice: req.estimatedprice,
+        selecteddate: req.selecteddate,
+        isdateflexible: req.isdateflexible,
+        baseprice: req.baseprice,
+        itempoints: req.itempoints,
+        carryingcost: req.carryingcost,
+        disassemblycost: req.disassemblycost,
+        distancecost: req.distancecost,
+        extrahelpercost: req.extrahelpercost,
+        selecteddate_start: req.selecteddate_start,
+        selecteddate_end: req.selecteddate_end,
+        firstlocation: req.firstlocation,
+        secondlocation: req.secondlocation,
+        firstlocation_coords: req.firstlocation_coords,
+        secondlocation_coords: req.secondlocation_coords,
+        calculated_distance_km: req.calculated_distance_km,
+        calculated_duration_seconds: req.calculated_duration_seconds,
+        calculated_duration_text: req.calculated_duration_text,
+        distance_provider: req.distance_provider,
+        disassembly: req.disassembly,
+        elevatorpickup: req.elevatorpickup,
+        elevatordropoff: req.elevatordropoff,
+        extrahelper: req.extrahelper,
+        carryingservice: req.carryingservice,
+        isstudent: req.isstudent,
+        studentid: req.studentid,
+        preferredtimespan: req.preferredtimespan,
+        updated_at: req.updated_at,
       }));
 
       const houseMoving = (houseMovingData || []).map((req: any) => ({
@@ -578,6 +649,43 @@ const AdminDashboard = () => {
         status: req.status || 'pending',
         notes: req.notes || '',
         type: 'house-moving' as const,
+        // Additional fields from Supabase
+        pickuptype: req.pickuptype,
+        furnitureitems: req.furnitureitems,
+        customitem: req.customitem,
+        floorpickup: req.floorpickup,
+        floordropoff: req.floordropoff,
+        firstname: req.firstname,
+        lastname: req.lastname,
+        phone: req.phone,
+        estimatedprice: req.estimatedprice,
+        selecteddate: req.selecteddate,
+        isdateflexible: req.isdateflexible,
+        baseprice: req.baseprice,
+        itempoints: req.itempoints,
+        carryingcost: req.carryingcost,
+        disassemblycost: req.disassemblycost,
+        distancecost: req.distancecost,
+        extrahelpercost: req.extrahelpercost,
+        selecteddate_start: req.selecteddate_start,
+        selecteddate_end: req.selecteddate_end,
+        firstlocation: req.firstlocation,
+        secondlocation: req.secondlocation,
+        firstlocation_coords: req.firstlocation_coords,
+        secondlocation_coords: req.secondlocation_coords,
+        calculated_distance_km: req.calculated_distance_km,
+        calculated_duration_seconds: req.calculated_duration_seconds,
+        calculated_duration_text: req.calculated_duration_text,
+        distance_provider: req.distance_provider,
+        disassembly: req.disassembly,
+        elevatorpickup: req.elevatorpickup,
+        elevatordropoff: req.elevatordropoff,
+        extrahelper: req.extrahelper,
+        carryingservice: req.carryingservice,
+        isstudent: req.isstudent,
+        studentid: req.studentid,
+        preferredtimespan: req.preferredtimespan,
+        updated_at: req.updated_at,
       }));
 
       setTransportRequests([...itemMoving, ...houseMoving]);
@@ -591,7 +699,7 @@ const AdminDashboard = () => {
   // Fetch pricing data
   const fetchPricingData = async () => {
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
@@ -1829,72 +1937,91 @@ const AdminDashboard = () => {
                   <table className="w-full border-collapse border border-gray-300">
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">TYPE</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CUSTOMER</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">EMAIL</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CITY</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">DATE</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">TYPE</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">CUSTOMER</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PHONE</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PICKUP TYPE</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">LOCATION</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">FLOORS</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">DATE</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PRICE</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ITEMS</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">STATUS</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filteredTransportRequests.map((request, index) => (
                         <tr key={index} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-gray-300 px-3 py-2">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
                               request.type === 'item-moving' 
                                 ? 'bg-green-100 text-green-800' 
                                 : 'bg-blue-100 text-blue-800'
                             }`}>
-                              {request.type === 'item-moving' ? 'Item Moving' : 'House Moving'}
+                              {request.type === 'item-moving' ? 'Item' : 'House'}
                             </span>
                           </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-gray-300 px-3 py-2 text-xs">
                             {editingTransportRequest === request.id ? (
                               <input
                                 type="text"
                                 value={editTransportData.customer_name}
                                 onChange={(e) => setEditTransportData({...editTransportData, customer_name: e.target.value})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 text-xs"
                               />
                             ) : (
-                              request.customer_name
+                              <div>
+                                <div className="font-medium">{request.customer_name}</div>
+                                <div className="text-gray-500 text-xs">{request.customer_email}</div>
+                              </div>
                             )}
                           </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            {editingTransportRequest === request.id ? (
-                              <input
-                                type="email"
-                                value={editTransportData.customer_email}
-                                onChange={(e) => setEditTransportData({...editTransportData, customer_email: e.target.value})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                              />
+                          <td className="border border-gray-300 px-3 py-2 text-xs">
+                            {request.phone || '-'}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-xs">
+                            {request.pickuptype || '-'}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-xs">
+                            <div>
+                              <div><strong>From:</strong> {request.firstlocation || request.city || '-'}</div>
+                              <div><strong>To:</strong> {request.secondlocation || '-'}</div>
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-xs">
+                            <div>
+                              <div>Pickup: {request.floorpickup || '-'}</div>
+                              <div>Dropoff: {request.floordropoff || '-'}</div>
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-xs">
+                            {request.selecteddate ? format(new Date(request.selecteddate), 'MM/dd/yyyy') : 
+                             request.selecteddate_start ? format(new Date(request.selecteddate_start), 'MM/dd/yyyy') :
+                             format(new Date(request.date), 'MM/dd/yyyy')}
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-xs">
+                            <div>
+                              <div className="font-medium">€{request.estimatedprice || '-'}</div>
+                              <div className="text-gray-500">Base: €{request.baseprice || '-'}</div>
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-3 py-2 text-xs">
+                            {request.furnitureitems ? (
+                              <div>
+                                <div>{request.furnitureitems.length} items</div>
+                                <div className="text-gray-500">{request.itempoints || 0} points</div>
+                              </div>
                             ) : (
-                              request.customer_email
+                              request.customitem || '-'
                             )}
                           </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            {editingTransportRequest === request.id ? (
-                              <input
-                                type="text"
-                                value={editTransportData.city}
-                                onChange={(e) => setEditTransportData({...editTransportData, city: e.target.value})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                              />
-                            ) : (
-                              request.city || '-'
-                            )}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            {format(new Date(request.date), 'yyyy-MM-dd HH:mm:ss')}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-gray-300 px-3 py-2">
                             {editingTransportRequest === request.id ? (
                               <select
                                 value={editTransportData.status}
                                 onChange={(e) => setEditTransportData({...editTransportData, status: e.target.value})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 text-xs"
                               >
                                 <option value="pending">Pending</option>
                                 <option value="confirmed">Confirmed</option>
@@ -1902,14 +2029,19 @@ const AdminDashboard = () => {
                                 <option value="cancelled">Cancelled</option>
                               </select>
                             ) : (
-                              <span className="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                request.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                                request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
                                 {request.status}
                               </span>
                             )}
                           </td>
-                          <td className="border border-gray-300 px-4 py-2">
+                          <td className="border border-gray-300 px-3 py-2">
                             {editingTransportRequest === request.id ? (
-                              <div className="flex space-x-2">
+                              <div className="flex space-x-1">
                                 <button
                                   onClick={() => handleSaveTransportRequest(request)}
                                   disabled={isUpdating}
@@ -2115,7 +2247,6 @@ const AdminDashboard = () => {
                 <div className="flex space-x-4 mb-6">
                   {[
                     { id: 'inventory', label: 'My Inventory', icon: FaBox },
-                    { id: 'requests', label: 'Incoming Requests', icon: FaPlus },
                     { id: 'supervision', label: 'User Listings', icon: FaSearch },
                     { id: 'sales', label: 'Sales History', icon: FaCog }
                   ].map(tab => (
@@ -2358,15 +2489,7 @@ const AdminDashboard = () => {
                   </div>
                 )}
 
-                {/* Placeholder for other tabs */}
-                {marketplaceTab === 'requests' && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Incoming Purchase Requests</h3>
-                    <p className="text-gray-600 mb-4">
-                      This section would show incoming purchase requests from buyers. Currently placeholder.
-                    </p>
-                  </div>
-                )}
+
               </div>
             )}
 

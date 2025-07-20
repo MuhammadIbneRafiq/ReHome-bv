@@ -74,6 +74,8 @@ export interface PricingInput {
   dropoffLocation: string;
   distanceKm?: number; // Calculated distance between locations
   selectedDate: string;
+  pickupDate?: string; // New field for pickup date
+  dropoffDate?: string; // New field for dropoff date
   isDateFlexible: boolean;
   itemQuantities: { [key: string]: number };
   floorPickup: number;
@@ -86,6 +88,8 @@ export interface PricingInput {
   isStudent: boolean;
   hasStudentId: boolean;
   isEarlyBooking?: boolean; // For empty calendar days
+  pickupPlace?: any; // Google Places object for pickup location
+  dropoffPlace?: any; // Google Places object for dropoff location
 }
 
 class PricingService {
@@ -99,7 +103,11 @@ class PricingService {
       pickupLocation: input.pickupLocation,
       dropoffLocation: input.dropoffLocation,
       selectedDate: input.selectedDate,
+      pickupDate: input.pickupDate,
+      dropoffDate: input.dropoffDate,
       isDateFlexible: input.isDateFlexible,
+      pickupPlace: input.pickupPlace?.city,
+      dropoffPlace: input.dropoffPlace?.city,
       itemQuantities: input.itemQuantities
     });
 
@@ -239,23 +247,182 @@ class PricingService {
           distance: Math.round(distanceFromCenter * 10) / 10
         };
       } else {
-        // For fixed dates, use the normal calculation
-        if (!input.selectedDate) {
-          breakdown.basePrice = 0;
-          breakdown.breakdown.baseCharge.city = null;
-          return;
+        // For fixed dates, check if we have separate pickup and dropoff dates
+        if (input.pickupDate && input.dropoffDate) {
+          console.log('🔍 [PRICING DEBUG] Processing separate pickup and dropoff dates');
+          // Calculate base charge for both pickup and dropoff cities
+          const pickupDate = new Date(input.pickupDate);
+          const dropoffDate = new Date(input.dropoffDate);
+          
+          console.log('🔍 [PRICING DEBUG] Dates:', {
+            pickupDate: pickupDate.toISOString(),
+            dropoffDate: dropoffDate.toISOString()
+          });
+          
+          const pickupCity = await this.findClosestCity(input.pickupLocation, input.pickupPlace);
+          const dropoffCity = await this.findClosestCity(input.dropoffLocation, input.dropoffPlace);
+          
+          console.log('🔍 [PRICING DEBUG] Cities detected:', {
+            pickupCity,
+            dropoffCity
+          });
+          
+          if (!pickupCity || !dropoffCity) {
+            breakdown.basePrice = 0;
+            breakdown.breakdown.baseCharge.city = null;
+            return;
+          }
+          
+          // Calculate base charges for both cities
+          const pickupBaseResult = await this.calculateBaseCharge(input.pickupLocation, pickupDate, input.pickupPlace);
+          const dropoffBaseResult = await this.calculateBaseCharge(input.dropoffLocation, dropoffDate, input.dropoffPlace);
+          
+          console.log('🔍 [PRICING DEBUG] Base charge results:', {
+            pickup: {
+              city: pickupBaseResult.city,
+              charge: pickupBaseResult.charge,
+              type: pickupBaseResult.type
+            },
+            dropoff: {
+              city: dropoffBaseResult.city,
+              charge: dropoffBaseResult.charge,
+              type: dropoffBaseResult.type
+            }
+          });
+          
+          // Combine the charges based on whether it's the same date or different dates
+          let totalCharge: number;
+          const isSameDate = pickupDate.toDateString() === dropoffDate.toDateString();
+          
+          if (isSameDate) {
+            // Same date: use the higher of the two base charges (one trip covering both cities)
+            totalCharge = Math.max(pickupBaseResult.charge, dropoffBaseResult.charge);
+            console.log('🔍 [PRICING DEBUG] Same date pricing:', {
+              date: pickupDate.toDateString(),
+              pickupCity: pickupCity,
+              dropoffCity: dropoffCity,
+              pickupCharge: pickupBaseResult.charge,
+              dropoffCharge: dropoffBaseResult.charge,
+              totalCharge: totalCharge,
+              method: 'using higher rate (same date)'
+            });
+          } else {
+            // Different dates: add the base charges from both cities (two separate trips)
+            totalCharge = pickupBaseResult.charge + dropoffBaseResult.charge;
+            console.log('🔍 [PRICING DEBUG] Different dates pricing:', {
+              pickupDate: pickupDate.toDateString(),
+              dropoffDate: dropoffDate.toDateString(),
+              pickupCity: pickupCity,
+              dropoffCity: dropoffCity,
+              pickupCharge: pickupBaseResult.charge,
+              dropoffCharge: dropoffBaseResult.charge,
+              totalCharge: totalCharge,
+              method: 'adding both charges (different dates)'
+            });
+          }
+          
+          // Determine the charge type based on same date vs different dates
+          let chargeType = '';
+          if (isSameDate) {
+            // Same date: using higher rate between the two cities
+            const isPickupCityDay = await this.isCityDay(pickupCity, pickupDate);
+            const isDropoffCityDay = await this.isCityDay(dropoffCity, dropoffDate);
+            
+            console.log('🔍 [PRICING DEBUG] Same date city day checks:', {
+              date: pickupDate.toDateString(),
+              pickupCity,
+              dropoffCity,
+              isPickupCityDay,
+              isDropoffCityDay
+            });
+            
+            // For same date, describe which city/rate we're using (the higher one)
+            const isUsingPickup = pickupBaseResult.charge >= dropoffBaseResult.charge;
+            const primaryCity = isUsingPickup ? pickupCity : dropoffCity;
+            const isPrimaryCityDay = isUsingPickup ? isPickupCityDay : isDropoffCityDay;
+            
+            if (pickupCity === dropoffCity) {
+              // Same city, same date
+              if (isPrimaryCityDay) {
+                chargeType = `${primaryCity} city day rate (same date)`;
+              } else {
+                chargeType = `${primaryCity} normal rate (same date)`;
+              }
+            } else {
+              // Different cities, same date - using higher rate
+              if (isPrimaryCityDay) {
+                chargeType = `${primaryCity} city day rate (same date, higher of ${pickupCity}/${dropoffCity})`;
+              } else {
+                chargeType = `${primaryCity} normal rate (same date, higher of ${pickupCity}/${dropoffCity})`;
+              }
+            }
+          } else {
+            // Different dates: combining both city rates
+            const isPickupCityDay = await this.isCityDay(pickupCity, pickupDate);
+            const isDropoffCityDay = await this.isCityDay(dropoffCity, dropoffDate);
+            
+            console.log('🔍 [PRICING DEBUG] Different dates city day checks:', {
+              pickupDate: pickupDate.toDateString(),
+              dropoffDate: dropoffDate.toDateString(),
+              pickupCity,
+              dropoffCity,
+              isPickupCityDay,
+              isDropoffCityDay
+            });
+            
+            if (isPickupCityDay && isDropoffCityDay) {
+              chargeType = `${pickupCity}/${dropoffCity} city day rates (different dates)`;
+            } else if (isPickupCityDay || isDropoffCityDay) {
+              chargeType = `${pickupCity}/${dropoffCity} mixed rates (different dates)`;
+            } else {
+              chargeType = `${pickupCity}/${dropoffCity} normal rates (different dates)`;
+            }
+          }
+          
+          baseResult = {
+            charge: totalCharge,
+            type: chargeType,
+            city: isSameDate && pickupCity !== dropoffCity ? 
+              (pickupBaseResult.charge >= dropoffBaseResult.charge ? pickupCity : dropoffCity) : 
+              (pickupCity === dropoffCity ? pickupCity : `${pickupCity}/${dropoffCity}`),
+            distance: Math.max(pickupBaseResult.distance, dropoffBaseResult.distance)
+          };
+          
+          // Set the breakdown for dual-date scenario
+          breakdown.basePrice = totalCharge;
+          breakdown.breakdown.baseCharge.city = isSameDate && pickupCity !== dropoffCity ? 
+            (pickupBaseResult.charge >= dropoffBaseResult.charge ? pickupCity : dropoffCity) : 
+            (pickupCity === dropoffCity ? pickupCity : `${pickupCity}/${dropoffCity}`);
+          breakdown.breakdown.baseCharge.isCityDay = chargeType.includes('city day');
+          breakdown.breakdown.baseCharge.isEarlyBooking = input.isDateFlexible;
+          breakdown.breakdown.baseCharge.originalPrice = totalCharge;
+          breakdown.breakdown.baseCharge.finalPrice = totalCharge;
+        } else {
+          // Fallback to single date calculation
+          if (!input.selectedDate) {
+            breakdown.basePrice = 0;
+            breakdown.breakdown.baseCharge.city = null;
+            return;
+          }
+          
+          const date = new Date(input.selectedDate);
+          baseResult = await this.calculateBaseCharge(input.pickupLocation, date, input.pickupPlace);
+          
+          // Set the breakdown for single-date scenario
+          breakdown.basePrice = baseResult.charge;
+          breakdown.breakdown.baseCharge.city = baseResult.city;
+          breakdown.breakdown.baseCharge.isCityDay = baseResult.type.includes('city day');
+          breakdown.breakdown.baseCharge.isEarlyBooking = baseResult.type.includes('early booking') || input.isDateFlexible;
+          breakdown.breakdown.baseCharge.originalPrice = baseResult.charge;
+          breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
         }
-        
-        const date = new Date(input.selectedDate);
-        baseResult = await this.calculateBaseCharge(input.pickupLocation, date);
       }
       
-      breakdown.basePrice = baseResult.charge;
-      breakdown.breakdown.baseCharge.city = baseResult.city;
-      breakdown.breakdown.baseCharge.isCityDay = baseResult.type.includes('city day');
-      breakdown.breakdown.baseCharge.isEarlyBooking = baseResult.type.includes('early booking') || input.isDateFlexible;
-      breakdown.breakdown.baseCharge.originalPrice = baseResult.charge;
-      breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
+      console.log('🔍 [PRICING DEBUG] Final base price set:', {
+        basePrice: breakdown.basePrice,
+        type: baseResult.type,
+        city: baseResult.city
+      });
     } catch (error) {
       console.error('Error calculating base charge breakdown:', error);
       breakdown.basePrice = 0;
@@ -306,13 +473,13 @@ class PricingService {
   /**
    * Calculate base charge based on location and date
    */
-  async calculateBaseCharge(pickup: string, date?: Date): Promise<{ charge: number; type: string; city: string; distance: number }> {
+  async calculateBaseCharge(pickup: string, date?: Date, placeObject?: any): Promise<{ charge: number; type: string; city: string; distance: number }> {
     // No pricing without both pickup location and date
     if (!pickup || !date) {
       return { charge: 0, type: 'No estimate available', city: '', distance: 0 };
     }
     // Find closest supported city
-    const city = await this.findClosestCity(pickup);
+    const city = await this.findClosestCity(pickup, placeObject);
     if (!city) {
       return { charge: 0, type: 'Location not supported', city: '', distance: 0 };
     }
@@ -325,6 +492,14 @@ class PricingService {
     
     // Check if it's an empty day for early booking discount
     const isEmptyDay = await this.isEmptyCalendarDay(date);
+    
+    console.log('🔍 [BASE CHARGE DEBUG] City day status:', {
+      city,
+      date: date.toISOString(),
+      isScheduledDay,
+      isEmptyDay,
+      cityPricing: cityBaseCharges[city]
+    });
     
     // Determine base charge (without distance adjustments - distance is handled separately)
     let baseCharge: number;
@@ -345,6 +520,12 @@ class PricingService {
       chargeType = `${city} normal rate`;
     }
     
+    console.log('🔍 [BASE CHARGE DEBUG] Base charge calculation:', {
+      city,
+      baseCharge,
+      chargeType
+    });
+    
     // Apply city center extra charge if beyond 8km from city center
     if (distanceFromCenter > 8) {
       const extraKm = distanceFromCenter - 8;
@@ -362,13 +543,37 @@ class PricingService {
   }
 
   private async isCityDay(city: string, date: Date): Promise<boolean> {
-    // Try Google Calendar integration first, fall back to constants
+    // TEMPORARY: Use constants-based logic directly since calendar service has incorrect data
+    // TODO: Fix calendar service data for city days
+    const constantsResult = isCityDay(city, date);
+    console.log('🔍 [CONSTANTS DEBUG] Using constants-based city day logic:', {
+      city,
+      date: isNaN(date.getTime()) ? 'Invalid Date' : date.toISOString(),
+      constantsResult
+    });
+    return constantsResult;
+    
+    // Original calendar service logic (commented out temporarily)
+    /*
     try {
-      return await calendarService.isCityScheduled(city, date);
+      const calendarResult = await calendarService.isCityScheduled(city, date);
+      console.log('🔍 [CALENDAR DEBUG] Calendar service result:', {
+        city,
+        date: isNaN(date.getTime()) ? 'Invalid Date' : date.toISOString(),
+        calendarResult
+      });
+      return calendarResult;
     } catch (error) {
       console.warn('Calendar service unavailable, using fallback logic:', error);
-      return isCityDay(city, date);
+      const fallbackResult = isCityDay(city, date);
+      console.log('🔍 [FALLBACK DEBUG] Using constants fallback:', {
+        city,
+        date: isNaN(date.getTime()) ? 'Invalid Date' : date.toISOString(),
+        fallbackResult
+      });
+      return fallbackResult;
     }
+    */
   }
 
   private async isEmptyCalendarDay(date: Date): Promise<boolean> {
@@ -382,11 +587,34 @@ class PricingService {
   }
 
   /**
-   * Find the closest city from our supported cities list using OpenStreetMap
+   * Find the closest city from our supported cities list
    */
-  private async findClosestCity(location: string): Promise<string | null> {
+  private async findClosestCity(location: string, placeObject?: any): Promise<string | null> {
     try {
-      // First try to extract city from postal code/address using existing logic
+      // If we have a Google Places object with city information, use that first
+      if (placeObject && placeObject.city) {
+        const city = placeObject.city;
+        console.log('🔍 [PRICING DEBUG] Using city from Google Places:', city);
+        
+        // Check if this city is in our supported cities
+        if (cityBaseCharges[city]) {
+          return city;
+        }
+        
+        // If not in our list, try to find a close match
+        const supportedCities = Object.keys(cityBaseCharges);
+        const closestMatch = supportedCities.find(supportedCity => 
+          city.toLowerCase().includes(supportedCity.toLowerCase()) ||
+          supportedCity.toLowerCase().includes(city.toLowerCase())
+        );
+        
+        if (closestMatch) {
+          console.log('🔍 [PRICING DEBUG] Found close match:', city, '->', closestMatch);
+          return closestMatch;
+        }
+      }
+
+      // Fallback to postal code extraction
       const extractedCity = getCityFromPostalCode(location);
       if (extractedCity && cityBaseCharges[extractedCity]) {
         return extractedCity;

@@ -107,9 +107,9 @@ export default function TermsPage() {
               <div>
                 <h3 className="text-lg font-semibold mb-2">4. Payment Terms</h3>
                 <p className="text-gray-600">
-                  Payment arrangements are made directly between users and service providers. 
-                  Service fees are clearly disclosed before transaction completion. 
-                  Refunds are processed according to our refund policy.
+                Payment arrangements for user-listed items are made directly between users. 
+                ReHome provides no integrated payment service on the platform and no guarantees. 
+                For ReHome services and listings, costs are disclosed clearly before transaction.
                 </p>
               </div>
 
