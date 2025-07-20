@@ -942,6 +942,7 @@ class PricingService {
       // Update the breakdown with the calculated base charge
       breakdown.basePrice = finalBaseCharge;
       breakdown.breakdown.baseCharge.finalPrice = finalBaseCharge;
+      breakdown.breakdown.baseCharge.originalPrice = finalBaseCharge; // Fix: also update originalPrice for UI display
       breakdown.breakdown.baseCharge.city = pickupCity;
       breakdown.breakdown.baseCharge.isCityDay = pickupCity === dropoffCity ? 
         await this.isCityDay(pickupCity, selectedDate) : false;
