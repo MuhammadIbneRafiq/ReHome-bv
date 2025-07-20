@@ -4,20 +4,11 @@ import { useAuth } from '../hooks/useAuth';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import useUserStore from '../services/state/useUserSessionStore';
+import { ADMIN_EMAILS } from "../constants/adminEmails";
 
 interface AdminRouteProps {
   children: ReactNode;
 }
-
-// List of admin email addresses
-const ADMIN_EMAILS = [
-  'muhammadibnerafiq123@gmail.com',
-  'testnewuser12345@gmail.com', // Test account with admin access
-  'egzmanagement@gmail.com',
-  'samuel.stroehle8@gmail.com',
-  'info@rehomebv.com'
-  // Add other admin emails here
-];
 
 const AdminRoute = ({ children }: AdminRouteProps) => {
   const { isAuthenticated, loading } = useAuth();

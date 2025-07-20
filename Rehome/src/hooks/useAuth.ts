@@ -4,6 +4,7 @@ import { jwtDecode } from "jwt-decode";
 import { useLocation } from "react-router-dom";
 import { toast } from "../components/ui/use-toast";
 import { useUserSessionStore } from "@/services/state/useUserSessionStore";
+import { ADMIN_EMAILS } from "@/constants/adminEmails";
 
 export const useAuth = () => {
   const setUser = useUserSessionStore((state) => state.setUser);
@@ -15,8 +16,8 @@ export const useAuth = () => {
 
   const location = useLocation();
 
-  // Check if user is admin - you can modify this logic based on your needs
-  const isAdmin = user?.email === 'admin@rehome.com';
+  // Check if user is admin - use centralized admin list
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email);
 
   const logout = (showToast = false, reason = '') => {
     localStorage.removeItem("accessToken");

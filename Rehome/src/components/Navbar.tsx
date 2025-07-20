@@ -11,15 +11,7 @@ import { useLanguage } from '../hooks/useLanguage';
 import logoImage from "../assets/logorehome.png"; // Import the ReHome logo
 import MessageNotifications from './MessageNotifications';
 import { jwtDecode } from "jwt-decode";
-
-// List of admin email addresses - keep in sync with AdminRoute.tsx
-const ADMIN_EMAILS = [
-  'muhammadibnerafiq123@gmail.com',
-  'testnewuser12345@gmail.com', // Test account with admin access
-  'egzmanagement@gmail.com',
-  'samuel.stroehle8@gmail.com',
-  'info@rehomebv.com'
-];
+import { ADMIN_EMAILS } from "../constants/adminEmails";
 
 export default function Navbar() {
     const { t } = useTranslation();
