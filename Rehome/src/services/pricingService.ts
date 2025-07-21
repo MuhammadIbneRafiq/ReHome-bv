@@ -225,7 +225,7 @@ class PricingService {
         const distanceFromCenter = await this.calculateDistanceFromCityCenter(input.pickupLocation, city);
         
         let finalCharge = baseCharge;
-        let chargeType = `${city} flexible date (50% off)`;
+        let chargeType = `${city} Flexible date with discount according to ReHome delivery plans`;
         
         // For long distance moves, don't apply the city center extra charge
         if (!isLongDistanceMove && distanceFromCenter > 8) {
@@ -246,6 +246,14 @@ class PricingService {
           city,
           distance: Math.round(distanceFromCenter * 10) / 10
         };
+        
+        // Set the breakdown for flexible date scenario
+        breakdown.basePrice = baseResult.charge;
+        breakdown.breakdown.baseCharge.city = baseResult.city;
+        breakdown.breakdown.baseCharge.isCityDay = false; // Flexible dates don't use city day rates
+        breakdown.breakdown.baseCharge.isEarlyBooking = true; // Flexible dates are considered early booking
+        breakdown.breakdown.baseCharge.originalPrice = normalRate;
+        breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
       } else {
         // For fixed dates, check if we have separate pickup and dropoff dates
         if (input.pickupDate && input.dropoffDate) {
@@ -513,7 +521,7 @@ class PricingService {
       // Early booking discount (50% off normal rate)
       const normalRate = cityBaseCharges[city]?.normal || 0;
       baseCharge = Math.round(normalRate * 0.5);
-      chargeType = `${city} early booking (50% off)`;
+      chargeType = `${city} Flexible date with discount according to ReHome delivery plans`;
     } else {
       // Normal pricing
       baseCharge = cityBaseCharges[city]?.normal || 0;
@@ -882,7 +890,7 @@ class PricingService {
         const isEmpty = await this.isEmptyCalendarDay(selectedDate);
         
         if (isEmpty) {
-          // Early booking discount: 50% off normal rate
+          // Early booking discount: with discount according to ReHome delivery plans
           const normalRate = cityBaseCharges[pickupCity]?.normal || 119;
           finalBaseCharge = Math.round(normalRate * 0.5);
         } else if (isCityScheduled) {

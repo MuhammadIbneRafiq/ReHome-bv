@@ -370,12 +370,21 @@ const HouseMovingPage = () => {
                 setDistanceKm(calculatedDistance);
             }
 
+            // For "Let ReHome choose" option, provide a 3-week window starting tomorrow
+            let selectedDateForPricing = selectedDateRange.start;
+            if (dateOption === 'rehome') {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                selectedDateForPricing = tomorrow.toISOString().split('T')[0];
+                console.log('🗓️ [REHOME DEBUG] Using tomorrow as selectedDate for pricing:', selectedDateForPricing);
+            }
+
             const input: PricingInput = {
                 serviceType: 'house-moving',
                 pickupLocation: firstLocation,
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
-                selectedDate: selectedDateRange.start,
+                selectedDate: selectedDateForPricing,
                 isDateFlexible: isDateFlexible,
                 itemQuantities: itemQuantities,
                 floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
@@ -406,6 +415,17 @@ const HouseMovingPage = () => {
     // Debounced price calculation to avoid excessive API calls while typing
     useEffect(() => {
         const debounceTimer = setTimeout(() => {
+            console.log('🔍 [DEBOUNCE DEBUG] Effect triggered with:', {
+                firstLocation,
+                secondLocation,
+                'selectedDateRange.start': selectedDateRange.start,
+                'selectedDateRange.end': selectedDateRange.end,
+                isDateFlexible,
+                dateOption,
+                'firstLocation.length': firstLocation.trim().length,
+                'secondLocation.length': secondLocation.trim().length
+            });
+            
             // Only calculate price if we have both complete locations
             if (firstLocation && secondLocation && 
                 firstLocation.trim().length > 3 && secondLocation.trim().length > 3) {
@@ -419,7 +439,7 @@ const HouseMovingPage = () => {
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDateRange, isDateFlexible, carryingServiceItems]);
+    }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, isDateFlexible, dateOption, carryingServiceItems]);
 
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
@@ -762,7 +782,7 @@ const HouseMovingPage = () => {
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
                     <p className="text-gray-500">
                         {!firstLocation || !secondLocation ? "Enter both pickup and dropoff locations" : 
-                         !isDateFlexible && !selectedDateRange.start ? "Select a date to see base pricing" : 
+                        //  !isDateFlexible && !selectedDateRange.start ? "Select a date to see base pricing" : 
                          "Calculating pricing..."}
                     </p>
                 </div>
@@ -780,8 +800,8 @@ const HouseMovingPage = () => {
                     {pricingBreakdown.breakdown.baseCharge.city && (
                         <div className="text-xs text-gray-500 ml-4">
                             {pricingBreakdown.breakdown.baseCharge.city} - {
-                                isDateFlexible ? "Flexible date (50% off)" :
-                                pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
+                                isDateFlexible ? "Flexible date with discount according to ReHome delivery plans" :
+                                pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking with discount according to ReHome delivery plans" :
                                 pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
                             }
                         </div>

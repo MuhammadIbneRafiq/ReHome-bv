@@ -939,8 +939,8 @@ const ItemMovingPage = () => {
                                 <div className="space-y-1">
                                     <div>
                                         {pricingBreakdown.breakdown.baseCharge.city} - {
-                                            isDateFlexible ? "Flexible dates (50% off)" :
-                                            pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
+                                            isDateFlexible ? "Flexible date with discount according to ReHome delivery plans" :
+                                            pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early bookingwith discount according to ReHome delivery plans" :
                                             pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rates" : "Mixed rates"
                                         }
                                     </div>
@@ -955,8 +955,8 @@ const ItemMovingPage = () => {
                                         `${pickupPlace.city} → ${dropoffPlace.city}` : 
                                         pricingBreakdown.breakdown.baseCharge.city
                                     } - {
-                                        isDateFlexible ? "Flexible date (50% off)" :
-                                        pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking (50% off)" :
+                                        isDateFlexible ? "Flexible date with discount according to ReHome delivery plans" :
+                                        pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking with discount according to ReHome delivery plans" :
                                         pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
                                     }
                                     {dateOption === 'fixed' && pickupDate && dropoffDate && (
