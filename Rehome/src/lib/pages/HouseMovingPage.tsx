@@ -10,6 +10,7 @@ import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import BookingTipsModal from '../../components/ui/BookingTipsModal';
+import { GooglePlaceObject } from '../../utils/locationServices';
 
 // TypeScript declarations for Google Maps API
 declare global {
@@ -44,7 +45,7 @@ function GooglePlacesAutocomplete({
   value: string, 
   onChange: (val: string, place?: any) => void, 
   placeholder?: string,
-  onPlaceSelect?: (place: any) => void 
+  onPlaceSelect?: (place: GooglePlaceObject) => void 
 }) {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -68,7 +69,6 @@ function GooglePlacesAutocomplete({
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Place details response:', data);
         return {
           placeId,
           coordinates: data.location ? {
@@ -128,7 +128,6 @@ function GooglePlacesAutocomplete({
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Places API response:', data);
         
         if (data.suggestions) {
           const placeSuggestions = data.suggestions
@@ -162,9 +161,12 @@ function GooglePlacesAutocomplete({
     if (onPlaceSelect) {
       // Get place details with coordinates
       const placeDetails = await getPlaceDetails(suggestion.placeId);
-      const placeWithDetails = {
-        ...suggestion,
-        ...placeDetails
+      const placeWithDetails: GooglePlaceObject = {
+        placeId: suggestion.placeId,
+        coordinates: placeDetails?.coordinates || undefined,
+        formattedAddress: placeDetails?.formattedAddress || undefined,
+        displayName: placeDetails?.displayName || undefined,
+        text: suggestion.text
       };
       onPlaceSelect(placeWithDetails);
     }
@@ -253,8 +255,8 @@ const HouseMovingPage = () => {
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
     const [showBookingTips, setShowBookingTips] = useState(false);
-    const [pickupPlace, setPickupPlace] = useState<any>(null);
-    const [dropoffPlace, setDropoffPlace] = useState<any>(null);
+    const [pickupPlace, setPickupPlace] = useState<GooglePlaceObject | null>(null);
+    const [dropoffPlace, setDropoffPlace] = useState<GooglePlaceObject | null>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
     const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome'>('fixed');
     // 1. Add state for carryingServiceItems
@@ -337,7 +339,6 @@ const HouseMovingPage = () => {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 selectedDateForPricing = tomorrow.toISOString().split('T')[0];
-                console.log('🗓️ [REHOME DEBUG] Using tomorrow as selectedDate for pricing:', selectedDateForPricing);
             }
 
             const input: PricingInput = {
@@ -357,7 +358,9 @@ const HouseMovingPage = () => {
                 carryingServiceItems, // Add carrying service items
                 isStudent,
                 hasStudentId: !!studentId,
-                isEarlyBooking: false // This would be determined by checking calendar availability
+                isEarlyBooking: false, // This would be determined by checking calendar availability
+                pickupPlace: pickupPlace, // Pass the place object for pickup
+                dropoffPlace: dropoffPlace // Pass the place object for dropoff
             };
 
             // Use async pricing calculation
@@ -376,26 +379,15 @@ const HouseMovingPage = () => {
     // Debounced price calculation to avoid excessive API calls while typing
     useEffect(() => {
         const debounceTimer = setTimeout(() => {
-            console.log('🔍 [DEBOUNCE DEBUG] Effect triggered with:', {
-                firstLocation,
-                secondLocation,
-                'selectedDateRange.start': selectedDateRange.start,
-                'selectedDateRange.end': selectedDateRange.end,
-                isDateFlexible,
-                dateOption,
-                'firstLocation.length': firstLocation.trim().length,
-                'secondLocation.length': secondLocation.trim().length
-            });
-            
+                       
             // Only calculate price if we have both complete locations
             if (firstLocation && secondLocation && 
                 firstLocation.trim().length > 3 && secondLocation.trim().length > 3) {
-                console.log('💰 Calculating price for:', firstLocation, '→', secondLocation);
                 calculatePrice();
             } else {
                 // Clear price if locations are incomplete
                 setPricingBreakdown(null);
-                console.log('⏳ Waiting for complete locations...');
+                
             }
         }, 400); // 400ms debounce - faster pricing updates
 
@@ -906,7 +898,7 @@ const HouseMovingPage = () => {
                                             placeholder="Enter pickup address"
                                             onPlaceSelect={(place) => {
                                                 setPickupPlace(place);
-                                                console.log('🎯 Pickup place selected with coordinates:', place);
+                                               
                                             }}
                                         />
                                         {/* Floor and elevator toggles remain unchanged */}
@@ -950,7 +942,7 @@ const HouseMovingPage = () => {
                                             placeholder="Enter dropoff address"
                                             onPlaceSelect={(place) => {
                                                 setDropoffPlace(place);
-                                                console.log('🎯 Dropoff place selected with coordinates:', place);
+                                               
                                             }}
                                         />
                                         {/* Floor and elevator toggles remain unchanged */}

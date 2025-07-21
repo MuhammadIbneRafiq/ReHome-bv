@@ -2,15 +2,10 @@ import {
   pricingConfig, 
   cityBaseCharges, 
   getItemPoints, 
-  getCityFromPostalCode,
   isCityDay
 } from '../lib/constants';
-import { 
-  findClosestCity, 
-  calculateDistanceFromCityCenter, 
-  calculateDistanceBetweenLocations 
-} from '../utils/distanceCalculations';
 import { calendarService } from './calendarService';
+import { findClosestSupportedCity} from '../utils/locationServices';
 
 export interface PricingBreakdown {
   basePrice: number;
@@ -98,19 +93,7 @@ class PricingService {
    * Calculate comprehensive pricing for house moving or item transport
    */
   async calculatePricing(input: PricingInput): Promise<PricingBreakdown> {
-    console.log('🔍 [PRICING DEBUG] Starting calculatePricing with input:', {
-      serviceType: input.serviceType,
-      pickupLocation: input.pickupLocation,
-      dropoffLocation: input.dropoffLocation,
-      selectedDate: input.selectedDate,
-      pickupDate: input.pickupDate,
-      dropoffDate: input.dropoffDate,
-      isDateFlexible: input.isDateFlexible,
-      pickupPlace: input.pickupPlace?.city,
-      dropoffPlace: input.dropoffPlace?.city,
-      itemQuantities: input.itemQuantities
-    });
-
+  
     const breakdown: PricingBreakdown = {
       basePrice: 0,
       itemValue: 0,
@@ -185,46 +168,23 @@ class PricingService {
    * Calculate base charge breakdown (async)
    */
   private async calculateBaseChargeBreakdown(input: PricingInput, breakdown: PricingBreakdown) {
-    if (!input.pickupLocation) {
-      breakdown.basePrice = 0;
-      breakdown.breakdown.baseCharge.city = null;
-      return;
-    }
-
     try {
       let baseResult;
-      
       // Check if we have a calculated distance for long-distance moves
       const isLongDistanceMove = input.distanceKm && input.distanceKm > 50;
       
       if (input.isDateFlexible) {
         // For flexible dates, apply early booking discount (50% off normal rate)
-        const city = await this.findClosestCity(input.pickupLocation);
+        //TODO W CALENDER
+        const city = await findClosestSupportedCity(input.pickupPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
         if (!city) {
           breakdown.basePrice = 0;
           breakdown.breakdown.baseCharge.city = null;
           return;
         }
-        
-        let normalRate = cityBaseCharges[city]?.normal || 0;
-        
-        // For long distance moves, adjust base rate based on distance
-        if (isLongDistanceMove && input.distanceKm) {
-          // Increase base rate for longer distances to account for fuel and time
-          const distanceMultiplier = Math.min(1.5, 1 + (input.distanceKm - 50) / 100); // Max 50% increase
-          normalRate = Math.round(normalRate * distanceMultiplier);
-          console.log('🔍 [PRICING DEBUG] Long distance adjustment:', {
-            originalRate: cityBaseCharges[city]?.normal,
-            distanceKm: input.distanceKm,
-            multiplier: distanceMultiplier,
-            adjustedRate: normalRate
-          });
-        }
-        
-        const baseCharge = Math.round(normalRate * 0.5);
-        const distanceFromCenter = await this.calculateDistanceFromCityCenter(input.pickupLocation, city);
-        
-        let finalCharge = baseCharge;
+                      
+        const distanceFromCenter = input.distanceKm || 0;
+        let finalCharge = cityBaseCharges[city]?.normal || 0;;
         let chargeType = `${city} Flexible date with discount according to ReHome delivery plans`;
         
         // For long distance moves, don't apply the city center extra charge
@@ -252,29 +212,19 @@ class PricingService {
         breakdown.breakdown.baseCharge.city = baseResult.city;
         breakdown.breakdown.baseCharge.isCityDay = false; // Flexible dates don't use city day rates
         breakdown.breakdown.baseCharge.isEarlyBooking = true; // Flexible dates are considered early booking
-        breakdown.breakdown.baseCharge.originalPrice = normalRate;
+        breakdown.breakdown.baseCharge.originalPrice = finalCharge;
         breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
       } else {
         // For fixed dates, check if we have separate pickup and dropoff dates
         if (input.pickupDate && input.dropoffDate) {
-          console.log('🔍 [PRICING DEBUG] Processing separate pickup and dropoff dates');
+          
           // Calculate base charge for both pickup and dropoff cities
           const pickupDate = new Date(input.pickupDate);
           const dropoffDate = new Date(input.dropoffDate);
           
-          console.log('🔍 [PRICING DEBUG] Dates:', {
-            pickupDate: pickupDate.toISOString(),
-            dropoffDate: dropoffDate.toISOString()
-          });
-          
-          const pickupCity = await this.findClosestCity(input.pickupLocation, input.pickupPlace);
-          const dropoffCity = await this.findClosestCity(input.dropoffLocation, input.dropoffPlace);
-          
-          console.log('🔍 [PRICING DEBUG] Cities detected:', {
-            pickupCity,
-            dropoffCity
-          });
-          
+          const pickupCity = await findClosestSupportedCity(input.pickupPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
+          const dropoffCity = await findClosestSupportedCity(input.dropoffPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
+
           if (!pickupCity || !dropoffCity) {
             breakdown.basePrice = 0;
             breakdown.breakdown.baseCharge.city = null;
@@ -282,21 +232,8 @@ class PricingService {
           }
           
           // Calculate base charges for both cities
-          const pickupBaseResult = await this.calculateBaseCharge(input.pickupLocation, pickupDate, input.pickupPlace);
-          const dropoffBaseResult = await this.calculateBaseCharge(input.dropoffLocation, dropoffDate, input.dropoffPlace);
-          
-          console.log('🔍 [PRICING DEBUG] Base charge results:', {
-            pickup: {
-              city: pickupBaseResult.city,
-              charge: pickupBaseResult.charge,
-              type: pickupBaseResult.type
-            },
-            dropoff: {
-              city: dropoffBaseResult.city,
-              charge: dropoffBaseResult.charge,
-              type: dropoffBaseResult.type
-            }
-          });
+          const pickupBaseResult = await this.calculateBaseCharge(input.distanceKm || 0, input.pickupLocation, pickupDate, input.pickupPlace);
+          const dropoffBaseResult = await this.calculateBaseCharge(input.distanceKm || 0, input.dropoffLocation, dropoffDate, input.dropoffPlace);
           
           // Combine the charges based on whether it's the same date or different dates
           let totalCharge: number;
@@ -305,28 +242,11 @@ class PricingService {
           if (isSameDate) {
             // Same date: use the higher of the two base charges (one trip covering both cities)
             totalCharge = Math.max(pickupBaseResult.charge, dropoffBaseResult.charge);
-            console.log('🔍 [PRICING DEBUG] Same date pricing:', {
-              date: pickupDate.toDateString(),
-              pickupCity: pickupCity,
-              dropoffCity: dropoffCity,
-              pickupCharge: pickupBaseResult.charge,
-              dropoffCharge: dropoffBaseResult.charge,
-              totalCharge: totalCharge,
-              method: 'using higher rate (same date)'
-            });
+            
           } else {
             // Different dates: add the base charges from both cities (two separate trips)
             totalCharge = pickupBaseResult.charge + dropoffBaseResult.charge;
-            console.log('🔍 [PRICING DEBUG] Different dates pricing:', {
-              pickupDate: pickupDate.toDateString(),
-              dropoffDate: dropoffDate.toDateString(),
-              pickupCity: pickupCity,
-              dropoffCity: dropoffCity,
-              pickupCharge: pickupBaseResult.charge,
-              dropoffCharge: dropoffBaseResult.charge,
-              totalCharge: totalCharge,
-              method: 'adding both charges (different dates)'
-            });
+            
           }
           
           // Determine the charge type based on same date vs different dates
@@ -335,16 +255,7 @@ class PricingService {
             // Same date: using higher rate between the two cities
             const isPickupCityDay = await this.isCityDay(pickupCity, pickupDate);
             const isDropoffCityDay = await this.isCityDay(dropoffCity, dropoffDate);
-            
-            console.log('🔍 [PRICING DEBUG] Same date city day checks:', {
-              date: pickupDate.toDateString(),
-              pickupCity,
-              dropoffCity,
-              isPickupCityDay,
-              isDropoffCityDay
-            });
-            
-            // For same date, describe which city/rate we're using (the higher one)
+                                  // For same date, describe which city/rate we're using (the higher one)
             const isUsingPickup = pickupBaseResult.charge >= dropoffBaseResult.charge;
             const primaryCity = isUsingPickup ? pickupCity : dropoffCity;
             const isPrimaryCityDay = isUsingPickup ? isPickupCityDay : isDropoffCityDay;
@@ -369,14 +280,7 @@ class PricingService {
             const isPickupCityDay = await this.isCityDay(pickupCity, pickupDate);
             const isDropoffCityDay = await this.isCityDay(dropoffCity, dropoffDate);
             
-            console.log('🔍 [PRICING DEBUG] Different dates city day checks:', {
-              pickupDate: pickupDate.toDateString(),
-              dropoffDate: dropoffDate.toDateString(),
-              pickupCity,
-              dropoffCity,
-              isPickupCityDay,
-              isDropoffCityDay
-            });
+
             
             if (isPickupCityDay && isDropoffCityDay) {
               chargeType = `${pickupCity}/${dropoffCity} city day rates (different dates)`;
@@ -414,7 +318,7 @@ class PricingService {
           }
           
           const date = new Date(input.selectedDate);
-          baseResult = await this.calculateBaseCharge(input.pickupLocation, date, input.pickupPlace);
+          baseResult = await this.calculateBaseCharge(input.distanceKm || 0, input.pickupLocation, date, input.pickupPlace);
           
           // Set the breakdown for single-date scenario
           breakdown.basePrice = baseResult.charge;
@@ -426,11 +330,7 @@ class PricingService {
         }
       }
       
-      console.log('🔍 [PRICING DEBUG] Final base price set:', {
-        basePrice: breakdown.basePrice,
-        type: baseResult.type,
-        city: baseResult.city
-      });
+      
     } catch (error) {
       console.error('Error calculating base charge breakdown:', error);
       breakdown.basePrice = 0;
@@ -449,11 +349,7 @@ class PricingService {
     }
 
     try {
-      const distanceResult = await this.calculateDistanceCost(
-        input.pickupLocation, 
-        input.dropoffLocation, 
-        input.distanceKm
-      );
+      const distanceResult = await this.calculateDistanceCost(input.distanceKm);
       
       breakdown.distanceCost = distanceResult.cost;
       breakdown.breakdown.distance.distanceKm = distanceResult.distance;
@@ -481,34 +377,23 @@ class PricingService {
   /**
    * Calculate base charge based on location and date
    */
-  async calculateBaseCharge(pickup: string, date?: Date, placeObject?: any): Promise<{ charge: number; type: string; city: string; distance: number }> {
+  async calculateBaseCharge(distanceKm: number, pickup: string, date?: Date, placeObject?: any): Promise<{ charge: number; type: string; city: string; distance: number }> {
     // No pricing without both pickup location and date
     if (!pickup || !date) {
       return { charge: 0, type: 'No estimate available', city: '', distance: 0 };
     }
     // Find closest supported city
-    const city = await this.findClosestCity(pickup, placeObject);
+    const city = await findClosestSupportedCity(placeObject, import.meta.env.VITE_GOOGLE_MAPS_API);
     if (!city) {
       return { charge: 0, type: 'Location not supported', city: '', distance: 0 };
     }
-
-    // Calculate distance from city center
-    const distanceFromCenter = await this.calculateDistanceFromCityCenter(pickup, city);
     
     // Check if it's a city day (scheduled in that city)
     const isScheduledDay = await this.isCityDay(city, date);
     
     // Check if it's an empty day for early booking discount
     const isEmptyDay = await this.isEmptyCalendarDay(date);
-    
-    console.log('🔍 [BASE CHARGE DEBUG] City day status:', {
-      city,
-      date: date.toISOString(),
-      isScheduledDay,
-      isEmptyDay,
-      cityPricing: cityBaseCharges[city]
-    });
-    
+        
     // Determine base charge (without distance adjustments - distance is handled separately)
     let baseCharge: number;
     let chargeType: string;
@@ -527,16 +412,10 @@ class PricingService {
       baseCharge = cityBaseCharges[city]?.normal || 0;
       chargeType = `${city} normal rate`;
     }
-    
-    console.log('🔍 [BASE CHARGE DEBUG] Base charge calculation:', {
-      city,
-      baseCharge,
-      chargeType
-    });
-    
+        
     // Apply city center extra charge if beyond 8km from city center
-    if (distanceFromCenter > 8) {
-      const extraKm = distanceFromCenter - 8;
+    if (distanceKm && distanceKm > 8) {
+      const extraKm = distanceKm - 8;
       const extraCharge = Math.round(extraKm * 3); // €3 per km beyond 8km
       baseCharge += extraCharge;
       chargeType += ` (+€${extraCharge} for ${Math.round(extraKm)}km beyond city center)`;
@@ -546,7 +425,7 @@ class PricingService {
       charge: baseCharge, 
       type: chargeType, 
       city, 
-      distance: Math.round(distanceFromCenter * 10) / 10 // Round to 1 decimal 
+      distance: Math.round(distanceKm * 10) / 10 // Round to 1 decimal 
     };
   }
 
@@ -554,11 +433,7 @@ class PricingService {
     // TEMPORARY: Use constants-based logic directly since calendar service has incorrect data
     // TODO: Fix calendar service data for city days
     const constantsResult = isCityDay(city, date);
-    console.log('🔍 [CONSTANTS DEBUG] Using constants-based city day logic:', {
-      city,
-      date: isNaN(date.getTime()) ? 'Invalid Date' : date.toISOString(),
-      constantsResult
-    });
+    
     return constantsResult;
     
     // Original calendar service logic (commented out temporarily)
@@ -594,66 +469,7 @@ class PricingService {
     }
   }
 
-  /**
-   * Find the closest city from our supported cities list
-   */
-  private async findClosestCity(location: string, placeObject?: any): Promise<string | null> {
-    try {
-      // If we have a Google Places object with city information, use that first
-      if (placeObject && placeObject.city) {
-        const city = placeObject.city;
-        console.log('🔍 [PRICING DEBUG] Using city from Google Places:', city);
-        
-        // Check if this city is in our supported cities
-        if (cityBaseCharges[city]) {
-          return city;
-        }
-        
-        // If not in our list, try to find a close match
-        const supportedCities = Object.keys(cityBaseCharges);
-        const closestMatch = supportedCities.find(supportedCity => 
-          city.toLowerCase().includes(supportedCity.toLowerCase()) ||
-          supportedCity.toLowerCase().includes(city.toLowerCase())
-        );
-        
-        if (closestMatch) {
-          console.log('🔍 [PRICING DEBUG] Found close match:', city, '->', closestMatch);
-          return closestMatch;
-        }
-      }
 
-      // Fallback to postal code extraction
-      const extractedCity = getCityFromPostalCode(location);
-      if (extractedCity && cityBaseCharges[extractedCity]) {
-        return extractedCity;
-      }
-
-      // Use OpenStreetMap to find the closest city
-      const closestCityResult = await findClosestCity(location);
-      if (closestCityResult && cityBaseCharges[closestCityResult.city]) {
-        return closestCityResult.city;
-      }
-
-      // If no match found, return Amsterdam as default
-      return 'Amsterdam';
-    } catch (error) {
-      console.error('Error finding closest city:', error);
-      return 'Amsterdam';
-    }
-  }
-
-  /**
-   * Calculate distance from city center using OpenStreetMap
-   */
-  private async calculateDistanceFromCityCenter(location: string, city: string): Promise<number> {
-    try {
-      return await calculateDistanceFromCityCenter(location, city);
-    } catch (error) {
-      console.error('Error calculating distance from city center:', error);
-      // Fallback to reasonable estimate
-      return 5; // Assume 5km if calculation fails
-    }
-  }
 
   private calculateItemValue(input: PricingInput, breakdown: PricingBreakdown) {
     let totalPoints = 0;
@@ -678,21 +494,10 @@ class PricingService {
   /**
    * Calculate distance cost between pickup and dropoff
    */
-  async calculateDistanceCost(pickup: string, dropoff: string, providedDistance?: number): Promise<{ cost: number; distance: number; type: string }> {
-    if (!pickup || !dropoff) {
-      return { cost: 0, distance: 0, type: 'Enter both locations' };
-    }
-
-    // Use provided distance if available, otherwise calculate it
+  async calculateDistanceCost(providedDistance?: number): Promise<{ cost: number; distance: number; type: string }> {
     let distance: number;
-    if (providedDistance !== undefined && providedDistance > 0) {
-      distance = providedDistance;
-      console.log('🔍 [PRICING DEBUG] Using provided distance:', distance, 'km');
-    } else {
-      distance = await this.calculateDistance(pickup, dropoff);
-      console.log('🔍 [PRICING DEBUG] Calculated distance:', distance, 'km');
-    }
-    
+    distance = providedDistance || 0;
+
     let cost = 0;
     let type = '';
     
@@ -717,19 +522,6 @@ class PricingService {
       distance: Math.round(distance * 10) / 10, // Round to 1 decimal
       type 
     };
-  }
-
-  /**
-   * Calculate distance between pickup and dropoff locations using OpenStreetMap
-   */
-  private async calculateDistance(pickup: string, dropoff: string): Promise<number> {
-    try {
-      if (!pickup || !dropoff) return 0;
-      return await calculateDistanceBetweenLocations(pickup, dropoff);
-    } catch (error) {
-      console.error('Error calculating distance between locations:', error);
-      return 0;
-    }
   }
 
   private calculateCarryingCost(input: PricingInput, breakdown: PricingBreakdown) {
@@ -873,8 +665,8 @@ class PricingService {
    * Handles split base charges for cross-city transport
    */
   async calculateItemTransportPricing(input: PricingInput): Promise<PricingBreakdown> {
-    const pickupCity = await this.findClosestCity(input.pickupLocation);
-    const dropoffCity = await this.findClosestCity(input.dropoffLocation);
+    const pickupCity = await findClosestSupportedCity(input.pickupPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
+    const dropoffCity = await findClosestSupportedCity(input.dropoffPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
     const selectedDate = new Date(input.selectedDate);
     
     // First calculate the regular pricing breakdown
