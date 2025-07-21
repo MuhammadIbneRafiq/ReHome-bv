@@ -24,6 +24,7 @@ export interface PricingBreakdown {
       isEarlyBooking: boolean;
       originalPrice: number;
       finalPrice: number;
+      type?: string;
     };
     items: {
       totalPoints: number;
@@ -172,11 +173,13 @@ class PricingService {
       let baseResult;
       // Check if we have a calculated distance for long-distance moves
       const isLongDistanceMove = input.distanceKm && input.distanceKm > 50;
+      console.log('isLongDistanceMove is', isLongDistanceMove);
+      console.log('input.distanceKm is', input.distanceKm);
       
       if (input.isDateFlexible) {
         // For flexible dates, apply early booking discount (50% off normal rate)
         //TODO W CALENDER
-        const city = await findClosestSupportedCity(input.pickupPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
+        const { city, distanceDifference } = await findClosestSupportedCity(input.pickupPlace);
         if (!city) {
           breakdown.basePrice = 0;
           breakdown.breakdown.baseCharge.city = null;
@@ -184,12 +187,11 @@ class PricingService {
         }
                       
         const distanceFromCenter = input.distanceKm || 0;
-        let finalCharge = cityBaseCharges[city]?.normal || 0;;
-        let chargeType = `${city} Flexible date with discount according to ReHome delivery plans`;
+        let finalCharge = cityBaseCharges[city]?.cityDay || 0;
+        let chargeType = `${city} Flexible date with city day rate according to ReHome delivery plans`;
         
-        // For long distance moves, don't apply the city center extra charge
-        if (!isLongDistanceMove && distanceFromCenter > 8) {
-          const extraKm = distanceFromCenter - 8;
+        if (isLongDistanceMove && distanceFromCenter > 8) {
+          const extraKm = distanceDifference;
           const extraCharge = Math.round(extraKm * 3); // €3 per km beyond 8km
           finalCharge += extraCharge;
           chargeType += ` (+€${extraCharge} for ${Math.round(extraKm)}km beyond city center)`;
@@ -210,7 +212,7 @@ class PricingService {
         // Set the breakdown for flexible date scenario
         breakdown.basePrice = baseResult.charge;
         breakdown.breakdown.baseCharge.city = baseResult.city;
-        breakdown.breakdown.baseCharge.isCityDay = false; // Flexible dates don't use city day rates
+        breakdown.breakdown.baseCharge.isCityDay = true; // Flexible dates now use city day rates
         breakdown.breakdown.baseCharge.isEarlyBooking = true; // Flexible dates are considered early booking
         breakdown.breakdown.baseCharge.originalPrice = finalCharge;
         breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
@@ -222,8 +224,8 @@ class PricingService {
           const pickupDate = new Date(input.pickupDate);
           const dropoffDate = new Date(input.dropoffDate);
           
-          const pickupCity = await findClosestSupportedCity(input.pickupPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
-          const dropoffCity = await findClosestSupportedCity(input.dropoffPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
+          const { city: pickupCity, distanceDifference: pickupDistanceDifference } = await findClosestSupportedCity(input.pickupPlace);
+          const { city: dropoffCity, distanceDifference: dropoffDistanceDifference } = await findClosestSupportedCity(input.dropoffPlace);
 
           if (!pickupCity || !dropoffCity) {
             breakdown.basePrice = 0;
@@ -232,8 +234,8 @@ class PricingService {
           }
           
           // Calculate base charges for both cities
-          const pickupBaseResult = await this.calculateBaseCharge(input.distanceKm || 0, input.pickupLocation, pickupDate, input.pickupPlace);
-          const dropoffBaseResult = await this.calculateBaseCharge(input.distanceKm || 0, input.dropoffLocation, dropoffDate, input.dropoffPlace);
+          const pickupBaseResult = await this.calculateBaseCharge(pickupDistanceDifference || 0, input.pickupLocation, pickupDate, input.pickupPlace);
+          const dropoffBaseResult = await this.calculateBaseCharge(dropoffDistanceDifference || 0, input.dropoffLocation, dropoffDate, input.dropoffPlace);
           
           // Combine the charges based on whether it's the same date or different dates
           let totalCharge: number;
@@ -309,6 +311,7 @@ class PricingService {
           breakdown.breakdown.baseCharge.isEarlyBooking = input.isDateFlexible;
           breakdown.breakdown.baseCharge.originalPrice = totalCharge;
           breakdown.breakdown.baseCharge.finalPrice = totalCharge;
+          breakdown.breakdown.baseCharge.type = chargeType;
         } else {
           // Fallback to single date calculation
           if (!input.selectedDate) {
@@ -327,6 +330,7 @@ class PricingService {
           breakdown.breakdown.baseCharge.isEarlyBooking = baseResult.type.includes('early booking') || input.isDateFlexible;
           breakdown.breakdown.baseCharge.originalPrice = baseResult.charge;
           breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
+          breakdown.breakdown.baseCharge.type = baseResult.type;
         }
       }
       
@@ -383,11 +387,12 @@ class PricingService {
       return { charge: 0, type: 'No estimate available', city: '', distance: 0 };
     }
     // Find closest supported city
-    const city = await findClosestSupportedCity(placeObject, import.meta.env.VITE_GOOGLE_MAPS_API);
+    const { city, distanceDifference } = await findClosestSupportedCity(placeObject);
     if (!city) {
       return { charge: 0, type: 'Location not supported', city: '', distance: 0 };
     }
-    
+    console.log('distanceDifference', distanceDifference);
+
     // Check if it's a city day (scheduled in that city)
     const isScheduledDay = await this.isCityDay(city, date);
     
@@ -414,8 +419,8 @@ class PricingService {
     }
         
     // Apply city center extra charge if beyond 8km from city center
-    if (distanceKm && distanceKm > 8) {
-      const extraKm = distanceKm - 8;
+    if (distanceKm) {
+      const extraKm = distanceDifference;
       const extraCharge = Math.round(extraKm * 3); // €3 per km beyond 8km
       baseCharge += extraCharge;
       chargeType += ` (+€${extraCharge} for ${Math.round(extraKm)}km beyond city center)`;
@@ -665,10 +670,12 @@ class PricingService {
    * Handles split base charges for cross-city transport
    */
   async calculateItemTransportPricing(input: PricingInput): Promise<PricingBreakdown> {
-    const pickupCity = await findClosestSupportedCity(input.pickupPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
-    const dropoffCity = await findClosestSupportedCity(input.dropoffPlace, import.meta.env.VITE_GOOGLE_MAPS_API);
+    const { city: pickupCity, distanceDifference: pickupDistanceDifference } = await findClosestSupportedCity(input.pickupPlace);
+    const { city: dropoffCity, distanceDifference: dropoffDistanceDifference } = await findClosestSupportedCity(input.dropoffPlace);
     const selectedDate = new Date(input.selectedDate);
     
+    console.log('pickupDistanceDifference', pickupDistanceDifference);
+    console.log('dropoffDistanceDifference', dropoffDistanceDifference);
     // First calculate the regular pricing breakdown
     const breakdown = await this.calculatePricing(input);
     

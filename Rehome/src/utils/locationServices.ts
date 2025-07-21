@@ -62,174 +62,47 @@ function calculateDistanceKm(lat1: number, lng1: number, lat2: number, lng2: num
 }
 
 /**
- * Extract city information from Google Places API response using additional API call
- * @param placeId The Google Places place ID
- * @param apiKey Google Maps API key
- * @returns Promise<string | null> The extracted city name or null
- */
-async function extractCityFromPlaceDetails(placeId: string, apiKey: string): Promise<string | null> {
-  try {
-    const response = await fetch(
-      `https://places.googleapis.com/v1/places/${placeId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'addressComponents'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      console.warn('Failed to fetch place details:', response.status);
-      return null;
-    }
-
-    const data = await response.json();
-    
-    // Extract city from address components
-    if (data.addressComponents) {
-      // Look for locality (city) or administrative_area_level_2 (broader area)
-      for (const component of data.addressComponents) {
-        if (component.types.includes('locality')) {
-          return component.longText || component.shortText;
-        }
-      }
-      
-      // Fallback to administrative_area_level_2
-      for (const component of data.addressComponents) {
-        if (component.types.includes('administrative_area_level_2')) {
-          return component.longText || component.shortText;
-        }
-      }
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Error extracting city from place details:', error);
-    return null;
-  }
-}
-
-/**
- * Extract city name from formatted address using pattern matching
- * @param formattedAddress The formatted address string
- * @returns string | null The extracted city name or null
- */
-function extractCityFromFormattedAddress(formattedAddress: string): string | null {
-  if (!formattedAddress) return null;
-
-  // Split by comma and try to find a city name
-  const parts = formattedAddress.split(',').map(part => part.trim());
-  
-  // Check each part against our supported cities
-  for (const part of parts) {
-    if (cityBaseCharges[part]) {
-      return part;
-    }
-    
-    // Handle common variations
-    const variations: { [key: string]: string } = {
-      'Den Haag': 'The Hague',
-      "'s-Hertogenbosch": 's-Hertogenbosch',
-      'Hertogenbosch': 's-Hertogenbosch',
-    };
-    
-    if (variations[part] && cityBaseCharges[variations[part]]) {
-      return variations[part];
-    }
-  }
-
-  return null;
-}
-
-/**
- * Find the nearest supported city based on coordinates
- * @param targetLat Target latitude
- * @param targetLng Target longitude
- * @returns string | null The nearest supported city name or null
- */
-function findNearestSupportedCity(targetLat: number, targetLng: number): string | null {
-  let nearestCity: string | null = null;
-  let shortestDistance = Infinity;
-
-  for (const [cityName, cityCoords] of Object.entries(SUPPORTED_CITIES_COORDS)) {
-    const distance = calculateDistanceKm(targetLat, targetLng, cityCoords.lat, cityCoords.lng);
-    
-    if (distance < shortestDistance) {
-      shortestDistance = distance;
-      nearestCity = cityName;
-    }
-  }
-
-  return nearestCity;
-}
-
-/**
  * Main function to find the closest supported city from a Google Places object
  * @param placeObject The place object from Google Places API
- * @param apiKey Google Maps API key (optional, for enhanced city extraction)
- * @returns Promise<string | null> The closest supported city name or Amsterdam as fallback
+ * @returns Promise<{ city: string | null, distanceDifference: number }> The closest supported city name and the difference to the second closest
  */
 export async function findClosestSupportedCity(
   placeObject?: GooglePlaceObject, 
-  apiKey?: string
-): Promise<string | null> {
+): Promise<{ city: string | null, distanceDifference: number }> {
   try {
-
     if (!placeObject) {
-      return 'Amsterdam';
+      return { city: 'Amsterdam', distanceDifference: 0 };
     }
 
-    // Method 1: Try to extract city from formatted address first (fastest)
-    if (placeObject.formattedAddress) {
-      const cityFromAddress = extractCityFromFormattedAddress(placeObject.formattedAddress);
-      if (cityFromAddress) {
-        return cityFromAddress;
-      }
-    }
-
-    // Method 2: Try to extract city from display name
-    if (placeObject.displayName) {
-      const cityFromDisplayName = extractCityFromFormattedAddress(placeObject.displayName);
-      if (cityFromDisplayName) {
-        return cityFromDisplayName;
-      }
-    }
-
-    // Method 3: Try to extract city from text field (for autocomplete results)
-    if (placeObject.text) {
-      const cityFromText = extractCityFromFormattedAddress(placeObject.text);
-      if (cityFromText) {
-        return cityFromText;
-      }
-    }
-
-    // Method 4: Use Google Places API to get detailed address components (if API key provided)
-    if (apiKey && placeObject.placeId) {
-      const cityFromAPI = await extractCityFromPlaceDetails(placeObject.placeId, apiKey);
-      if (cityFromAPI && cityBaseCharges[cityFromAPI]) {
-        return cityFromAPI;
-      }
-    }
-
-    // Method 5: Find nearest city using coordinates (fallback)
     if (placeObject.coordinates?.lat && placeObject.coordinates?.lng) {
-      const nearestCity = findNearestSupportedCity(
-        placeObject.coordinates.lat, 
-        placeObject.coordinates.lng
-      );
-      if (nearestCity) {
-        return nearestCity;
+      let targetLat = placeObject.coordinates.lat;
+      let targetLng = placeObject.coordinates.lng;
+
+      let nearestCity: string | null = null;
+      let shortestDistance = Infinity;
+      let secondShortestDistance = Infinity;
+
+      for (const [cityName, cityCoords] of Object.entries(SUPPORTED_CITIES_COORDS)) {
+        const distance = calculateDistanceKm(targetLat, targetLng, cityCoords.lat, cityCoords.lng);
+        if (distance < shortestDistance) {
+          secondShortestDistance = shortestDistance;
+          shortestDistance = distance;
+          nearestCity = cityName;
+        } else if (distance < secondShortestDistance) {
+          secondShortestDistance = distance;
+        }
+      }
+      // If only one city exists, difference is 0
+      const distanceDifference = isFinite(secondShortestDistance) ? Math.abs(shortestDistance - secondShortestDistance) : 0;
+      if (nearestCity) { 
+        return { city: nearestCity, distanceDifference };
       }
     }
 
-    return 'Amsterdam';
+    return { city: 'Amsterdam', distanceDifference: 0 };
 
   } catch (error) {
-    console.error('🔍 [CITY FINDER] Error finding closest city:', error);
-    return 'Amsterdam';
+    return { city: 'Amsterdam', distanceDifference: 0 };
   }
 }
 
