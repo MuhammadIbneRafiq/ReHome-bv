@@ -163,12 +163,6 @@ function findNearestSupportedCity(targetLat: number, targetLng: number): string 
     }
   }
 
-  console.log('🗺️ [NEAREST CITY] Found nearest city:', {
-    nearestCity,
-    distance: shortestDistance.toFixed(2) + 'km',
-    targetCoords: { lat: targetLat, lng: targetLng }
-  });
-
   return nearestCity;
 }
 
@@ -183,10 +177,8 @@ export async function findClosestSupportedCity(
   apiKey?: string
 ): Promise<string | null> {
   try {
-    console.log('🔍 [CITY FINDER] Processing place object:', placeObject);
 
     if (!placeObject) {
-      console.log('🔍 [CITY FINDER] No place object provided, defaulting to Amsterdam');
       return 'Amsterdam';
     }
 
@@ -194,7 +186,6 @@ export async function findClosestSupportedCity(
     if (placeObject.formattedAddress) {
       const cityFromAddress = extractCityFromFormattedAddress(placeObject.formattedAddress);
       if (cityFromAddress) {
-        console.log('🔍 [CITY FINDER] Found city from formatted address:', cityFromAddress);
         return cityFromAddress;
       }
     }
@@ -203,7 +194,6 @@ export async function findClosestSupportedCity(
     if (placeObject.displayName) {
       const cityFromDisplayName = extractCityFromFormattedAddress(placeObject.displayName);
       if (cityFromDisplayName) {
-        console.log('🔍 [CITY FINDER] Found city from display name:', cityFromDisplayName);
         return cityFromDisplayName;
       }
     }
@@ -212,36 +202,29 @@ export async function findClosestSupportedCity(
     if (placeObject.text) {
       const cityFromText = extractCityFromFormattedAddress(placeObject.text);
       if (cityFromText) {
-        console.log('🔍 [CITY FINDER] Found city from text:', cityFromText);
         return cityFromText;
       }
     }
 
     // Method 4: Use Google Places API to get detailed address components (if API key provided)
     if (apiKey && placeObject.placeId) {
-      console.log('🔍 [CITY FINDER] Trying to extract city from place details API');
       const cityFromAPI = await extractCityFromPlaceDetails(placeObject.placeId, apiKey);
       if (cityFromAPI && cityBaseCharges[cityFromAPI]) {
-        console.log('🔍 [CITY FINDER] Found city from Places API:', cityFromAPI);
         return cityFromAPI;
       }
     }
 
     // Method 5: Find nearest city using coordinates (fallback)
     if (placeObject.coordinates?.lat && placeObject.coordinates?.lng) {
-      console.log('🔍 [CITY FINDER] Using coordinates to find nearest city');
       const nearestCity = findNearestSupportedCity(
         placeObject.coordinates.lat, 
         placeObject.coordinates.lng
       );
       if (nearestCity) {
-        console.log('🔍 [CITY FINDER] Found nearest city by coordinates:', nearestCity);
         return nearestCity;
       }
     }
 
-    // Final fallback
-    console.log('🔍 [CITY FINDER] No city found, defaulting to Amsterdam');
     return 'Amsterdam';
 
   } catch (error) {
