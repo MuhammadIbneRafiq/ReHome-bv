@@ -92,3 +92,63 @@ export interface TransportRequest {
     cities: string[];
     discountPercentage: number;
   }
+
+  // Item donation interface
+  export interface ItemDonation {
+    id: string;
+    donation_items: any[];
+    custom_item?: string;
+    contact_info: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+    };
+    pickup_location?: string;
+    donation_location?: string;
+    pickup_location_coords?: any;
+    donation_location_coords?: any;
+    preferred_pickup_date?: string;
+    is_date_flexible: boolean;
+    donation_type: 'charity' | 'recycling' | 'other';
+    special_instructions?: string;
+    organization_name?: string;
+    organization_contact?: any;
+    total_estimated_value?: number;
+    item_condition?: string;
+    photo_urls: string[];
+    calculated_distance_km?: number;
+    calculated_duration_seconds?: number;
+    calculated_duration_text?: string;
+    distance_provider?: string;
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+    created_at: string;
+    updated_at: string;
+  }
+
+  // Special request interface
+  export interface SpecialRequest {
+    id: string;
+    selected_services: string[];
+    message?: string;
+    contact_info: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone: string;
+    };
+    pickup_location?: string;
+    dropoff_location?: string;
+    pickup_location_coords?: any;
+    dropoff_location_coords?: any;
+    request_type?: string;
+    preferred_date?: string;
+    is_date_flexible: boolean;
+    calculated_distance_km?: number;
+    calculated_duration_seconds?: number;
+    calculated_duration_text?: string;
+    distance_provider?: string;
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+    created_at: string;
+    updated_at: string;
+  }

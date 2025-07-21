@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes } from 'react-icons/fa';
+import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe } from 'react-icons/fa';
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameMonth } from 'date-fns';
 import { toast } from 'react-toastify';
 import { supabase } from "../../lib/supabaseClient";
 import useUserSessionStore from "../../services/state/useUserSessionStore";
 import { cityBaseCharges } from "../../lib/constants";
 import pricingConfigData from "../../lib/pricingConfig.json";
-import { CityPrice, MarketplaceItem, CalendarDay, TimeBlock, TransportRequest } from '../../types/admin';
+import { CityPrice, MarketplaceItem, CalendarDay, TimeBlock, TransportRequest, ItemDonation, SpecialRequest } from '../../types/admin';
 
 const AdminDashboard = () => {
   const { user, role } = useUserSessionStore();
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items'>('transport');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'donations' | 'special-requests'>('transport');
 
   const ADMIN_EMAILS = [
     'muhammadibnerafiq123@gmail.com',
@@ -149,6 +149,16 @@ const AdminDashboard = () => {
   // Transportation request detail state
   const [selectedTransportRequest, setSelectedTransportRequest] = useState<TransportRequest | null>(null);
   const [showRequestDetails, setShowRequestDetails] = useState(false);
+
+  // Item donations state
+  const [itemDonations, setItemDonations] = useState<ItemDonation[]>([]);
+  const [selectedDonation, setSelectedDonation] = useState<ItemDonation | null>(null);
+  const [showDonationDetails, setShowDonationDetails] = useState(false);
+
+  // Special requests state
+  const [specialRequests, setSpecialRequests] = useState<SpecialRequest[]>([]);
+  const [selectedSpecialRequest, setSelectedSpecialRequest] = useState<SpecialRequest | null>(null);
+  const [showSpecialRequestDetails, setShowSpecialRequestDetails] = useState(false);
 
   // Get all cities from constants
   const allCities = Object.keys(cityBaseCharges);
@@ -332,7 +342,9 @@ const AdminDashboard = () => {
         fetchFurnitureItemsData(),
         loadScheduleData(),
         fetchAdminListings(),
-        fetchUserListings()
+        fetchUserListings(),
+        fetchItemDonations(),
+        fetchSpecialRequests()
       ]);
     } catch (err) {
       setError('Failed to load data. Please try again.');
@@ -1103,6 +1115,94 @@ const AdminDashboard = () => {
     setShowRequestDetails(true);
   };
 
+  // Fetch item donations
+  const fetchItemDonations = async () => {
+    try {
+      const response = await fetch('/api/item-donation-requests');
+      if (response.ok) {
+        const data = await response.json();
+        setItemDonations(data);
+      } else {
+        console.error('Failed to fetch item donations');
+      }
+    } catch (error) {
+      console.error('Error fetching item donations:', error);
+    }
+  };
+
+  // Fetch special requests
+  const fetchSpecialRequests = async () => {
+    try {
+      const response = await fetch('/api/special-requests');
+      if (response.ok) {
+        const data = await response.json();
+        setSpecialRequests(data);
+      } else {
+        console.error('Failed to fetch special requests');
+      }
+    } catch (error) {
+      console.error('Error fetching special requests:', error);
+    }
+  };
+
+  // Handle donation status update
+  const handleUpdateDonationStatus = async (donationId: string, status: string) => {
+    try {
+      const response = await fetch(`/api/item-donation-requests/${donationId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (response.ok) {
+        toast.success('Donation status updated successfully');
+        fetchItemDonations();
+      } else {
+        toast.error('Failed to update donation status');
+      }
+    } catch (error) {
+      console.error('Error updating donation status:', error);
+      toast.error('Failed to update donation status');
+    }
+  };
+
+  // Handle special request status update
+  const handleUpdateSpecialRequestStatus = async (requestId: string, status: string) => {
+    try {
+      const response = await fetch(`/api/special-requests/${requestId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (response.ok) {
+        toast.success('Special request status updated successfully');
+        fetchSpecialRequests();
+      } else {
+        toast.error('Failed to update special request status');
+      }
+    } catch (error) {
+      console.error('Error updating special request status:', error);
+      toast.error('Failed to update special request status');
+    }
+  };
+
+  // Handle view donation details
+  const handleViewDonationDetails = (donation: ItemDonation) => {
+    setSelectedDonation(donation);
+    setShowDonationDetails(true);
+  };
+
+  // Handle view special request details
+  const handleViewSpecialRequestDetails = (request: SpecialRequest) => {
+    setSelectedSpecialRequest(request);
+    setShowSpecialRequestDetails(true);
+  };
+
   // Handle bulk city assignment
   const handleBulkAssignCities = async () => {
     if (!bulkAssignStartDate || !bulkAssignEndDate || bulkAssignCities.length === 0) {
@@ -1233,6 +1333,28 @@ const AdminDashboard = () => {
             >
               <FaBox className="mr-2" />
               Items Management
+            </button>
+            <button
+              onClick={() => setActiveTab('donations')}
+              className={`flex items-center px-4 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'donations'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FaHandshake className="mr-2" />
+              Item Donations
+            </button>
+            <button
+              onClick={() => setActiveTab('special-requests')}
+              className={`flex items-center px-4 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'special-requests'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FaGlobe className="mr-2" />
+              Special Requests
             </button>
 
           </div>
@@ -3236,6 +3358,415 @@ const AdminDashboard = () => {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'donations' && (
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Item Donations Management</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CUSTOMER</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">ITEMS</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">PICKUP LOCATION</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">DONATION TYPE</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CREATED</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itemDonations.map((donation) => (
+                        <tr key={donation.id} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div>
+                              <div className="font-medium">{donation.contact_info.firstName} {donation.contact_info.lastName}</div>
+                              <div className="text-sm text-gray-500">{donation.contact_info.email}</div>
+                              <div className="text-sm text-gray-500">{donation.contact_info.phone}</div>
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div className="text-sm">
+                              {donation.donation_items?.length > 0 ? (
+                                <div>
+                                  {donation.donation_items.slice(0, 2).map((item: any, index: number) => (
+                                    <div key={index}>{item.name} (x{item.quantity})</div>
+                                  ))}
+                                  {donation.donation_items.length > 2 && (
+                                    <div className="text-gray-500">+{donation.donation_items.length - 2} more</div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div>Custom item: {donation.custom_item}</div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div className="text-sm">
+                              {donation.pickup_location || 'Not specified'}
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              donation.donation_type === 'charity' ? 'bg-green-100 text-green-800' :
+                              donation.donation_type === 'recycling' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {donation.donation_type}
+                            </span>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <select
+                              value={donation.status}
+                              onChange={(e) => handleUpdateDonationStatus(donation.id, e.target.value)}
+                              className={`px-2 py-1 rounded text-xs font-medium border ${
+                                donation.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                donation.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                donation.status === 'in_progress' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                                donation.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' :
+                                'bg-red-100 text-red-800 border-red-300'
+                              }`}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {format(new Date(donation.created_at), 'yyyy-MM-dd HH:mm')}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <button
+                              onClick={() => handleViewDonationDetails(donation)}
+                              className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                            >
+                              <FaEdit className="mr-1" />
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'special-requests' && (
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Special Requests Management</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CUSTOMER</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">SERVICES</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">PICKUP LOCATION</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">DROPOFF LOCATION</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CREATED</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {specialRequests.map((request) => (
+                        <tr key={request.id} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div>
+                              <div className="font-medium">{request.contact_info.firstName} {request.contact_info.lastName}</div>
+                              <div className="text-sm text-gray-500">{request.contact_info.email}</div>
+                              <div className="text-sm text-gray-500">{request.contact_info.phone}</div>
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div className="text-sm">
+                              {request.selected_services?.map((service: string, index: number) => (
+                                <div key={index} className="mb-1">
+                                  <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
+                                    {service}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div className="text-sm">
+                              {request.pickup_location || 'Not specified'}
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div className="text-sm">
+                              {request.dropoff_location || 'Not specified'}
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <select
+                              value={request.status}
+                              onChange={(e) => handleUpdateSpecialRequestStatus(request.id, e.target.value)}
+                              className={`px-2 py-1 rounded text-xs font-medium border ${
+                                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
+                                request.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-300' :
+                                request.status === 'in_progress' ? 'bg-orange-100 text-orange-800 border-orange-300' :
+                                request.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' :
+                                'bg-red-100 text-red-800 border-red-300'
+                              }`}
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="completed">Completed</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            {format(new Date(request.created_at), 'yyyy-MM-dd HH:mm')}
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <button
+                              onClick={() => handleViewSpecialRequestDetails(request)}
+                              className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                            >
+                              <FaEdit className="mr-1" />
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Item Donation Details Modal */}
+            {showDonationDetails && selectedDonation && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-2xl font-bold text-gray-800">Item Donation Details</h3>
+                      <button
+                        onClick={() => setShowDonationDetails(false)}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <FaTimes size={24} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Customer Information */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Customer Information</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Name:</span> {selectedDonation.contact_info.firstName} {selectedDonation.contact_info.lastName}</p>
+                          <p><span className="font-medium">Email:</span> {selectedDonation.contact_info.email}</p>
+                          <p><span className="font-medium">Phone:</span> {selectedDonation.contact_info.phone}</p>
+                        </div>
+                      </div>
+
+                      {/* Donation Information */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Donation Information</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Type:</span> 
+                            <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+                              selectedDonation.donation_type === 'charity' ? 'bg-green-100 text-green-800' :
+                              selectedDonation.donation_type === 'recycling' ? 'bg-blue-100 text-blue-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {selectedDonation.donation_type}
+                            </span>
+                          </p>
+                          <p><span className="font-medium">Status:</span> 
+                            <span className="ml-2 px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                              {selectedDonation.status}
+                            </span>
+                          </p>
+                          <p><span className="font-medium">Condition:</span> {selectedDonation.item_condition || 'N/A'}</p>
+                          <p><span className="font-medium">Estimated Value:</span> €{selectedDonation.total_estimated_value || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      {/* Location Information */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Location Details</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Pickup Location:</span> {selectedDonation.pickup_location || 'N/A'}</p>
+                          <p><span className="font-medium">Donation Location:</span> {selectedDonation.donation_location || 'N/A'}</p>
+                          <p><span className="font-medium">Distance:</span> {selectedDonation.calculated_distance_km || 'N/A'} km</p>
+                          <p><span className="font-medium">Duration:</span> {selectedDonation.calculated_duration_text || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      {/* Organization Information */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Organization Details</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Organization:</span> {selectedDonation.organization_name || 'N/A'}</p>
+                          <p><span className="font-medium">Contact:</span> {selectedDonation.organization_contact ? JSON.stringify(selectedDonation.organization_contact) : 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      {/* Items List */}
+                      <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Donated Items</h4>
+                        {selectedDonation.donation_items?.length > 0 ? (
+                          <div className="overflow-x-auto">
+                            <table className="w-full border-collapse border border-gray-300">
+                              <thead>
+                                <tr className="bg-gray-100">
+                                  <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Item</th>
+                                  <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Quantity</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {selectedDonation.donation_items.map((item: any, index: number) => (
+                                  <tr key={index} className="hover:bg-gray-50">
+                                    <td className="border border-gray-300 px-3 py-2 text-sm">{item.name}</td>
+                                    <td className="border border-gray-300 px-3 py-2 text-sm">{item.quantity}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className="text-gray-700">Custom item: {selectedDonation.custom_item}</p>
+                        )}
+                      </div>
+
+                      {/* Special Instructions */}
+                      {selectedDonation.special_instructions && (
+                        <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                          <h4 className="text-lg font-semibold text-gray-800 mb-3">Special Instructions</h4>
+                          <p className="text-gray-700">{selectedDonation.special_instructions}</p>
+                        </div>
+                      )}
+
+                      {/* Timeline */}
+                      <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Timeline</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Created:</span> {format(new Date(selectedDonation.created_at), 'PPpp')}</p>
+                          <p><span className="font-medium">Updated:</span> {format(new Date(selectedDonation.updated_at), 'PPpp')}</p>
+                          <p><span className="font-medium">Preferred Pickup Date:</span> {selectedDonation.preferred_pickup_date ? format(new Date(selectedDonation.preferred_pickup_date), 'PPP') : 'N/A'}</p>
+                          <p><span className="font-medium">Date Flexible:</span> {selectedDonation.is_date_flexible ? 'Yes' : 'No'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="mt-6 flex justify-end space-x-3">
+                      <button
+                        onClick={() => setShowDonationDetails(false)}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Special Request Details Modal */}
+            {showSpecialRequestDetails && selectedSpecialRequest && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-2xl font-bold text-gray-800">Special Request Details</h3>
+                      <button
+                        onClick={() => setShowSpecialRequestDetails(false)}
+                        className="text-gray-500 hover:text-gray-700"
+                      >
+                        <FaTimes size={24} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Customer Information */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Customer Information</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Name:</span> {selectedSpecialRequest.contact_info.firstName} {selectedSpecialRequest.contact_info.lastName}</p>
+                          <p><span className="font-medium">Email:</span> {selectedSpecialRequest.contact_info.email}</p>
+                          <p><span className="font-medium">Phone:</span> {selectedSpecialRequest.contact_info.phone}</p>
+                        </div>
+                      </div>
+
+                      {/* Request Information */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Request Information</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Type:</span> {selectedSpecialRequest.request_type || 'N/A'}</p>
+                          <p><span className="font-medium">Status:</span> 
+                            <span className="ml-2 px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                              {selectedSpecialRequest.status}
+                            </span>
+                          </p>
+                          <p><span className="font-medium">Date Flexible:</span> {selectedSpecialRequest.is_date_flexible ? 'Yes' : 'No'}</p>
+                        </div>
+                      </div>
+
+                      {/* Location Information */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Location Details</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Pickup Location:</span> {selectedSpecialRequest.pickup_location || 'N/A'}</p>
+                          <p><span className="font-medium">Dropoff Location:</span> {selectedSpecialRequest.dropoff_location || 'N/A'}</p>
+                          <p><span className="font-medium">Distance:</span> {selectedSpecialRequest.calculated_distance_km || 'N/A'} km</p>
+                          <p><span className="font-medium">Duration:</span> {selectedSpecialRequest.calculated_duration_text || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      {/* Services */}
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Requested Services</h4>
+                        <div className="space-y-2">
+                          {selectedSpecialRequest.selected_services?.map((service: string, index: number) => (
+                            <div key={index}>
+                              <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+                                {service}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Message */}
+                      {selectedSpecialRequest.message && (
+                        <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                          <h4 className="text-lg font-semibold text-gray-800 mb-3">Message</h4>
+                          <p className="text-gray-700">{selectedSpecialRequest.message}</p>
+                        </div>
+                      )}
+
+                      {/* Timeline */}
+                      <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Timeline</h4>
+                        <div className="space-y-2">
+                          <p><span className="font-medium">Created:</span> {format(new Date(selectedSpecialRequest.created_at), 'PPpp')}</p>
+                          <p><span className="font-medium">Updated:</span> {format(new Date(selectedSpecialRequest.updated_at), 'PPpp')}</p>
+                          <p><span className="font-medium">Preferred Date:</span> {selectedSpecialRequest.preferred_date ? format(new Date(selectedSpecialRequest.preferred_date), 'PPP') : 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="mt-6 flex justify-end space-x-3">
+                      <button
+                        onClick={() => setShowSpecialRequestDetails(false)}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                      >
+                        Close
+                      </button>
                     </div>
                   </div>
                 </div>

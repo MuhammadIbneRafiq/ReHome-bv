@@ -29,10 +29,15 @@ export const AuthErrorHandler: React.FC<AuthErrorHandlerProps> = ({ children }) 
           
           const responseData = await response.clone().json().catch(() => ({}));
           
+          console.log(responseData.error, 'HERE IS THE ERROR LOOKING LIKE');
+          // Only logout if the error message specifically indicates token is invalid/expired
           if (responseData.error && 
-              (responseData.error.includes('token') || 
-               responseData.error.includes('expired') || 
-               responseData.error.includes('unauthorized'))) {
+              (responseData.error.includes('expired') || 
+               responseData.error.includes('Invalid token') ||
+               responseData.error.includes('Token expired') ||
+               responseData.error.includes('token expired') ||
+               responseData.error.includes('Session expired') ||
+               responseData.error.includes('session expired'))) {
             
             // Clear tokens and show message
             localStorage.removeItem("accessToken");
