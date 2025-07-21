@@ -135,7 +135,6 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                             <li>• Book during off-peak times for better rates</li>
                             <li>• Combine multiple services for package discounts</li>
                             <li>• Provide accurate item counts to avoid price adjustments</li>
-                            <li>• Consider sharing a truck with others in your area</li>
                         </ul>
                     </div>
                 </div>

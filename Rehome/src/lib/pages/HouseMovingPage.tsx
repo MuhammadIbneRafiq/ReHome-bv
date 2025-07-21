@@ -287,67 +287,29 @@ const HouseMovingPage = () => {
 
     // Calculate distance using Google Maps Distance Matrix API with fallback to straight-line
     const calculateDistance = async (place1: any, place2: any): Promise<number> => {
-        if (!place1?.coordinates || !place2?.coordinates) {
-            return 0;
-        }
-
-        console.log('📏 Calculating distance between:', place1.text || place1.formattedAddress, 'and', place2.text || place2.formattedAddress);
+        // Ensure Google Maps API is loaded
+        await loadGoogleMapsAPI();
         
-        try {
-            // Ensure Google Maps API is loaded
-            await loadGoogleMapsAPI();
-            
-            // Use Distance Matrix API for accurate driving distance
-            return new Promise((resolve) => {
-                const service = new google.maps.DistanceMatrixService();
-                const origins = [new google.maps.LatLng(place1.coordinates.lat, place1.coordinates.lng)];
-                const destinations = [new google.maps.LatLng(place2.coordinates.lat, place2.coordinates.lng)];
+        // Use Distance Matrix API for accurate driving distance
+        return new Promise((resolve) => {
+            const service = new google.maps.DistanceMatrixService();
+            const origins = [new google.maps.LatLng(place1.coordinates.lat, place1.coordinates.lng)];
+            const destinations = [new google.maps.LatLng(place2.coordinates.lat, place2.coordinates.lng)];
 
-                service.getDistanceMatrix({
-                    origins,
-                    destinations,
-                    travelMode: google.maps.TravelMode.DRIVING,
-                    unitSystem: google.maps.UnitSystem.METRIC,
-                }, (response, status) => {
-                    if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK') {
-                        const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
-                        console.log('📏 Distance Matrix API distance:', distanceKm.toFixed(2), 'km');
-                        resolve(distanceKm);
-                    } else {
-                        console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
-                        resolve(calculateStraightLineDistance(place1, place2));
-                    }
-                });
+            service.getDistanceMatrix({
+                origins,
+                destinations,
+                travelMode: google.maps.TravelMode.DRIVING,
+                unitSystem: google.maps.UnitSystem.METRIC,
+            }, (response, status) => {
+                if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK') {
+                    const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
+                    resolve(distanceKm);
+                } else {
+                    console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
+                }
             });
-        } catch (error) {
-            console.warn('⚠️ Error loading Google Maps API, falling back to straight-line calculation:', error);
-            return calculateStraightLineDistance(place1, place2);
-        }
-    };
-
-    // Fallback function for straight-line distance calculation
-    const calculateStraightLineDistance = (place1: any, place2: any): number => {
-        if (!place1?.coordinates || !place2?.coordinates) {
-            return 0;
-        }
-
-        const R = 6371; // Radius of the Earth in kilometers
-        const lat1 = place1.coordinates.lat;
-        const lon1 = place1.coordinates.lng;
-        const lat2 = place2.coordinates.lat;
-        const lon2 = place2.coordinates.lng;
-
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLon = (lon2 - lon1) * Math.PI / 180;
-        const a = 
-            Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        const distance = R * c; // Distance in kilometers
-        
-        console.log('📏 Calculated straight-line distance:', distance.toFixed(2), 'km between', place1.text, 'and', place2.text);
-        return distance;
+        });
     };
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
@@ -356,7 +318,6 @@ const HouseMovingPage = () => {
     };
 
     const calculatePrice = async () => {
-
         if (!firstLocation || !secondLocation) {
             setPricingBreakdown(null);
             return;
@@ -667,9 +628,8 @@ const HouseMovingPage = () => {
             .filter(([_, quantity]) => quantity > 0)
             .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
 
-        // Use already calculated distance from state, or fallback to straight-line if needed
-        const finalDistance = distanceKm || (pickupPlace?.coordinates && dropoffPlace?.coordinates 
-            ? calculateStraightLineDistance(pickupPlace, dropoffPlace) : 0);
+        // Use already calculated distance from state of the GOOGLE DISTANCE MATRIX ONLYYYY
+        const finalDistance = distanceKm;
 
         // Prepare payload in the format expected by backend
         const payload = {
@@ -782,7 +742,7 @@ const HouseMovingPage = () => {
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
                     <p className="text-gray-500">
                         {!firstLocation || !secondLocation ? "Enter both pickup and dropoff locations" : 
-                        //  !isDateFlexible && !selectedDateRange.start ? "Select a date to see base pricing" : 
+                         !isDateFlexible && !selectedDateRange.start ? "Select a date to see base pricing" : 
                          "Calculating pricing..."}
                     </p>
                 </div>
