@@ -445,8 +445,10 @@ const ItemMovingPage = () => {
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateForPricing,
-                pickupDate: dateOption === 'fixed' ? pickupDate : '',
-                dropoffDate: dateOption === 'fixed' ? dropoffDate : '',
+                pickupDate: dateOption === 'fixed' ? pickupDate : 
+                           dateOption === 'flexible' ? selectedDateRange.start : '',
+                dropoffDate: dateOption === 'fixed' ? dropoffDate : 
+                            dateOption === 'flexible' ? selectedDateRange.end : '',
                 isDateFlexible,
                 itemQuantities,
                 floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
@@ -510,9 +512,15 @@ const ItemMovingPage = () => {
         }
 
         // Validate date selection in step 4
-        if (step === 4 && !isDateFlexible && dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
-            toast.error("Please select both pickup and dropoff dates or indicate that your date is flexible.");
-            return;
+        if (step === 4) {
+            if (dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
+                toast.error("Please select both pickup and dropoff dates.");
+                return;
+            }
+            if (dateOption === 'flexible' && (!selectedDateRange.start || !selectedDateRange.end)) {
+                toast.error("Please select both start and end dates for your flexible date range.");
+                return;
+            }
         }
 
         // Validate contact information in step 5
@@ -661,8 +669,12 @@ const ItemMovingPage = () => {
         console.log('- contactInfo:', contactInfo);
         console.log('- agreedToTerms:', agreedToTerms);
         
-        if (!isDateFlexible && dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
+        if (dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
             console.log('❌ Date validation failed - missing pickup or dropoff date');
+            return false;
+        }
+        if (dateOption === 'flexible' && (!selectedDateRange.start || !selectedDateRange.end)) {
+            console.log('❌ Date validation failed - missing flexible date range');
             return false;
         }
         if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
@@ -737,8 +749,10 @@ const ItemMovingPage = () => {
             estimatedPrice: pricingBreakdown?.total || 0,
             selectedDateRange,
             isDateFlexible,
-            pickupDate: dateOption === 'fixed' ? pickupDate : null,
-            dropoffDate: dateOption === 'fixed' ? dropoffDate : null,
+            pickupDate: dateOption === 'fixed' ? pickupDate : 
+                       dateOption === 'flexible' ? selectedDateRange.start : null,
+            dropoffDate: dateOption === 'fixed' ? dropoffDate : 
+                        dateOption === 'flexible' ? selectedDateRange.end : null,
             dateOption,
             preferredTimeSpan,
             extraInstructions,
@@ -777,10 +791,14 @@ const ItemMovingPage = () => {
                     elevator: elevatorDropoff
                 },
                 schedule: {
-                    date: isDateFlexible ? 'Flexible' : 
+                    date: dateOption === 'rehome' ? 'Let ReHome Choose' :
+                          isDateFlexible || dateOption === 'flexible' ? 
+                          (selectedDateRange.start && selectedDateRange.end ? 
+                           `${new Date(selectedDateRange.start).toLocaleDateString()} - ${new Date(selectedDateRange.end).toLocaleDateString()}` : 
+                           'Flexible date range') : 
                           dateOption === 'fixed' && pickupDate && dropoffDate ? 
                           `Pickup: ${new Date(pickupDate).toLocaleDateString()}, Dropoff: ${new Date(dropoffDate).toLocaleDateString()}` :
-                          new Date(selectedDateRange.start).toLocaleDateString(),
+                          'Date not specified',
                     time: preferredTimeSpan ? (
                         preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
                         preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
@@ -1438,7 +1456,6 @@ const ItemMovingPage = () => {
                                             placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list"
                                         />
                                     </div>
-                                    
                                     {/* Upload photo/video option */}
                                     <div className="mt-4">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo(s) of your items</label>
@@ -1777,14 +1794,17 @@ const ItemMovingPage = () => {
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
                                         <h4 className="text-md font-medium text-gray-800 mb-3">Schedule</h4>
                                         <div className="text-sm">
-                                            {isDateFlexible ? (
-                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">Flexible</span></p>
+                                            {dateOption === 'rehome' || isDateFlexible ? (
+                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">
+                                                    {dateOption === 'rehome' ? 'Let ReHome Choose' : 'Flexible'}
+                                                </span></p>
                                             ) : (
                                                 <p><span className="text-gray-500">Date:</span> <span className="font-medium">
-                            {isDateFlexible ? 'Flexible' : 
-                             dateOption === 'fixed' && pickupDate && dropoffDate ? 
+                            {dateOption === 'fixed' && pickupDate && dropoffDate ? 
                              `Pickup: ${new Date(pickupDate).toLocaleDateString()}, Dropoff: ${new Date(dropoffDate).toLocaleDateString()}` :
-                             new Date(selectedDateRange.start).toLocaleDateString()}
+                             dateOption === 'flexible' && selectedDateRange.start && selectedDateRange.end ?
+                             `${new Date(selectedDateRange.start).toLocaleDateString()} - ${new Date(selectedDateRange.end).toLocaleDateString()}` :
+                             'Date not selected'}
                         </span></p>
                                             )}
                                             {preferredTimeSpan && (

@@ -666,109 +666,15 @@ class PricingService {
   }
 
   /**
-   * Calculate pricing for item transport with special base charge logic
-   * Handles split base charges for cross-city transport
+   * Calculate pricing for item transport
+   * Uses the same logic as calculatePricing for consistency
    */
   async calculateItemTransportPricing(input: PricingInput): Promise<PricingBreakdown> {
-    const { city: pickupCity, distanceDifference: pickupDistanceDifference } = await findClosestSupportedCity(input.pickupPlace);
-    const { city: dropoffCity, distanceDifference: dropoffDistanceDifference } = await findClosestSupportedCity(input.dropoffPlace);
-    const selectedDate = new Date(input.selectedDate);
-    
-    console.log('pickupDistanceDifference', pickupDistanceDifference);
-    console.log('dropoffDistanceDifference', dropoffDistanceDifference);
-    // First calculate the regular pricing breakdown
-    const breakdown = await this.calculatePricing(input);
-    
-    // Now handle special item transport base charge logic
-    if (pickupCity && dropoffCity) {
-      let finalBaseCharge: number;
-      
-      if (pickupCity === dropoffCity) {
-        // Transport within same city
-        const isCityScheduled = await this.isCityDay(pickupCity, selectedDate);
-        const isEmpty = await this.isEmptyCalendarDay(selectedDate);
-        
-        if (isEmpty) {
-          // Early booking discount: with discount according to ReHome delivery plans
-          const normalRate = cityBaseCharges[pickupCity]?.normal;
-          finalBaseCharge = Math.round(normalRate * 0.5);
-        } else if (isCityScheduled) {
-          // City day rate
-          finalBaseCharge = cityBaseCharges[pickupCity]?.cityDay;
-        } else {
-          // Normal rate
-          finalBaseCharge = cityBaseCharges[pickupCity]?.normal;
-        }
-      } else {
-        // Transport between different cities - Split base charge logic
-        
-        // Check if pickup date aligns with pickup city schedule
-        const pickupAligns = await this.isCityDay(pickupCity, selectedDate);
-        const pickupEmpty = await this.isEmptyCalendarDay(selectedDate);
-        
-        // For dropoff, check if flexible date is selected
-        let dropoffAligns = false;
-        let dropoffEmpty = false;
-        
-        if (input.isDateFlexible) {
-          // Flexible date: use city day rate for dropoff city
-          dropoffAligns = true;
-        } else {
-          // Fixed date: check if it aligns with dropoff city schedule
-          dropoffAligns = await this.isCityDay(dropoffCity, selectedDate);
-          dropoffEmpty = await this.isEmptyCalendarDay(selectedDate);
-        }
-        
-        // Calculate pickup charge
-        let pickupCharge: number;
-        if (pickupEmpty) {
-          pickupCharge = Math.round((cityBaseCharges[pickupCity]?.normal));
-        } else if (pickupAligns) {
-          pickupCharge = cityBaseCharges[pickupCity]?.cityDay;
-        } else {
-          pickupCharge = cityBaseCharges[pickupCity]?.normal;
-        }
-        
-        // Calculate dropoff charge
-        let dropoffCharge: number;
-        if (input.isDateFlexible) {
-          // Flexible date gets city day rate
-          dropoffCharge = cityBaseCharges[dropoffCity]?.cityDay;
-        } else if (dropoffEmpty) {
-          dropoffCharge = Math.round((cityBaseCharges[dropoffCity]?.normal));
-        } else if (dropoffAligns) {
-          dropoffCharge = cityBaseCharges[dropoffCity]?.cityDay;
-        } else {
-          dropoffCharge = cityBaseCharges[dropoffCity]?.normal;
-        }
-        
-        // Split the base charge (average of pickup and dropoff)
-        finalBaseCharge = Math.max(pickupCharge, dropoffCharge);
-      }
-      
-      // Update the breakdown with the calculated base charge
-      breakdown.basePrice = finalBaseCharge;
-      breakdown.breakdown.baseCharge.finalPrice = finalBaseCharge;
-      breakdown.breakdown.baseCharge.originalPrice = finalBaseCharge; // Fix: also update originalPrice for UI display
-      breakdown.breakdown.baseCharge.city = pickupCity;
-      breakdown.breakdown.baseCharge.isCityDay = pickupCity === dropoffCity ? 
-        await this.isCityDay(pickupCity, selectedDate) : false;
-      breakdown.breakdown.baseCharge.isEarlyBooking = await this.isEmptyCalendarDay(selectedDate);
-      
-      // Recalculate totals with new base charge
-      breakdown.subtotal = breakdown.basePrice + breakdown.itemValue + breakdown.distanceCost + 
-                          breakdown.carryingCost + breakdown.assemblyCost + breakdown.extraHelperCost;
-      
-      if (input.isStudent && input.hasStudentId) {
-        breakdown.studentDiscount = breakdown.subtotal * pricingConfig.studentDiscount;
-        breakdown.total = breakdown.subtotal - breakdown.studentDiscount;
-      } else {
-        breakdown.studentDiscount = 0;
-        breakdown.total = breakdown.subtotal;
-      }
-    }
-    
-    return breakdown;
+    // Use the regular pricing calculation which already handles:
+    // - Fixed dates with separate pickup/dropoff dates (max for same date, sum for different dates)
+    // - Flexible dates 
+    // - All other pricing components
+    return await this.calculatePricing(input);
   }
 }
 
