@@ -690,14 +690,14 @@ class PricingService {
         
         if (isEmpty) {
           // Early booking discount: with discount according to ReHome delivery plans
-          const normalRate = cityBaseCharges[pickupCity]?.normal || 119;
+          const normalRate = cityBaseCharges[pickupCity]?.normal;
           finalBaseCharge = Math.round(normalRate * 0.5);
         } else if (isCityScheduled) {
           // City day rate
-          finalBaseCharge = cityBaseCharges[pickupCity]?.cityDay || 35;
+          finalBaseCharge = cityBaseCharges[pickupCity]?.cityDay;
         } else {
           // Normal rate
-          finalBaseCharge = cityBaseCharges[pickupCity]?.normal || 119;
+          finalBaseCharge = cityBaseCharges[pickupCity]?.normal;
         }
       } else {
         // Transport between different cities - Split base charge logic
@@ -722,28 +722,28 @@ class PricingService {
         // Calculate pickup charge
         let pickupCharge: number;
         if (pickupEmpty) {
-          pickupCharge = Math.round((cityBaseCharges[pickupCity]?.normal || 119) * 0.5);
+          pickupCharge = Math.round((cityBaseCharges[pickupCity]?.normal));
         } else if (pickupAligns) {
-          pickupCharge = cityBaseCharges[pickupCity]?.cityDay || 35;
+          pickupCharge = cityBaseCharges[pickupCity]?.cityDay;
         } else {
-          pickupCharge = cityBaseCharges[pickupCity]?.normal || 119;
+          pickupCharge = cityBaseCharges[pickupCity]?.normal;
         }
         
         // Calculate dropoff charge
         let dropoffCharge: number;
         if (input.isDateFlexible) {
           // Flexible date gets city day rate
-          dropoffCharge = cityBaseCharges[dropoffCity]?.cityDay || 35;
+          dropoffCharge = cityBaseCharges[dropoffCity]?.cityDay;
         } else if (dropoffEmpty) {
-          dropoffCharge = Math.round((cityBaseCharges[dropoffCity]?.normal || 149) * 0.5);
+          dropoffCharge = Math.round((cityBaseCharges[dropoffCity]?.normal));
         } else if (dropoffAligns) {
-          dropoffCharge = cityBaseCharges[dropoffCity]?.cityDay || 35;
+          dropoffCharge = cityBaseCharges[dropoffCity]?.cityDay;
         } else {
-          dropoffCharge = cityBaseCharges[dropoffCity]?.normal || 149;
+          dropoffCharge = cityBaseCharges[dropoffCity]?.normal;
         }
         
         // Split the base charge (average of pickup and dropoff)
-        finalBaseCharge = Math.round((pickupCharge + dropoffCharge) / 2);
+        finalBaseCharge = Math.max(pickupCharge, dropoffCharge);
       }
       
       // Update the breakdown with the calculated base charge

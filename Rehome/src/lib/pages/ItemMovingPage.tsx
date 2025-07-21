@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTranslation } from 'react-i18next';
 import { itemCategories, getItemPoints } from '../../lib/constants';
-import pricingService, { PricingBreakdown } from '../../services/pricingService';
+import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
@@ -431,23 +431,20 @@ const ItemMovingPage = () => {
                 setDistanceKm(calculatedDistance);
             }
 
-            console.log('🔍 [PRICING DEBUG] Calculating price with dates:', {
-                dateOption,
-                pickupDate,
-                dropoffDate,
-                pickupDateObj: pickupDate ? new Date(pickupDate) : null,
-                dropoffDateObj: dropoffDate ? new Date(dropoffDate) : null,
-                isDateFlexible,
-                pickupPlace: pickupPlace?.city,
-                dropoffPlace: dropoffPlace?.city
-            });
+            // For "Let ReHome choose" option, provide a 3-week window starting tomorrow
+            let selectedDateForPricing = selectedDateRange.start;
+            if (dateOption === 'rehome') {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                selectedDateForPricing = tomorrow.toISOString().split('T')[0];
+            }
 
-            const pricingInput = {
-                serviceType: 'item-transport' as const,
+            const pricingInput: PricingInput = {
+                serviceType: 'item-transport',
                 pickupLocation: firstLocation,
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
-                selectedDate: selectedDateRange.start,
+                selectedDate: selectedDateForPricing,
                 pickupDate: dateOption === 'fixed' ? pickupDate : '',
                 dropoffDate: dateOption === 'fixed' ? dropoffDate : '',
                 isDateFlexible,
@@ -466,21 +463,7 @@ const ItemMovingPage = () => {
                 dropoffPlace: dropoffPlace,
             };
             
-            console.log('🔍 [PRICING DEBUG] Input for same date calculation:', {
-                pickupDate: pricingInput.pickupDate,
-                dropoffDate: pricingInput.dropoffDate,
-                pickupCity: pickupPlace?.city,
-                dropoffCity: dropoffPlace?.city,
-                isSameDate: pricingInput.pickupDate === pricingInput.dropoffDate
-            });
-
             const breakdown = await pricingService.calculateItemTransportPricing(pricingInput);
-            
-            console.log('🔍 [UI DEBUG] Setting pricing breakdown:', {
-                basePrice: breakdown?.basePrice,
-                total: breakdown?.total,
-                fullBreakdown: breakdown
-            });
             
             setPricingBreakdown(breakdown);
             
@@ -1455,9 +1438,10 @@ const ItemMovingPage = () => {
                                             placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list"
                                         />
                                     </div>
+                                    
                                     {/* Upload photo/video option */}
                                     <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo(s) of your items(optional)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo(s) of your items</label>
                                         <input type="file" accept="image/*,video/*" multiple className="block w-full text-sm text-gray-500" />
                                     </div>
                                 </div>
@@ -1912,8 +1896,8 @@ const ItemMovingPage = () => {
                                             id="extra-instructions"
                                             value={extraInstructions}
                                             onChange={(e) => setExtraInstructions(e.target.value)}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                            rows={4}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-3 border"
+                                            rows={5}
                                             placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list, parking opportunities for the driver, instructions on how to access the building/ room"
                                             />
                                     </div>

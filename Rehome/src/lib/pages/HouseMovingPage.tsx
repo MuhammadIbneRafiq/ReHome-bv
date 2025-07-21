@@ -1132,7 +1132,7 @@ const HouseMovingPage = () => {
                                     </div>
                                     {/* Upload photo/video option */}
                                     <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo(s) of your items(optional)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo(s) of your items</label>
                                         <input type="file" accept="image/*,video/*" multiple className="block w-full text-sm text-gray-500" />
                                     </div>
                                 </div>
@@ -1593,14 +1593,14 @@ const HouseMovingPage = () => {
                                     </div>
                                     
                                     <div className="bg-green-50 p-4 rounded-lg">
-                                        <div className="flex">
-                                            <FaInfoCircle className="h-5 w-5 text-green-500" />
-                                            <div className="ml-3">
+                                        <div className="flex items-start">
+                                            <FaInfoCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                                            <div className="ml-3 flex-1">
                                                 <h3 className="text-sm font-medium text-green-800">Extra Information/ Instructions for our Team</h3>
                                                 <div className="mt-2 text-sm text-green-700">
                                                     <textarea
-                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                        rows={3}
+                                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-3 border"
+                                                        rows={5}
                                                         placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list, parking opportunities for the driver, instructions on how to access the building/ room"
                                                         value={extraInstructions}
                                                         onChange={(e) => setExtraInstructions(e.target.value)}
