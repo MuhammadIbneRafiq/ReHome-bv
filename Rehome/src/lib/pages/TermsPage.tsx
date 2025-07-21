@@ -98,7 +98,7 @@ export default function TermsPage() {
               <div>
                 <h3 className="text-lg font-semibold mb-2">3. Moving Services</h3>
                 <p className="text-gray-600">
-                  Moving services are provided by third-party providers. 
+                  ReHome provides its moving services by its own staff. 
                   Pricing is calculated based on distance, item complexity, and additional services requested. 
                   No insurance coverage is provided for the items as of now.
                 </p>

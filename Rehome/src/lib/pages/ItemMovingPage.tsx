@@ -1906,7 +1906,7 @@ const ItemMovingPage = () => {
                                     {/* Extra Information Field */}
                                     <div className="mt-6">
                                         <label htmlFor="extra-instructions" className="block text-sm font-medium text-gray-700 mb-2">
-                                            Extra Information/ Instructions for our Team e.g. parking opportunities for the driver, instructions on how to access the building/ room
+                                            Extra Information/ Instructions for our Team
                                         </label>
                                         <textarea
                                             id="extra-instructions"
@@ -1914,8 +1914,8 @@ const ItemMovingPage = () => {
                                             onChange={(e) => setExtraInstructions(e.target.value)}
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                             rows={4}
-                                            placeholder="E.g. parking opportunities for the driver, instructions on how to access the building/ room"
-                                        />
+                                            placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list, parking opportunities for the driver, instructions on how to access the building/ room"
+                                            />
                                     </div>
                                 </div>
                             )}

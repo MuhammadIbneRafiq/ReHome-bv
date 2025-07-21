@@ -648,23 +648,18 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                         className={`${elevatorAvailable ? 'bg-orange-600' : 'bg-gray-200'} relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2`}
                       >
                         <span
-                          className={`${elevatorAvailable ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                          style={{
+                            transform: (elevatorAvailable) ? 'translateX(24px)' : 'translateX(4px)',
+                            transition: 'transform 0.2s'
+                          }}
+                          className="inline-block h-4 w-4 rounded-full bg-white"
                         />
                       </Switch>
-                      <span className="ml-3 text-sm text-gray-700">Elevator available</span>
+                      <span className="ml-2 text-sm text-gray-700">Elevator available</span>
                     </div>
                   </div>
                 </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start">
-                    <FaInfoCircle className="text-blue-500 mt-0.5 mr-2" />
-                    <div className="text-sm text-blue-700">
-                      <p className="font-medium">Delivery Information</p>
-                      <p>Normal delivery is to ground floor only. Select carrying assistance if delivery is to upper floors.</p>
-                    </div>
-                  </div>
-                </div>
+                
               </div>
             </div>
           )}
@@ -680,9 +675,19 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
               </div>
 
               <div className="space-y-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                
+                {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <div className="text-sm text-blue-700">
                     <p className="font-medium">Our standard delivery is to the ground floor and certain items may be disassembled (see description of our listing).</p>
+                  </div>
+                </div> */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <FaInfoCircle className="text-blue-500 mt-0.5 mr-2" />
+                    <div className="text-sm text-blue-700">
+                      <p className="font-medium">Delivery Information</p>
+                      <p>Normal delivery is to ground floor only. Select carrying assistance if delivery is to upper floors.</p>
+                    </div>
                   </div>
                 </div>
                 
@@ -709,6 +714,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                             </div>
                           </div>
 
+                          
                           <div className="space-y-3">
                             <div>
                               <h5 className="font-medium text-gray-800 mb-2">1. Need help with assembly?</h5>

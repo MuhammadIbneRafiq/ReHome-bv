@@ -65,7 +65,7 @@ const OrderConfirmationModal = ({ isOpen, onClose, orderNumber, isReHomeOrder, i
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-orange-800">Confirmation Email Sent</h3>
                   <p className="text-sm text-orange-700 mt-1">
-                    We've sent you a confirmation email with your {isMovingRequest ? 'request' : 'order'} details. Our team will review and get back to you shortly with final pricing and delivery options..
+                    We've sent you a confirmation email with your {isMovingRequest ? 'request' : 'order'} details. Our team will review and get back to you shortly with final pricing and.
                   </p>
                 </div>
               </div>
@@ -73,28 +73,30 @@ const OrderConfirmationModal = ({ isOpen, onClose, orderNumber, isReHomeOrder, i
           )}
           
           {/* Marketplace Promotion */}
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 mt-1">
-                <FaShoppingCart className="text-blue-500" />
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-blue-800">Need furniture for your new home?</h3>
-                <p className="text-sm text-blue-700 mt-1">
-                  Visit our marketplace to browse our listings. We can provide a combined offer for our services and deliver the item on your moving date.
-                </p>
-                <button
-                  onClick={() => {
-                    onClose();
-                    window.location.href = '/marketplace';
-                  }}
-                  className="mt-2 text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded transition-colors"
-                >
-                  Go to Marketplace
-                </button>
+          {isMovingRequest && (
+            <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 mt-1">
+                  <FaShoppingCart className="text-blue-500" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-blue-800">Need furniture for your new home?</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Visit our marketplace to browse our listings. We can provide a combined offer for our services and deliver the item on your moving date.
+                  </p>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      window.location.href = '/marketplace';
+                    }}
+                    className="mt-2 text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded transition-colors"
+                  >
+                    Go to Marketplace
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
           
           <div className="mt-6">
             <button
