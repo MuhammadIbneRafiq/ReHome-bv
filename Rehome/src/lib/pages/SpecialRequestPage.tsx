@@ -4,6 +4,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { FaWarehouse, FaBroom, FaGlobe, FaCheckCircle } from 'react-icons/fa';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
+import { API_ENDPOINTS } from '../api/config';
 
 type ServiceFieldsType = {
   [key: string]: string[];
@@ -130,12 +131,12 @@ const SpecialRequestPage = () => {
         }
       });
       
-      // Add photos
-      photos.forEach((photo, index) => {
-        formData.append(`photo${index}`, photo);
+      // Add photos with correct field name
+      photos.forEach((photo) => {
+        formData.append('photos', photo);
       });
       
-      const response = await fetch('/api/special-requests', {
+      const response = await fetch(API_ENDPOINTS.SPECIAL_REQUESTS.SUBMIT, {
         method: 'POST',
         body: formData,
       });

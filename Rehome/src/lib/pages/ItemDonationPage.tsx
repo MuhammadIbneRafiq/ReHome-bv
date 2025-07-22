@@ -100,39 +100,34 @@ const ItemDonationPage = () => {
     
     setIsLoading(true);
     
-    // Prepare data for submission
-    const formData = new FormData();
-    formData.append('mode', mode);
-    formData.append('description', description);
-    formData.append('condition', condition);
-    formData.append('address', address);
-    formData.append('floor', floor);
-    formData.append('elevatorAvailable', elevatorAvailable.toString());
-    formData.append('firstName', contactInfo.firstName);
-    formData.append('lastName', contactInfo.lastName);
-    formData.append('email', contactInfo.email);
-    formData.append('phone', contactInfo.phone);
-    formData.append('preferredDate', preferredDate);
-    formData.append('isDateFlexible', isDateFlexible.toString());
-    formData.append('preferredTimeSpan', preferredTimeSpan);
-    
-    if (mode === 'sell') {
-      formData.append('price', price);
-    }
-    
-    // Append photos
-    photos.forEach((photo, index) => {
-      formData.append(`photo${index}`, photo);
-    });
+    // Prepare data for submission (JSON, not FormData)
+    const payload = {
+      donationItems: [
+        {
+          description,
+          price: mode === 'sell' ? price : undefined,
+          condition,
+        }
+      ],
+      contactInfo,
+      pickupLocation: address,
+      preferredPickupDate: preferredDate,
+      isDateFlexible,
+      donationType: mode === 'sell' ? 'sell' : 'charity',
+      itemCondition: condition,
+      photoUrls: [], // TODO: handle actual upload or base64 conversion
+      floor,
+      elevatorAvailable,
+      preferredTimeSpan,
+    };
     
     try {
-      // Mock submission for now
-      // Replace with actual API call when backend is ready
-      // const response = await fetch('https://rehome-backend.vercel.app/api/donations', {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-      
+      const response = await fetch('https://rehome-backend.vercel.app/api/item-donation-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      console.log('Response:', response);
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
       

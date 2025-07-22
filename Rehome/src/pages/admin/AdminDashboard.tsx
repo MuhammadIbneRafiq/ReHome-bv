@@ -8,10 +8,12 @@ import useUserSessionStore from "../../services/state/useUserSessionStore";
 import { cityBaseCharges } from "../../lib/constants";
 import pricingConfigData from "../../lib/pricingConfig.json";
 import { CityPrice, MarketplaceItem, CalendarDay, TimeBlock, TransportRequest, ItemDonation, SpecialRequest } from '../../types/admin';
+import { API_ENDPOINTS } from '../../lib/api/config';
 
 const AdminDashboard = () => {
   const { user, role } = useUserSessionStore();
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'donations' | 'special-requests'>('transport');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'requests'>('transport');
+  const [requestsTab, setRequestsTab] = useState<'donations' | 'special-requests'>('donations');
 
   const ADMIN_EMAILS = [
     'muhammadibnerafiq123@gmail.com',
@@ -24,7 +26,6 @@ const AdminDashboard = () => {
   const isAdmin = role === 'admin' || ADMIN_EMAILS.includes(user?.email || '');
   
   if (!user || !isAdmin) {
-    console.log('AdminDashboard - User not admin, showing access denied');
     return (
       <div className="min-h-screen bg-orange-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
@@ -484,7 +485,6 @@ const AdminDashboard = () => {
         .from('city_base_charges')
         .select('*')
         .order('created_at', { ascending: false });
-      console.log(cityPrices)
       const citydata = (cityPrices || []).map((req: any) => ({
           id: req.id?.toString() || '',
           created_at: req.created_at || '',
@@ -836,9 +836,7 @@ const AdminDashboard = () => {
       
       toast.success('Configuration updated successfully');
       setEditingJsonConfig(null);
-      
-      console.log('Updated config:', updatedConfig);
-      
+            
     } catch (error) {
       toast.error('Failed to update configuration');
       console.error('Update error:', error);
@@ -1118,37 +1116,49 @@ const AdminDashboard = () => {
   // Fetch item donations
   const fetchItemDonations = async () => {
     try {
-      const response = await fetch('/api/item-donation-requests');
-      if (response.ok) {
-        const data = await response.json();
-        setItemDonations(data);
+      const { data, error } = await supabase
+        .from('item_donations')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      console.log('Fetched item donations:', data);
+      if (error) {
+        console.error('Error fetching item donations:', error);
+        setItemDonations([]);
       } else {
-        console.error('Failed to fetch item donations');
+        setItemDonations(data || []);
+        console.log('Fetched item donations:', data);
       }
     } catch (error) {
       console.error('Error fetching item donations:', error);
+      setItemDonations([]);
     }
   };
 
   // Fetch special requests
   const fetchSpecialRequests = async () => {
     try {
-      const response = await fetch('/api/special-requests');
-      if (response.ok) {
-        const data = await response.json();
-        setSpecialRequests(data);
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching special requests:', error);
+        setSpecialRequests([]);
       } else {
-        console.error('Failed to fetch special requests');
+        setSpecialRequests(data || []);
+        console.log('Fetched special requests:', data);
       }
     } catch (error) {
       console.error('Error fetching special requests:', error);
+      setSpecialRequests([]);
     }
   };
 
   // Handle donation status update
   const handleUpdateDonationStatus = async (donationId: string, status: string) => {
     try {
-      const response = await fetch(`/api/item-donation-requests/${donationId}/status`, {
+      const response = await fetch(API_ENDPOINTS.DONATION.UPDATE_STATUS(donationId), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1171,7 +1181,7 @@ const AdminDashboard = () => {
   // Handle special request status update
   const handleUpdateSpecialRequestStatus = async (requestId: string, status: string) => {
     try {
-      const response = await fetch(`/api/special-requests/${requestId}/status`, {
+      const response = await fetch(`${API_ENDPOINTS.MOVING.SPECIAL_REQUEST}/${requestId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1335,28 +1345,16 @@ const AdminDashboard = () => {
               Items Management
             </button>
             <button
-              onClick={() => setActiveTab('donations')}
+              onClick={() => setActiveTab('requests')}
               className={`flex items-center px-4 py-2 rounded-md font-medium transition-colors ${
-                activeTab === 'donations'
+                activeTab === 'requests'
                   ? 'bg-orange-500 text-white'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               <FaHandshake className="mr-2" />
-              Item Donations
+              Requests
             </button>
-            <button
-              onClick={() => setActiveTab('special-requests')}
-              className={`flex items-center px-4 py-2 rounded-md font-medium transition-colors ${
-                activeTab === 'special-requests'
-                  ? 'bg-orange-500 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              <FaGlobe className="mr-2" />
-              Special Requests
-            </button>
-
           </div>
         </div>
 
@@ -3364,184 +3362,165 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {activeTab === 'donations' && (
+            {activeTab === 'requests' && (
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Item Donations Management</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CUSTOMER</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">ITEMS</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">PICKUP LOCATION</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">DONATION TYPE</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CREATED</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {itemDonations.map((donation) => (
-                        <tr key={donation.id} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 px-4 py-2">
-                            <div>
-                              <div className="font-medium">{donation.contact_info.firstName} {donation.contact_info.lastName}</div>
-                              <div className="text-sm text-gray-500">{donation.contact_info.email}</div>
-                              <div className="text-sm text-gray-500">{donation.contact_info.phone}</div>
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <div className="text-sm">
-                              {donation.donation_items?.length > 0 ? (
-                                <div>
-                                  {donation.donation_items.slice(0, 2).map((item: any, index: number) => (
-                                    <div key={index}>{item.name} (x{item.quantity})</div>
-                                  ))}
-                                  {donation.donation_items.length > 2 && (
-                                    <div className="text-gray-500">+{donation.donation_items.length - 2} more</div>
-                                  )}
-                                </div>
-                              ) : (
-                                <div>Custom item: {donation.custom_item}</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <div className="text-sm">
-                              {donation.pickup_location || 'Not specified'}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              donation.donation_type === 'charity' ? 'bg-green-100 text-green-800' :
-                              donation.donation_type === 'recycling' ? 'bg-blue-100 text-blue-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {donation.donation_type}
-                            </span>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <select
-                              value={donation.status}
-                              onChange={(e) => handleUpdateDonationStatus(donation.id, e.target.value)}
-                              className={`px-2 py-1 rounded text-xs font-medium border ${
-                                donation.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
-                                donation.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                                donation.status === 'in_progress' ? 'bg-orange-100 text-orange-800 border-orange-300' :
-                                donation.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' :
-                                'bg-red-100 text-red-800 border-red-300'
-                              }`}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="confirmed">Confirmed</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            {format(new Date(donation.created_at), 'yyyy-MM-dd HH:mm')}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <button
-                              onClick={() => handleViewDonationDetails(donation)}
-                              className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                            >
-                              <FaEdit className="mr-1" />
-                              View Details
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Requests</h2>
+                {/* Requests Sub-tabs */}
+                <div className="flex space-x-4 mb-6">
+                  <button
+                    onClick={() => setRequestsTab('donations')}
+                    className={`flex items-center px-4 py-2 rounded-md font-medium transition-colors ${
+                      requestsTab === 'donations'
+                        ? 'bg-orange-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <FaHandshake className="mr-2" />
+                    Item Donations
+                  </button>
+                  <button
+                    onClick={() => setRequestsTab('special-requests')}
+                    className={`flex items-center px-4 py-2 rounded-md font-medium transition-colors ${
+                      requestsTab === 'special-requests'
+                        ? 'bg-orange-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <FaGlobe className="mr-2" />
+                    Special Requests
+                  </button>
                 </div>
-              </div>
-            )}
-
-            {activeTab === 'special-requests' && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-6">Special Requests Management</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse border border-gray-300">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CUSTOMER</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">SERVICES</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">PICKUP LOCATION</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">DROPOFF LOCATION</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">CREATED</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {specialRequests.map((request) => (
-                        <tr key={request.id} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 px-4 py-2">
-                            <div>
-                              <div className="font-medium">{request.contact_info.firstName} {request.contact_info.lastName}</div>
-                              <div className="text-sm text-gray-500">{request.contact_info.email}</div>
-                              <div className="text-sm text-gray-500">{request.contact_info.phone}</div>
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <div className="text-sm">
-                              {request.selected_services?.map((service: string, index: number) => (
-                                <div key={index} className="mb-1">
-                                  <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs">
-                                    {service}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <div className="text-sm">
-                              {request.pickup_location || 'Not specified'}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <div className="text-sm">
-                              {request.dropoff_location || 'Not specified'}
-                            </div>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <select
-                              value={request.status}
-                              onChange={(e) => handleUpdateSpecialRequestStatus(request.id, e.target.value)}
-                              className={`px-2 py-1 rounded text-xs font-medium border ${
-                                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' :
-                                request.status === 'confirmed' ? 'bg-blue-100 text-blue-800 border-blue-300' :
-                                request.status === 'in_progress' ? 'bg-orange-100 text-orange-800 border-orange-300' :
-                                request.status === 'completed' ? 'bg-green-100 text-green-800 border-green-300' :
-                                'bg-red-100 text-red-800 border-red-300'
-                              }`}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="confirmed">Confirmed</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            {format(new Date(request.created_at), 'yyyy-MM-dd HH:mm')}
-                          </td>
-                          <td className="border border-gray-300 px-4 py-2">
-                            <button
-                              onClick={() => handleViewSpecialRequestDetails(request)}
-                              className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                            >
-                              <FaEdit className="mr-1" />
-                              View Details
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {/* Requests Sub-tab Content */}
+                {requestsTab === 'donations' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Item Donations</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">DONOR</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ITEMS</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">STATUS</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ACTIONS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {itemDonations.map((donation) => (
+                            <tr key={donation.id} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {donation.contact_info.firstName} {donation.contact_info.lastName}<br/>{donation.contact_info.email}
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {donation.donation_items?.length || 0} items
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                <select
+                                  value={donation.status}
+                                  onChange={e => handleUpdateDonationStatus(donation.id, e.target.value as typeof donation.status)}
+                                  className="px-2 py-1 border rounded"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="approved">Approved</option>
+                                  <option value="rejected">Rejected</option>
+                                  <option value="completed">Completed</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                <button
+                                  onClick={() => handleUpdateDonationStatus(donation.id, donation.status)}
+                                  className="px-2 py-1 bg-blue-500 text-white rounded"
+                                >
+                                  Update
+                                </button>
+                                <button
+                                  onClick={() => handleViewDonationDetails(donation)}
+                                  className="ml-2 px-2 py-1 bg-gray-300 text-gray-800 rounded"
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+                {requestsTab === 'special-requests' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Special Requests</h3>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">CUSTOMER</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">SERVICE</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">STATUS</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ACTIONS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {specialRequests.map((request) => (
+                            <tr key={request.id} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {(() => {
+                                  let info = request.contact_info;
+                                  if (!info) return <span className="text-gray-400">No contact info</span>;
+                                  if (typeof info === 'string') {
+                                    try {
+                                      info = JSON.parse(info);
+                                    } catch {
+                                      return <span className="text-gray-400">Invalid contact info</span>;
+                                    }
+                                  }
+                                  return (
+                                    <>
+                                      {(info.firstName || '') + ' ' + (info.lastName || '')}<br />
+                                      {info.email || info.phone || ''}
+                                    </>
+                                  );
+                                })()}
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {Array.isArray(request.selected_services) ? request.selected_services.join(', ') :
+                                  typeof request.selected_services === 'string' ? request.selected_services :
+                                  '-'}
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                <select
+                                  value={request.status}
+                                  onChange={e => handleUpdateSpecialRequestStatus(request.id, e.target.value as typeof request.status)}
+                                  className="px-2 py-1 border rounded"
+                                >
+                                  <option value="pending">Pending</option>
+                                  <option value="confirmed">Confirmed</option>
+                                  <option value="in_progress">In Progress</option>
+                                  <option value="completed">Completed</option>
+                                  <option value="cancelled">Cancelled</option>
+                                </select>
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                <button
+                                  onClick={() => handleUpdateSpecialRequestStatus(request.id, request.status)}
+                                  className="px-2 py-1 bg-blue-500 text-white rounded"
+                                >
+                                  Update
+                                </button>
+                                <button
+                                  onClick={() => handleViewSpecialRequestDetails(request)}
+                                  className="ml-2 px-2 py-1 bg-gray-300 text-gray-800 rounded"
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

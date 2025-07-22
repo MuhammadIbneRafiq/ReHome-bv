@@ -29,7 +29,12 @@ export const API_ENDPOINTS = {
   MOVING: {
     ITEM_REQUEST: `${API_BASE_URL}/api/item-moving-requests`,
     HOUSE_REQUEST: `${API_BASE_URL}/api/house-moving-requests`,
-    SPECIAL_REQUEST: `${API_BASE_URL}/api/special-request`,
+    SPECIAL_REQUEST: `${API_BASE_URL}/api/special-requests`,
+  },
+
+  // Special Requests
+  SPECIAL_REQUESTS: {
+    SUBMIT: `${API_BASE_URL}/api/special-requests`,
   },
 
   // Item Donation Services
