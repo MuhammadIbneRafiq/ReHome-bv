@@ -1918,7 +1918,7 @@ const ItemMovingPage = () => {
                                             onChange={(e) => setExtraInstructions(e.target.value)}
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-3 border"
                                             rows={5}
-                                            placeholder="e.g., Fragile items, special handling requirements, additional items you could not find in our list, parking opportunities for the driver, instructions on how to access the building/ room"
+                                            placeholder="E.g., parking opportunities for the driver, instructions on how to access the building/ room"
                                             />
                                     </div>
                                 </div>

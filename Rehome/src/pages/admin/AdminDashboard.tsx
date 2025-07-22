@@ -3004,90 +3004,9 @@ const AdminDashboard = () => {
                       </table>
                     </div>
                   </div>
-                  {/* Distance Pricing Configuration */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Distance Pricing Configuration</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* Small Distance */}
-                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                        <h4 className="font-medium text-green-800 mb-2">Small Distance (≤10 km)</h4>
-                        <div className="space-y-2">
-                          <div>
-                            <label className="block text-sm text-green-700">Price per km</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              defaultValue="0.00"
-                              className="w-full px-2 py-1 border border-green-300 rounded text-sm"
-                              placeholder="€0.00 (Free)"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm text-green-700">Max Distance</label>
-                            <input
-                              type="number"
-                              defaultValue="10"
-                              className="w-full px-2 py-1 border border-green-300 rounded text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
+                 
 
-                      {/* Medium Distance */}
-                      <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                        <h4 className="font-medium text-yellow-800 mb-2">Medium Distance (10-50 km)</h4>
-                        <div className="space-y-2">
-                          <div>
-                            <label className="block text-sm text-yellow-700">Price per km</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              defaultValue="0.70"
-                              className="w-full px-2 py-1 border border-yellow-300 rounded text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm text-yellow-700">Max Distance</label>
-                            <input
-                              type="number"
-                              defaultValue="50"
-                              className="w-full px-2 py-1 border border-yellow-300 rounded text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Long Distance */}
-                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                        <h4 className="font-medium text-red-800 mb-2">Long Distance (&gt;50 km)</h4>
-                        <div className="space-y-2">
-                          <div>
-                            <label className="block text-sm text-red-700">Price per km</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              defaultValue="0.50"
-                              className="w-full px-2 py-1 border border-red-300 rounded text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm text-red-700">Min Distance</label>
-                            <input
-                              type="number"
-                              defaultValue="50"
-                              className="w-full px-2 py-1 border border-red-300 rounded text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                        Save Distance Pricing
-                      </button>
-                    </div>
-                  </div>
-
+                     
                   {/* Helper Pricing Configuration */}
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Extra Helper Pricing</h3>
