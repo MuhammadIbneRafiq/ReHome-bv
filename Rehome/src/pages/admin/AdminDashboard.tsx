@@ -115,7 +115,7 @@ const AdminDashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
-  const [scheduleData, setScheduleData] = useState<{ [key: string]: string[] }>({});
+  const [scheduleData, setScheduleData] = useState<{ [key: string]: { city: string, id: string }[] }>({});
   const [showCitySelector, setShowCitySelector] = useState(false);
   // Bulk assign modal state
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
@@ -191,7 +191,7 @@ const AdminDashboard = () => {
       const allCitiesForDay = dayTimeBlocks.flatMap(block => block.cities);
       
       // Get assigned cities from city_schedules table
-      const assignedCitiesFromSchedule = scheduleData[dateKey] || [];
+      const assignedCitiesFromSchedule = (scheduleData[dateKey] || []).map(entry => entry.city);
       
       return {
         date: day,
@@ -249,14 +249,14 @@ const AdminDashboard = () => {
         return;
       }
 
-      // Convert to format: { '2024-01-15': ['Amsterdam', 'Rotterdam'] }
-      const scheduleMap: { [key: string]: string[] } = {};
+      // Convert to format: { '2024-01-15': [{ city, id }] }
+      const scheduleMap: { [key: string]: { city: string, id: string }[] } = {};
       data?.forEach((item: any) => {
         const dateKey = format(new Date(item.date), 'yyyy-MM-dd');
         if (!scheduleMap[dateKey]) {
           scheduleMap[dateKey] = [];
         }
-        scheduleMap[dateKey].push(item.city);
+        scheduleMap[dateKey].push({ city: item.city, id: item.id });
       });
 
       setScheduleData(scheduleMap);
@@ -298,28 +298,47 @@ const AdminDashboard = () => {
   // Handle date selection
   const handleDateClick = (day: CalendarDay) => {
     setSelectedDate(day.date);
-    setSelectedCities(day.assignedCities);
+    // selectedCities is now an array of city names for the selected date
+    const dateKey = format(day.date, 'yyyy-MM-dd');
+    setSelectedCities((scheduleData[dateKey] || []).map(entry => entry.city));
     setShowCitySelector(true);
   };
 
-  // Handle city assignment
+  // Handle city toggle (just update state, no immediate delete)
+  const toggleCity = (city: string) => {
+    setSelectedCities(prev =>
+      prev.includes(city)
+        ? prev.filter(c => c !== city)
+        : [...prev, city]
+    );
+  };
+
+  // Handle city assignment (add new, delete removed)
   const handleCityAssignment = async () => {
     if (!selectedDate) return;
 
     const dateKey = format(selectedDate, 'yyyy-MM-dd');
-    await saveScheduleData(dateKey, selectedCities);
+    const originalEntries = scheduleData[dateKey] || [];
+    const originalCities = originalEntries.map(entry => entry.city);
+
+    // Cities to delete (were in original, but not in selectedCities)
+    const citiesToDelete = originalEntries.filter(entry => !selectedCities.includes(entry.city));
+    // Cities to add (are in selectedCities, but not in original)
+    const citiesToAdd = selectedCities.filter(city => !originalCities.includes(city));
+
+    // Delete removed cities
+    for (const entry of citiesToDelete) {
+      await deleteScheduleEntry(entry.id);
+    }
+
+    // Add new cities
+    if (citiesToAdd.length > 0) {
+      await saveScheduleData(dateKey, citiesToAdd);
+    }
+
     await loadScheduleData();
     setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
     setShowCitySelector(false);
-  };
-
-  // Handle city toggle
-  const toggleCity = (city: string) => {
-    setSelectedCities(prev => 
-      prev.includes(city) 
-        ? prev.filter(c => c !== city)
-        : [...prev, city]
-    );
   };
 
   // Navigate months
@@ -1253,6 +1272,29 @@ const AdminDashboard = () => {
       console.error(error);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // Delete a city schedule entry from Supabase by id
+  const deleteScheduleEntry = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('city_schedules')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        toast.error('Failed to delete schedule entry');
+        console.error('Delete error:', error);
+        return;
+      }
+
+      toast.success('Schedule entry deleted successfully');
+      await loadScheduleData();
+      setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
+    } catch (error) {
+      toast.error('Failed to delete schedule entry');
+      console.error('Delete error:', error);
     }
   };
 
