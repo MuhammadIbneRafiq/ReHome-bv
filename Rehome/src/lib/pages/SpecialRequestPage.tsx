@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaWarehouse, FaBroom, FaGlobe, FaCheckCircle } from 'react-icons/fa';
-import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
 
@@ -15,7 +14,7 @@ const serviceFields: ServiceFieldsType = {
     'itemList', 'duration', 'pickupAddress', 'dropoffPreference', 'contactInfo'
   ],
   junkRemoval: [
-    'itemDescription', 'location', 'contactInfo'
+    'itemDescription', 'address', 'removalDate', 'contactInfo'
   ],
   fullInternationalMove: [
     'pickupAddress', 'dropoffAddress', 'itemList', 'services', 'contactInfo'
@@ -47,8 +46,6 @@ const SpecialRequestPage = () => {
   const handleFieldChange = (field: string, value: any) => {
     setFields((prev: any) => ({ ...prev, [field]: value }));
   };
-
-
 
   const handlePhoneChange = (value: string) => {
     setContactInfo(prev => ({ ...prev, phone: value }));
@@ -264,29 +261,90 @@ const SpecialRequestPage = () => {
                   <div className="space-y-6">
                     {serviceFields[selectedService].map((field) => {
                       if (field === 'contactInfo') return null; // Skip this as we handle it separately
-                      
-                      return (
-                        <div key={field}>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1')}
-                          </label>
-                          {field.includes('Address') ? (
-                            <LocationAutocomplete
+
+                      // Custom label for junkRemoval fields
+                      let label = field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1');
+                      if (selectedService === 'junkRemoval') {
+                        if (field === 'address') label = 'Address';
+                        if (field === 'removalDate') label = 'Latest Removal Date';
+                        if (field === 'itemDescription') label = 'Item Description';
+                      }
+
+                      // Use date input for removalDate
+                      if (field === 'removalDate') {
+                        return (
+                          <div key={field}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {label}
+                            </label>
+                            <input
+                              type="date"
                               value={fields[field] || ''}
-                              onChange={(value) => handleFieldChange(field, value)}
-                              placeholder={`Enter ${field.toLowerCase()}`}
-                              countryCode="nl"
+                              onChange={(e) => handleFieldChange(field, e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              required
                             />
-                          ) : (
+                            {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
+                          </div>
+                        );
+                      }
+
+                      // Use LocationAutocomplete for address fields
+                      if (field === 'address' || field.includes('Address')) {
+                        return (
+                          <div key={field}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              {label}
+                            </label>
+                            <input
+                              type="text"
+                              value={fields[field] || ''}
+                              onChange={(e) => handleFieldChange(field, e.target.value)}
+                              placeholder={`Enter ${label.toLowerCase()}`}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              required
+                            />
+                            {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
+                          </div>
+                        );
+                      }
+
+                      // Use manual text input for junkRemoval address
+                      if (selectedService === 'junkRemoval' && field === 'address') {
+                        return (
+                          <div key={field}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Address
+                            </label>
                             <input
                               type="text"
                               value={fields[field] || ''}
                               onChange={(e) => handleFieldChange(field, e.target.value)}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                              placeholder={`Enter ${field.toLowerCase()}`}
+                              placeholder="Enter your full address"
+                              maxLength={100}
                               required
                             />
-                          )}
+                            <p className="text-xs text-gray-500 mt-1">Type in your full address.</p>
+                            {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
+                          </div>
+                        );
+                      }
+
+                      // Default to text input
+                      return (
+                        <div key={field}>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {label}
+                          </label>
+                          <input
+                            type="text"
+                            value={fields[field] || ''}
+                            onChange={(e) => handleFieldChange(field, e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            placeholder={`Enter ${label.toLowerCase()}`}
+                            required
+                          />
                           {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}
                         </div>
                       );
