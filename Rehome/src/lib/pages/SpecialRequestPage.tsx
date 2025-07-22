@@ -202,7 +202,7 @@ const SpecialRequestPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-orange-50 py-8">
+    <div className="min-h-screen bg-orange-50 pt-16 pb-8">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-lg shadow-lg p-8">
