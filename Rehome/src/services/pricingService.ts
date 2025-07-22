@@ -4,7 +4,6 @@ import {
   getItemPoints, 
   isCityDay
 } from '../lib/constants';
-import { calendarService } from './calendarService';
 import { findClosestSupportedCity} from '../utils/locationServices';
 
 export interface PricingBreakdown {
@@ -397,7 +396,7 @@ class PricingService {
     const isScheduledDay = await this.isCityDay(city, date);
     
     // Check if it's an empty day for early booking discount
-    const isEmptyDay = await this.isEmptyCalendarDay(date);
+    const isEmptyDay = await this.isEmptyCalendarDay();
         
     // Determine base charge (without distance adjustments - distance is handled separately)
     let baseCharge: number;
@@ -435,43 +434,12 @@ class PricingService {
   }
 
   private async isCityDay(city: string, date: Date): Promise<boolean> {
-    // TEMPORARY: Use constants-based logic directly since calendar service has incorrect data
-    // TODO: Fix calendar service data for city days
     const constantsResult = isCityDay(city, date);
-    
     return constantsResult;
-    
-    // Original calendar service logic (commented out temporarily)
-    /*
-    try {
-      const calendarResult = await calendarService.isCityScheduled(city, date);
-      console.log('🔍 [CALENDAR DEBUG] Calendar service result:', {
-        city,
-        date: isNaN(date.getTime()) ? 'Invalid Date' : date.toISOString(),
-        calendarResult
-      });
-      return calendarResult;
-    } catch (error) {
-      console.warn('Calendar service unavailable, using fallback logic:', error);
-      const fallbackResult = isCityDay(city, date);
-      console.log('🔍 [FALLBACK DEBUG] Using constants fallback:', {
-        city,
-        date: isNaN(date.getTime()) ? 'Invalid Date' : date.toISOString(),
-        fallbackResult
-      });
-      return fallbackResult;
-    }
-    */
   }
 
-  private async isEmptyCalendarDay(date: Date): Promise<boolean> {
-    // Check if calendar day is empty for early booking discount
-    try {
-      return await calendarService.isEmptyCalendarDay(date);
-    } catch (error) {
-      console.warn('Calendar service unavailable for empty day check:', error);
-      return false; // No early booking discount if calendar is unavailable
-    }
+  private async isEmptyCalendarDay(): Promise<boolean> {
+    return false; // No early booking discount if calendar is unavailable
   }
 
 
@@ -480,6 +448,8 @@ class PricingService {
     let totalPoints = 0;
     
     for (const [itemId, quantity] of Object.entries(input.itemQuantities)) {
+      console.log('itemId', itemId);
+      console.log('quantity', quantity);
       if (quantity > 0) {
         const points = getItemPoints(itemId);
         totalPoints += points * quantity;
