@@ -41,8 +41,6 @@ export const GoogleOAuthCallback: React.FC = () => {
           sessionStorage.removeItem('oauth_state');
         }
 
-        console.log('🔑 Processing Google OAuth callback with code:', code.substring(0, 10) + '...');
-
         // Exchange code for tokens
         const response = await fetch(API_ENDPOINTS.AUTH.GOOGLE_CALLBACK, {
           method: 'POST',
@@ -73,11 +71,7 @@ export const GoogleOAuthCallback: React.FC = () => {
         }
 
         const data = await response.json();
-        console.log('data', data);
         if (data.accessToken) { // Using accessToken which is a JWT
-          console.log('✅ Google OAuth successful, storing ID token (JWT)');
-          
-          console.log('data.accessToken', data.accessToken);
           // Store the JWT token
           localStorage.setItem('accessToken', data.accessToken);
           

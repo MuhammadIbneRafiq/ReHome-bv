@@ -19,7 +19,6 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ text }) => {
 
       // Google OAuth parameters
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-      console.log('clientId', clientId);
       
       // Use domain-based environment detection
       const currentDomain = window.location.hostname;
@@ -28,11 +27,9 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ text }) => {
       if (currentDomain === 'localhost' || currentDomain.includes('127.0.0.1')) {
         // Local development
         redirectUri = `${window.location.origin}/auth/google/callback`;
-        console.log('Using development redirect URI:', redirectUri);
       } else if (currentDomain === 'www.rehomebv.com' || currentDomain === 'rehomebv.com') {
         // Production
         redirectUri = 'https://www.rehomebv.com/auth/google/callback';
-        console.log('Using production redirect URI:', redirectUri);
       } else {
         // Unknown domain - use current origin but log a warning
         redirectUri = `${window.location.origin}/auth/google/callback`;
@@ -53,7 +50,6 @@ export const GoogleAuthButton: React.FC<GoogleAuthButtonProps> = ({ text }) => {
       // Log the full auth URL in development
       const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
       if (currentDomain === 'localhost' || currentDomain.includes('127.0.0.1')) {
-        console.log('Full Google Auth URL:', googleAuthUrl);
       }
       
       window.location.href = googleAuthUrl;

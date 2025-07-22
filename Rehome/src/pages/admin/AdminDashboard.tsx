@@ -11,39 +11,9 @@ import { CityPrice, MarketplaceItem, CalendarDay, TimeBlock, TransportRequest, I
 import { API_ENDPOINTS } from '../../lib/api/config';
 
 const AdminDashboard = () => {
-  const { user, role } = useUserSessionStore();
+  const { user } = useUserSessionStore();
   const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'requests'>('transport');
   const [requestsTab, setRequestsTab] = useState<'donations' | 'special-requests'>('donations');
-
-  const ADMIN_EMAILS = [
-    'muhammadibnerafiq123@gmail.com',
-    'testnewuser12345@gmail.com',
-    'egzmanagement@gmail.com',
-    'samuel.stroehle8@gmail.com',
-    'info@rehomebv.com'
-  ];
-
-  const isAdmin = role === 'admin' || ADMIN_EMAILS.includes(user?.email || '');
-  
-  if (!user || !isAdmin) {
-    return (
-      <div className="min-h-screen bg-orange-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
-          <p className="text-gray-700 mb-4">
-            You need admin privileges to access this dashboard.
-          </p>
-          <p className="text-sm text-gray-500">
-            Current user: {user?.email || 'Not logged in'}
-            <br />
-            Current role: {role || 'No role'}
-            <br />
-            Is admin email: {ADMIN_EMAILS.includes(user?.email || '') ? 'Yes' : 'No'}
-          </p>
-        </div>
-      </div>
-    );
-  }
   
   // State for all tabs
   const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([]);
@@ -123,19 +93,7 @@ const AdminDashboard = () => {
   const [bulkAssignEndDate, setBulkAssignEndDate] = useState('');
   const [bulkAssignCities, setBulkAssignCities] = useState<string[]>([]);
 
-  // Enhanced calendar state for time blocks
-  // const [selectedDateForBlocks, setSelectedDateForBlocks] = useState<Date | null>(null);
-  // const [showTimeBlockEditor, setShowTimeBlockEditor] = useState(false);
-  const [timeBlocks, setTimeBlocks] = useState<{ [key: string]: TimeBlock[] }>({});
-  // const [currentTimeBlock, setCurrentTimeBlock] = useState<TimeBlock>({
-  //   id: '',
-  //   startTime: '08:00',
-  //   endTime: '15:00',
-  //   cities: [],
-  //   discountPercentage: 20
-  // });
-  // const [editingTimeBlock, setEditingTimeBlock] = useState<string | null>(null);
-
+  const [timeBlocks] = useState<{ [key: string]: TimeBlock[] }>({});
   // Pricing editing state  
   const [editingCityPrice, setEditingCityPrice] = useState<string | null>(null);
   const [editCityPriceData, setEditCityPriceData] = useState<any>({});
@@ -169,11 +127,6 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  // Load time blocks on component mount
-  useEffect(() => {
-    loadTimeBlocksFromSupabase();
-  }, []);
-
   // Update calendar when time blocks or schedule data change
   useEffect(() => {
     setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
@@ -204,38 +157,6 @@ const AdminDashboard = () => {
     });
   };
 
-  const loadTimeBlocksFromSupabase = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('time_blocks')
-        .select('*');
-
-      if (error) {
-        console.error('Error loading time blocks:', error);
-        return;
-      }
-
-      // Convert to time blocks format
-      const timeBlocksMap: { [key: string]: TimeBlock[] } = {};
-      data?.forEach((item: any) => {
-        const dateKey = item.date;
-        if (!timeBlocksMap[dateKey]) {
-          timeBlocksMap[dateKey] = [];
-        }
-        timeBlocksMap[dateKey].push({
-          id: item.id.toString(),
-          startTime: item.start_time,
-          endTime: item.end_time,
-          cities: item.cities,
-          discountPercentage: item.discount_percentage
-        });
-      });
-
-      setTimeBlocks(timeBlocksMap);
-    } catch (error) {
-      console.error('Error loading time blocks:', error);
-    }
-  };
 
   // Load schedule data from Supabase
   const loadScheduleData = async () => {
@@ -578,24 +499,6 @@ const AdminDashboard = () => {
     return matchesSearch && matchesCity && matchesStatus && matchesType && matchesDateRange;
   });
 
-  // Filter marketplace items based on search and filters (commented out - using adminListings instead)
-  // const filteredMarketplaceItems = marketplaceItems.filter(item => {
-  //   const matchesSearch = item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //                        item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //                        item.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-  //                        item.seller_email?.toLowerCase().includes(searchQuery.toLowerCase());
-    
-  //   const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-  //   const matchesCategory = typeFilter === 'all' || item.category === typeFilter;
-    
-  //   const matchesPriceRange = (!priceRangeFilter.minPrice || item.price >= parseFloat(priceRangeFilter.minPrice)) &&
-  //                            (!priceRangeFilter.maxPrice || item.price <= parseFloat(priceRangeFilter.maxPrice));
-    
-  //   return matchesSearch && matchesStatus && matchesCategory && matchesPriceRange;
-  // });
-
-
-
   // Filter furniture items based on search and filters
   const filteredFurnitureItems = furnitureItemsData.filter(item => {
     const matchesSearch = item.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -644,7 +547,7 @@ const AdminDashboard = () => {
   const handleSaveTransportRequest = async (request: TransportRequest) => {
     setIsUpdating(true);
     try {
-      const tableName = request.type === 'item-moving' ? 'item_moving_requests' : 'house_moving_requests';
+      const tableName = request.type === 'item-moving' ? 'item_moving' : 'house_moving';
       
       const { error } = await supabase
         .from(tableName)
