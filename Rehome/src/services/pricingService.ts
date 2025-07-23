@@ -2,9 +2,9 @@ import {
   pricingConfig, 
   cityBaseCharges, 
   getItemPoints, 
-  isCityDay
 } from '../lib/constants';
 import { findClosestSupportedCity} from '../utils/locationServices';
+import API_ENDPOINTS from '../lib/api/config';
 
 export interface PricingBreakdown {
   basePrice: number;
@@ -165,152 +165,132 @@ class PricingService {
   }
 
   /**
-   * Calculate base charge breakdown (async)
+   * Calculate base charge breakdown using Split the Base Charge (Balanced Approach)
    */
   private async calculateBaseChargeBreakdown(input: PricingInput, breakdown: PricingBreakdown) {
     try {
       let baseResult;
-      // Check if we have a calculated distance for long-distance moves
-      const isLongDistanceMove = input.distanceKm && input.distanceKm > 50;
-      console.log('isLongDistanceMove is', isLongDistanceMove);
-      console.log('input.distanceKm is', input.distanceKm);
-      
+      console.log('[DEBUG] Input:', JSON.stringify(input));
       if (input.isDateFlexible) {
-        // For flexible dates, apply early booking discount (50% off normal rate)
-        //TODO W CALENDER
+        // For flexible dates, apply city day rate for pickup city
         const { city, distanceDifference } = await findClosestSupportedCity(input.pickupPlace);
+        console.log('[DEBUG] Flexible date - Closest city:', city, 'Distance diff:', distanceDifference);
         if (!city) {
           breakdown.basePrice = 0;
           breakdown.breakdown.baseCharge.city = null;
           return;
         }
-                      
-        const distanceFromCenter = input.distanceKm || 0;
         let finalCharge = cityBaseCharges[city]?.cityDay || 0;
         let chargeType = `${city} Flexible date with city day rate according to ReHome delivery plans`;
-        
-        if (isLongDistanceMove && distanceFromCenter > 8) {
-          const extraKm = distanceDifference;
-          const extraCharge = Math.round(extraKm * 3); // €3 per km beyond 8km
+        console.log('[DEBUG] Flexible date - cityDay rate:', finalCharge);
+        // Add extra km charge
+        if (distanceDifference > 0) {
+          const extraCharge = Math.round(distanceDifference * 3); // €3 per km beyond 8km
           finalCharge += extraCharge;
-          chargeType += ` (+€${extraCharge} for ${Math.round(extraKm)}km beyond city center)`;
+          chargeType += ` (+€${extraCharge} for ${Math.round(distanceDifference)}km beyond city center)`;
+          console.log('[DEBUG] Flexible date - Extra km charge:', extraCharge, 'New finalCharge:', finalCharge);
         }
-        
-        // Add long distance indicator if applicable
-        if (isLongDistanceMove) {
-          chargeType += ` (long distance: ${Math.round(input.distanceKm!)}km)`;
-        }
-        
         baseResult = {
           charge: finalCharge,
           type: chargeType,
           city,
-          distance: Math.round(distanceFromCenter * 10) / 10
+          distance: Math.round((input.distanceKm || 0) * 10) / 10
         };
-        
         // Set the breakdown for flexible date scenario
         breakdown.basePrice = baseResult.charge;
         breakdown.breakdown.baseCharge.city = baseResult.city;
-        breakdown.breakdown.baseCharge.isCityDay = true; // Flexible dates now use city day rates
-        breakdown.breakdown.baseCharge.isEarlyBooking = true; // Flexible dates are considered early booking
+        breakdown.breakdown.baseCharge.isCityDay = true;
+        breakdown.breakdown.baseCharge.isEarlyBooking = true;
         breakdown.breakdown.baseCharge.originalPrice = finalCharge;
         breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
+        breakdown.breakdown.baseCharge.type = chargeType;
+        console.log('[DEBUG] Flexible date - Final baseResult:', baseResult);
       } else {
-        // For fixed dates, check if we have separate pickup and dropoff dates
+        // For fixed dates, use Split the Base Charge (Balanced Approach)
         if (input.pickupDate && input.dropoffDate) {
-          
-          // Calculate base charge for both pickup and dropoff cities
           const pickupDate = new Date(input.pickupDate);
           const dropoffDate = new Date(input.dropoffDate);
-          
           const { city: pickupCity, distanceDifference: pickupDistanceDifference } = await findClosestSupportedCity(input.pickupPlace);
           const { city: dropoffCity, distanceDifference: dropoffDistanceDifference } = await findClosestSupportedCity(input.dropoffPlace);
-
+          console.log('[DEBUG] Fixed date - Pickup city:', pickupCity, 'Dropoff city:', dropoffCity);
           if (!pickupCity || !dropoffCity) {
             breakdown.basePrice = 0;
             breakdown.breakdown.baseCharge.city = null;
             return;
           }
-          
-          // Calculate base charges for both cities
-          const pickupBaseResult = await this.calculateBaseCharge(pickupDistanceDifference || 0, input.pickupLocation, pickupDate, input.pickupPlace);
-          const dropoffBaseResult = await this.calculateBaseCharge(dropoffDistanceDifference || 0, input.dropoffLocation, dropoffDate, input.dropoffPlace);
-          
-          // Combine the charges based on whether it's the same date or different dates
-          let totalCharge: number;
-          const isSameDate = pickupDate.toDateString() === dropoffDate.toDateString();
-          
-          if (isSameDate) {
-            // Same date: use the higher of the two base charges (one trip covering both cities)
-            totalCharge = Math.max(pickupBaseResult.charge, dropoffBaseResult.charge);
-            
+          // Calculate pickup charge
+          let pickupCharge = 0;
+          let pickupDescription = '';
+          const isPickupAligned = await this.isCityDay(pickupCity, pickupDate);
+          const isPickupEarlyBooking = await this.isEmptyCalendarDay(pickupCity, pickupDate); // Check if it's early booking
+          console.log('[DEBUG] Pickup - isCityDay:', isPickupAligned, 'isEarlyBooking:', isPickupEarlyBooking);
+          if (isPickupAligned) {
+            pickupCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
+            pickupDescription = `${pickupCity} aligned (€${pickupCharge})`;
+          } else if (isPickupEarlyBooking) {
+            const normalRate = cityBaseCharges[pickupCity]?.normal || 0;
+            pickupCharge = Math.round(normalRate * 0.5);
+            pickupDescription = `${pickupCity} early booking (€${pickupCharge})`;
           } else {
-            // Different dates: add the base charges from both cities (two separate trips)
-            totalCharge = pickupBaseResult.charge + dropoffBaseResult.charge;
-            
+            pickupCharge = cityBaseCharges[pickupCity]?.normal || 0;
+            pickupDescription = `${pickupCity} normal (€${pickupCharge})`;
           }
-          
-          // Determine the charge type based on same date vs different dates
-          let chargeType = '';
-          if (isSameDate) {
-            // Same date: using higher rate between the two cities
-            const isPickupCityDay = await this.isCityDay(pickupCity, pickupDate);
-            const isDropoffCityDay = await this.isCityDay(dropoffCity, dropoffDate);
-                                  // For same date, describe which city/rate we're using (the higher one)
-            const isUsingPickup = pickupBaseResult.charge >= dropoffBaseResult.charge;
-            const primaryCity = isUsingPickup ? pickupCity : dropoffCity;
-            const isPrimaryCityDay = isUsingPickup ? isPickupCityDay : isDropoffCityDay;
-            
-            if (pickupCity === dropoffCity) {
-              // Same city, same date
-              if (isPrimaryCityDay) {
-                chargeType = `${primaryCity} city day rate (same date)`;
-              } else {
-                chargeType = `${primaryCity} normal rate (same date)`;
-              }
-            } else {
-              // Different cities, same date - using higher rate
-              if (isPrimaryCityDay) {
-                chargeType = `${primaryCity} city day rate (same date, higher of ${pickupCity}/${dropoffCity})`;
-              } else {
-                chargeType = `${primaryCity} normal rate (same date, higher of ${pickupCity}/${dropoffCity})`;
-              }
-            }
+          // Add pickup extra km charge
+          if (pickupDistanceDifference > 0) {
+            const pickupExtraCharge = Math.round(pickupDistanceDifference * 3);
+            pickupCharge += pickupExtraCharge;
+            pickupDescription += ` +€${pickupExtraCharge}km`;
+            console.log('[DEBUG] Pickup - Extra km charge:', pickupExtraCharge, 'New pickupCharge:', pickupCharge);
+          }
+          // Calculate dropoff charge
+          let dropoffCharge = 0;
+          let dropoffDescription = '';
+          const isDropoffAligned = await this.isCityDay(dropoffCity, dropoffDate);
+          const isDropoffEarlyBooking = await this.isEmptyCalendarDay(dropoffCity, dropoffDate); // Check if it's early booking
+          console.log('[DEBUG] Dropoff - isCityDay:', isDropoffAligned, 'isEarlyBooking:', isDropoffEarlyBooking);
+          if (input.isDateFlexible) {
+            dropoffCharge = cityBaseCharges[dropoffCity]?.cityDay || 0;
+            dropoffDescription = `${dropoffCity} flexible (€${dropoffCharge})`;
+          } else if (isDropoffAligned) {
+            dropoffCharge = cityBaseCharges[dropoffCity]?.cityDay || 0;
+            dropoffDescription = `${dropoffCity} aligned (€${dropoffCharge})`;
+          } else if (isDropoffEarlyBooking) {
+            const normalRate = cityBaseCharges[dropoffCity]?.normal || 0;
+            dropoffCharge = Math.round(normalRate * 0.5);
+            dropoffDescription = `${dropoffCity} early booking (€${dropoffCharge})`;
           } else {
-            // Different dates: combining both city rates
-            const isPickupCityDay = await this.isCityDay(pickupCity, pickupDate);
-            const isDropoffCityDay = await this.isCityDay(dropoffCity, dropoffDate);
-            
-
-            
-            if (isPickupCityDay && isDropoffCityDay) {
-              chargeType = `${pickupCity}/${dropoffCity} city day rates (different dates)`;
-            } else if (isPickupCityDay || isDropoffCityDay) {
-              chargeType = `${pickupCity}/${dropoffCity} mixed rates (different dates)`;
-            } else {
-              chargeType = `${pickupCity}/${dropoffCity} normal rates (different dates)`;
-            }
+            dropoffCharge = cityBaseCharges[dropoffCity]?.normal || 0;
+            dropoffDescription = `${dropoffCity} normal (€${dropoffCharge})`;
           }
-          
+          // Add dropoff extra km charge
+          if (dropoffDistanceDifference > 0) {
+            const dropoffExtraCharge = Math.round(dropoffDistanceDifference * 3);
+            dropoffCharge += dropoffExtraCharge;
+            dropoffDescription += ` +€${dropoffExtraCharge}km`;
+            console.log('[DEBUG] Dropoff - Extra km charge:', dropoffExtraCharge, 'New dropoffCharge:', dropoffCharge);
+          }
+          // Split the base charge (balanced approach) - take average
+          const totalCharge = Math.round((pickupCharge + dropoffCharge) / 2);
+          const chargeType = `Split base charge: (${pickupDescription} + ${dropoffDescription}) / 2 = €${totalCharge}`;
           baseResult = {
             charge: totalCharge,
             type: chargeType,
-            city: isSameDate && pickupCity !== dropoffCity ? 
-              (pickupBaseResult.charge >= dropoffBaseResult.charge ? pickupCity : dropoffCity) : 
-              (pickupCity === dropoffCity ? pickupCity : `${pickupCity}/${dropoffCity}`),
-            distance: Math.max(pickupBaseResult.distance, dropoffBaseResult.distance)
+            city: pickupCity === dropoffCity ? pickupCity : `${pickupCity}/${dropoffCity}`,
+            distance: Math.max(
+              Math.round((pickupDistanceDifference || 0) * 10) / 10,
+              Math.round((dropoffDistanceDifference || 0) * 10) / 10
+            )
           };
-          
-          // Set the breakdown for dual-date scenario
+          // Set the breakdown for split charge scenario
           breakdown.basePrice = totalCharge;
-          breakdown.breakdown.baseCharge.city = isSameDate && pickupCity !== dropoffCity ? 
-            (pickupBaseResult.charge >= dropoffBaseResult.charge ? pickupCity : dropoffCity) : 
-            (pickupCity === dropoffCity ? pickupCity : `${pickupCity}/${dropoffCity}`);
-          breakdown.breakdown.baseCharge.isCityDay = chargeType.includes('city day');
-          breakdown.breakdown.baseCharge.isEarlyBooking = input.isDateFlexible;
-          breakdown.breakdown.baseCharge.originalPrice = totalCharge;
+          breakdown.breakdown.baseCharge.city = baseResult.city;
+          breakdown.breakdown.baseCharge.isCityDay = isPickupAligned || isDropoffAligned;
+          breakdown.breakdown.baseCharge.isEarlyBooking = isPickupEarlyBooking || isDropoffEarlyBooking || input.isDateFlexible;
+          breakdown.breakdown.baseCharge.originalPrice = pickupCharge + dropoffCharge;
           breakdown.breakdown.baseCharge.finalPrice = totalCharge;
           breakdown.breakdown.baseCharge.type = chargeType;
+          console.log('[DEBUG] Fixed date - PickupCharge:', pickupCharge, 'DropoffCharge:', dropoffCharge, 'TotalCharge:', totalCharge);
+          console.log('[DEBUG] Fixed date - PickupDesc:', pickupDescription, 'DropoffDesc:', dropoffDescription);
         } else {
           // Fallback to single date calculation
           if (!input.selectedDate) {
@@ -318,10 +298,8 @@ class PricingService {
             breakdown.breakdown.baseCharge.city = null;
             return;
           }
-          
           const date = new Date(input.selectedDate);
           baseResult = await this.calculateBaseCharge(input.distanceKm || 0, input.pickupLocation, date, input.pickupPlace);
-          
           // Set the breakdown for single-date scenario
           breakdown.basePrice = baseResult.charge;
           breakdown.breakdown.baseCharge.city = baseResult.city;
@@ -330,10 +308,9 @@ class PricingService {
           breakdown.breakdown.baseCharge.originalPrice = baseResult.charge;
           breakdown.breakdown.baseCharge.finalPrice = baseResult.charge;
           breakdown.breakdown.baseCharge.type = baseResult.type;
+          console.log('[DEBUG] Single date - baseResult:', baseResult);
         }
       }
-      
-      
     } catch (error) {
       console.error('Error calculating base charge breakdown:', error);
       breakdown.basePrice = 0;
@@ -390,39 +367,37 @@ class PricingService {
     if (!city) {
       return { charge: 0, type: 'Location not supported', city: '', distance: 0 };
     }
-    console.log('distanceDifference', distanceDifference);
 
     // Check if it's a city day (scheduled in that city)
     const isScheduledDay = await this.isCityDay(city, date);
     
     // Check if it's an empty day for early booking discount
-    const isEmptyDay = await this.isEmptyCalendarDay();
+    const isEmptyDay = await this.isEmptyCalendarDay(city, date);
         
-    // Determine base charge (without distance adjustments - distance is handled separately)
+    // Determine base charge
     let baseCharge: number;
     let chargeType: string;
     
     if (isScheduledDay) {
-      // City day pricing
+      // City day pricing - aligned with schedule
       baseCharge = cityBaseCharges[city]?.cityDay || 0;
       chargeType = `${city} city day rate`;
     } else if (isEmptyDay) {
       // Early booking discount (50% off normal rate)
       const normalRate = cityBaseCharges[city]?.normal || 0;
       baseCharge = Math.round(normalRate * 0.5);
-      chargeType = `${city} Flexible date with discount according to ReHome delivery plans`;
+      chargeType = `${city} early booking discount (50% off)`;
     } else {
-      // Normal pricing
+      // Normal pricing - doesn't align with schedule
       baseCharge = cityBaseCharges[city]?.normal || 0;
       chargeType = `${city} normal rate`;
     }
         
-    // Apply city center extra charge if beyond 8km from city center
-    if (distanceKm) {
-      const extraKm = distanceDifference;
-      const extraCharge = Math.round(extraKm * 3); // €3 per km beyond 8km
+    // Apply city center extra charge if beyond city center range
+    if (distanceDifference > 0) {
+      const extraCharge = Math.round(distanceDifference * 3); // €3 per km beyond 8km
       baseCharge += extraCharge;
-      chargeType += ` (+€${extraCharge} for ${Math.round(extraKm)}km beyond city center)`;
+      chargeType += ` (+€${extraCharge} for ${Math.round(distanceDifference)}km beyond city center)`;
     }
     
     return { 
@@ -433,13 +408,48 @@ class PricingService {
     };
   }
 
-  private async isCityDay(city: string, date: Date): Promise<boolean> {
-    const constantsResult = isCityDay(city, date);
-    return constantsResult;
+  private async getCityScheduleStatus(city: string, date: Date): Promise<{
+    isScheduled: boolean;
+    isEmpty: boolean;
+  }> {
+    try {
+      const dateStr = date.toISOString().split('T')[0];
+      const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
+      const url = `${baseUrl}/api/city-schedule-status?city=${encodeURIComponent(city)}&date=${dateStr}`;
+      console.log('[DEBUG] Fetching city schedule status:', url);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch schedule status: ${response.status}`);
+      }
+      const result = await response.json();
+      console.log('[DEBUG] City schedule status result:', result);
+      if (!result.success) {
+        throw new Error(`Backend error: ${result.error}`);
+      }
+      return {
+        isScheduled: result.data.isScheduled,
+        isEmpty: result.data.isEmpty
+      };
+    } catch (error) {
+      console.error('[getCityScheduleStatus] Error:', error);
+      // Fallback to safe defaults
+      return {
+        isScheduled: false,
+        isEmpty: true
+      };
+    }
   }
 
-  private async isEmptyCalendarDay(): Promise<boolean> {
-    return false; // No early booking discount if calendar is unavailable
+  private async isCityDay(city: string, date: Date): Promise<boolean> {
+    const { isScheduled } = await this.getCityScheduleStatus(city, date);
+    console.log(`[DEBUG] isCityDay for ${city} on ${date.toISOString().split('T')[0]}:`, isScheduled);
+    return isScheduled;
+  }
+
+  private async isEmptyCalendarDay(city: string, date: Date): Promise<boolean> {
+    const { isEmpty } = await this.getCityScheduleStatus(city, date);
+    console.log(`[DEBUG] isEmptyCalendarDay for ${city} on ${date.toISOString().split('T')[0]}:`, isEmpty);
+    return isEmpty;
   }
 
 
@@ -448,8 +458,6 @@ class PricingService {
     let totalPoints = 0;
     
     for (const [itemId, quantity] of Object.entries(input.itemQuantities)) {
-      console.log('itemId', itemId);
-      console.log('quantity', quantity);
       if (quantity > 0) {
         const points = getItemPoints(itemId);
         totalPoints += points * quantity;

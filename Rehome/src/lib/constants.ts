@@ -1,4 +1,3 @@
-import { supabase } from "./supabaseClient";
 import pricingConfigData from "./pricingConfig.json";
 import { API_ENDPOINTS } from "./api/config";
 // // {
@@ -125,20 +124,3 @@ export const getItemPoints = (itemId: string): number => {
   return item ? item.points : 0;
 };
 
-// Helper function to check if a date is a city day (admin-booked in city_schedules)
-export const isCityDay = async (city: string, date: Date): Promise<boolean> => {
-  // Format date as YYYY-MM-DD
-  const dateStr = date.toISOString().split('T')[0];
-  const { data, error } = await supabase
-    .from('city_schedules')
-    .select('id')
-    .eq('city', city)
-    .eq('date', dateStr)
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    console.error('[isCityDay] Error fetching city_schedules:', error);
-    return false;
-  }
-  return !!data;
-};
