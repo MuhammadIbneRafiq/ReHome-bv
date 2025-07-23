@@ -389,7 +389,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
         isEarlyBooking: false,
       };
 
-      const breakdown = await pricingService.calculateItemTransportPricing(pricingInput);
+      const breakdown = await pricingService.calculatePricing(pricingInput);
       setPricingBreakdown(breakdown);
     } catch (error) {
       console.error('Error calculating additional costs:', error);
