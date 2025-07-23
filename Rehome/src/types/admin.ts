@@ -151,4 +151,5 @@ export interface TransportRequest {
     status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
     created_at: string;
     updated_at: string;
+    photo_urls?: string[];
   }

@@ -3406,6 +3406,19 @@ const AdminDashboard = () => {
                           <p><span className="font-medium">Condition:</span> {selectedDonation.item_condition || 'N/A'}</p>
                           <p><span className="font-medium">Estimated Value:</span> €{selectedDonation.total_estimated_value || 'N/A'}</p>
                         </div>
+                        {/* Uploaded Photos */}
+                        {selectedDonation.photo_urls && selectedDonation.photo_urls.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="text-sm font-semibold mb-2">Uploaded Photos</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedDonation.photo_urls.map((url: string, idx: number) => (
+                                <a href={url} target="_blank" rel="noopener noreferrer" key={idx} className="block">
+                                  <img src={url} alt={`Donation Photo ${idx + 1}`} className="w-24 h-24 object-cover rounded border hover:shadow-lg transition" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Location Information */}
@@ -3436,15 +3449,22 @@ const AdminDashboard = () => {
                             <table className="w-full border-collapse border border-gray-300">
                               <thead>
                                 <tr className="bg-gray-100">
-                                  <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Item</th>
-                                  <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Quantity</th>
+                                  {/* Dynamically render columns based on keys in the first item */}
+                                  {Object.keys(selectedDonation.donation_items[0]).map((key) => (
+                                    <th key={key} className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">
+                                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                                    </th>
+                                  ))}
                                 </tr>
                               </thead>
                               <tbody>
                                 {selectedDonation.donation_items.map((item: any, index: number) => (
                                   <tr key={index} className="hover:bg-gray-50">
-                                    <td className="border border-gray-300 px-3 py-2 text-sm">{item.name}</td>
-                                    <td className="border border-gray-300 px-3 py-2 text-sm">{item.quantity}</td>
+                                    {Object.keys(selectedDonation.donation_items[0]).map((key) => (
+                                      <td key={key} className="border border-gray-300 px-3 py-2 text-sm">
+                                        {item[key] ?? ''}
+                                      </td>
+                                    ))}
                                   </tr>
                                 ))}
                               </tbody>
@@ -3527,6 +3547,19 @@ const AdminDashboard = () => {
                           </p>
                           <p><span className="font-medium">Date Flexible:</span> {selectedSpecialRequest.is_date_flexible ? 'Yes' : 'No'}</p>
                         </div>
+                        {/* Uploaded Photos */}
+                        {selectedSpecialRequest.photo_urls && selectedSpecialRequest.photo_urls.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="text-sm font-semibold mb-2">Uploaded Photos</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {selectedSpecialRequest.photo_urls.map((url: string, idx: number) => (
+                                <a href={url} target="_blank" rel="noopener noreferrer" key={idx} className="block">
+                                  <img src={url} alt={`Special Request Photo ${idx + 1}`} className="w-24 h-24 object-cover rounded border hover:shadow-lg transition" />
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Location Information */}
@@ -3566,9 +3599,9 @@ const AdminDashboard = () => {
                       <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-lg font-semibold text-gray-800 mb-3">Timeline</h4>
                         <div className="space-y-2">
-                          <p><span className="font-medium">Created:</span> {format(new Date(selectedSpecialRequest.created_at), 'PPpp')}</p>
-                          <p><span className="font-medium">Updated:</span> {format(new Date(selectedSpecialRequest.updated_at), 'PPpp')}</p>
-                          <p><span className="font-medium">Preferred Date:</span> {selectedSpecialRequest.preferred_date ? format(new Date(selectedSpecialRequest.preferred_date), 'PPP') : 'N/A'}</p>
+                          <p><span className="font-medium">Created:</span> {selectedSpecialRequest.created_at && !isNaN(new Date(selectedSpecialRequest.created_at).getTime()) ? format(new Date(selectedSpecialRequest.created_at), 'PPpp') : 'N/A'}</p>
+                          <p><span className="font-medium">Updated:</span> {selectedSpecialRequest.updated_at && !isNaN(new Date(selectedSpecialRequest.updated_at).getTime()) ? format(new Date(selectedSpecialRequest.updated_at), 'PPpp') : 'N/A'}</p>
+                          <p><span className="font-medium">Preferred Date:</span> {selectedSpecialRequest.preferred_date && !isNaN(new Date(selectedSpecialRequest.preferred_date).getTime()) ? format(new Date(selectedSpecialRequest.preferred_date), 'PPP') : 'N/A'}</p>
                         </div>
                       </div>
                     </div>
