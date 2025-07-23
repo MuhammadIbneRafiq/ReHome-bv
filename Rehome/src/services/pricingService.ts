@@ -370,41 +370,40 @@ class PricingService {
 
     // Check if it's a city day (scheduled in that city)
     const isScheduledDay = await this.isCityDay(city, date);
-    
-    // Check if it's an empty day for early booking discount
-    const isEmptyDay = await this.isEmptyCalendarDay(city, date);
-        
+    // Check if it's an early booking (at least 21 days in advance)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysInAdvance = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const isEarlyBooking = daysInAdvance >= 21;
+    console.log(`[DEBUG] Booking for ${city} on ${date.toISOString().split('T')[0]}: isScheduledDay=${isScheduledDay}, isEarlyBooking=${isEarlyBooking} (daysInAdvance=${daysInAdvance})`);
     // Determine base charge
     let baseCharge: number;
     let chargeType: string;
-    
     if (isScheduledDay) {
       // City day pricing - aligned with schedule
       baseCharge = cityBaseCharges[city]?.cityDay || 0;
       chargeType = `${city} city day rate`;
-    } else if (isEmptyDay) {
+    } else if (isEarlyBooking) {
       // Early booking discount (50% off normal rate)
       const normalRate = cityBaseCharges[city]?.normal || 0;
       baseCharge = Math.round(normalRate * 0.5);
       chargeType = `${city} early booking discount (50% off)`;
     } else {
-      // Normal pricing - doesn't align with schedule
+      // Normal pricing - doesn't align with schedule and not early booking
       baseCharge = cityBaseCharges[city]?.normal || 0;
       chargeType = `${city} normal rate`;
     }
-        
     // Apply city center extra charge if beyond city center range
     if (distanceDifference > 0) {
       const extraCharge = Math.round(distanceDifference * 3); // €3 per km beyond 8km
       baseCharge += extraCharge;
       chargeType += ` (+€${extraCharge} for ${Math.round(distanceDifference)}km beyond city center)`;
     }
-    
-    return { 
-      charge: baseCharge, 
-      type: chargeType, 
-      city, 
-      distance: Math.round(distanceKm * 10) / 10 // Round to 1 decimal 
+    return {
+      charge: baseCharge,
+      type: chargeType,
+      city,
+      distance: Math.round(distanceKm * 10) / 10 // Round to 1 decimal
     };
   }
 
