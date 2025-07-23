@@ -51,23 +51,6 @@ class AdminService {
     });
   }
 
-  // City Base Charges
-  async getCityBaseCharges(): Promise<CityBaseCharge[]> {
-    const response = await fetch(API_ENDPOINTS.PRICING.CITY_BASE_CHARGES);
-    const data = await response.json();
-    if (!data.success) throw new Error(data.error || 'Failed to fetch city base charges');
-    return data.data;
-  }
-
-  async updateCityBaseCharge(cityName: string, normal: number, cityDay: number, dayOfWeek: number): Promise<void> {
-    const response = await this.fetchWithAuth(`${API_ENDPOINTS.PRICING.CITY_BASE_CHARGES}/${cityName}`, {
-      method: 'PUT',
-      body: JSON.stringify({ normal, cityDay, dayOfWeek }),
-    });
-    const data = await response.json();
-    if (!data.success) throw new Error(data.error || 'Failed to update city base charge');
-  }
-
   // Furniture Items
   async getFurnitureItems(): Promise<FurnitureItemAPI[]> {
     const response = await fetch(API_ENDPOINTS.ADMIN.FURNITURE_ITEMS);

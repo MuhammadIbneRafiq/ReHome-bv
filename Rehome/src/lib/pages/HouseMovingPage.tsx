@@ -347,6 +347,7 @@ const HouseMovingPage = () => {
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateForPricing,
+                selectedDateRange: selectedDateRange, // Pass the date range for flexible dates
                 isDateFlexible: isDateFlexible,
                 itemQuantities: itemQuantities,
                 floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,

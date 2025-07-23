@@ -445,6 +445,7 @@ const ItemMovingPage = () => {
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateForPricing,
+                selectedDateRange: selectedDateRange, // Pass the date range for flexible dates
                 pickupDate: dateOption === 'fixed' ? pickupDate : 
                            dateOption === 'flexible' ? selectedDateRange.start : '',
                 dropoffDate: dateOption === 'fixed' ? dropoffDate : 
@@ -464,9 +465,7 @@ const ItemMovingPage = () => {
                 pickupPlace: pickupPlace,
                 dropoffPlace: dropoffPlace,
             };
-            
-            const breakdown = await pricingService.calculateItemTransportPricing(pricingInput);
-            
+            const breakdown = await pricingService.calculatePricing(pricingInput);
             setPricingBreakdown(breakdown);
             
             // Update distance state from pricing service result if we didn't calculate distance
