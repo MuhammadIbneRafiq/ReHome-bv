@@ -9,6 +9,8 @@ import { DynamicModalProvider } from "./components/ui/DynamicModal";
 import AuthErrorHandler from "./components/AuthErrorHandler";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useState, useEffect } from 'react';
+import { initDynamicConstants, constantsLoaded } from './lib/constants';
 
 // Import Pages
 import LandingPage from "./lib/pages/LandingPage";
@@ -37,11 +39,89 @@ import GoogleOAuthCallback from "./components/GoogleOAuthCallback";
 import TestNSFW from "./components/TestNSFW";
 import RequireAdmin from "./components/RequireAdmin";
 
+// Loading Component
+const LoadingScreen = () => (
+  <div className="min-h-screen bg-orange-50 flex flex-col items-center justify-center">
+    <div className="text-center">
+      {/* ReHome Logo */}
+      <div className="mb-8">
+        <img 
+          src="/assets/logorehome.png" 
+          alt="ReHome" 
+          className="h-16 w-auto mx-auto"
+        />
+      </div>
+      
+      {/* Loading Spinner */}
+      <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-orange-500 mx-auto mb-6"></div>
+      
+      {/* Loading Text */}
+      <h2 className="text-xl font-semibold text-gray-800 mb-2">Loading ReHome</h2>
+      <p className="text-gray-600 mb-4">Preparing your moving experience...</p>
+      
+      {/* Loading Steps */}
+      <div className="text-sm text-gray-500 space-y-1">
+        <div>✓ Loading furniture items</div>
+        <div>✓ Loading city pricing</div>
+        <div>✓ Setting up services</div>
+      </div>
+      
+      {/* Progress Bar */}
+      <div className="w-64 bg-gray-200 rounded-full h-2 mx-auto mt-6">
+        <div className="bg-orange-500 h-2 rounded-full animate-pulse" style={{ width: '75%' }}></div>
+      </div>
+    </div>
+  </div>
+);
+
 // ✅ Main App Component
 const App = () => {
   const queryClient = new QueryClient();
+  const [isConstantsLoaded, setIsConstantsLoaded] = useState(constantsLoaded);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    const loadConstants = async () => {
+      try {
+        if (!constantsLoaded) {
+          console.log('[App] Constants not loaded, initializing...');
+          await initDynamicConstants();
+        }
+        setIsConstantsLoaded(true);
+      } catch (error) {
+        console.error('[App] Failed to load constants:', error);
+        setLoadingError('Failed to load application data. Please refresh the page.');
+      }
+    };
+
+    loadConstants();
+  }, []);
+
+  // Show error screen if constants failed to load
+  if (loadingError) {
+    return (
+      <div className="min-h-screen bg-orange-50 flex flex-col items-center justify-center">
+        <div className="text-center p-8">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Loading Error</h1>
+          <p className="text-gray-600 mb-6 max-w-md">{loadingError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading screen while constants are loading
+  if (!isConstantsLoaded) {
+    return <LoadingScreen />;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

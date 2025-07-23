@@ -2614,6 +2614,115 @@ const AdminDashboard = () => {
                       </div>
                     </div>
 
+
+
+                    {/* Assembly Multipliers MARKETPLACE */}
+                    <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-700 mb-3">DISASSEMBLY / ASSEMBLY Multipliers</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Low Value Items (≤6 points)</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Threshold (points)</label>
+                              {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
+                                <input
+                                  type="number"
+                                  value={editJsonConfigData.threshold}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.lowValue.threshold}</span>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-500">Multiplier</label>
+                              {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editJsonConfigData.multiplier}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.lowValue.multiplier}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('assemblyMultipliers', 'lowValue')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('assemblyMultipliers', 'lowValue')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">High Value Items (≥7 points)</label>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs text-gray-500">Multiplier</label>
+                              {editingJsonConfig === 'assemblyMultipliers.highValue' ? (
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  value={editJsonConfigData.multiplier}
+                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                />
+                              ) : (
+                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.highValue.multiplier}</span>
+                              )}
+                            </div>
+                          </div>
+                          {editingJsonConfig === 'assemblyMultipliers.highValue' ? (
+                            <div className="mt-2 flex space-x-1">
+                              <button
+                                onClick={() => handleSaveJsonConfig('assemblyMultipliers', 'highValue')}
+                                disabled={isUpdating}
+                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingJsonConfig(null)}
+                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleEditJsonConfig('assemblyMultipliers', 'highValue')}
+                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Extra Helper Pricing */}
                     <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
                       <h4 className="font-medium text-gray-700 mb-3">Extra Helper Pricing</h4>
@@ -2905,144 +3014,6 @@ const AdminDashboard = () => {
                           ))}
                         </tbody>
                       </table>
-                    </div>
-                  </div>
-                 
-
-                     
-                  {/* Helper Pricing Configuration */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Extra Helper Pricing</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Small Move Helper */}
-                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                        <h4 className="font-medium text-blue-800 mb-3">Small Move Helper</h4>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm text-blue-700 mb-1">Item Point Limit (Small Move)</label>
-                            <input
-                              type="number"
-                              defaultValue="50"
-                              className="w-full px-3 py-2 border border-blue-300 rounded"
-                              placeholder="Points threshold"
-                            />
-                            <p className="text-xs text-blue-600 mt-1">Moves with ≤ this many points are considered small</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm text-blue-700 mb-1">Helper Price (Small Move)</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              defaultValue="25.00"
-                              className="w-full px-3 py-2 border border-blue-300 rounded"
-                              placeholder="€25.00"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Big Move Helper */}
-                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                        <h4 className="font-medium text-purple-800 mb-3">Big Move Helper</h4>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm text-purple-700 mb-1">Item Point Limit (Big Move)</label>
-                            <input
-                              type="number"
-                              defaultValue="51"
-                              className="w-full px-3 py-2 border border-purple-300 rounded"
-                              placeholder="Points threshold"
-                            />
-                            <p className="text-xs text-purple-600 mt-1">Moves with &gt; this many points are considered big</p>
-                          </div>
-                          <div>
-                            <label className="block text-sm text-purple-700 mb-1">Helper Price (Big Move)</label>
-                            <input
-                              type="number"
-                              step="0.01"
-                              defaultValue="45.00"
-                              className="w-full px-3 py-2 border border-purple-300 rounded"
-                              placeholder="€45.00"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                        Save Helper Pricing
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Add-on Services Configuration */}
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Add-on Service Multipliers</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {/* House Moving Add-ons */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="font-medium text-gray-800 mb-3">House Moving Add-ons</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Dismantling Service</span>
-                            <input type="number" step="0.01" defaultValue="1.2" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Packing Service</span>
-                            <input type="number" step="0.01" defaultValue="1.3" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Storage Service</span>
-                            <input type="number" step="0.01" defaultValue="1.1" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Item Transport Add-ons */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="font-medium text-gray-800 mb-3">Item Transport Add-ons</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Assembly Service</span>
-                            <input type="number" step="0.01" defaultValue="1.15" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Fragile Handling</span>
-                            <input type="number" step="0.01" defaultValue="1.25" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Express Delivery</span>
-                            <input type="number" step="0.01" defaultValue="1.4" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* ReHome Marketplace Add-ons */}
-                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                        <h4 className="font-medium text-orange-800 mb-3">ReHome Listing Add-ons</h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Premium Listing</span>
-                            <input type="number" step="0.01" defaultValue="1.5" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Featured Placement</span>
-                            <input type="number" step="0.01" defaultValue="1.8" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm">Professional Photos</span>
-                            <input type="number" step="0.01" defaultValue="1.3" className="w-16 px-2 py-1 border rounded text-sm" />
-                          </div>
-                        </div>
-                        <p className="text-xs text-orange-600 mt-2">
-                          💡 ReHome listing multipliers are typically higher than transport services
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-4">
-                      <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                        Save Add-on Multipliers
-                      </button>
                     </div>
                   </div>
                 </div>
