@@ -61,7 +61,6 @@ async function fetchAllConstants(): Promise<{
   cityBaseCharges: Record<string, CityBaseCharge>;
 }> {
   try {
-    console.log('[Constants] Fetching from backend API...');
     // Use the backend endpoint from config
     const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
     const response = await fetch(`${baseUrl}/api/constants`);
@@ -76,38 +75,14 @@ async function fetchAllConstants(): Promise<{
       throw new Error(`Backend error: ${result.error}`);
     }
     
-    console.log('[Constants] Backend response:', result.meta);
     
     return result.data;
   } catch (error) {
     console.error('[Constants] Error fetching from backend:', error);
-    // Fallback to direct Supabase calls if backend fails
-    console.log('[Constants] Falling back to direct Supabase calls...');
-    const { data: items } = await supabase.from('furniture_items').select('*');
-    const { data: cities } = await supabase.from('city_base_charges').select('*');
-    const furnitureItems = (items || []).map(({ name, category, points }: any) => ({
-      id: name.toLowerCase().replace(/\s+/g, '-'),
-      name,
-      category,
-      points
-    }));
-    const categoryMap: Record<string, { id: string; name: string }[]> = {};
-    for (const item of furnitureItems) {
-      if (!categoryMap[item.category]) categoryMap[item.category] = [];
-      categoryMap[item.category].push({ id: item.id, name: item.name });
-    }
-    const itemCategories = Object.entries(categoryMap).map(([name, items]) => ({ name, items }));
-    const cityBaseCharges: Record<string, CityBaseCharge> = {};
-    for (const row of cities || []) {
-      cityBaseCharges[row.city_name] = {
-        normal: row.normal,
-        cityDay: row.city_day,
-        dayOfWeek: row.day_of_week
-      };
-    }
-    return { furnitureItems, itemCategories, cityBaseCharges };
+    throw error;
   }
 }
+
 
 // --- DYNAMIC CONSTANTS INIT ---
 // These will be populated at runtime by the internal call to initDynamicConstants()
@@ -123,22 +98,17 @@ export let constantsLoaded = false;
  * Export this function so it can be awaited in the app entry point.
  */
 export async function initDynamicConstants() {
-  console.log('[Constants] Starting to load dynamic constants...');
   
   try {
     const constants = await fetchAllConstants();
     
     furnitureItems = constants.furnitureItems;
-    console.log('[Constants] Loaded furnitureItems:', furnitureItems.length, 'items');
     
     itemCategories = constants.itemCategories;
-    console.log('[Constants] Loaded itemCategories:', itemCategories.length, 'categories');
     
     cityBaseCharges = constants.cityBaseCharges;
-    console.log('[Constants] Loaded cityBaseCharges:', Object.keys(cityBaseCharges).length, 'cities');
     
     constantsLoaded = true;
-    console.log('[Constants] ✅ All constants loaded successfully!');
   } catch (error) {
     console.error('[Constants] ❌ Error loading constants:', error);
     constantsLoaded = false;
