@@ -12,13 +12,13 @@ type ServiceFieldsType = {
 
 const serviceFields: ServiceFieldsType = {
   storage: [
-    'itemList', 'duration', 'pickupAddress', 'dropoffPreference', 'contactInfo'
+    'itemDescription', 'duration', 'pickupAddress', 'dropoffPreference', 'contactInfo'
   ],
   junkRemoval: [
     'itemDescription', 'address', 'removalDate', 'contactInfo'
   ],
   fullInternationalMove: [
-    'pickupAddress', 'dropoffAddress', 'itemList', 'services', 'contactInfo'
+    'pickupAddress', 'dropoffAddress', 'itemDescription', 'services', 'contactInfo'
   ]
 };
 
@@ -263,12 +263,16 @@ const SpecialRequestPage = () => {
                     {serviceFields[selectedService].map((field) => {
                       if (field === 'contactInfo') return null; // Skip this as we handle it separately
 
-                      // Custom label for junkRemoval fields
+                      // Custom label and placeholder for itemDescription
                       let label = field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1');
+                      let placeholder = `Enter ${label.toLowerCase()}`;
+                      if (field === 'itemDescription') {
+                        label = 'Description';
+                        placeholder = 'What items need to be removed? Are the items on the ground floor, upstairs or outside?';
+                      }
                       if (selectedService === 'junkRemoval') {
                         if (field === 'address') label = 'Address';
                         if (field === 'removalDate') label = 'Latest Removal Date';
-                        if (field === 'itemDescription') label = 'Item Description';
                       }
 
                       // Use date input for removalDate
@@ -343,7 +347,7 @@ const SpecialRequestPage = () => {
                             value={fields[field] || ''}
                             onChange={(e) => handleFieldChange(field, e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            placeholder={`Enter ${label.toLowerCase()}`}
+                            placeholder={placeholder}
                             required
                           />
                           {errors[field] && <p className="text-red-500 text-sm mt-1">{errors[field]}</p>}

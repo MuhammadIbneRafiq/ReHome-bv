@@ -56,8 +56,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                                         Smart Scheduling = Lower Prices
                                     </h3>
                                     <p className="text-sm sm:text-base text-green-700">
-                                        Our pricing depends on route efficiency. If we're already scheduled in your area 
-                                        on your selected day, your price can be significantly lower. So if you are not 
+                                        Our pricing depends on route efficiency. If you are not 
                                         tied to a specific date, make sure to check through different options.
                                     </p>
                                 </div>
