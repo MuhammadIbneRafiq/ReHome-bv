@@ -167,7 +167,6 @@ class PricingService {
    */
   private async calculateBaseChargeBreakdown(input: PricingInput, breakdown: PricingBreakdown) {
     try {
-      console.log('[DEBUG] Input:', JSON.stringify(input));
       
       // Determine if this is an intercity move
       const { city: pickupCity, distanceDifference: pickupDistanceDifference } = await findClosestSupportedCity(input.pickupPlace);
@@ -308,7 +307,6 @@ class PricingService {
         }
         
         // No early booking discount for ReHome suggest date
-        console.log('[DEBUG] ReHome suggest date - no early booking discount');
       }
       
       // Set breakdown values
@@ -458,29 +456,19 @@ class PricingService {
        dropoffInput, dropoffCity, dropoffDistanceDifference
      );
      
-     console.log('[DEBUG] Item transport intercity calculation details:', {
-       pickup: { city: pickupCity, date: input.pickupDate, charge: pickupResult.charge, isCheapRate: pickupResult.isCheapRate },
-       dropoff: { city: dropoffCity, date: input.dropoffDate, charge: dropoffResult.charge, isCheapRate: dropoffResult.isCheapRate }
-     });
-     
      // Apply the correct intercity logic based on city day alignment
      let totalCharge: number;
      
            if (pickupResult.isCheapRate && dropoffResult.isCheapRate) {
         // Scenario 1: Both cities are city days → Use cheapest total charge (including distance)
         totalCharge = Math.min(pickupResult.charge, dropoffResult.charge);
-        console.log('[DEBUG] Item transport Scenario 1 - Both cities align: Using cheapest total charge €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
       } else if (pickupResult.isCheapRate || dropoffResult.isCheapRate) {
        // Scenario 2/3: Only one city is a city day → Split the charges
        totalCharge = Math.round((pickupResult.charge + dropoffResult.charge) / 2);
-       console.log('[DEBUG] Item transport Scenario 2/3 - Only one city aligns: Split charge €' + totalCharge);
      } else {
        // Scenario 4: Neither city is a city day → Use higher charge
        totalCharge = Math.max(pickupResult.charge, dropoffResult.charge);
-       console.log('[DEBUG] Item transport Scenario 4 - Neither city aligns: Using higher charge €' + totalCharge);
      }
-     
-     console.log('[DEBUG] Item transport intercity final charge:', totalCharge);
      
      return totalCharge;
    }
@@ -495,8 +483,6 @@ class PricingService {
       const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
       const url = `${baseUrl}/api/city-availability-range?city=${encodeURIComponent(city)}&startDate=${startStr}&endDate=${endStr}`;
       
-      console.log('[DEBUG] Checking city availability in range:', url);
-      
       const response = await fetch(url);
       if (!response.ok) {
         console.warn(`Failed to fetch availability range: ${response.status}`);
@@ -504,7 +490,6 @@ class PricingService {
       }
       
       const result = await response.json();
-      console.log('[DEBUG] City availability range result:', result);
       
       if (!result.success) {
         console.warn(`Backend error: ${result.error}`);
@@ -575,7 +560,6 @@ class PricingService {
     today.setHours(0, 0, 0, 0);
     const daysInAdvance = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     const isEarlyBooking = daysInAdvance >= 21;
-    console.log(`[DEBUG] Booking for ${city} on ${date.toISOString().split('T')[0]}: isScheduledDay=${isScheduledDay}, isEarlyBooking=${isEarlyBooking} (daysInAdvance=${daysInAdvance})`);
     // Determine base charge
     let baseCharge: number;
     let chargeType: string;
@@ -615,13 +599,11 @@ class PricingService {
       const dateStr = date.toISOString().split('T')[0];
       const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
       const url = `${baseUrl}/api/city-schedule-status?city=${encodeURIComponent(city)}&date=${dateStr}`;
-      console.log('[DEBUG] Fetching city schedule status:', url);
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch schedule status: ${response.status}`);
       }
       const result = await response.json();
-      console.log('[DEBUG] City schedule status result:', result);
       if (!result.success) {
         throw new Error(`Backend error: ${result.error}`);
       }
@@ -647,7 +629,6 @@ class PricingService {
 
   private async isEmptyCalendarDay(city: string, date: Date): Promise<boolean> {
     const { isEmpty } = await this.getCityScheduleStatus(city, date);
-    console.log(`[DEBUG] isEmptyCalendarDay for ${city} on ${date.toISOString().split('T')[0]}:`, isEmpty);
     return isEmpty;
   }
 
