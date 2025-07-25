@@ -166,11 +166,14 @@ class PricingService {
    * Calculate base charge breakdown using the correct logic for date options and city combinations
    */
   private async calculateBaseChargeBreakdown(input: PricingInput, breakdown: PricingBreakdown) {
-    try {
-      
+    try {     
       // Determine if this is an intercity move
-      const { city: pickupCity, distanceDifference: pickupDistanceDifference } = await findClosestSupportedCity(input.pickupPlace);
-      const { city: dropoffCity, distanceDifference: dropoffDistanceDifference } = await findClosestSupportedCity(input.dropoffPlace);
+      const pickupResult = await findClosestSupportedCity(input.pickupPlace);
+      const dropoffResult = await findClosestSupportedCity(input.dropoffPlace);
+      const pickupCity = pickupResult.city;
+      const dropoffCity = dropoffResult.city;
+      const pickupDistanceDifference = pickupResult.distanceDifference;
+      const dropoffDistanceDifference = dropoffResult.distanceDifference;
       
       console.log('[DEBUG] Pickup city:', pickupCity, 'Dropoff city:', dropoffCity);
       
@@ -189,12 +192,17 @@ class PricingService {
       let isEarlyBooking = false;
       let isCheapRate = false;
       
+      // Check if either city is not an exact match (not in top 25)
+      const isPickupNearest = !pickupCity || !cityBaseCharges[pickupCity];
+      const isDropoffNearest = !dropoffCity || !cityBaseCharges[dropoffCity];
+      const isNearestCityRate = isPickupNearest || isDropoffNearest;
+      
       // Calculate early booking discount (10%) - only for fixed dates and flexible ranges
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-             if ((input.selectedDate && !input.isDateFlexible) || 
-           (input.serviceType === 'item-transport' && input.pickupDate && input.dropoffDate && !input.isDateFlexible)) {
+      if ((input.selectedDate && !input.isDateFlexible) || 
+          (input.serviceType === 'item-transport' && input.pickupDate && input.dropoffDate && !input.isDateFlexible)) {
          // Fixed date (either selectedDate for house moving, or pickupDate/dropoffDate for item transport)
          let referenceDate: Date;
          
@@ -225,12 +233,14 @@ class PricingService {
            chargeType = 'Intercity Rate';
          } else {
            // Within city move
+           console.log(`[DEBUG] Within-city move for ${pickupCity}, distanceDifference: ${pickupDistanceDifference}`);
            const result = await this.calculateWithinCityFixedDateCharge(
              input, pickupCity, pickupDistanceDifference
            );
            finalCharge = result.charge;
            isCheapRate = result.isCheapRate;
            chargeType = `${pickupCity} - ${isCheapRate ? 'Cheap Rate' : 'Normal Rate'}`;
+           console.log(`[DEBUG] Within-city final charge set to: €${finalCharge}, isCheapRate: ${isCheapRate}`);
          }
          
          // Apply early booking discount (10%)
@@ -310,15 +320,22 @@ class PricingService {
       }
       
       // Set breakdown values
+      console.log(`[DEBUG] Setting breakdown values - finalCharge: €${finalCharge}, isNearestCityRate: ${isNearestCityRate}`);
       breakdown.basePrice = finalCharge;
       breakdown.breakdown.baseCharge.city = isIntercity ? `${pickupCity}/${dropoffCity}` : pickupCity;
       breakdown.breakdown.baseCharge.isCityDay = isCheapRate;
       breakdown.breakdown.baseCharge.isEarlyBooking = isEarlyBooking;
       breakdown.breakdown.baseCharge.originalPrice = finalCharge;
       breakdown.breakdown.baseCharge.finalPrice = finalCharge;
-      breakdown.breakdown.baseCharge.type = chargeType;
+      // Set type to Nearest City Rate if either city is not in top 25
+      if (isNearestCityRate) {
+        breakdown.breakdown.baseCharge.type = 'Nearest City Rate';
+      } else {
+        breakdown.breakdown.baseCharge.type = chargeType;
+      }
       
-      console.log('[DEBUG] Final result - Charge:', finalCharge, 'Type:', chargeType);
+      console.log('[DEBUG] Final result - Charge:', finalCharge, 'Type:', breakdown.breakdown.baseCharge.type);
+      console.log('[DEBUG] Breakdown basePrice set to:', breakdown.basePrice);
       
     } catch (error) {
       console.error('Error calculating base charge breakdown:', error);

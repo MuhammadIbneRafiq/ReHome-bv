@@ -60,7 +60,6 @@ function GooglePlacesAutocomplete({
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Place details response:', data);
         
         // Extract city from address components
         let city = null;
@@ -484,12 +483,10 @@ const ItemMovingPage = () => {
             // Only calculate price if we have both complete locations
             if (firstLocation && secondLocation && 
                 firstLocation.trim().length > 3 && secondLocation.trim().length > 3) {
-                console.log('💰 Calculating price for:', firstLocation, '→', secondLocation);
                 calculatePrice();
             } else {
                 // Clear price if locations are incomplete
                 setPricingBreakdown(null);
-                console.log('⏳ Waiting for complete locations...');
             }
         }, 400); // 400ms debounce - faster pricing updates
 
@@ -658,16 +655,7 @@ const ItemMovingPage = () => {
         }
     }, [itemQuantities, carryingService]);
 
-    const isFormValid = () => {
-        // Debug logging to identify which validation is failing
-        console.log('🔍 Form validation check:');
-        console.log('- isDateFlexible:', isDateFlexible);
-        console.log('- selectedDateRange:', selectedDateRange);
-        console.log('- pickupDate:', pickupDate);
-        console.log('- dropoffDate:', dropoffDate);
-        console.log('- contactInfo:', contactInfo);
-        console.log('- agreedToTerms:', agreedToTerms);
-        
+    const isFormValid = () => {        
         if (dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
             console.log('❌ Date validation failed - missing pickup or dropoff date');
             return false;
@@ -1178,12 +1166,6 @@ const ItemMovingPage = () => {
                                         placeholder="Enter pickup address"
                                         onPlaceSelect={(place) => {
                                             setPickupPlace(place);
-                                            console.log('🎯 Pickup place selected:', {
-                                                text: place.text,
-                                                city: place.city,
-                                                coordinates: place.coordinates,
-                                                formattedAddress: place.formattedAddress
-                                            });
                                         }}
                                     />
                                 </div>
@@ -1220,12 +1202,6 @@ const ItemMovingPage = () => {
                                         placeholder="Enter dropoff address"
                                         onPlaceSelect={(place) => {
                                             setDropoffPlace(place);
-                                            console.log('🎯 Dropoff place selected:', {
-                                                text: place.text,
-                                                city: place.city,
-                                                coordinates: place.coordinates,
-                                                formattedAddress: place.formattedAddress
-                                            });
                                         }}
                                     />
                                 </div>
@@ -1334,7 +1310,6 @@ const ItemMovingPage = () => {
                                                     type="date"
                                                     value={pickupDate}
                                                     onChange={e => {
-                                                        console.log('🔍 [DATE DEBUG] Pickup date changed:', e.target.value);
                                                         setPickupDate(e.target.value);
                                                         setSelectedDateRange({ start: '', end: '' });
                                                     }}
@@ -1349,7 +1324,6 @@ const ItemMovingPage = () => {
                                                     type="date"
                                                     value={dropoffDate}
                                                     onChange={e => {
-                                                        console.log('🔍 [DATE DEBUG] Dropoff date changed:', e.target.value);
                                                         setDropoffDate(e.target.value);
                                                         setSelectedDateRange({ start: '', end: '' });
                                                     }}
