@@ -78,6 +78,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                                     <p className="text-sm sm:text-base text-blue-700">
                                         Selecting a date range or letting us suggest a moving date can unlock major savings. 
                                         The more flexible you are, the more we can optimize our routes and pass the savings to you.
+                                        If you select 2 weeks in advance, we can offer you a discount of 10% on the total price.
                                     </p>
                                 </div>
                             </div>
@@ -134,6 +135,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                             <li>• Book during off-peak times for better rates</li>
                             <li>• Combine multiple services for package discounts</li>
                             <li>• Provide accurate item counts to avoid price adjustments</li>
+                            <li>• Select 2 weeks in advance for a 10% discount on the total price.</li>
                         </ul>
                     </div>
                 </div>
