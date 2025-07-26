@@ -76,13 +76,10 @@ export async function findClosestSupportedCity(
 
     // First check: Is this location in one of our top 25 supported cities?
     const locationText = placeObject.text || placeObject.displayName || placeObject.formattedAddress || '';
-    console.log(`[DEBUG] Checking location: "${locationText}"`);
     
     // Check if the location name contains any of our supported city names
     for (const supportedCity of Object.keys(cityBaseCharges)) {
       if (locationText.toLowerCase().includes(supportedCity.toLowerCase())) {
-        console.log(`[DEBUG] ✅ EXACT MATCH: Location "${locationText}" matches supported city "${supportedCity}"`);
-        console.log(`[DEBUG] - Using city: ${supportedCity}`);
         console.log(`[DEBUG] - Extra charge: €0 (exact city match)`);
         
         return { 
@@ -91,10 +88,7 @@ export async function findClosestSupportedCity(
         };
       }
     }
-    
-    // If no exact match found, calculate distance to closest supported city
-    console.log(`[DEBUG] ❌ NO EXACT MATCH: "${locationText}" not in top 25 cities`);
-    
+        
     if (placeObject.coordinates?.lat && placeObject.coordinates?.lng) {
       let targetLat = placeObject.coordinates.lat;
       let targetLng = placeObject.coordinates.lng;
@@ -114,11 +108,7 @@ export async function findClosestSupportedCity(
       if (nearestCity) {
         // Calculate extra km charge: €3 per km beyond 8km city center range
         const extraKmBeyondRange = Math.max(0, shortestDistance - 8);
-        
-        console.log(`[DEBUG] 📍 DISTANCE CALCULATION for "${locationText}":`);
-        console.log(`[DEBUG] - Closest supported city: ${nearestCity}`);
-        console.log(`[DEBUG] - Distance to city center: ${shortestDistance.toFixed(2)}km`);
-        console.log(`[DEBUG] - Extra km beyond 8km range: ${extraKmBeyondRange.toFixed(2)}km`);
+
         console.log(`[DEBUG] - Extra charge: €${Math.round(extraKmBeyondRange * 3)}`);
         
         return { 

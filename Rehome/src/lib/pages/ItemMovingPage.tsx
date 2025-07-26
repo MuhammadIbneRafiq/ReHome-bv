@@ -444,12 +444,12 @@ const ItemMovingPage = () => {
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateForPricing,
-                selectedDateRange: selectedDateRange, // Pass the date range for flexible dates
-                pickupDate: dateOption === 'fixed' ? pickupDate : 
-                           dateOption === 'flexible' ? selectedDateRange.start : '',
-                dropoffDate: dateOption === 'fixed' ? dropoffDate : 
-                            dateOption === 'flexible' ? selectedDateRange.end : '',
-                isDateFlexible,
+                selectedDateRange: dateOption === 'flexible' ? selectedDateRange : { start: '', end: '' }, // Only pass date range for flexible dates
+                // For fixed dates, use separate pickup/dropoff dates
+                // For flexible/rehome, don't set pickup/dropoff dates
+                pickupDate: dateOption === 'fixed' ? pickupDate : undefined,
+                dropoffDate: dateOption === 'fixed' ? dropoffDate : undefined,
+                isDateFlexible: dateOption === 'rehome', // Only true for ReHome choose option
                 itemQuantities,
                 floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
                 floorDropoff: carryingService ? (parseInt(floorDropoff) || 0) : 0,
@@ -491,7 +491,7 @@ const ItemMovingPage = () => {
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDateRange.start, pickupDate, dropoffDate, isDateFlexible]);
+    }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isDateFlexible, dateOption]);
 
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
@@ -1258,15 +1258,30 @@ const ItemMovingPage = () => {
                                                 const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome';
                                                 setDateOption(newDateOption);
                                                 
-                                                // Set isDateFlexible ONLY when "Let ReHome choose" is selected
+                                                // Clear all date-related states first
+                                                setSelectedDateRange({ start: '', end: '' });
+                                                setPickupDate('');
+                                                setDropoffDate('');
+                                                setIsDateFlexible(false);
+                                                
+                                                // Set appropriate states based on option
                                                 if (newDateOption === 'rehome') {
+                                                    // ReHome choose: isDateFlexible=true, no dates set
                                                     setIsDateFlexible(true);
-                                                    setSelectedDateRange({ start: '', end: '' });
-                                                    setPickupDate('');
-                                                    setDropoffDate('');
-                                                } else {
+                                                } else if (newDateOption === 'flexible') {
+                                                    // Flexible range: isDateFlexible=false, user will set date range
+                                                    setIsDateFlexible(false);
+                                                } else if (newDateOption === 'fixed') {
+                                                    // Fixed date: isDateFlexible=false, user will set pickup/dropoff dates
                                                     setIsDateFlexible(false);
                                                 }
+                                                
+                                                // Trigger immediate price calculation after state change
+                                                setTimeout(() => {
+                                                    if (firstLocation && secondLocation) {
+                                                        calculatePrice();
+                                                    }
+                                                }, 50);
                                             }}
                                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                         >

@@ -247,6 +247,7 @@ const HouseMovingPage = () => {
     const [isStudent, setIsStudent] = useState(false);
     const [studentId, setStudentId] = useState<File | null>(null);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
+    const [isFixedDate, setIsFixedDate] = useState(false);
     const [extraHelperItems, setExtraHelperItems] = useState<{[key: string]: boolean}>({});
     const [disassemblyItems, setDisassemblyItems] = useState<{[key: string]: boolean}>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
@@ -347,8 +348,8 @@ const HouseMovingPage = () => {
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateForPricing,
-                selectedDateRange: selectedDateRange, // Pass the date range for flexible dates
-                isDateFlexible: isDateFlexible,
+                selectedDateRange: dateOption === 'flexible' ? selectedDateRange : { start: '', end: '' }, // Only pass date range for flexible dates
+                isDateFlexible: dateOption === 'rehome', // Only true for ReHome choose option
                 itemQuantities: itemQuantities,
                 floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
                 floorDropoff: carryingService ? (parseInt(floorDropoff) || 0) : 0,
@@ -393,7 +394,7 @@ const HouseMovingPage = () => {
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, isDateFlexible, dateOption, carryingServiceItems]);
+    }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, isDateFlexible, dateOption, isFixedDate]);
 
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
@@ -836,12 +837,12 @@ const HouseMovingPage = () => {
                             </div>
                         )}
                         {/* Early Booking Discount */}
-                        {pricingBreakdown.earlyBookingDiscount > 0 && (
-                            <div className="flex justify-between text-green-600">
-                                <span>Early Booking Discount (10%):</span>
-                                <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
-                            </div>
-                        )}
+                    {pricingBreakdown.earlyBookingDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Early Booking Discount (10%):</span>
+                            <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                             <span>Total:</span>
                             <span>€{pricingBreakdown.total.toFixed(2)}</span>
@@ -1004,13 +1005,30 @@ const HouseMovingPage = () => {
                                                 const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome';
                                                 setDateOption(newDateOption);
                                                 
-                                                // Set isDateFlexible ONLY when "Let ReHome choose" is selected
+                                                // Clear all date-related states first
+                                                setSelectedDateRange({ start: '', end: '' });
+                                                setIsDateFlexible(false);
+                                                setIsFixedDate(false);
+                                                
+                                                // Set appropriate states based on option
                                                 if (newDateOption === 'rehome') {
+                                                    // ReHome choose: isDateFlexible=true, no dates set
                                                     setIsDateFlexible(true);
-                                                    setSelectedDateRange({ start: '', end: '' });
-                                                } else {
+                                                } else if (newDateOption === 'flexible') {
+                                                    // Flexible range: isDateFlexible=false, user will set date range
                                                     setIsDateFlexible(false);
+                                                } else if (newDateOption === 'fixed') {
+                                                    // Fixed date: isDateFlexible=false, user will set single date
+                                                    setIsDateFlexible(false);
+                                                    setIsFixedDate(true);
                                                 }
+                                                
+                                                // Trigger immediate price calculation after state change
+                                                setTimeout(() => {
+                                                    if (firstLocation && secondLocation) {
+                                                        calculatePrice();
+                                                    }
+                                                }, 50);
                                             }}
                                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                         >
