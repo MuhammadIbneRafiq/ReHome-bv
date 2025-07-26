@@ -173,11 +173,6 @@ class ApiService {
     return this.request<{ success: boolean }>('POST', API_ENDPOINTS.LEGAL.ACCEPT_TERMS, acceptanceData, true);
   }
 
-  // Pricing methods
-  async calculatePricing(pricingData: any) {
-    return this.request<any>('POST', API_ENDPOINTS.PRICING.CALCULATE, pricingData);
-  }
-
   // Upload methods with enhanced error handling
   async uploadPhotos(formData: FormData) {
     try {

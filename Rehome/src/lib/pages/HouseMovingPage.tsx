@@ -754,7 +754,6 @@ const HouseMovingPage = () => {
                         <div className="text-xs text-gray-500 ml-4">
                             {pricingBreakdown.breakdown.baseCharge.city} - {
                                 isDateFlexible ? "Flexible date with discount according to ReHome delivery plans" :
-                                pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking with discount according to ReHome delivery plans" :
                                 pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
                             }
                         </div>
@@ -834,6 +833,13 @@ const HouseMovingPage = () => {
                             <div className="flex justify-between text-green-600">
                                 <span>Student Discount (10%):</span>
                                 <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {/* Early Booking Discount */}
+                        {pricingBreakdown.earlyBookingDiscount > 0 && (
+                            <div className="flex justify-between text-green-600">
+                                <span>Early Booking Discount (10%):</span>
+                                <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
                             </div>
                         )}
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">

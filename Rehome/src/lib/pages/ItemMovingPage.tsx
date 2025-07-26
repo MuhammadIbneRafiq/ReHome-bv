@@ -1062,6 +1062,14 @@ const ItemMovingPage = () => {
                         </div>
                     )}
 
+                    {/* Early Booking Discount */}
+                    {pricingBreakdown.earlyBookingDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Early Booking Discount (10%):</span>
+                            <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
+
                     {/* Total */}
                     <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
                         <span>Total:</span>

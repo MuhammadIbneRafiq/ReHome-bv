@@ -16,6 +16,7 @@ export interface PricingBreakdown {
   subtotal: number;
   studentDiscount: number;
   total: number;
+  earlyBookingDiscount: number; // New field for early booking discount
   breakdown: {
     baseCharge: {
       city: string | null;
@@ -102,6 +103,7 @@ class PricingService {
       subtotal: 0,
       studentDiscount: 0,
       total: 0,
+      earlyBookingDiscount: 0, // Initialize new field
       breakdown: {
         baseCharge: {
           city: null,
@@ -189,7 +191,6 @@ class PricingService {
       
       let finalCharge = 0;
       let chargeType = '';
-      let isEarlyBooking = false;
       let isCheapRate = false;
       
       // Check if either city is not an exact match (not in top 25)
@@ -204,21 +205,7 @@ class PricingService {
       if ((input.selectedDate && !input.isDateFlexible) || 
           (input.serviceType === 'item-transport' && input.pickupDate && input.dropoffDate && !input.isDateFlexible)) {
          // Fixed date (either selectedDate for house moving, or pickupDate/dropoffDate for item transport)
-         let referenceDate: Date;
-         
-         if (input.selectedDate) {
-           referenceDate = new Date(input.selectedDate);
-         } else if (input.pickupDate) {
-           // For item transport, use pickup date as reference for early booking calculation
-           referenceDate = new Date(input.pickupDate);
-         } else {
-           throw new Error('No valid date found for fixed date calculation');
-         }
-         
-         const daysInAdvance = Math.floor((referenceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-         isEarlyBooking = daysInAdvance >= 14; // 2 weeks = 14 days
-         console.log('[DEBUG] Fixed date - Days in advance:', daysInAdvance, 'isEarlyBooking:', isEarlyBooking);
-         
+                  
          if (isIntercity && input.serviceType === 'item-transport' && input.pickupDate && input.dropoffDate) {
            // Item transport with different pickup/dropoff dates
            finalCharge = await this.calculateIntercityItemTransportCharge(
@@ -227,9 +214,11 @@ class PricingService {
            chargeType = 'Intercity Rate';
          } else if (isIntercity) {
            // House moving or item transport same day intercity
-           finalCharge = await this.calculateIntercityFixedDateCharge(
+           const intercityResult = await this.calculateIntercityFixedDateCharge(
              input, pickupCity, dropoffCity, pickupDistanceDifference, dropoffDistanceDifference
            );
+           finalCharge = intercityResult.charge;
+           breakdown.breakdown.baseCharge.city = intercityResult.cityUsed;
            chargeType = 'Intercity Rate';
          } else {
            // Within city move
@@ -242,25 +231,13 @@ class PricingService {
            chargeType = `${pickupCity} - ${isCheapRate ? 'Cheap Rate' : 'Normal Rate'}`;
            console.log(`[DEBUG] Within-city final charge set to: €${finalCharge}, isCheapRate: ${isCheapRate}`);
          }
-         
-         // Apply early booking discount (10%)
-         if (isEarlyBooking && !isIntercity) {
-           const originalCharge = finalCharge;
-           finalCharge = Math.round(finalCharge * 0.9); // 10% discount
-           chargeType += ` (Early booking: -10%)`;
-           console.log('[DEBUG] Early booking discount applied:', originalCharge, '→', finalCharge);
-         }
-        
+                 
       } else if (input.isDateFlexible && input.selectedDateRange?.start && input.selectedDateRange?.end) {
         // Flexible date range
         const startDate = new Date(input.selectedDateRange.start);
         const endDate = new Date(input.selectedDateRange.end);
         const rangeDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
         
-        // Check if starting date is 2 weeks or more in advance for early booking
-        const daysInAdvance = Math.floor((startDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        isEarlyBooking = daysInAdvance >= 14;
-        console.log('[DEBUG] Flexible range - Days:', rangeDays, 'Days in advance:', daysInAdvance, 'isEarlyBooking:', isEarlyBooking);
         
         if (rangeDays > 7) {
           // Range above 1 week → cheap base charge for pickup city
@@ -291,15 +268,7 @@ class PricingService {
           finalCharge += extraCharge;
           chargeType += ` (+€${extraCharge} for ${Math.round(pickupDistanceDifference)}km beyond city center)`;
         }
-        
-        // Apply early booking discount (10%)
-        if (isEarlyBooking) {
-          const originalCharge = finalCharge;
-          finalCharge = Math.round(finalCharge * 0.9);
-          chargeType += ` (Early booking: -10%)`;
-          console.log('[DEBUG] Early booking discount applied:', originalCharge, '→', finalCharge);
-        }
-        
+                
       } else if (input.isDateFlexible && !input.selectedDateRange?.start) {
         // ReHome suggest date → always cheapest base price for pickup city
         finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
@@ -324,7 +293,6 @@ class PricingService {
       breakdown.basePrice = finalCharge;
       breakdown.breakdown.baseCharge.city = isIntercity ? `${pickupCity}/${dropoffCity}` : pickupCity;
       breakdown.breakdown.baseCharge.isCityDay = isCheapRate;
-      breakdown.breakdown.baseCharge.isEarlyBooking = isEarlyBooking;
       breakdown.breakdown.baseCharge.originalPrice = finalCharge;
       breakdown.breakdown.baseCharge.finalPrice = finalCharge;
       // Set type to Nearest City Rate if either city is not in top 25
@@ -406,43 +374,39 @@ class PricingService {
      dropoffCity: string,
      pickupDistanceDifference: number,
      dropoffDistanceDifference: number
-   ): Promise<number> {
-     
+   ): Promise<{ charge: number, cityUsed: string }> {
      // Calculate pickup charge
      const pickupResult = await this.calculateWithinCityFixedDateCharge(
        input, pickupCity, pickupDistanceDifference
      );
-     
-     // Calculate dropoff charge  
+     // Calculate dropoff charge
      const dropoffResult = await this.calculateWithinCityFixedDateCharge(
        { ...input, selectedDate: input.selectedDate }, dropoffCity, dropoffDistanceDifference
      );
-     
-     console.log('[DEBUG] Intercity calculation details:', {
-       pickup: { city: pickupCity, charge: pickupResult.charge, isCheapRate: pickupResult.isCheapRate },
-       dropoff: { city: dropoffCity, charge: dropoffResult.charge, isCheapRate: dropoffResult.isCheapRate }
-     });
-     
-     // Apply the correct intercity logic based on city day alignment
-     let totalCharge: number;
-     
-           if (pickupResult.isCheapRate && dropoffResult.isCheapRate) {
-        // Scenario 1: Both cities are city days → Use cheapest total charge (including distance)
-        totalCharge = Math.min(pickupResult.charge, dropoffResult.charge);
-        console.log('[DEBUG] Scenario 1 - Both cities align: Using cheapest total charge €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
-      } else if (pickupResult.isCheapRate || dropoffResult.isCheapRate) {
-       // Scenario 2/3: Only one city is a city day → Split the charges
+     let totalCharge = 0;
+     let cityUsed = pickupCity;
+     if (pickupResult.isCheapRate && dropoffResult.isCheapRate) {
+       // Scenario 1: Both cities are city days → Use cheapest total charge (including distance)
+       if (pickupResult.charge <= dropoffResult.charge) {
+         totalCharge = pickupResult.charge;
+         cityUsed = pickupCity;
+       } else {
+         totalCharge = dropoffResult.charge;
+         cityUsed = dropoffCity;
+       }
+       console.log('[DEBUG] Scenario 1 - Both cities align: Using cheapest total charge €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
+     } else if (pickupResult.isCheapRate || dropoffResult.isCheapRate) {
+       // Scenario 2/3: Only one city is a city day → split the charge
        totalCharge = Math.round((pickupResult.charge + dropoffResult.charge) / 2);
-       console.log('[DEBUG] Scenario 2/3 - Only one city aligns: Split charge €' + totalCharge);
+       cityUsed = pickupResult.charge <= dropoffResult.charge ? pickupCity : dropoffCity;
+       console.log('[DEBUG] Scenario 2/3 - Only one city aligns: Split charge €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
      } else {
-       // Scenario 4: Neither city is a city day → Use higher charge
+       // Scenario 4: Neither city is a city day → use higher charge
        totalCharge = Math.max(pickupResult.charge, dropoffResult.charge);
-       console.log('[DEBUG] Scenario 4 - Neither city aligns: Using higher charge €' + totalCharge);
+       cityUsed = pickupResult.charge >= dropoffResult.charge ? pickupCity : dropoffCity;
+       console.log('[DEBUG] Scenario 4 - Neither city aligns: Using higher charge €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
      }
-     
-     console.log('[DEBUG] Intercity final charge:', totalCharge);
-     
-     return totalCharge;
+     return { charge: totalCharge, cityUsed };
    }
   
      /**
@@ -575,8 +539,6 @@ class PricingService {
     // Check if it's an early booking (at least 21 days in advance)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const daysInAdvance = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    const isEarlyBooking = daysInAdvance >= 21;
     // Determine base charge
     let baseCharge: number;
     let chargeType: string;
@@ -584,11 +546,6 @@ class PricingService {
       // City day pricing - aligned with schedule
       baseCharge = cityBaseCharges[city]?.cityDay || 0;
       chargeType = `${city} city day rate`;
-    } else if (isEarlyBooking) {
-      // Early booking discount (50% off normal rate)
-      const normalRate = cityBaseCharges[city]?.normal || 0;
-      baseCharge = Math.round(normalRate * 0.5);
-      chargeType = `${city} early booking discount (50% off)`;
     } else {
       // Normal pricing - doesn't align with schedule and not early booking
       baseCharge = cityBaseCharges[city]?.normal || 0;
@@ -837,6 +794,22 @@ class PricingService {
     } else {
       breakdown.studentDiscount = 0;
       breakdown.total = breakdown.subtotal;
+    }
+
+    const referenceDate = new Date(input.selectedDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysInAdvance = Math.floor((referenceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const isEarlyBooking = daysInAdvance >= 14; // 2 weeks = 14 days
+  
+
+    // Apply early booking discount to the total (after student discount)
+    if (isEarlyBooking) {
+      input.isEarlyBooking = true;
+      breakdown.earlyBookingDiscount = Math.round(breakdown.total * 0.10 * 100) / 100;
+      breakdown.total = Math.round((breakdown.subtotal - breakdown.earlyBookingDiscount) * 100) / 100;
+    } else {
+      breakdown.earlyBookingDiscount = 0;
     }
   }
 }
