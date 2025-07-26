@@ -1304,7 +1304,6 @@ const ItemMovingPage = () => {
                                                         setDropoffDate('');
                                                     }}
                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                    min={new Date().toISOString().split('T')[0]}
                                                     required
                                                 />
                                             </div>
@@ -1319,7 +1318,6 @@ const ItemMovingPage = () => {
                                                         setDropoffDate('');
                                                     }}
                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                    min={selectedDateRange.start || new Date().toISOString().split('T')[0]}
                                                     required
                                                 />
                                             </div>
@@ -1337,7 +1335,6 @@ const ItemMovingPage = () => {
                                                         setSelectedDateRange({ start: '', end: '' });
                                                     }}
                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                    min={new Date().toISOString().split('T')[0]}
                                                     required
                                                 />
                                             </div>
@@ -1351,7 +1348,6 @@ const ItemMovingPage = () => {
                                                         setSelectedDateRange({ start: '', end: '' });
                                                     }}
                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                    min={pickupDate || new Date().toISOString().split('T')[0]}
                                                     required
                                                 />
                                             </div>

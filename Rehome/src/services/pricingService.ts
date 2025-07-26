@@ -242,17 +242,17 @@ class PricingService {
             chargeType = `${pickupCity} - Cheap Rate (Flexible range > 1 week)`;
           }
         } else {
-          // Range 1 week or below → check if city has available day during range
-          const hasAvailableDay = await this.checkCityAvailabilityInRange(pickupCity, startDate, endDate);
-          console.log('hasAvailableDay', hasAvailableDay, 'within 1 week');
-          if (hasAvailableDay) {
+          // Range 1 week or below → check if city has actual city days during range
+          const hasCityDaysInRange = await this.checkCityDaysInRange(pickupCity, startDate, endDate);
+          console.log('🔍 [DEBUG] hasCityDaysInRange for', pickupCity, ':', hasCityDaysInRange);
+          if (hasCityDaysInRange) {
             finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
             isCheapRate = true;
-            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Cheap Rate (Available in range)`;
+            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Cheap Rate (City days in range)`;
           } else {
             finalCharge = cityBaseCharges[pickupCity]?.normal || 0;
             isCheapRate = false;
-            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Normal Rate (Not available in range)`;
+            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Normal Rate (No city days in range)`;
           }
         }
         
@@ -414,14 +414,14 @@ class PricingService {
      }
      
      // Add distance charges for non-base cities (>8km)
-     if (pickupDistanceDifference > 8) {
+     if (pickupDistanceDifference > 0) {
        const pickupExtraCharge = Math.round((pickupDistanceDifference - 8) * 3);
        totalCharge += pickupExtraCharge;
        console.log(`[DEBUG] Intercity - Added pickup distance charge: €${pickupExtraCharge} for ${Math.round(pickupDistanceDifference - 8)}km beyond 8km`);
      }
      
-     if (dropoffDistanceDifference > 8) {
-       const dropoffExtraCharge = Math.round((dropoffDistanceDifference - 8) * 3);
+     if (dropoffDistanceDifference > 0) {
+       const dropoffExtraCharge = Math.round((dropoffDistanceDifference-3) * 3);
        totalCharge += dropoffExtraCharge;
        console.log(`[DEBUG] Intercity - Added dropoff distance charge: €${dropoffExtraCharge} for ${Math.round(dropoffDistanceDifference - 8)}km beyond 8km`);
      }
@@ -495,41 +495,40 @@ class PricingService {
    }
   
   /**
-   * Check if a city has any available day within the given date range
+   * Check if a city has actual city days (scheduled days) within the given date range
+   * This is different from checkCityAvailabilityInRange which includes empty days
    */
-  private async checkCityAvailabilityInRange(city: string, startDate: Date, endDate: Date): Promise<boolean> {
+  private async checkCityDaysInRange(city: string, startDate: Date, endDate: Date): Promise<boolean> {
     try {
       // Validate dates before using them
       if (!startDate || isNaN(startDate.getTime())) {
-        console.warn('[checkCityAvailabilityInRange] Invalid startDate provided:', startDate);
+        console.warn('[checkCityDaysInRange] Invalid startDate provided:', startDate);
         return false;
       }
       if (!endDate || isNaN(endDate.getTime())) {
-        console.warn('[checkCityAvailabilityInRange] Invalid endDate provided:', endDate);
+        console.warn('[checkCityDaysInRange] Invalid endDate provided:', endDate);
         return false;
       }
 
-      const startStr = startDate.toISOString().split('T')[0];
-      const endStr = endDate.toISOString().split('T')[0];
-      const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-      const url = `${baseUrl}/api/city-availability-range?city=${encodeURIComponent(city)}&startDate=${startStr}&endDate=${endStr}`;
+      const currentDate = new Date(startDate);
       
-      const response = await fetch(url);
-      if (!response.ok) {
-        console.warn(`Failed to fetch availability range: ${response.status}`);
-        return false; // Fallback to not available
+      // Check each day in the range for actual city days (scheduled days)
+      while (currentDate <= endDate) {
+        const isCityDay = await this.isCityDay(city, currentDate);
+        const isEmpty = await this.isCompletelyEmptyCalendarDay(currentDate);
+        
+        if (isCityDay || isEmpty) {
+          console.log(`🎯 [DEBUG] Found city day for ${city} on ${currentDate.toISOString().split('T')[0]}`);
+          return true; // Found at least one city day
+        }
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
       }
       
-      const result = await response.json();
-      
-      if (!result.success) {
-        console.warn(`Backend error: ${result.error}`);
-        return false;
-      }
-      
-      return result.data.hasAvailableDay;
+      console.log(`❌ [DEBUG] No city days found for ${city} in range ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
+      return false; // No city days found in range
     } catch (error) {
-      console.error('[checkCityAvailabilityInRange] Error:', error);
+      console.error('[checkCityDaysInRange] Error:', error);
       return false; // Fallback to not available
     }
   }
