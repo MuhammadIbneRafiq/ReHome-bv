@@ -226,10 +226,60 @@ function GooglePlacesAutocomplete({
 const HouseMovingPage = () => {
     const { t } = useTranslation();
     const [step, setStep] = useState(1);
+    
+    // Check for transferred data from item transport
+    useEffect(() => {
+        const transferredData = sessionStorage.getItem('itemTransportToHouseMoving');
+        if (transferredData) {
+            try {
+                const data = JSON.parse(transferredData);
+                
+                // Populate form with transferred data
+                if (data.pickupType) setPickupType(data.pickupType);
+                if (data.firstLocation) setFirstLocation(data.firstLocation);
+                if (data.secondLocation) setSecondLocation(data.secondLocation);
+                if (data.floorPickup) setFloorPickup(data.floorPickup);
+                if (data.floorDropoff) setFloorDropoff(data.floorDropoff);
+                if (data.elevatorPickup !== undefined) setElevatorPickup(data.elevatorPickup);
+                if (data.elevatorDropoff !== undefined) setElevatorDropoff(data.elevatorDropoff);
+                if (data.selectedDateRange) setSelectedDateRange(data.selectedDateRange);
+                if (data.pickupDate) setPickupDate(data.pickupDate);
+                if (data.dropoffDate) setDropoffDate(data.dropoffDate);
+                if (data.dateOption) setDateOption(data.dateOption);
+                if (data.isDateFlexible !== undefined) setIsDateFlexible(data.isDateFlexible);
+                if (data.preferredTimeSpan) setPreferredTimeSpan(data.preferredTimeSpan);
+                if (data.itemQuantities) setItemQuantities(data.itemQuantities);
+                if (data.customItem) setCustomItem(data.customItem);
+                if (data.disassembly !== undefined) setDisassembly(data.disassembly);
+                if (data.extraHelper !== undefined) setExtraHelper(data.extraHelper);
+                if (data.carryingService !== undefined) setCarryingService(data.carryingService);
+                if (data.isStudent !== undefined) setIsStudent(data.isStudent);
+                if (data.studentId) setStudentId(data.studentId);
+                if (data.storeProofPhoto) setStoreProofPhoto(data.storeProofPhoto);
+                if (data.disassemblyItems) setDisassemblyItems(data.disassemblyItems);
+                if (data.extraHelperItems) setExtraHelperItems(data.extraHelperItems);
+                if (data.carryingServiceItems) setCarryingServiceItems(data.carryingServiceItems);
+                if (data.pickupPlace) setPickupPlace(data.pickupPlace);
+                if (data.dropoffPlace) setDropoffPlace(data.dropoffPlace);
+                if (data.distanceKm) setDistanceKm(data.distanceKm);
+                if (data.extraInstructions) setExtraInstructions(data.extraInstructions);
+                
+                // Show success message
+                toast.success("Your information has been transferred from item transport. Please review and continue.");
+                
+                // Clear the transferred data
+                sessionStorage.removeItem('itemTransportToHouseMoving');
+                
+            } catch (error) {
+                console.error('Error parsing transferred data:', error);
+            }
+        }
+    }, []);
     const [firstLocation, setFirstLocation] = useState('');
     const [secondLocation, setSecondLocation] = useState('');
     const [floorPickup, setFloorPickup] = useState('');
     const [floorDropoff, setFloorDropoff] = useState('');
+    const [pickupType, setPickupType] = useState<'private' | 'store' | null>(null);
     const [disassembly, setDisassembly] = useState(false);
     const [contactInfo, setContactInfo] = useState<ContactInfo>({
         firstName: '',
@@ -244,8 +294,10 @@ const HouseMovingPage = () => {
     const [extraHelper, setExtraHelper] = useState(false);
     const [carryingService, setCarryingService] = useState(false);
     const [itemQuantities, setItemQuantities] = useState<ItemQuantities>({});
+    const [customItem, setCustomItem] = useState('');
     const [isStudent, setIsStudent] = useState(false);
     const [studentId, setStudentId] = useState<File | null>(null);
+    const [storeProofPhoto, setStoreProofPhoto] = useState<File | null>(null);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
     const [isFixedDate, setIsFixedDate] = useState(false);
     const [extraHelperItems, setExtraHelperItems] = useState<{[key: string]: boolean}>({});
@@ -260,6 +312,8 @@ const HouseMovingPage = () => {
     const [dropoffPlace, setDropoffPlace] = useState<GooglePlaceObject | null>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
     const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome'>('fixed');
+    const [pickupDate, setPickupDate] = useState('');
+    const [dropoffDate, setDropoffDate] = useState('');
     // 1. Add state for carryingServiceItems
     const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({});
     // Add state for select all functionality and extra instructions
@@ -318,6 +372,11 @@ const HouseMovingPage = () => {
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>): void => {
         const file = event.target.files?.[0];
         setStudentId(file || null);
+    };
+
+    const handleStoreProofUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        setStoreProofPhoto(file || null);
     };
 
     const calculatePrice = async () => {
@@ -593,6 +652,9 @@ const HouseMovingPage = () => {
         const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 international format
         if (!phoneRegex.test(contactInfo.phone)) return false;
         
+        // Validate store proof photo if pickup type is store
+        if (pickupType === 'store' && !storeProofPhoto) return false;
+        
         // Check if terms and conditions are agreed to
         if (!agreedToTerms) return false;
         
@@ -627,15 +689,31 @@ const HouseMovingPage = () => {
 
         // Prepare payload in the format expected by backend
         const payload = {
-            pickupType: 'house',
+            pickupType: pickupType || 'house',
             furnitureItems,
-            customItem: '',
+            customItem,
             floorPickup: parseInt(floorPickup) || 0,
             floorDropoff: parseInt(floorDropoff) || 0,
             contactInfo,
             estimatedPrice: pricingBreakdown?.total || 0,
             selectedDateRange,
             isDateFlexible,
+            pickupDate: dateOption === 'fixed' ? pickupDate : undefined,
+            dropoffDate: dateOption === 'fixed' ? dropoffDate : undefined,
+            dateOption,
+            preferredTimeSpan,
+            extraInstructions,
+            elevatorPickup,
+            elevatorDropoff,
+            disassembly,
+            extraHelper,
+            carryingService,
+            isStudent,
+            studentId,
+            storeProofPhoto,
+            disassemblyItems,
+            extraHelperItems,
+            carryingServiceItems,
             basePrice: pricingBreakdown?.basePrice || 0,
             itemPoints: totalItemPoints,
             carryingCost: pricingBreakdown?.carryingCost || 0,
@@ -1475,6 +1553,40 @@ const HouseMovingPage = () => {
                                         />
                                     </div>
                                     
+                                    {/* Store Proof Photo Upload - Only show if pickup type is store */}
+                                    {pickupType === 'store' && (
+                                        <div className="mt-6">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Proof of Purchase/Ownership *
+                                            </label>
+                                            <p className="text-sm text-gray-600 mb-3">
+                                                Please upload a photo of your receipt, invoice, or proof of ownership for the items from the store.
+                                            </p>
+                                            <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                                                <div className="space-y-1 text-center">
+                                                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                    </svg>
+                                                    <div className="flex text-sm text-gray-600">
+                                                        <label htmlFor="store-proof-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-orange-600 hover:text-orange-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-orange-500">
+                                                            <span>Upload a file</span>
+                                                            <input id="store-proof-upload" name="store-proof-upload" type="file" className="sr-only" onChange={handleStoreProofUpload} accept="image/*" />
+                                                        </label>
+                                                        <p className="pl-1">or drag and drop</p>
+                                                    </div>
+                                                    <p className="text-xs text-gray-500">
+                                                        PNG, JPG, GIF up to 10MB
+                                                    </p>
+                                                    {storeProofPhoto && (
+                                                        <p className="text-sm text-green-600">
+                                                            Proof uploaded: {storeProofPhoto.name}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
                                     <div className="mt-4">
                                         <div className="flex items-start">
                                             <div className="flex items-center h-5">
@@ -1613,6 +1725,12 @@ const HouseMovingPage = () => {
                                                     <span className="text-gray-600">Phone:</span>
                                                     <span className="text-gray-900 ml-2">{contactInfo.phone}</span>
                                                 </li>
+                                                {pickupType === 'store' && (
+                                                    <li className="text-sm">
+                                                        <span className="text-gray-600">Store Proof:</span>
+                                                        <span className="text-gray-900 ml-2">{storeProofPhoto ? storeProofPhoto.name : 'Not uploaded'}</span>
+                                                    </li>
+                                                )}
                                             </ul>
                                         </div>
                                     </div>

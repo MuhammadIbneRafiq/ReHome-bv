@@ -122,6 +122,7 @@ const ItemDonationPage = () => {
       photos.forEach((photo) => {
         formData.append('photos', photo);
       });
+      
 
       const response = await fetch(API_ENDPOINTS.DONATION.ITEM_REQUEST, {
         method: 'POST',

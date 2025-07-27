@@ -4,6 +4,7 @@ import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { itemCategories, getItemPoints } from '../../lib/constants';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
@@ -238,6 +239,7 @@ function GooglePlacesAutocomplete({
 
 const ItemMovingPage = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [disassembly, setDisassembly] = useState(false);
     const [contactInfo, setContactInfo] = useState<ContactInfo>({
@@ -274,6 +276,7 @@ const ItemMovingPage = () => {
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [showConfirmationModal, setShowConfirmationModal] = useState(false);
     const [showBookingTips, setShowBookingTips] = useState(false);
+    const [showPointLimitModal, setShowPointLimitModal] = useState(false);
     const [pickupPlace, setPickupPlace] = useState<any>(null);
     const [dropoffPlace, setDropoffPlace] = useState<any>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
@@ -284,6 +287,64 @@ const ItemMovingPage = () => {
     const [selectAllAssembly, setSelectAllAssembly] = useState(false);
     const [selectAllCarrying, setSelectAllCarrying] = useState(false);
     const [extraInstructions, setExtraInstructions] = useState('');
+
+    // Point limit constant
+    const ITEM_TRANSPORT_POINT_LIMIT = 20;
+
+    // Function to calculate total points
+    const calculateTotalPoints = () => {
+        return Object.entries(itemQuantities)
+            .filter(([_, quantity]) => quantity > 0)
+            .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
+    };
+
+    // Function to check point limit and redirect if exceeded
+    const checkPointLimitAndRedirect = () => {
+        const totalPoints = calculateTotalPoints();
+        if (totalPoints > ITEM_TRANSPORT_POINT_LIMIT) {
+            setShowPointLimitModal(true);
+            return true;
+        }
+        return false;
+    };
+
+    // Function to redirect to house moving with current data
+    const redirectToHouseMoving = () => {
+        const transferData = {
+            pickupType,
+            firstLocation,
+            secondLocation,
+            floorPickup,
+            floorDropoff,
+            elevatorPickup,
+            elevatorDropoff,
+            selectedDateRange,
+            pickupDate,
+            dropoffDate,
+            dateOption,
+            isDateFlexible,
+            preferredTimeSpan,
+            itemQuantities,
+            customItem,
+            disassembly,
+            extraHelper,
+            carryingService,
+            isStudent,
+            studentId,
+            storeProofPhoto,
+            disassemblyItems,
+            extraHelperItems,
+            carryingServiceItems,
+            pickupPlace,
+            dropoffPlace,
+            distanceKm,
+            extraInstructions
+        };
+        
+        // Store data in sessionStorage for transfer
+        sessionStorage.setItem('itemTransportToHouseMoving', JSON.stringify(transferData));
+        navigate('/house-moving');
+    };
 
     // Add handlers for select all functionality
     const handleSelectAllAssembly = (checked: boolean) => {
@@ -507,6 +568,13 @@ const ItemMovingPage = () => {
             return;
         }
 
+        // Check point limit when moving to step 3 (items) or later
+        if (step >= 2) {
+            if (checkPointLimitAndRedirect()) {
+                return;
+            }
+        }
+
         // Validate date selection in step 4
         if (step === 4) {
             if (dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
@@ -574,10 +642,24 @@ const ItemMovingPage = () => {
     };
 
     const incrementItem = (itemId: string) => {
-        setItemQuantities(prevQuantities => ({
-            ...prevQuantities,
-            [itemId]: (prevQuantities[itemId] || 0) + 1,
-        }));
+        setItemQuantities(prevQuantities => {
+            const newQuantities = {
+                ...prevQuantities,
+                [itemId]: (prevQuantities[itemId] || 0) + 1,
+            };
+            
+            // Check if this increment would exceed the limit
+            const newTotalPoints = Object.entries(newQuantities)
+                .filter(([_, quantity]) => quantity > 0)
+                .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
+            
+            if (newTotalPoints > ITEM_TRANSPORT_POINT_LIMIT) {
+                // Show the modal immediately when limit is exceeded
+                setTimeout(() => setShowPointLimitModal(true), 100);
+            }
+            
+            return newQuantities;
+        });
     };
 
     const decrementItem = (itemId: string) => {
@@ -907,12 +989,46 @@ const ItemMovingPage = () => {
                 };
             });
 
-        // const totalItemPoints = selectedItems.reduce((sum, item) => sum + item.points, 0);
+        const totalItemPoints = selectedItems.reduce((sum, item) => sum + item.points, 0);
         const totalItemValue = selectedItems.reduce((sum, item) => sum + item.value, 0);
+        
+        // Check if approaching or exceeding point limit
+        const isApproachingLimit = totalItemPoints >= ITEM_TRANSPORT_POINT_LIMIT * 0.8; // 80% of limit
+        const isExceedingLimit = totalItemPoints > ITEM_TRANSPORT_POINT_LIMIT;
         
         return (
             <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
                 <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                
+                {/* Point Limit Warning */}
+                {isExceedingLimit && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                        <div className="flex items-center">
+                            <FaHome className="h-4 w-4 text-red-600 mr-2" />
+                            <span className="text-sm font-medium text-red-800">
+                                Move too large for item transport ({totalItemPoints} points)
+                            </span>
+                        </div>
+                        <p className="text-xs text-red-600 mt-1">
+                            Consider house moving service for better pricing
+                        </p>
+                    </div>
+                )}
+                
+                {isApproachingLimit && !isExceedingLimit && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                        <div className="flex items-center">
+                            <FaHome className="h-4 w-4 text-yellow-600 mr-2" />
+                            <span className="text-sm font-medium text-yellow-800">
+                                Approaching item transport limit ({totalItemPoints}/20 points)
+                            </span>
+                        </div>
+                        <p className="text-xs text-yellow-600 mt-1">
+                            Consider house moving for larger moves
+                        </p>
+                    </div>
+                )}
+                
                 <div className="space-y-3">
                     {/* Base Price */}
                     <div className="flex justify-between">
@@ -961,7 +1077,7 @@ const ItemMovingPage = () => {
                     {/* Items Section - Show detailed breakdown */}
                     <div className="border-t pt-3">
                         <div className="flex justify-between font-medium">
-                            {/* <span>Items ({totalItemPoints} points):</span> */}
+                            <span>Items ({totalItemPoints} points):</span>
                             <span>€{totalItemValue.toFixed(2)}</span>
                         </div>
                         {selectedItems.length > 0 && (
@@ -1987,7 +2103,48 @@ const ItemMovingPage = () => {
                 isOpen={showBookingTips}
                 onContinue={handleContinueFromTips}
                 serviceType="item-transport"
-            />            
+            />
+
+            {/* Point Limit Modal */}
+            {showPointLimitModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+                        <div className="text-center">
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 mb-4">
+                                <FaHome className="h-6 w-6 text-orange-600" />
+                            </div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                Large Move Detected
+                            </h3>
+                            <p className="text-sm text-gray-600 mb-4">
+                                Your move exceeds the 20-point limit for item transport. 
+                                For moves of this size, we recommend using our house moving service 
+                                which is better suited for larger moves and offers better pricing.
+                            </p>
+                            <p className="text-sm text-gray-600 mb-6">
+                                Your current information will be transferred to the house moving form.
+                            </p>
+                            <div className="flex space-x-3">
+                                <button
+                                    onClick={() => setShowPointLimitModal(false)}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowPointLimitModal(false);
+                                        redirectToHouseMoving();
+                                    }}
+                                    className="flex-1 px-4 py-2 bg-orange-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-orange-700"
+                                >
+                                    Continue to House Moving
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
