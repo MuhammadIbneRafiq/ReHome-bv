@@ -108,8 +108,6 @@ export async function findClosestSupportedCity(
       if (nearestCity) {
         // Calculate extra km charge: €3 per km beyond 8km city center range
         const extraKmBeyondRange = Math.max(0, shortestDistance - 8);
-
-        console.log(`[DEBUG] - Extra charge: €${Math.round(extraKmBeyondRange * 3)}`);
         
         return { 
           city: nearestCity, 

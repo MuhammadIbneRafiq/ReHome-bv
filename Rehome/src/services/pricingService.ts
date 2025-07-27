@@ -236,11 +236,7 @@ class PricingService {
           // Range above 1 week → cheap base charge for pickup city
           finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
           isCheapRate = true;
-          if (isIntercity) {
-            chargeType = 'Intercity Rate';
-          } else {
-            chargeType = `${pickupCity} - Cheap Rate (Flexible range > 1 week)`;
-          }
+          chargeType = 'Intercity Rate';
         } else {
           // Range 1 week or below → check if city has actual city days during range
           const hasCityDaysInRange = await this.checkCityDaysInRange(pickupCity, startDate, endDate);
@@ -248,11 +244,11 @@ class PricingService {
           if (hasCityDaysInRange) {
             finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
             isCheapRate = true;
-            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Cheap Rate (City days in range)`;
+            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Cheap Rate`;
           } else {
             finalCharge = cityBaseCharges[pickupCity]?.normal || 0;
             isCheapRate = false;
-            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Normal Rate (No city days in range)`;
+            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Normal Rate`;
           }
         }
         
@@ -260,7 +256,6 @@ class PricingService {
         if (pickupDistanceDifference > 0) {
           const extraCharge = Math.round(pickupDistanceDifference * 3);
           finalCharge += extraCharge;
-          chargeType += ` (+€${extraCharge} for ${Math.round(pickupDistanceDifference)}km beyond city center)`;
         }
                 
       } else if (input.isDateFlexible && !input.selectedDateRange?.start) {
@@ -273,12 +268,7 @@ class PricingService {
         if (pickupDistanceDifference > 8) {
           const extraCharge = Math.round((pickupDistanceDifference - 8) * 3);
           finalCharge += extraCharge;
-          chargeType = isIntercity 
-            ? `Intercity Rate (+€${extraCharge} for ${Math.round(pickupDistanceDifference - 8)}km beyond 8km)`
-            : `${pickupCity} - ReHome Choice (+€${extraCharge} for ${Math.round(pickupDistanceDifference - 8)}km beyond 8km)`;
-        } else {
-          chargeType = isIntercity ? 'Intercity Rate (ReHome Choice)' : `${pickupCity} - ReHome Choice (Cheapest Rate)`;
-        }
+        } 
       }
       
       // Set breakdown values
@@ -594,17 +584,16 @@ class PricingService {
     if (isScheduledDay) {
       // City day pricing - aligned with schedule
       baseCharge = cityBaseCharges[city]?.cityDay || 0;
-      chargeType = `${city} city day rate`;
+      chargeType = `${city} - Cheap Rate`;
     } else {
       // Normal pricing - doesn't align with schedule and not early booking
       baseCharge = cityBaseCharges[city]?.normal || 0;
-      chargeType = `${city} normal rate`;
+      chargeType = `${city} - Normal Rate`;
     }
     // Apply city center extra charge if beyond city center range
     if (distanceDifference > 0) {
       const extraCharge = Math.round(distanceDifference * 3); // €3 per km beyond 8km
       baseCharge += extraCharge;
-      chargeType += ` (+€${extraCharge} for ${Math.round(distanceDifference)}km beyond city center)`;
     }
     return {
       charge: baseCharge,

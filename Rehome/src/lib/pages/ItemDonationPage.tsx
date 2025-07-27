@@ -6,6 +6,7 @@ import { FaCheckCircle, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 import LocationAutocomplete from '../../components/ui/LocationAutocomplete';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
+import { API_ENDPOINTS } from '../api/config';
 
 const ItemDonationPage = () => {
   const { t } = useTranslation();
@@ -99,74 +100,63 @@ const ItemDonationPage = () => {
     if (!validateForm()) return;
     
     setIsLoading(true);
-    
-    // Prepare data for submission (JSON, not FormData)
-    const payload = {
-      donationItems: [
+
+    try {
+      const formData = new FormData();
+      formData.append('donationItems', JSON.stringify([
         {
           description,
           price: mode === 'sell' ? price : undefined,
           condition,
         }
-      ],
-      contactInfo,
-      pickupLocation: address,
-      preferredPickupDate: preferredDate,
-      isDateFlexible,
-      donationType: mode === 'sell' ? 'sell' : 'charity',
-      itemCondition: condition,
-      photoUrls: [], // TODO: handle actual upload or base64 conversion
-      floor,
-      elevatorAvailable,
-      preferredTimeSpan,
-    };
-    
-    try {
-      const response = await fetch('https://rehome-backend.vercel.app/api/item-donation-requests', {
+      ]));
+      formData.append('contactInfo', JSON.stringify(contactInfo));
+      formData.append('pickupLocation', address);
+      formData.append('preferredPickupDate', preferredDate);
+      formData.append('isDateFlexible', String(isDateFlexible));
+      formData.append('donationType', mode === 'sell' ? 'sell' : 'charity');
+      formData.append('itemCondition', condition);
+      formData.append('floor', floor);
+      formData.append('elevatorAvailable', String(elevatorAvailable));
+      formData.append('preferredTimeSpan', preferredTimeSpan);
+      photos.forEach((photo) => {
+        formData.append('photos', photo);
+      });
+
+      const response = await fetch(API_ENDPOINTS.DONATION.ITEM_REQUEST, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: formData,
       });
-      console.log('Response:', response);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      if (mode === 'donate') {
-        toast.success("Thank you for your donation! We'll contact you soon to arrange pickup.", {
+      const result = await response.json();
+      if (response.ok) {
+        toast.success(result.message || "Thank you for your donation! We'll contact you soon to arrange pickup.", {
           position: "top-right",
           autoClose: 5000,
         });
-        
-        setConfirmation("Thank you for your generous donation! We'll be in touch shortly to arrange pickup of your items.");
+        setConfirmation(result.message || "Thank you for your generous donation! We'll be in touch shortly to arrange pickup of your items.");
+        // Reset form
+        setStep(1);
+        setMode('donate');
+        setPrice('');
+        setDescription('');
+        setCondition('good');
+        setPhotos([]);
+        setAddress('');
+        setFloor('');
+        setElevatorAvailable(false);
+        setContactInfo({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+        });
+        setPreferredDate('');
+        setIsDateFlexible(false);
+        setPreferredTimeSpan('');
+        setAgreedToTerms(false);
       } else {
-        toast.success("Thank you for your listing! We'll review your item and contact you soon.", {
-          position: "top-right",
-          autoClose: 5000,
-        });
-        
-        setConfirmation("Thank you for choosing to sell through ReHome! We'll evaluate your item and contact you shortly with next steps.");
+        throw new Error(result.error || 'Failed to submit donation request');
       }
-      
-      // Reset form
-      setStep(1);
-      setMode('donate');
-      setPrice('');
-      setDescription('');
-      setCondition('good');
-      setPhotos([]);
-      setAddress('');
-      setFloor('');
-      setElevatorAvailable(false);
-      setContactInfo({
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-      });
-      setPreferredDate('');
-      setIsDateFlexible(false);
-      setPreferredTimeSpan('');
-      setAgreedToTerms(false);
     } catch (error) {
       console.error("Error submitting the form:", error);
       toast.error("An error occurred while submitting your request. Please try again.");
