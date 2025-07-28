@@ -208,11 +208,65 @@ class PricingService {
           chargeType = 'Intercity Rate';
         } else if (isIntercity) {
           // House moving or item transport same day intercity - average rates and add distance
-          const intercityResult = await this.calculateIntercityFixedDateCharge(
-            input, pickupCity, dropoffCity, pickupDistanceDifference, dropoffDistanceDifference
-          );
-          finalCharge = intercityResult.charge;
-          breakdown.breakdown.baseCharge.city = intercityResult.cityUsed;
+          const selectedDate = new Date(input.selectedDate);
+          // Check if calendar is empty for THIS specific city on this date
+          const isEmpty = await this.isCompletelyEmptyCalendarDay(selectedDate);
+          let baseCharge: number;
+          let isCheapRate: boolean;
+          
+          if (isEmpty) {
+            if (dropoffCity === pickupCity) { 
+              baseCharge = cityBaseCharges[pickupCity]?.cityDay;
+              isCheapRate = true;
+              console.log(`[DEBUG] ${pickupCity} - Empty calendar, using cityDay rate: €${baseCharge}`);
+            }
+            else {
+              // Empty calendar for this city → cheap base charge(NOT ANYMORE) but the avg
+              baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+              isCheapRate = true;
+              console.log(`[DEBUG] ${pickupCity} - Empty calendar, using cityDay rate: €${baseCharge}`);
+            }
+          } else {
+            // Not empty → check if city is included on that date
+            const isIncluded = await this.isCityDay(pickupCity, selectedDate);
+            console.log(`[DEBUG] ${pickupCity} - Not empty, isCityDay: ${isIncluded}`);
+
+            if (isIncluded) {
+              if (dropoffCity === pickupCity) { 
+                baseCharge = cityBaseCharges[pickupCity]?.cityDay;
+                isCheapRate = true;
+                console.log(`[DEBUG] ${pickupCity} - City day, using cityDay rate: €${baseCharge}`);
+              }
+              else {
+                baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+                isCheapRate = true;
+                console.log(`[DEBUG] ${pickupCity} - City day, using cityDay rate: €${baseCharge}`);
+              }
+            } else {
+              if (dropoffCity === pickupCity) { 
+                baseCharge = cityBaseCharges[pickupCity]?.normal;
+                isCheapRate = false;
+                console.log(`[DEBUG] ${pickupCity} - Not city day, using normal rate: €${baseCharge}`);
+              }
+              else {
+                baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
+                isCheapRate = false;
+                console.log(`[DEBUG] ${pickupCity} - Not city day, using normal rate: €${baseCharge}`);
+              }
+            }
+          }
+          
+          // Add extra km charge ONLY if distance difference > 8km
+          if (pickupDistanceDifference > 8) {
+            const extraCharge = Math.round((pickupDistanceDifference - 8) * 3);
+            console.log(`[DEBUG] ${pickupCity} - Adding extra km charge: €${extraCharge} for ${Math.round(pickupDistanceDifference - 8)}km beyond 8km`);
+            baseCharge += extraCharge;
+          }
+          
+          console.log(`[DEBUG] ${pickupCity} - Final charge: €${baseCharge} (isCheapRate: ${isCheapRate})`);
+          
+          finalCharge = baseCharge;
+          breakdown.breakdown.baseCharge.city = pickupCity;
           chargeType = 'Intercity Rate';
         } else {
           // Within city move
@@ -373,66 +427,6 @@ class PricingService {
     
     return { charge: baseCharge, isCheapRate };
   }
-  
-     /**
-    * Calculate base charge for intercity moves on fixed dates (house moving or same-day item transport)
-    */
-  private async calculateIntercityFixedDateCharge(
-    input: PricingInput,
-    pickupCity: string,
-    dropoffCity: string,
-    pickupDistanceDifference: number,
-    dropoffDistanceDifference: number
-  ): Promise<{ charge: number, cityUsed: string }> {
-     // Calculate pickup charge (without distance - will add later)
-    const pickupResult = await this.calculateWithinCityFixedDateCharge(
-      input, pickupCity, 0 // Don't add distance charge here
-    );
-    
-    // Calculate dropoff charge (without distance - will add later)
-    const dropoffResult = await this.calculateWithinCityFixedDateCharge(
-      { ...input, selectedDate: input.selectedDate }, dropoffCity, 0 // Don't add distance charge here
-    );
-    
-    let totalCharge = 0;
-    let cityUsed = pickupCity;
-    
-    // Apply intercity logic: average the base rates, then add distance charges
-    if (pickupResult.isCheapRate && dropoffResult.isCheapRate) {
-      // Both cities are city days → average them
-      totalCharge = Math.round((pickupResult.charge + dropoffResult.charge) / 2);
-      cityUsed = pickupResult.charge <= dropoffResult.charge ? pickupCity : dropoffCity;
-      console.log('[DEBUG] Intercity - Both cities align: Averaging charges €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
-    } else if (pickupResult.isCheapRate || dropoffResult.isCheapRate) {
-      // Only one city is a city day → average city day + normal rate
-      totalCharge = Math.round((pickupResult.charge + dropoffResult.charge) / 2);
-      cityUsed = pickupResult.charge <= dropoffResult.charge ? pickupCity : dropoffCity;
-      console.log('[DEBUG] Intercity - Mixed rates: Averaging city day + normal €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
-    } else {
-      // Neither city is a city day → average normal rates
-      totalCharge = Math.round((pickupResult.charge + dropoffResult.charge) / 2);
-      cityUsed = pickupResult.charge <= dropoffResult.charge ? pickupCity : dropoffCity;
-      console.log('[DEBUG] Intercity - Both normal rates: Averaging charges €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
-    }
-    
-    // Add distance charges for non-base cities (>8km)
-    if (pickupDistanceDifference > 0) {
-      const pickupExtraCharge = Math.round((pickupDistanceDifference - 8) * 3);
-      totalCharge += pickupExtraCharge;
-      console.log(`[DEBUG] Intercity - Added pickup distance charge: €${pickupExtraCharge} for ${Math.round(pickupDistanceDifference - 8)}km beyond 8km`);
-    }
-    
-    if (dropoffDistanceDifference > 0) {
-      const dropoffExtraCharge = Math.round((dropoffDistanceDifference-3) * 3);
-      totalCharge += dropoffExtraCharge;
-      console.log(`[DEBUG] Intercity - Added dropoff distance charge: €${dropoffExtraCharge} for ${Math.round(dropoffDistanceDifference - 8)}km beyond 8km`);
-    }
-    
-    console.log(`[DEBUG] Intercity - Final total charge: €${totalCharge}`);
-    
-    return { charge: totalCharge, cityUsed };
-  }
-
     /**
   * Calculate base charge for item transport with different pickup/dropoff dates
   */
@@ -464,7 +458,7 @@ class PricingService {
     // Apply the correct intercity logic based on city day alignment for each respective date
     let totalCharge: number;
     
-          if (pickupResult.isCheapRate && dropoffResult.isCheapRate) {
+    if (pickupResult.isCheapRate && dropoffResult.isCheapRate) {
       // Both cities are city days on their respective dates → average them
       totalCharge = Math.round((pickupResult.charge + dropoffResult.charge) / 2);
       console.log('[DEBUG] Item Transport - Both cities align on respective dates: Averaging charges €' + totalCharge + ' (pickup: €' + pickupResult.charge + ', dropoff: €' + dropoffResult.charge + ')');
