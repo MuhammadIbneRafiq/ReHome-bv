@@ -36,8 +36,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                     <div className="text-center mb-4 sm:mb-6">
                         <p className="text-base sm:text-lg text-gray-700">
                             Before you continue the booking process, take a look at the information below. 
-                            This can help you customize your {serviceType === 'item-transport' ? 'transport' : 'move'} 
-                            for your needs while keeping the cost as low as possible.
+                            This can help you customize your {serviceType === 'item-transport' ? 'transport' : 'move'} for your needs while keeping the cost as low as possible.
                         </p>
                     </div>
 
