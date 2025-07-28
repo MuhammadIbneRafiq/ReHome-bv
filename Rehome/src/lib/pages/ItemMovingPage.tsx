@@ -993,6 +993,7 @@ const ItemMovingPage = () => {
         const totalItemValue = selectedItems.reduce((sum, item) => sum + item.value, 0);
         
         // Check if approaching or exceeding point limit
+        const isApproachingLimit = totalItemPoints >= ITEM_TRANSPORT_POINT_LIMIT * 0.8; // 80% of limit (16/20)
         const isExceedingLimit = totalItemPoints > ITEM_TRANSPORT_POINT_LIMIT;
         
         return (
@@ -1000,20 +1001,20 @@ const ItemMovingPage = () => {
                 <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
                 
                 {/* Point Limit Warning */}
-                {isExceedingLimit && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                {isApproachingLimit && !isExceedingLimit && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                         <div className="flex items-center">
-                            <FaHome className="h-4 w-4 text-red-600 mr-2" />
-                            <span className="text-sm font-medium text-red-800">
-                                Move too large for item transport ({totalItemPoints} points)
+                            <FaHome className="h-4 w-4 text-yellow-600 mr-2" />
+                            <span className="text-sm font-medium text-yellow-800">
+                                Approaching item transport limit!
                             </span>
                         </div>
-                        <p className="text-xs text-red-600 mt-1">
-                            Consider house moving service for better pricing
+                        <p className="text-xs text-yellow-600 mt-1">
+                            Consider house moving for larger moves.
                         </p>
                     </div>
                 )}
-                
+                               
                                 
                 <div className="space-y-3">
                     {/* Base Price */}
@@ -1031,7 +1032,7 @@ const ItemMovingPage = () => {
                     {/* Items Section - Show detailed breakdown */}
                     <div className="border-t pt-3">
                         <div className="flex justify-between font-medium">
-                            <span>Items ({totalItemPoints} points):</span>
+                            <span>Items:</span>
                             <span>€{totalItemValue.toFixed(2)}</span>
                         </div>
                         {selectedItems.length > 0 && (

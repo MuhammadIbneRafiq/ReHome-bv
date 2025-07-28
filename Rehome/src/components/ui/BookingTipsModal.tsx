@@ -63,24 +63,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                             </div>
                         </div>
 
-                        {/* Tip 2: Early booking */}
-                        <div className="bg-gradient-to-r from-red-50 to-red-100 p-4 sm:p-6 rounded-lg border border-red-200">
-                            <div className="flex items-start space-x-3 sm:space-x-4">
-                                <div className="flex-shrink-0">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center">
-                                        <FaClock className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <h3 className="text-base sm:text-lg font-semibold text-red-800 mb-2">
-                                        Can you book early?
-                                    </h3>
-                                    <p className="text-sm sm:text-base text-red-700">
-                                        If you book 2 weeks in advance, we can offer you a discount of 10% on the total price.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                        
                         {/* Tip 2: Flexible Dates */}
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 sm:p-6 rounded-lg border border-blue-200">
                             <div className="flex items-start space-x-3 sm:space-x-4">
@@ -123,7 +106,24 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                                 </div>
                             </div>
                         </div>
-
+                        {/* Tip 3.1: Early booking */}
+                        <div className="bg-gradient-to-r from-red-50 to-red-100 p-4 sm:p-6 rounded-lg border border-red-200">
+                            <div className="flex items-start space-x-3 sm:space-x-4">
+                                <div className="flex-shrink-0">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center">
+                                        <FaClock className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <h3 className="text-base sm:text-lg font-semibold text-red-800 mb-2">
+                                        Early Booking Discount
+                                    </h3>
+                                    <p className="text-sm sm:text-base text-red-700">
+                                        Booking 2 weeks in advance will give you a 10 percent discount on the total price.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                         {/* Tip 4: Student Discount */}
                         <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 sm:p-6 rounded-lg border border-purple-200">
                             <div className="flex items-start space-x-3 sm:space-x-4">

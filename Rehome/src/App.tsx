@@ -59,13 +59,6 @@ const LoadingScreen = () => (
       <h2 className="text-xl font-semibold text-gray-800 mb-2">Loading ReHome</h2>
       <p className="text-gray-600 mb-4">Preparing your moving experience...</p>
       
-      {/* Loading Steps */}
-      <div className="text-sm text-gray-500 space-y-1">
-        <div>✓ Loading furniture items</div>
-        <div>✓ Loading city pricing</div>
-        <div>✓ Setting up services</div>
-      </div>
-      
       {/* Progress Bar */}
       <div className="w-64 bg-gray-200 rounded-full h-2 mx-auto mt-6">
         <div className="bg-orange-500 h-2 rounded-full animate-pulse" style={{ width: '75%' }}></div>

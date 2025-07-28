@@ -1,52 +1,85 @@
-import pricingConfigData from "./pricingConfig.json";
 import { API_ENDPOINTS } from "./api/config";
-// // {
-// const pricingConfigData = {
-//   "distancePricing": {
-//     "smallDistance": { "threshold": 10, "rate": 0 },
-//     "mediumDistance": { "threshold": 50, "rate": 0.7 },
-//     "longDistance": { "rate": 0.5 }
-//   },
-//   "carryingMultipliers": {
-//     "lowValue": { "threshold": 6, "multiplier": 0.015 },
-//     "highValue": { "multiplier": 0.040 }
-//   },
-//   "assemblyMultipliers": {
-//     "lowValue": { "threshold": 6, "multiplier": 1.80 },
-//     "highValue": { "multiplier": 4.2 }
-//   },
-//   "extraHelperPricing": {
-//     "smallMove": { "threshold": 30, "price": 30 },
-//     "bigMove": { "price": 60 }
-//   }
-// }
 
-export const pricingConfig = {
-  // Base multipliers
-  houseMovingItemMultiplier: 2, // €2.3 per point for house moving
-  itemTransportMultiplier: 1, // €1.5 per point for item transport
-  addonMultiplier: 3, // €3 per point for add-ons
-  
-  // Distance pricing
-  distancePricing: pricingConfigData.distancePricing,
-  
-  // Carrying multipliers (per floor)
-  carryingMultipliers: pricingConfigData.carryingMultipliers,
-  
-  // Assembly multipliers
-  assemblyMultipliers: pricingConfigData.assemblyMultipliers,
-  
-  // Extra helper pricing
-  extraHelperPricing: pricingConfigData.extraHelperPricing,
-  
-  // City range and extra distance pricing
+// Pricing configuration type
+export type PricingConfig = {
+  baseMultipliers: {
+    houseMovingItemMultiplier: number;
+    itemTransportMultiplier: number;
+    addonMultiplier: number;
+  };
+  distancePricing: {
+    smallDistance: { threshold: number; rate: number };
+    mediumDistance: { threshold: number; rate: number };
+    longDistance: { rate: number };
+  };
+  carryingMultipliers: {
+    lowValue: { threshold: number; multiplier: number };
+    highValue: { multiplier: number };
+  };
+  assemblyMultipliers: {
+    lowValue: { threshold: number; multiplier: number };
+    highValue: { multiplier: number };
+  };
+  extraHelperPricing: {
+    smallMove: { threshold: number; price: number };
+    bigMove: { price: number };
+  };
   cityRange: {
-    baseRadius: 8, // 8km from city center
-    extraKmRate: 3 // €3 per extra km
-  },
-  // Student discount
-  studentDiscount: 0.1 // 10% discount
+    baseRadius: number;
+    extraKmRate: number;
+  };
+  studentDiscount: number;
+  weekendMultiplier: number;
+  cityDayMultiplier: number;
+  floorChargePerLevel: number;
+  elevatorDiscount: number;
+  assemblyChargePerItem: number;
+  extraHelperChargePerItem: number;
+  earlyBookingDiscount: number;
+  minimumCharge: number;
 };
+
+// Default pricing config (fallback)
+const defaultPricingConfig: PricingConfig = {
+  baseMultipliers: {
+    houseMovingItemMultiplier: 2.0,
+    itemTransportMultiplier: 1.0,
+    addonMultiplier: 3.0
+  },
+  distancePricing: {
+    smallDistance: { threshold: 10, rate: 0 },
+    mediumDistance: { threshold: 50, rate: 0.7 },
+    longDistance: { rate: 0.5 }
+  },
+  carryingMultipliers: {
+    lowValue: { threshold: 6, multiplier: 0.015 },
+    highValue: { multiplier: 0.040 }
+  },
+  assemblyMultipliers: {
+    lowValue: { threshold: 6, multiplier: 1.80 },
+    highValue: { multiplier: 4.2 }
+  },
+  extraHelperPricing: {
+    smallMove: { threshold: 30, price: 30 },
+    bigMove: { price: 60 }
+  },
+  cityRange: {
+    baseRadius: 8,
+    extraKmRate: 3
+  },
+  studentDiscount: 0.1,
+  weekendMultiplier: 1.2,
+  cityDayMultiplier: 1.3,
+  floorChargePerLevel: 25.0,
+  elevatorDiscount: 0.8,
+  assemblyChargePerItem: 30.0,
+  extraHelperChargePerItem: 20.0,
+  earlyBookingDiscount: 0.1,
+  minimumCharge: 75.0
+};
+
+// Dynamic pricing config that will be populated from API
+export let pricingConfig: PricingConfig = defaultPricingConfig;
 
 // Types for dynamic data
 export type FurnitureItem = { id: string; name: string; category: string; points: number };
@@ -58,6 +91,7 @@ async function fetchAllConstants(): Promise<{
   furnitureItems: FurnitureItem[];
   itemCategories: ItemCategory[];
   cityBaseCharges: Record<string, CityBaseCharge>;
+  pricingConfig: PricingConfig;
 }> {
   try {
     // Use the backend endpoint from config
@@ -73,7 +107,6 @@ async function fetchAllConstants(): Promise<{
     if (!result.success) {
       throw new Error(`Backend error: ${result.error}`);
     }
-    
     
     return result.data;
   } catch (error) {
@@ -106,6 +139,14 @@ export async function initDynamicConstants() {
     itemCategories = constants.itemCategories;
     
     cityBaseCharges = constants.cityBaseCharges;
+    
+    // Update pricing config with data from API
+    if (constants.pricingConfig) {
+      pricingConfig = constants.pricingConfig;
+      console.log('[Constants] ✅ Pricing config loaded from API');
+    } else {
+      console.log('[Constants] ⚠️ Using default pricing config (no API data)');
+    }
     
     constantsLoaded = true;
   } catch (error) {

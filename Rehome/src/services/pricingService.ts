@@ -701,8 +701,8 @@ class PricingService {
     }
 
     const multiplier = input.serviceType === 'house-moving' 
-      ? pricingConfig.houseMovingItemMultiplier 
-      : pricingConfig.itemTransportMultiplier;
+      ? pricingConfig.baseMultipliers.houseMovingItemMultiplier 
+      : pricingConfig.baseMultipliers.itemTransportMultiplier;
 
     breakdown.breakdown.items.totalPoints = totalPoints;
     breakdown.breakdown.items.multiplier = multiplier;
@@ -747,12 +747,15 @@ class PricingService {
     // Calculate floors based on new elevator logic:
     // - If elevator is available, count as 1 floor (same effort as 1 level)
     // - If no elevator, count actual floors above ground level
-    const pickupFloors = input.elevatorPickup ? 1 : Math.max(0, input.floorPickup - 1);
-    const dropoffFloors = input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff - 1);
+    const pickupFloors = input.elevatorPickup ? 1 : Math.max(0, input.floorPickup);
+    const dropoffFloors = input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff);
+    console.log(pickupFloors, 'pickupFloors')
+    console.log(dropoffFloors, 'dropoffFloors')
     const totalFloors = pickupFloors + dropoffFloors;
 
     breakdown.breakdown.carrying.floors = totalFloors;
 
+    // If no floors, no carrying cost
     if (totalFloors === 0) {
       breakdown.carryingCost = 0;
       return;
@@ -787,13 +790,13 @@ class PricingService {
             itemId,
             points: points * quantity,
             multiplier: multiplier * totalFloors,
-            cost: itemCarryingPoints * pricingConfig.addonMultiplier
+            cost: itemCarryingPoints * pricingConfig.baseMultipliers.addonMultiplier
           });
         }
       }
     }
-
-    const totalCost = totalCarryingPoints * pricingConfig.addonMultiplier;
+    // Apply x3 multiplier for add-ons as per pricing rules
+    const totalCost = totalCarryingPoints * pricingConfig.baseMultipliers.addonMultiplier;
 
     breakdown.breakdown.carrying.itemBreakdown = itemBreakdown;
     breakdown.breakdown.carrying.totalCost = totalCost;
@@ -824,12 +827,13 @@ class PricingService {
           itemId,
           points: points * quantity,
           multiplier,
-          cost: itemAssemblyPoints * pricingConfig.addonMultiplier
+          cost: itemAssemblyPoints * pricingConfig.baseMultipliers.addonMultiplier
         });
       }
     }
 
-    const totalCost = totalAssemblyPoints * pricingConfig.addonMultiplier;
+    // Apply x3 multiplier for add-ons as per pricing rules
+    const totalCost = totalAssemblyPoints * pricingConfig.baseMultipliers.addonMultiplier;
 
     breakdown.breakdown.assembly.itemBreakdown = itemBreakdown;
     breakdown.breakdown.assembly.totalCost = totalCost;

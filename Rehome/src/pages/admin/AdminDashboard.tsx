@@ -421,6 +421,7 @@ const AdminDashboard = () => {
   // Fetch pricing data - 
   const fetchPricingData = async () => {
     try {
+      // Fetch city prices
       const { data: cityPrices } = await supabase
         .from('city_base_charges')
         .select('*')
@@ -434,10 +435,20 @@ const AdminDashboard = () => {
           day_of_week: req.day_of_week || '',
       }));
 
-
       setCityPrices(citydata || []);
+
+      // Fetch current pricing configuration
+      const { data: pricingConfig } = await supabase
+        .from('pricing_config')
+        .select('*')
+        .eq('is_active', true)
+        .single();
+
+      if (pricingConfig?.config) {
+        setJsonPricingConfig(pricingConfig.config);
+      }
     } catch (error) {
-      console.error('Error fetching city base charges:', error);
+      console.error('Error fetching pricing data:', error);
     }
   };
 
@@ -679,7 +690,7 @@ const AdminDashboard = () => {
     setIsUpdating(true);
     try {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/city-prices/${city.id}`, {
+      const response = await fetch(`${API_ENDPOINTS.PRICING.CITY_BASE_CHARGES}/${city.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -745,7 +756,7 @@ const AdminDashboard = () => {
   const handleSaveJsonConfig = async (configKey: string, subKey: string) => {
     setIsUpdating(true);
     try {
-      // Update the local state directly
+      // Update the local state
       const updatedConfig = {
         ...jsonPricingConfig,
         [configKey]: {
@@ -754,6 +765,24 @@ const AdminDashboard = () => {
         }
       };
       
+      // Send update to backend
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const response = await fetch(`${API_ENDPOINTS.PRICING.CONFIG}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          config: updatedConfig 
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update pricing configuration');
+      }
+
+      // Update local state only after successful backend update
       setJsonPricingConfig(updatedConfig);
       
       toast.success('Configuration updated successfully');
@@ -782,7 +811,7 @@ const AdminDashboard = () => {
     setIsUpdating(true);
     try {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/furniture-items/${item.id}`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.FURNITURE_ITEMS}/${item.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -815,7 +844,7 @@ const AdminDashboard = () => {
     setIsUpdating(true);
     try {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`https://rehome-backend.vercel.app/api/admin/furniture-items/${item.id}`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.FURNITURE_ITEMS}/${item.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -2616,116 +2645,7 @@ const AdminDashboard = () => {
                           )}
                         </div>
                       </div>
-                    </div>
-
-
-
-                    {/* Assembly Multipliers MARKETPLACE */}
-                    <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
-                      <h4 className="font-medium text-gray-700 mb-3">DISASSEMBLY / ASSEMBLY Multipliers</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-3 bg-gray-50 rounded">
-                          <label className="block text-sm font-medium text-gray-600 mb-1">Low Value Items (≤6 points)</label>
-                          <div className="space-y-2">
-                            <div>
-                              <label className="block text-xs text-gray-500">Threshold (points)</label>
-                              {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
-                                <input
-                                  type="number"
-                                  value={editJsonConfigData.threshold}
-                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                />
-                              ) : (
-                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.lowValue.threshold}</span>
-                              )}
-                            </div>
-                            <div>
-                              <label className="block text-xs text-gray-500">Multiplier</label>
-                              {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={editJsonConfigData.multiplier}
-                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                />
-                              ) : (
-                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.lowValue.multiplier}</span>
-                              )}
-                            </div>
-                          </div>
-                          {editingJsonConfig === 'assemblyMultipliers.lowValue' ? (
-                            <div className="mt-2 flex space-x-1">
-                              <button
-                                onClick={() => handleSaveJsonConfig('assemblyMultipliers', 'lowValue')}
-                                disabled={isUpdating}
-                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => setEditingJsonConfig(null)}
-                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleEditJsonConfig('assemblyMultipliers', 'lowValue')}
-                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                            >
-                              Edit
-                            </button>
-                          )}
-                        </div>
-                        
-                        <div className="p-3 bg-gray-50 rounded">
-                          <label className="block text-sm font-medium text-gray-600 mb-1">High Value Items (≥7 points)</label>
-                          <div className="space-y-2">
-                            <div>
-                              <label className="block text-xs text-gray-500">Multiplier</label>
-                              {editingJsonConfig === 'assemblyMultipliers.highValue' ? (
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  value={editJsonConfigData.multiplier}
-                                  onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
-                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                />
-                              ) : (
-                                <span className="text-sm font-medium">{jsonPricingConfig.assemblyMultipliers.highValue.multiplier}</span>
-                              )}
-                            </div>
-                          </div>
-                          {editingJsonConfig === 'assemblyMultipliers.highValue' ? (
-                            <div className="mt-2 flex space-x-1">
-                              <button
-                                onClick={() => handleSaveJsonConfig('assemblyMultipliers', 'highValue')}
-                                disabled={isUpdating}
-                                className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => setEditingJsonConfig(null)}
-                                className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => handleEditJsonConfig('assemblyMultipliers', 'highValue')}
-                              className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                            >
-                              Edit
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
+                    </div>                    
 
                     {/* Extra Helper Pricing */}
                     <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">

@@ -214,7 +214,7 @@ const SpecialRequestPage = () => {
             {confirmation ? (
               <div className="text-center py-8">
                 <FaCheckCircle className="mx-auto text-green-500 text-6xl mb-4" />
-                <h2 className="text-2xl font-bold text-green-600 mb-4">Request Submitted!</h2>
+                <h2 className="text-2xl font-bold text-green-600 mb-4">Request Submitted successfully and we will get back to you soon after reviewing it!</h2>
                 <p className="text-gray-600 mb-6">{confirmation}</p>
                 <button
                   onClick={() => setConfirmation('')}
