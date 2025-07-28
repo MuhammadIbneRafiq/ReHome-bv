@@ -235,7 +235,7 @@ class PricingService {
         
         if (rangeDays > 7) {
           // Range above 1 week → cheap base charge for pickup city
-          finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
+          finalCharge = cityBaseCharges[pickupCity]?.cityDay ;
           isCheapRate = true;
           chargeType = 'Intercity Rate';
         } else {
@@ -244,13 +244,27 @@ class PricingService {
           const isEmpty = await this.isCompletelyEmptyCalendarDay(startDate);
           console.log('🔍 [DEBUG] hasCityDaysInRange for', pickupCity, ':', hasCityDaysInRange);
           if (hasCityDaysInRange) {
-            finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
-            isCheapRate = true;
-            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Cheap Rate`;
+            if (dropoffCity === pickupCity) { 
+              finalCharge = cityBaseCharges[pickupCity]?.cityDay;
+              isCheapRate = true;
+              chargeType =  pickupCity + ' - Cheap Rate';
+            }
+            else {
+              finalCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+              isCheapRate = true;
+              chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Cheap Rate`;
+            }
           } else if (isEmpty) {
-            finalCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
-            isCheapRate = false;
-            chargeType = `${pickupCity} - Normal Rate`;
+            if (dropoffCity === pickupCity) { 
+              finalCharge = cityBaseCharges[pickupCity]?.cityDay;
+              isCheapRate = true;
+              chargeType =  pickupCity + ' - Cheap Rate';
+            }
+            else {
+              finalCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+              isCheapRate = false;
+              chargeType = `${pickupCity} - Normal Rate`;
+            }
           }
           else {
             finalCharge = cityBaseCharges[pickupCity]?.normal || 0;
