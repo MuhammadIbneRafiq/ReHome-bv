@@ -1080,10 +1080,12 @@ const AdminDashboard = () => {
   // Handle donation status update
   const handleUpdateDonationStatus = async (donationId: string, status: string) => {
     try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
       const response = await fetch(API_ENDPOINTS.DONATION.UPDATE_STATUS(donationId), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ status }),
       });
@@ -1103,10 +1105,12 @@ const AdminDashboard = () => {
   // Handle special request status update
   const handleUpdateSpecialRequestStatus = async (requestId: string, status: string) => {
     try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
       const response = await fetch(`${API_ENDPOINTS.MOVING.SPECIAL_REQUEST}/${requestId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ status }),
       });
