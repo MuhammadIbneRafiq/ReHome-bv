@@ -106,7 +106,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                             </div>
                         </div>
                         {/* Tip 3.1: Early booking */}
-                        <div className="bg-gradient-to-r from-red-50 to-red-100 p-4 sm:p-6 rounded-lg border border-red-200">
+                        <div className="bg-white p-4 sm:p-6 rounded-lg border border-red-200">
                             <div className="flex items-start space-x-3 sm:space-x-4">
                                 <div className="flex-shrink-0">
                                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 rounded-full flex items-center justify-center">
@@ -124,7 +124,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                             </div>
                         </div>
                         {/* Tip 4: Student Discount */}
-                        <div className="bg-gradient-to-r from-purple-50 to-violet-50 p-4 sm:p-6 rounded-lg border border-purple-200">
+                        <div className="bg-white p-4 sm:p-6 rounded-lg border border-purple-200">
                             <div className="flex items-start space-x-3 sm:space-x-4">
                                 <div className="flex-shrink-0">
                                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center">
