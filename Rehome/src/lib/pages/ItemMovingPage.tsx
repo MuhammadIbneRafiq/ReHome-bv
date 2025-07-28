@@ -1038,30 +1038,10 @@ const ItemMovingPage = () => {
 
                     {pricingBreakdown.breakdown.baseCharge.city && (
                         <div className="text-xs text-gray-500 ml-4">
-                            {/* Show detailed breakdown for separate pickup/dropoff dates */}
-                            {dateOption === 'fixed' && pickupDate && dropoffDate && pricingBreakdown.breakdown.baseCharge.city.includes('/') ? (
-                                <div className="space-y-1">
-                                    <div>
-                                        {
-                                            pricingBreakdown.breakdown.baseCharge.isCityDay ? "Cheap rate" : "Normal rate"
-                                        }
-                                    </div>
-                                    <div className="text-xs text-gray-400">
-                                        Pickup: {new Date(pickupDate).toLocaleDateString('en-US', { weekday: 'short' })} | 
-                                        Dropoff: {new Date(dropoffDate).toLocaleDateString('en-US', { weekday: 'short' })}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div>
-                                    {pickupPlace?.city && dropoffPlace?.city ? 
-                                        `${pickupPlace.city} → ${dropoffPlace.city}` : 
-                                        pricingBreakdown.breakdown.baseCharge.city
-                                    } - {
-                                        pricingBreakdown.breakdown.baseCharge.isCityDay ? "Cheap rate" : "Normal rate"
-                                    }
-                                    
-                                </div>
-                            )}
+                            {pricingBreakdown.breakdown.baseCharge.type === 'Intercity Rate' ? 
+                                'Intercity Rate' : 
+                                `${pricingBreakdown.breakdown.baseCharge.city} - ${pricingBreakdown.breakdown.baseCharge.isCityDay ? 'Cheap Rate' : 'Normal Rate'}`
+                            }
                         </div>
                     )}
 
