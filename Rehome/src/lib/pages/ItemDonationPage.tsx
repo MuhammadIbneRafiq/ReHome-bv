@@ -464,21 +464,24 @@ const ItemDonationPage = () => {
                   </div>
                 )}
                 
-                {/* Item Description */}
-                <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                    Description
-                  </label>
-                  <textarea
-                    id="description"
-                    value={description}
-                    onChange={e => setDescription(e.target.value)}
-                    rows={3}
-                    className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
-                    placeholder="What items need to be removed? Are the items on the ground floor, upstairs or outside?"
-                    required
-                  />
-                </div>
+                                 {/* Item Description */}
+                 <div>
+                   <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                     Description
+                   </label>
+                   <textarea
+                     id="description"
+                     value={description}
+                     onChange={e => setDescription(e.target.value)}
+                     rows={3}
+                     className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                     placeholder={mode === 'donate' 
+                       ? "Describe your items in detail. What type of furniture or appliances are you donating? Are they on the ground floor, upstairs or outside?"
+                       : "Describe your items in detail. What type of furniture or appliances are you selling? Are they on the ground floor, upstairs or outside?"
+                     }
+                     required
+                   />
+                 </div>
                 
                 {/* Item Condition */}
                 <div>
