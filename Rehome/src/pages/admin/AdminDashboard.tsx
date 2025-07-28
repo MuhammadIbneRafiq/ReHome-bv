@@ -3407,16 +3407,40 @@ const AdminDashboard = () => {
                           <p><span className="font-medium">Estimated Value:</span> €{selectedDonation.total_estimated_value || 'N/A'}</p>
                         </div>
                         {/* Uploaded Photos */}
-                        {selectedDonation.photo_urls && selectedDonation.photo_urls.length > 0 && (
+                        {selectedDonation.photo_urls && selectedDonation.photo_urls.length > 0 ? (
                           <div className="mt-4">
-                            <h4 className="text-sm font-semibold mb-2">Uploaded Photos</h4>
-                            <div className="flex flex-wrap gap-2">
+                            <h4 className="text-sm font-semibold mb-3 text-gray-700">📸 Uploaded Photos ({selectedDonation.photo_urls.length})</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                               {selectedDonation.photo_urls.map((url: string, idx: number) => (
-                                <a href={url} target="_blank" rel="noopener noreferrer" key={idx} className="block">
-                                  <img src={url} alt={`Donation Photo ${idx + 1}`} className="w-24 h-24 object-cover rounded border hover:shadow-lg transition" />
-                                </a>
+                                <div key={idx} className="relative group">
+                                  <a 
+                                    href={url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="block"
+                                    title="Click to view full size"
+                                  >
+                                    <img 
+                                      src={url} 
+                                      alt={`Donation Photo ${idx + 1}`} 
+                                      className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-orange-300 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                                      onError={(e) => {
+                                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00OCA0MGMtNC40MiAwLTggMy41OC04IDhzMy41OCA4IDggOCA4LTMuNTggOC04LTMuNTgtOC04LTh6IiBmaWxsPSIjOUI5QkEwIi8+CjxwYXRoIGQ9Ik00OCA1NmMtOC44NCAwLTE2LTcuMTYtMTYtMTZzNy4xNi0xNiAxNi0xNiAxNiA3LjE2IDE2IDE2LTcuMTYgMTYtMTYgMTZ6IiBmaWxsPSIjOUI5QkEwIi8+Cjwvc3ZnPgo=';
+                                        e.currentTarget.alt = 'Image failed to load';
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                      <span className="text-white opacity-0 group-hover:opacity-100 text-xs font-medium">View</span>
+                                    </div>
+                                  </a>
+                                </div>
                               ))}
                             </div>
+                          </div>
+                        ) : (
+                          <div className="mt-4">
+                            <h4 className="text-sm font-semibold mb-2 text-gray-500">📸 Uploaded Photos</h4>
+                            <p className="text-xs text-gray-400">No photos uploaded</p>
                           </div>
                         )}
                       </div>
@@ -3548,16 +3572,40 @@ const AdminDashboard = () => {
                           <p><span className="font-medium">Date Flexible:</span> {selectedSpecialRequest.is_date_flexible ? 'Yes' : 'No'}</p>
                         </div>
                         {/* Uploaded Photos */}
-                        {selectedSpecialRequest.photo_urls && selectedSpecialRequest.photo_urls.length > 0 && (
+                        {selectedSpecialRequest.photo_urls && selectedSpecialRequest.photo_urls.length > 0 ? (
                           <div className="mt-4">
-                            <h4 className="text-sm font-semibold mb-2">Uploaded Photos</h4>
-                            <div className="flex flex-wrap gap-2">
+                            <h4 className="text-sm font-semibold mb-3 text-gray-700">📸 Uploaded Photos ({selectedSpecialRequest.photo_urls.length})</h4>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                               {selectedSpecialRequest.photo_urls.map((url: string, idx: number) => (
-                                <a href={url} target="_blank" rel="noopener noreferrer" key={idx} className="block">
-                                  <img src={url} alt={`Special Request Photo ${idx + 1}`} className="w-24 h-24 object-cover rounded border hover:shadow-lg transition" />
-                                </a>
+                                <div key={idx} className="relative group">
+                                  <a 
+                                    href={url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="block"
+                                    title="Click to view full size"
+                                  >
+                                    <img 
+                                      src={url} 
+                                      alt={`Special Request Photo ${idx + 1}`} 
+                                      className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-orange-300 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                                      onError={(e) => {
+                                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00OCA0MGMtNC40MiAwLTggMy41OC04IDhzMy41OCA4IDggOCA4LTMuNTggOC04LTMuNTgtOC04LTh6IiBmaWxsPSIjOUI5QkEwIi8+CjxwYXRoIGQ9Ik00OCA1NmMtOC44NCAwLTE2LTcuMTYtMTYtMTZzNy4xNi0xNiAxNi0xNiAxNiA3LjE2IDE2IDE2LTcuMTYgMTYtMTYgMTZ6IiBmaWxsPSIjOUI5QkEwIi8+Cjwvc3ZnPgo=';
+                                        e.currentTarget.alt = 'Image failed to load';
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                      <span className="text-white opacity-0 group-hover:opacity-100 text-xs font-medium">View</span>
+                                    </div>
+                                  </a>
+                                </div>
                               ))}
                             </div>
+                          </div>
+                        ) : (
+                          <div className="mt-4">
+                            <h4 className="text-sm font-semibold mb-2 text-gray-500">📸 Uploaded Photos</h4>
+                            <p className="text-xs text-gray-400">No photos uploaded</p>
                           </div>
                         )}
                       </div>
