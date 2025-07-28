@@ -191,7 +191,7 @@ function GooglePlacesAutocomplete({
         type="text"
         value={value}
         onChange={handleInputChange}
-        placeholder={placeholder || "💡 Start typing street name, city, or postal code"}
+        placeholder={placeholder || "💡 Type in the street name, city, and postal code."}
         className="w-full p-3 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500"
         required
       />
@@ -616,7 +616,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                   <GooglePlacesAutocomplete
                     value={deliveryAddress}
                     onChange={setDeliveryAddress}
-                    placeholder="💡 Start typing street name, city, or postal code"
+                    placeholder="💡 Type in the street name, city, and postal code."
                     onPlaceSelect={(place) => {
                       setDeliveryPlace(place);
                       console.log('🎯 Delivery place selected with coordinates:', place);

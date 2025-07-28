@@ -428,9 +428,6 @@ const ItemDonationPage = () => {
                         min="0"
                       />
                     </div>
-                    <p className="mt-1 text-sm text-gray-500">
-                      We'll evaluate your item when we pick it up. The final price might be adjusted based on condition and market value.
-                    </p>
                   </div>
                 )}
                 

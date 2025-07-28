@@ -410,7 +410,7 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
 
       {/* Search tips */}
       <div className="mt-1 text-xs text-gray-500">
-        💡 Start typing street name, city, or postal code
+        💡 Type in the street name, city, and postal code.
       </div>
     </div>
   );
