@@ -1474,18 +1474,11 @@ const ItemMovingPage = () => {
                                                         const itemKey = item.id;
                                                         const points = getItemPoints(itemKey);
                                                         const quantity = itemQuantities[itemKey] || 0;
-                                                        const itemValue = points * quantity * 1;
                                                         return (
                                                             <div key={itemIndex} className="flex items-center justify-between py-3 px-3 bg-gray-50 rounded-md">
                                                                 <div className="flex-1">
                                                                     <div className="text-sm text-gray-700">{item.name}</div>
-                                                                    <div className="text-xs text-gray-500">
-                                                                        {quantity > 0 && (
-                                                                            <span className="ml-2 text-orange-600 font-medium">
-                                                                                ({quantity}x = €{itemValue.toFixed(2)})
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
+                                                                   
                                                                 </div>
                                                                 <div className="flex items-center space-x-2 ml-4">
                                                                     <button
