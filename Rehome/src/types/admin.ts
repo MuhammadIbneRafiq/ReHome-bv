@@ -145,6 +145,10 @@ export interface TransportRequest {
     request_type?: string;
     preferred_date?: string;
     is_date_flexible: boolean;
+    floor_pickup?: string;
+    floor_dropoff?: string;
+    elevator_pickup?: boolean;
+    elevator_dropoff?: boolean;
     calculated_distance_km?: number;
     calculated_duration_seconds?: number;
     calculated_duration_text?: string;

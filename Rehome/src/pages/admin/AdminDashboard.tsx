@@ -3254,6 +3254,7 @@ const AdminDashboard = () => {
                           <tr className="bg-gray-100">
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">CUSTOMER</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">SERVICE</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">FLOORS</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">STATUS</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ACTIONS</th>
                           </tr>
@@ -3284,6 +3285,12 @@ const AdminDashboard = () => {
                                 {Array.isArray(request.selected_services) ? request.selected_services.join(', ') :
                                   typeof request.selected_services === 'string' ? request.selected_services :
                                   '-'}
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {request.floor_pickup || request.floor_dropoff ? 
+                                  `P: ${request.floor_pickup || 'Ground'} | D: ${request.floor_dropoff || 'Ground'}` : 
+                                  'Ground'
+                                }
                               </td>
                               <td className="border border-gray-300 px-3 py-2 text-xs">
                                 <select
@@ -3572,6 +3579,10 @@ const AdminDashboard = () => {
                         <div className="space-y-2">
                           <p><span className="font-medium">Pickup Location:</span> {selectedSpecialRequest.pickup_location || 'N/A'}</p>
                           <p><span className="font-medium">Dropoff Location:</span> {selectedSpecialRequest.dropoff_location || 'N/A'}</p>
+                          <p><span className="font-medium">Pickup Floor:</span> {selectedSpecialRequest.floor_pickup || 'Ground'}</p>
+                          <p><span className="font-medium">Dropoff Floor:</span> {selectedSpecialRequest.floor_dropoff || 'Ground'}</p>
+                          <p><span className="font-medium">Pickup Elevator:</span> {selectedSpecialRequest.elevator_pickup ? 'Yes' : 'No'}</p>
+                          <p><span className="font-medium">Dropoff Elevator:</span> {selectedSpecialRequest.elevator_dropoff ? 'Yes' : 'No'}</p>
                           <p><span className="font-medium">Distance:</span> {selectedSpecialRequest.calculated_distance_km || 'N/A'} km</p>
                           <p><span className="font-medium">Duration:</span> {selectedSpecialRequest.calculated_duration_text || 'N/A'}</p>
                         </div>
