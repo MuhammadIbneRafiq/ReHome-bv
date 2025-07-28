@@ -178,12 +178,13 @@ class PricingService {
       const dropoffDistanceDifference = dropoffResult.distanceDifference;
       
       
-      if (!pickupCity) {
+      if (!pickupCity || !dropoffCity) {
         breakdown.basePrice = 0;
         breakdown.breakdown.baseCharge.city = null;
         breakdown.breakdown.baseCharge.type = 'Location not supported';
         return;
       }
+      
       
       const isIntercity = pickupCity !== dropoffCity && dropoffCity;
       
@@ -240,12 +241,18 @@ class PricingService {
         } else {
           // Range 1 week or below → check if city has actual city days during range
           const hasCityDaysInRange = await this.checkCityDaysInRange(pickupCity, startDate, endDate);
+          const isEmpty = await this.isCompletelyEmptyCalendarDay(startDate);
           console.log('🔍 [DEBUG] hasCityDaysInRange for', pickupCity, ':', hasCityDaysInRange);
           if (hasCityDaysInRange) {
             finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
             isCheapRate = true;
             chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Cheap Rate`;
-          } else {
+          } else if (isEmpty) {
+            finalCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+            isCheapRate = false;
+            chargeType = `${pickupCity} - Normal Rate`;
+          }
+          else {
             finalCharge = cityBaseCharges[pickupCity]?.normal || 0;
             isCheapRate = false;
             chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Normal Rate`;
@@ -310,15 +317,19 @@ class PricingService {
     const selectedDate = new Date(input.selectedDate);
     // Check if calendar is empty for THIS specific city on this date
     const isEmpty = await this.isCompletelyEmptyCalendarDay(selectedDate);
-    
+    const dropoffResult = await findClosestSupportedCity(input.dropoffPlace);
+    const dropoffCity = dropoffResult.city || city;
+
+
+
     let baseCharge: number;
     let isCheapRate: boolean;
     console.log(`[DEBUG] ${city} on ${selectedDate.toISOString().split('T')[0]} - isEmpty: ${isEmpty}`);
     console.log(`[DEBUG] ${city} cityBaseCharges:`, cityBaseCharges[city]);
     
     if (isEmpty) {
-      // Empty calendar for this city → cheap base charge
-      baseCharge = cityBaseCharges[city]?.cityDay || 0;
+      // Empty calendar for this city → cheap base charge(NOT ANYMORE) but the avg
+      baseCharge = (cityBaseCharges[city]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
       isCheapRate = true;
       console.log(`[DEBUG] ${city} - Empty calendar, using cityDay rate: €${baseCharge}`);
     } else {
