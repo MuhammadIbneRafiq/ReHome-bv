@@ -1617,7 +1617,7 @@ const AdminDashboard = () => {
                             {request.furnitureitems ? (
                               <div>
                                 <div>{request.furnitureitems.length} items</div>
-                                <div className="text-gray-500">Item transport request</div>
+                                <div className="text-gray-500">{request.itempoints || 0} points</div>
                               </div>
                             ) : (
                               request.customitem || '-'
@@ -1768,7 +1768,7 @@ const AdminDashboard = () => {
                               <p><span className="font-medium">Helper Required:</span> {(selectedTransportRequest as any).helper ? 'Yes' : 'No'}</p>
                               <p><span className="font-medium">Dismantling:</span> {(selectedTransportRequest as any).dismantling ? 'Yes' : 'No'}</p>
                               <p><span className="font-medium">Total Items:</span> {(selectedTransportRequest as any).totalitems || 'N/A'}</p>
-                              <p><span className="font-medium">Request Type:</span> Item Transport</p>
+                              <p><span className="font-medium">Total Points:</span> {(selectedTransportRequest as any).totalpoints || 'N/A'}</p>
                               <p><span className="font-medium">Estimated Price:</span> €{(selectedTransportRequest as any).price || 'N/A'}</p>
                             </div>
                           </div>
@@ -1801,7 +1801,7 @@ const AdminDashboard = () => {
                                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.name}</td>
                                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.category}</td>
                                         <td className="border border-gray-300 px-3 py-2 text-sm">{item.quantity}</td>
-                                        <td className="border border-gray-300 px-3 py-2 text-sm">-</td>
+                                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.points}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -2473,7 +2473,7 @@ const AdminDashboard = () => {
                       <h4 className="font-medium text-gray-700 mb-3">Carrying Multipliers (per floor)</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-3 bg-gray-50 rounded">
-                          <label className="block text-sm font-medium text-gray-600 mb-1">Low Value Items</label>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Low Value Items (≤6 points)</label>
                           <div className="space-y-2">
                             <div>
                               <label className="block text-xs text-gray-500">Threshold (points)</label>
@@ -2530,7 +2530,7 @@ const AdminDashboard = () => {
                         </div>
                         
                         <div className="p-3 bg-gray-50 rounded">
-                          <label className="block text-sm font-medium text-gray-600 mb-1">High Value Items</label>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">High Value Items (≥7 points)</label>
                           <div className="space-y-2">
                             <div>
                               <label className="block text-xs text-gray-500">Multiplier</label>
@@ -2580,7 +2580,7 @@ const AdminDashboard = () => {
                       <h4 className="font-medium text-gray-700 mb-3">Assembly Multipliers</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="p-3 bg-gray-50 rounded">
-                          <label className="block text-sm font-medium text-gray-600 mb-1">Low Value Items</label>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Low Value Items (≤6 points)</label>
                           <div className="space-y-2">
                             <div>
                               <label className="block text-xs text-gray-500">Threshold (points)</label>
@@ -2637,7 +2637,7 @@ const AdminDashboard = () => {
                         </div>
                         
                         <div className="p-3 bg-gray-50 rounded">
-                          <label className="block text-sm font-medium text-gray-600 mb-1">High Value Items</label>
+                          <label className="block text-sm font-medium text-gray-600 mb-1">High Value Items (≥7 points)</label>
                           <div className="space-y-2">
                             <div>
                               <label className="block text-xs text-gray-500">Multiplier</label>
@@ -3021,7 +3021,13 @@ const AdminDashboard = () => {
                             <option value="Garden">Garden</option>
                             <option value="Other">Other</option>
                           </select>
-
+                          <input
+                            type="number"
+                            placeholder="Points"
+                            value={newFurnitureItem.points}
+                            onChange={(e) => setNewFurnitureItem({...newFurnitureItem, points: parseInt(e.target.value)})}
+                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
                         </div>
                         <div className="mt-3 flex space-x-2">
                           <button
@@ -3047,7 +3053,7 @@ const AdminDashboard = () => {
                           <tr className="bg-gray-100">
                             <th className="border border-gray-300 px-4 py-2 text-left font-medium">NAME</th>
                             <th className="border border-gray-300 px-4 py-2 text-left font-medium">CATEGORY</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">CATEGORY</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">POINTS</th>
                             <th className="border border-gray-300 px-4 py-2 text-left font-medium">CREATED</th>
                             <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
                           </tr>
@@ -3088,21 +3094,14 @@ const AdminDashboard = () => {
                               </td>
                               <td className="border border-gray-300 px-4 py-2">
                                 {editingFurnitureItem === item.id ? (
-                                  <select
-                                    value={editFurnitureItemData.category}
-                                    onChange={(e) => setEditFurnitureItemData({...editFurnitureItemData, category: e.target.value})}
+                                  <input
+                                    type="number"
+                                    value={editFurnitureItemData.points}
+                                    onChange={(e) => setEditFurnitureItemData({...editFurnitureItemData, points: parseInt(e.target.value)})}
                                     className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                  >
-                                    <option value="Bedroom">Bedroom</option>
-                                    <option value="Living Room">Living Room</option>
-                                    <option value="Kitchen">Kitchen</option>
-                                    <option value="Bathroom">Bathroom</option>
-                                    <option value="Office">Office</option>
-                                    <option value="Garden">Garden</option>
-                                    <option value="Other">Other</option>
-                                  </select>
+                                  />
                                 ) : (
-                                  item.category
+                                  item.points
                                 )}
                               </td>
                               <td className="border border-gray-300 px-4 py-2">

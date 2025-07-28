@@ -1052,7 +1052,127 @@ const ItemMovingPage = () => {
                         </div>
                     )}
 
-                    {/* Pricing breakdown removed as requested */}
+                    {/* Items Section - Show detailed breakdown */}
+                    <div className="border-t pt-3">
+                        <div className="flex justify-between font-medium">
+                            <span>Items:</span>
+                            <span>€{totalItemValue.toFixed(2)}</span>
+                        </div>
+                        {selectedItems.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                                {selectedItems.map((item, index) => (
+                                    <div key={index} className="flex justify-between text-xs text-gray-600 ml-4">
+                                        <span>{item.name} ({item.quantity}x)</span>
+                                        <span>€{item.value.toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {selectedItems.length === 0 && (
+                            <div className="text-xs text-gray-500 ml-4">No items selected</div>
+                        )}
+                    </div>
+
+                    {/* Distance */}
+                    {pricingBreakdown.distanceCost > 0 ? (
+                        <div className="flex justify-between">
+                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                            <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
+                        </div>
+                    ) : (
+                        <div className="flex justify-between text-green-600">
+                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                            <span>Free</span>
+                        </div>
+                    )}
+
+                    {/* Add-ons Section */}
+                    {(pricingBreakdown.carryingCost > 0 || pricingBreakdown.assemblyCost > 0 || pricingBreakdown.extraHelperCost > 0) && (
+                        <div className="border-t pt-3">
+                            <div className="font-medium mb-2">Add-ons:</div>
+                            
+                            {/* Assembly */}
+                            {pricingBreakdown.assemblyCost > 0 && (
+                                <div className="space-y-1">
+                                    <div className="flex justify-between">
+                                        <span className="ml-2">Assembly/Disassembly:</span>
+                                        <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
+                                    </div>
+                                    {pricingBreakdown.breakdown.assembly.itemBreakdown.map((item, index) => (
+                                        <div key={index} className="flex justify-between text-xs text-gray-600 ml-6">
+                                            <span>{item.itemId.replace(/-/g, ' - ')}</span>
+                                            <span>€{item.cost.toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Carrying */}
+                            {pricingBreakdown.carryingCost > 0 && (
+                                <div className="space-y-1">
+                                    <div className="flex justify-between">
+                                        <span className="ml-2">
+                                            Carrying ({(() => {
+                                                const pickupFloors = elevatorPickup ? 1 : Math.max(0, parseInt(floorPickup));
+                                                const dropoffFloors = elevatorDropoff ? 1 : Math.max(0, parseInt(floorDropoff));
+                                                const totalFloors = pickupFloors + dropoffFloors;
+                                                return `${totalFloors} floors: ${pickupFloors} pickup + ${dropoffFloors} dropoff`;
+                                            })()}):
+                                        </span>
+                                        <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
+                                    </div>
+                                    {/* Elevator discount explanation */}
+                                    {((elevatorPickup && parseInt(floorPickup) > 1) || (elevatorDropoff && parseInt(floorDropoff) > 1)) && (
+                                        <div className="text-xs text-green-700 ml-6">
+                                            <span>Elevator discount applied.</span>
+                                        </div>
+                                    )}
+                                    {pricingBreakdown.breakdown.carrying.itemBreakdown.map((item, index) => (
+                                        <div key={index} className="flex justify-between text-xs text-gray-600 ml-6">
+                                            <span>{item.itemId.replace(/-/g, ' - ')}</span>
+                                            <span>€{item.cost.toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Extra Helper */}
+                            {pricingBreakdown.extraHelperCost > 0 && (
+                                <div className="flex justify-between">
+                                    <span className="ml-2">Extra Helper ({pricingBreakdown.breakdown.extraHelper.category} move):</span>
+                                    <span>€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    
+                    {/* Subtotal */}
+                    <div className="flex justify-between font-semibold border-t pt-2">
+                        <span>Subtotal:</span>
+                        <span>€{pricingBreakdown.subtotal.toFixed(2)}</span>
+                    </div>
+
+                    {/* Student Discount */}
+                    {pricingBreakdown.studentDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Student Discount (10%):</span>
+                            <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    {/* Early Booking Discount */}
+                    {pricingBreakdown.earlyBookingDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Early Booking Discount (10%):</span>
+                            <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                        <span>Total:</span>
+                        <span>€{pricingBreakdown.total.toFixed(2)}</span>
+                    </div>
                 </div>
             </div>
         );
