@@ -267,6 +267,7 @@ const ItemMovingPage = () => {
     const [isStudent, setIsStudent] = useState(false);
     const [studentId, setStudentId] = useState<File | null>(null);
     const [storeProofPhoto, setStoreProofPhoto] = useState<File | null>(null);
+    const [itemPhotos, setItemPhotos] = useState<File[]>([]);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({});
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
@@ -389,6 +390,18 @@ const ItemMovingPage = () => {
     const handleStoreProofUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         setStoreProofPhoto(file || null);
+    };
+
+    const handleItemPhotosUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (files) {
+            const fileArray = Array.from(files);
+            setItemPhotos(prev => [...prev, ...fileArray]);
+        }
+    };
+
+    const removeItemPhoto = (index: number) => {
+        setItemPhotos(prev => prev.filter((_, i) => i !== index));
     };
 
     // Load Google Maps API if not already loaded
@@ -891,13 +904,23 @@ const ItemMovingPage = () => {
         };
 
         try {
-            // Submit the moving request (this will also send the email)
+            // Create FormData for file uploads
+            const formData = new FormData();
+            
+            // Add all the JSON data as a string
+            formData.append('data', JSON.stringify(payload));
+            
+            // Add photos if any
+            if (itemPhotos.length > 0) {
+                itemPhotos.forEach((photo) => {
+                    formData.append('photos', photo);
+                });
+            }
+            
+            // Submit the moving request with FormData
             const response = await fetch(API_ENDPOINTS.MOVING.ITEM_REQUEST, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
+                body: formData,
             });
 
             if (!response.ok) { 
@@ -1521,7 +1544,38 @@ const ItemMovingPage = () => {
                                     {/* Upload photo/video option */}
                                     <div className="mt-4">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Upload photo(s) of your items</label>
-                                        <input type="file" accept="image/*,video/*" multiple className="block w-full text-sm text-gray-500" />
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            multiple 
+                                            onChange={handleItemPhotosUpload}
+                                            className="block w-full text-sm text-gray-500" 
+                                        />
+                                        
+                                        {/* Display uploaded photos */}
+                                        {itemPhotos.length > 0 && (
+                                            <div className="mt-3">
+                                                <p className="text-sm text-gray-600 mb-2">Uploaded photos ({itemPhotos.length}):</p>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {itemPhotos.map((photo, index) => (
+                                                        <div key={index} className="relative">
+                                                            <img 
+                                                                src={URL.createObjectURL(photo)} 
+                                                                alt={`Item photo ${index + 1}`}
+                                                                className="w-full h-24 object-cover rounded border"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeItemPhoto(index)}
+                                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}

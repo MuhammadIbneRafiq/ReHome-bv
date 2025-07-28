@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe } from 'react-icons/fa';
+import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe, FaExternalLinkAlt } from 'react-icons/fa';
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameMonth } from 'date-fns';
 import { toast } from 'react-toastify';
 import { supabase } from "../../lib/supabaseClient";
@@ -359,6 +359,7 @@ const AdminDashboard = () => {
         studentid: req.studentid,
         preferredtimespan: req.preferredtimespan,
         updated_at: req.updated_at,
+        photo_urls: req.photo_urls || [],
       }));
 
       const houseMoving = (houseMovingData || []).map((req: any) => ({
@@ -408,6 +409,7 @@ const AdminDashboard = () => {
         studentid: req.studentid,
         preferredtimespan: req.preferredtimespan,
         updated_at: req.updated_at,
+        photo_urls: req.photo_urls || [],
       }));
 
       setTransportRequests([...itemMoving, ...houseMoving]);
@@ -1805,6 +1807,39 @@ const AdminDashboard = () => {
                                   </tbody>
                                 </table>
                               </div>
+                            </div>
+                          )}
+
+                          {/* Photos Section */}
+                          {(selectedTransportRequest as any).photo_urls && (selectedTransportRequest as any).photo_urls.length > 0 && (
+                            <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                              <h4 className="text-lg font-semibold text-gray-800 mb-3">Uploaded Photos</h4>
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                {(selectedTransportRequest as any).photo_urls.map((photoUrl: string, index: number) => (
+                                  <div key={index} className="relative group">
+                                    <img
+                                      src={photoUrl}
+                                      alt={`Photo ${index + 1}`}
+                                      className="w-full h-32 object-cover rounded-lg border border-gray-200 hover:shadow-lg transition-shadow cursor-pointer"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjOWNhM2FmIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCI+SW1hZ2Ugbm90IGZvdW5kPC90ZXh0Pjwvc3ZnPg==';
+                                      }}
+                                    />
+                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                                      <button
+                                        onClick={() => window.open(photoUrl, '_blank')}
+                                        className="opacity-0 group-hover:opacity-100 bg-white bg-opacity-90 rounded-full p-2 transition-all duration-200 hover:bg-opacity-100"
+                                      >
+                                        <FaExternalLinkAlt className="text-gray-700" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                              <p className="text-sm text-gray-500 mt-2">
+                                Click on any photo to view it in full size
+                              </p>
                             </div>
                           )}
 
