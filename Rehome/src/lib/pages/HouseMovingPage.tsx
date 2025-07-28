@@ -783,7 +783,7 @@ const HouseMovingPage = () => {
             
             // Add photos if any
             if (itemPhotos.length > 0) {
-                itemPhotos.forEach((photo, index) => {
+                itemPhotos.forEach((photo) => {
                     formData.append('photos', photo);
                 });
             }
