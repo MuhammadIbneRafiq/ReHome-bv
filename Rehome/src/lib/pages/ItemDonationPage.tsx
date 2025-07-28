@@ -304,41 +304,74 @@ const ItemDonationPage = () => {
   return (
     <div className="min-h-screen bg-orange-50 pt-24 pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('itemDonation.title', 'Furniture Donation & Resale')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Donate or Sell Your Items – Extend their Lifecycle!</h1>
         <p className="text-lg text-gray-600 mb-6">{t('itemDonation.subtitle', 'Give your furniture a second life by donating or selling it through ReHome')}</p>
         
-        <div className="bg-white shadow-md rounded-lg p-6 mb-8">
-          {/* Introduction Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Why choose ReHome?</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-orange-50 p-4 rounded-lg">
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Benefits of donating with us:</h3>
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
-                  <li>Free pickup service at your convenience</li>
-                  <li>Extend the life of your furniture through our professional refurbishment</li>
-                  <li>Support sustainability and reduce waste</li>
-                  <li>Help others furnish their homes affordably</li>
-                  <li>Declutter your space responsibly</li>
-                  <li>Tax deduction receipts available on request</li>
-                </ul>
+        {/* New Content Section */}
+        <div className="bg-white shadow-md rounded-lg p-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold text-orange-600 mb-3">Sustainability Meets Purpose</h3>
+                <p className="text-gray-700 leading-relaxed">
+                  Every item has a story—and a future. By donating or selling your items to us, you help extend their lifecycle, ensuring they continue to bring value to someone else. Instead of letting your items gather dust or end up in landfills, we find them a new home where they are truly needed and appreciated.
+                </p>
               </div>
-              <div className="bg-orange-50 p-4 rounded-lg">
-                <h3 className="text-lg font-medium text-gray-800 mb-2">What we accept:</h3>
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
-                  <li>Sofas, armchairs, and other seating</li>
-                  <li>Tables, desks, and chairs</li>
-                  <li>Clean beds and mattresses</li>
-                  <li>Wardrobes and storage furniture</li>
-                  <li>Working appliances</li>
-                  <li>Lamps and lighting fixtures</li>
-                  <li>Bookshelves and display units</li>
-                  <li>Dining sets and kitchen furniture</li>
-                </ul>
+              
+              <div>
+                <h3 className="text-xl font-semibold text-orange-600 mb-3">A Fair and Responsible Approach</h3>
+                <p className="text-gray-700 leading-relaxed">
+                  We believe that the condition of an item is a matter of perspective. Items that may seem old to you or are no longer needed could be exactly what someone else is looking for. Different people have different needs and standards, and we aim to match each item with the right person.
+                </p>
+              </div>
+            </div>
+            
+            {/* Right Column */}
+            <div>
+              <h3 className="text-xl font-semibold text-orange-600 mb-4">How It Works</h3>
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                    1
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Donate or Sell</h4>
+                    <p className="text-gray-600 text-sm">Choose to donate your items or sell them at a fair price.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                    2
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Review & Arrange</h4>
+                    <p className="text-gray-600 text-sm">Our team will review your proposal and get in touch to arrange the pickup from your location.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                    3
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">A New Home</h4>
+                    <p className="text-gray-600 text-sm">Your item finds a new purpose with someone who values it, extending its journey and supporting a circular economy.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                <p className="text-sm text-orange-800 font-medium">
+                  <strong>Note:</strong> We are focused on furniture and house appliances so we are not collecting clothes or other items.
+                </p>
               </div>
             </div>
           </div>
-
+        </div>
+        
+        <div className="bg-white shadow-md rounded-lg p-6 mb-8">
           {confirmation && (
             <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md text-green-800">
               {confirmation}
