@@ -54,7 +54,7 @@ const LandingPage = () => {
               <div className="relative h-[280px] overflow-hidden flex items-center justify-center">
                 {/* Road background */}
                 <motion.div
-                  className="absolute bottom-0 w-full h-40 bg-gray-800"
+                  className="absolute bottom-0 w-full h-24 bg-gray-800"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5 }}
