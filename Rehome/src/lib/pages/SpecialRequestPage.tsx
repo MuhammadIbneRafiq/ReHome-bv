@@ -270,9 +270,29 @@ const SpecialRequestPage = () => {
                         label = 'Description';
                         placeholder = 'What items need to be removed? Are the items on the ground floor, upstairs or outside?';
                       }
+                      if (selectedService === 'storage') {
+                        if (field === 'itemDescription') {
+                          label = 'Description';
+                          placeholder = 'What items need to be stored? Are the items on the ground floor, upstairs or outside?';
+                        }
+                      }
                       if (selectedService === 'junkRemoval') {
                         if (field === 'address') label = 'Address';
                         if (field === 'removalDate') label = 'Latest Removal Date';
+                      }
+                      if (selectedService === 'fullInternationalMove') {
+                        if (field === 'pickupAddress') {
+                          label = 'Pickup Address';
+                          placeholder = 'Enter pickup address';
+                        }
+                        if (field === 'dropoffAddress') {
+                          label = 'Dropoff Address';
+                          placeholder = 'Enter dropoff address';
+                        }
+                        if (field === 'itemDescription') {
+                          label = 'Description';
+                          placeholder = 'What items need to be moved internationally? Are the items on the ground floor, upstairs or outside?';
+                        }
                       }
 
                       // Use date input for removalDate
@@ -305,7 +325,7 @@ const SpecialRequestPage = () => {
                               type="text"
                               value={fields[field] || ''}
                               onChange={(e) => handleFieldChange(field, e.target.value)}
-                              placeholder={`Enter ${label.toLowerCase()}`}
+                              placeholder={placeholder}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                               required
                             />
@@ -382,6 +402,13 @@ const SpecialRequestPage = () => {
                         />
                         {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                       </div>
+                    </div>
+
+                    {/* Services Label */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Services
+                      </label>
                     </div>
 
                     {/* Photo Upload */}

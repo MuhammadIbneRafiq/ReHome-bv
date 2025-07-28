@@ -48,7 +48,7 @@ const LandingPage = () => {
                   Start Booking Process
                 </button>
               </motion.div>
-            </div>
+            </div>h
             {/* Right: Truck Image */}
             <div>
               <div className="relative h-[280px] overflow-hidden flex items-center justify-center">
