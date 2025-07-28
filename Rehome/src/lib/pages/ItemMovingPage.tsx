@@ -1090,7 +1090,14 @@ const ItemMovingPage = () => {
                             {pricingBreakdown.carryingCost > 0 && (
                                 <div className="space-y-1">
                                     <div className="flex justify-between">
-                                        <span className="ml-2">Carrying ({pricingBreakdown.breakdown.carrying.floors} floors):</span>
+                                        <span className="ml-2">
+                                            Carrying ({(() => {
+                                                const pickupFloors = elevatorPickup ? 1 : Math.max(0, parseInt(floorPickup));
+                                                const dropoffFloors = elevatorDropoff ? 1 : Math.max(0, parseInt(floorDropoff));
+                                                const totalFloors = pickupFloors + dropoffFloors;
+                                                return `${totalFloors} floors: ${pickupFloors} pickup + ${dropoffFloors} dropoff`;
+                                            })()}):
+                                        </span>
                                         <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
                                     </div>
                                     {/* Elevator discount explanation */}

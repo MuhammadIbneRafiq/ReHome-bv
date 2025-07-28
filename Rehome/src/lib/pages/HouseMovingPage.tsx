@@ -878,7 +878,14 @@ const HouseMovingPage = () => {
                     )}
                     {pricingBreakdown.carryingCost > 0 && (
                         <div className="flex justify-between">
-                            <span>Carrying ({pricingBreakdown.breakdown.carrying.floors} floors):</span>
+                            <span>
+                                Carrying ({(() => {
+                                    const pickupFloors = elevatorPickup ? 1 : Math.max(0, parseInt(floorPickup));
+                                    const dropoffFloors = elevatorDropoff ? 1 : Math.max(0, parseInt(floorDropoff));
+                                    const totalFloors = pickupFloors + dropoffFloors;
+                                    return `${totalFloors} floors: ${pickupFloors} pickup + ${dropoffFloors} dropoff`;
+                                })()}):
+                            </span>
                             <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
                         </div>
                     )}
