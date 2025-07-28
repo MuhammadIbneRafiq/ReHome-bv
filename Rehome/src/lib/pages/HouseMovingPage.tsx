@@ -831,10 +831,7 @@ const HouseMovingPage = () => {
                     </div>
                     {pricingBreakdown.breakdown.baseCharge.city && (
                         <div className="text-xs text-gray-500 ml-4">
-                            {pricingBreakdown.breakdown.baseCharge.type === 'Intercity Rate' ? 
-                                'Intercity Rate' : 
-                                `${pricingBreakdown.breakdown.baseCharge.city} - ${pricingBreakdown.breakdown.baseCharge.isCityDay ? 'Cheap Rate' : 'Normal Rate'}`
-                            }
+                            {pricingBreakdown.breakdown.baseCharge.type}
                         </div>
                     )}
                     {/* Items Section - Show detailed breakdown */}
