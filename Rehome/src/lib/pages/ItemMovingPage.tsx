@@ -1472,7 +1472,6 @@ const ItemMovingPage = () => {
                                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                                     {[...category.items, ...(index === 0 && !category.items.some(i => i.id === 'box-bag') ? [{ id: 'box-bag', name: 'Box/Bag' }] : [])].map((item, itemIndex) => {
                                                         const itemKey = item.id;
-                                                        const points = getItemPoints(itemKey);
                                                         const quantity = itemQuantities[itemKey] || 0;
                                                         return (
                                                             <div key={itemIndex} className="flex items-center justify-between py-3 px-3 bg-gray-50 rounded-md">
