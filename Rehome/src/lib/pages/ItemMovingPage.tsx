@@ -2085,13 +2085,10 @@ const ItemMovingPage = () => {
                                 Large Move Detected
                             </h3>
                             <p className="text-sm text-gray-600 mb-4">
-                                Your move exceeds the 20-point limit for item transport. 
-                                For moves of this size, we recommend using our house moving service 
-                                which is better suited for larger moves and offers better pricing.
+                                Your selction exceeds our limit for item transport. For Transports of this size we recommend using our house moving service.
+                                Your current information will be transferred to the house moving booking process.
                             </p>
-                            <p className="text-sm text-gray-600 mb-6">
-                                Your current information will be transferred to the house moving form.
-                            </p>
+                            
                             <div className="flex space-x-3">
                                 <button
                                     onClick={() => setShowPointLimitModal(false)}

@@ -263,12 +263,13 @@ class PricingService {
         console.log('🏠 REHOME CHOOSE MODE! (Cheapest rates)');
         finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
         isCheapRate = true;
-        
+        chargeType += 'ReHome- Cheap Rate';
         // Add extra km charge for pickup location if non-base city
         if (pickupDistanceDifference > 8) {
           const extraCharge = Math.round((pickupDistanceDifference - 8) * 3);
           finalCharge += extraCharge;
-        } 
+          chargeType += 'ReHome- Cheap Rate';
+        }
       }
       
       // Set breakdown values
