@@ -343,7 +343,7 @@ class PricingService {
     
     if (isEmpty) {
       // Empty calendar for this city → cheap base charge(NOT ANYMORE) but the avg
-      baseCharge = (cityBaseCharges[city]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+      baseCharge = (cityBaseCharges[city]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
       isCheapRate = true;
       console.log(`[DEBUG] ${city} - Empty calendar, using cityDay rate: €${baseCharge}`);
     } else {
