@@ -993,7 +993,6 @@ const ItemMovingPage = () => {
         const totalItemValue = selectedItems.reduce((sum, item) => sum + item.value, 0);
         
         // Check if approaching or exceeding point limit
-        const isApproachingLimit = totalItemPoints >= ITEM_TRANSPORT_POINT_LIMIT * 0.8; // 80% of limit
         const isExceedingLimit = totalItemPoints > ITEM_TRANSPORT_POINT_LIMIT;
         
         return (
@@ -1015,20 +1014,7 @@ const ItemMovingPage = () => {
                     </div>
                 )}
                 
-                {isApproachingLimit && !isExceedingLimit && (
-                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                        <div className="flex items-center">
-                            <FaHome className="h-4 w-4 text-yellow-600 mr-2" />
-                            <span className="text-sm font-medium text-yellow-800">
-                                Approaching item transport limit ({totalItemPoints}/20 points)
-                            </span>
-                        </div>
-                        <p className="text-xs text-yellow-600 mt-1">
-                            Consider house moving for larger moves
-                        </p>
-                    </div>
-                )}
-                
+                                
                 <div className="space-y-3">
                     {/* Base Price */}
                     <div className="flex justify-between">
