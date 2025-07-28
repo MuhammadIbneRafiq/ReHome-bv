@@ -46,6 +46,10 @@ const ItemDonationPage = () => {
       toast.error("Please enter a price for your item.");
       return false;
     }
+    if (mode === 'sell' && isNaN(parseFloat(price))) {
+      toast.error("Please enter a valid price for your item.");
+      return false;
+    }
     if (!description.trim()) {
       toast.error("Please provide a description of your item.");
       return false;
@@ -91,6 +95,16 @@ const ItemDonationPage = () => {
       return false;
     }
 
+    // Additional validation to ensure contactInfo is properly structured
+    const requiredFields = ['firstName', 'lastName', 'email', 'phone'] as const;
+    for (const field of requiredFields) {
+      if (!contactInfo[field] || typeof contactInfo[field] !== 'string' || !contactInfo[field].trim()) {
+        console.error(`Missing or invalid contactInfo field: ${field}`, contactInfo[field]);
+        toast.error(`Please provide a valid ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}.`);
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -102,17 +116,36 @@ const ItemDonationPage = () => {
     setIsLoading(true);
 
     try {
+      // Ensure contactInfo is properly structured
+      const sanitizedContactInfo = {
+        firstName: contactInfo.firstName.trim(),
+        lastName: contactInfo.lastName.trim(),
+        email: contactInfo.email.trim(),
+        phone: contactInfo.phone.trim()
+      };
+
       const formData = new FormData();
       formData.append('donationItems', JSON.stringify([
         {
           description,
-          price: mode === 'sell' ? price : undefined,
+          price: mode === 'sell' ? parseFloat(price) : undefined,
           condition,
         }
       ]));
-      formData.append('contactInfo', JSON.stringify(contactInfo));
-      formData.append('pickupLocation', address);
-      formData.append('preferredPickupDate', preferredDate);
+      try {
+        formData.append('contactInfo', JSON.stringify(sanitizedContactInfo));
+        // Also append individual fields as backup
+        formData.append('contactFirstName', sanitizedContactInfo.firstName);
+        formData.append('contactLastName', sanitizedContactInfo.lastName);
+        formData.append('contactEmail', sanitizedContactInfo.email);
+        formData.append('contactPhone', sanitizedContactInfo.phone);
+      } catch (jsonError) {
+        console.error('Error stringifying contactInfo:', jsonError);
+        toast.error('Error preparing contact information. Please try again.');
+        return;
+      }
+      formData.append('pickupLocation', address); // Changed from 'address' to 'pickupLocation'
+      formData.append('preferredPickupDate', preferredDate || '');
       formData.append('isDateFlexible', String(isDateFlexible));
       formData.append('donationType', mode === 'sell' ? 'sell' : 'charity');
       formData.append('itemCondition', condition);
@@ -123,12 +156,49 @@ const ItemDonationPage = () => {
         formData.append('photos', photo);
       });
       
+      // Debug logging
+      console.log('Submitting donation request with data:', {
+        donationItems: [{ description, price: mode === 'sell' ? parseFloat(price) : undefined, condition }],
+        contactInfo: sanitizedContactInfo,
+        pickupLocation: address,
+        preferredPickupDate: preferredDate,
+        isDateFlexible,
+        donationType: mode === 'sell' ? 'sell' : 'charity',
+        itemCondition: condition,
+        floor,
+        elevatorAvailable,
+        preferredTimeSpan,
+        photoCount: photos.length
+      });
+      
+      // Debug: Log the exact JSON being sent
+      console.log('ContactInfo JSON string:', JSON.stringify(sanitizedContactInfo));
+      console.log('ContactInfo object:', sanitizedContactInfo);
+      console.log('ContactInfo validation:', {
+        hasContactInfo: !!sanitizedContactInfo,
+        hasEmail: !!sanitizedContactInfo.email,
+        hasFirstName: !!sanitizedContactInfo.firstName,
+        hasLastName: !!sanitizedContactInfo.lastName,
+        email: sanitizedContactInfo.email,
+        firstName: sanitizedContactInfo.firstName,
+        lastName: sanitizedContactInfo.lastName
+      });
+
+      // Debug: Log the FormData contents
+      console.log('FormData contents:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value);
+      }
 
       const response = await fetch(API_ENDPOINTS.DONATION.ITEM_REQUEST, {
         method: 'POST',
         body: formData,
       });
+      
+      console.log('Response status:', response.status);
       const result = await response.json();
+      console.log('Response result:', result);
+      
       if (response.ok) {
         toast.success(result.message || "Thank you for your donation! We'll contact you soon to arrange pickup.", {
           position: "top-right",
@@ -156,11 +226,12 @@ const ItemDonationPage = () => {
         setPreferredTimeSpan('');
         setAgreedToTerms(false);
       } else {
-        throw new Error(result.error || 'Failed to submit donation request');
+        console.error('Server error:', result);
+        throw new Error(result.error || result.details || 'Failed to submit donation request');
       }
     } catch (error) {
       console.error("Error submitting the form:", error);
-      toast.error("An error occurred while submitting your request. Please try again.");
+      toast.error(error instanceof Error ? error.message : "An error occurred while submitting your request. Please try again.");
     } finally {
       setIsLoading(false);
     }

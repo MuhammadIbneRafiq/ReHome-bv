@@ -1042,10 +1042,8 @@ const ItemMovingPage = () => {
                             {dateOption === 'fixed' && pickupDate && dropoffDate && pricingBreakdown.breakdown.baseCharge.city.includes('/') ? (
                                 <div className="space-y-1">
                                     <div>
-                                        {pricingBreakdown.breakdown.baseCharge.city} - {
-                                            isDateFlexible ? "Flexible date with discount according to ReHome delivery plans" :
-                                            pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early bookingwith discount according to ReHome delivery plans" :
-                                            pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rates" : "Mixed rates"
+                                        {
+                                            pricingBreakdown.breakdown.baseCharge.isCityDay ? "Cheap rate" : "Normal rate"
                                         }
                                     </div>
                                     <div className="text-xs text-gray-400">
@@ -1059,16 +1057,9 @@ const ItemMovingPage = () => {
                                         `${pickupPlace.city} → ${dropoffPlace.city}` : 
                                         pricingBreakdown.breakdown.baseCharge.city
                                     } - {
-                                        isDateFlexible ? "Flexible date with discount according to ReHome delivery plans" :
-                                        pricingBreakdown.breakdown.baseCharge.isEarlyBooking ? "Early booking with discount according to ReHome delivery plans" :
-                                        pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
+                                        pricingBreakdown.breakdown.baseCharge.isCityDay ? "Cheap rate" : "Normal rate"
                                     }
-                                    {dateOption === 'fixed' && pickupDate && dropoffDate && (
-                                        <div className="text-xs text-gray-400">
-                                            Pickup: {new Date(pickupDate).toLocaleDateString('en-US', { weekday: 'short' })} | 
-                                            Dropoff: {new Date(dropoffDate).toLocaleDateString('en-US', { weekday: 'short' })}
-                                        </div>
-                                    )}
+                                    
                                 </div>
                             )}
                         </div>

@@ -831,10 +831,7 @@ const HouseMovingPage = () => {
                     </div>
                     {pricingBreakdown.breakdown.baseCharge.city && (
                         <div className="text-xs text-gray-500 ml-4">
-                            {pricingBreakdown.breakdown.baseCharge.city} - {
-                                isDateFlexible ? "Flexible date with discount according to ReHome delivery plans" :
-                                pricingBreakdown.breakdown.baseCharge.isCityDay ? "City day rate" : "Normal rate"
-                            }
+                            {pricingBreakdown.breakdown.baseCharge.isCityDay ? "Cheap rate" : "Normal rate"}
                         </div>
                     )}
                     {/* Items Section - Show detailed breakdown */}
