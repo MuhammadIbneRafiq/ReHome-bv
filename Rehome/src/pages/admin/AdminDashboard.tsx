@@ -1766,7 +1766,7 @@ const AdminDashboard = () => {
                             <h4 className="text-lg font-semibold text-gray-800 mb-3">Service Details</h4>
                             <div className="space-y-2">
                               <p><span className="font-medium">Helper Required:</span> {(selectedTransportRequest as any).helper ? 'Yes' : 'No'}</p>
-                              <p><span className="font-medium">Dismantling:</span> {(selectedTransportRequest as any).dismantling ? 'Yes' : 'No'}</p>
+                              <p><span className="font-medium">Assembly/Disassembly:</span> {(selectedTransportRequest as any).dismantling ? 'Yes' : 'No'}</p>
                               <p><span className="font-medium">Total Items:</span> {(selectedTransportRequest as any).totalitems || 'N/A'}</p>
                               <p><span className="font-medium">Total Points:</span> {(selectedTransportRequest as any).totalpoints || 'N/A'}</p>
                               <p><span className="font-medium">Estimated Price:</span> €{(selectedTransportRequest as any).price || 'N/A'}</p>
