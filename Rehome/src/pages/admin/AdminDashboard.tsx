@@ -3194,6 +3194,7 @@ const AdminDashboard = () => {
                           <tr className="bg-gray-100">
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">DONOR</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ITEMS</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">FLOORS</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">STATUS</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ACTIONS</th>
                           </tr>
@@ -3206,6 +3207,9 @@ const AdminDashboard = () => {
                               </td>
                               <td className="border border-gray-300 px-3 py-2 text-xs">
                                 {donation.donation_items?.length || 0} items
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {donation.floor || 'Ground'}
                               </td>
                               <td className="border border-gray-300 px-3 py-2 text-xs">
                                 <select
@@ -3410,17 +3414,10 @@ const AdminDashboard = () => {
                         <div className="space-y-2">
                           <p><span className="font-medium">Pickup Location:</span> {selectedDonation.pickup_location || 'N/A'}</p>
                           <p><span className="font-medium">Donation Location:</span> {selectedDonation.donation_location || 'N/A'}</p>
+                          <p><span className="font-medium">Floor:</span> {selectedDonation.floor || 'Ground'}</p>
+                          <p><span className="font-medium">Elevator Available:</span> {selectedDonation.elevator_available ? 'Yes' : 'No'}</p>
                           <p><span className="font-medium">Distance:</span> {selectedDonation.calculated_distance_km || 'N/A'} km</p>
                           <p><span className="font-medium">Duration:</span> {selectedDonation.calculated_duration_text || 'N/A'}</p>
-                        </div>
-                      </div>
-
-                      {/* Organization Information */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Organization Details</h4>
-                        <div className="space-y-2">
-                          <p><span className="font-medium">Organization:</span> {selectedDonation.organization_name || 'N/A'}</p>
-                          <p><span className="font-medium">Contact:</span> {selectedDonation.organization_contact ? JSON.stringify(selectedDonation.organization_contact) : 'N/A'}</p>
                         </div>
                       </div>
 

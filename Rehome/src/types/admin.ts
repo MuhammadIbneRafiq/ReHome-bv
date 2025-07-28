@@ -112,11 +112,12 @@ export interface TransportRequest {
     is_date_flexible: boolean;
     donation_type: 'charity' | 'recycling' | 'other';
     special_instructions?: string;
-    organization_name?: string;
-    organization_contact?: any;
     total_estimated_value?: number;
     item_condition?: string;
     photo_urls: string[];
+    floor?: string;
+    elevator_available?: boolean;
+    preferred_time_span?: string;
     calculated_distance_km?: number;
     calculated_duration_seconds?: number;
     calculated_duration_text?: string;
