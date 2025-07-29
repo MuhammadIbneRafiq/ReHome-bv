@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe, FaExternalLinkAlt, FaTags } from 'react-icons/fa';
+import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe, FaExternalLinkAlt, FaTags, FaChartLine } from 'react-icons/fa';
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameMonth } from 'date-fns';
 import { toast } from 'react-toastify';
 import { supabase } from "../../lib/supabaseClient";
@@ -19,7 +19,7 @@ import {
 
 const AdminDashboard = () => {
   const { user } = useUserSessionStore();
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'requests'>('transport');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'requests' | 'sales'>('transport');
   const [requestsTab, setRequestsTab] = useState<'donations' | 'special-requests'>('donations');
   
   // State for all tabs
@@ -59,7 +59,10 @@ const AdminDashboard = () => {
   const [adminListings, setAdminListings] = useState<MarketplaceItem[]>([]);
   const [userListings, setUserListings] = useState<MarketplaceItem[]>([]);
   // const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
-  // const [salesHistory, setSalesHistory] = useState<any[]>([]);
+  const [salesHistory, setSalesHistory] = useState<any[]>([]);
+  const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
+  const [salesStatistics, setSalesStatistics] = useState<any>(null);
+  const [salesStatisticsLoading, setSalesStatisticsLoading] = useState(false);
   const [newAdminListing, setNewAdminListing] = useState({
     name: '',
     description: '',
@@ -84,6 +87,7 @@ const AdminDashboard = () => {
   
   // Marketplace item details management state
   const [marketplaceItemDetails, setMarketplaceItemDetails] = useState<MarketplaceItemDetail[]>([]);
+  const [marketplaceItemDetailsLoading, setMarketplaceItemDetailsLoading] = useState(false);
   const [editingMarketplaceItemDetail, setEditingMarketplaceItemDetail] = useState<string | null>(null);
   const [editMarketplaceItemDetailData, setEditMarketplaceItemDetailData] = useState<any>({});
   const [newMarketplaceItemDetail, setNewMarketplaceItemDetail] = useState({
@@ -295,16 +299,17 @@ const AdminDashboard = () => {
     try {
       await Promise.all([
         fetchTransportRequests(),
-        fetchSchedule(),
         fetchPricingData(),
         fetchMarketplaceData(),
         fetchFurnitureItemsData(),
         fetchMarketplaceItemDetails(),
-        loadScheduleData(),
+        fetchSchedule(),
         fetchAdminListings(),
         fetchUserListings(),
         fetchItemDonations(),
-        fetchSpecialRequests()
+        fetchSpecialRequests(),
+        fetchSalesHistory(),
+        fetchSalesStatistics(),
       ]);
     } catch (err) {
       setError('Failed to load data. Please try again.');
@@ -511,16 +516,60 @@ const AdminDashboard = () => {
   // Fetch marketplace item details
   const fetchMarketplaceItemDetails = async () => {
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-      
-      const data = await adminFetchMarketplaceItemDetails(token);
+      setMarketplaceItemDetailsLoading(true);
+      const token = localStorage.getItem('accessToken');
+      const data = await adminFetchMarketplaceItemDetails(token || '');
       setMarketplaceItemDetails(data);
     } catch (error) {
       console.error('Error fetching marketplace item details:', error);
-      setError('Failed to fetch marketplace item details');
+    } finally {
+      setMarketplaceItemDetailsLoading(false);
+    }
+  };
+
+  const fetchSalesHistory = async () => {
+    try {
+      setSalesHistoryLoading(true);
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/admin/sales-history', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setSalesHistory(result.data || []);
+      } else {
+        console.error('Failed to fetch sales history:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching sales history:', error);
+    } finally {
+      setSalesHistoryLoading(false);
+    }
+  };
+
+  const fetchSalesStatistics = async () => {
+    try {
+      setSalesStatisticsLoading(true);
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/admin/sales-statistics', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setSalesStatistics(result.data || {});
+      } else {
+        console.error('Failed to fetch sales statistics:', response.status);
+      }
+    } catch (error) {
+      console.error('Error fetching sales statistics:', error);
+    } finally {
+      setSalesStatisticsLoading(false);
     }
   };
   
@@ -1479,6 +1528,17 @@ const AdminDashboard = () => {
               <FaHandshake className="mr-2" />
               Requests
             </button>
+            <button
+              onClick={() => setActiveTab('sales')}
+              className={`flex items-center px-4 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'sales'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FaChartLine className="mr-2" />
+              Sales History
+            </button>
           </div>
         </div>
 
@@ -2313,109 +2373,116 @@ const AdminDashboard = () => {
                     )}
 
                     {/* Marketplace Item Details Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">CATEGORY</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">SUBCATEGORY</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">POINTS</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {marketplaceItemDetails.map((item) => (
-                            <tr key={item.id} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMarketplaceItemDetail === item.id ? (
-                                  <input
-                                    type="text"
-                                    value={editMarketplaceItemDetailData.category || ''}
-                                    onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, category: e.target.value})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded"
-                                  />
-                                ) : (
-                                  item.category
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMarketplaceItemDetail === item.id ? (
-                                  <input
-                                    type="text"
-                                    value={editMarketplaceItemDetailData.subcategory || ''}
-                                    onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, subcategory: e.target.value})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded"
-                                  />
-                                ) : (
-                                  item.subcategory || '-'
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMarketplaceItemDetail === item.id ? (
-                                  <input
-                                    type="number"
-                                    value={editMarketplaceItemDetailData.points || 1}
-                                    onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, points: parseFloat(e.target.value) || 1})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded"
-                                  />
-                                ) : (
-                                  item.points
-                                )}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  item.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {item.is_active ? 'Active' : 'Inactive'}
-                                </span>
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {editingMarketplaceItemDetail === item.id ? (
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleSaveMarketplaceItemDetail(item)}
-                                      disabled={isUpdating}
-                                      className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs"
-                                    >
-                                      <FaSave className="mr-1" />
-                                      {isUpdating ? 'Saving...' : 'Save'}
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setEditingMarketplaceItemDetail(null);
-                                        setEditMarketplaceItemDetailData({});
-                                      }}
-                                      className="flex items-center px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
-                                    >
-                                      <FaTimes className="mr-1" />
-                                      Cancel
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="flex space-x-2">
-                                    <button
-                                      onClick={() => handleEditMarketplaceItemDetail(item)}
-                                      className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                                    >
-                                      <FaEdit className="mr-1" />
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteMarketplaceItemDetail(item)}
-                                      className="flex items-center px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                                    >
-                                      <FaTrash className="mr-1" />
-                                      Delete
-                                    </button>
-                                  </div>
-                                )}
-                              </td>
+                    {marketplaceItemDetailsLoading ? (
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
+                        <p className="mt-2 text-gray-600">Loading marketplace item details...</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">CATEGORY</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">SUBCATEGORY</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">POINTS</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                          </thead>
+                          <tbody>
+                            {marketplaceItemDetails.map((item) => (
+                              <tr key={item.id} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-2">
+                                  {editingMarketplaceItemDetail === item.id ? (
+                                    <input
+                                      type="text"
+                                      value={editMarketplaceItemDetailData.category || ''}
+                                      onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, category: e.target.value})}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded"
+                                    />
+                                  ) : (
+                                    item.category
+                                  )}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  {editingMarketplaceItemDetail === item.id ? (
+                                    <input
+                                      type="text"
+                                      value={editMarketplaceItemDetailData.subcategory || ''}
+                                      onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, subcategory: e.target.value})}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded"
+                                    />
+                                  ) : (
+                                    item.subcategory || '-'
+                                  )}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  {editingMarketplaceItemDetail === item.id ? (
+                                    <input
+                                      type="number"
+                                      value={editMarketplaceItemDetailData.points || 1}
+                                      onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, points: parseFloat(e.target.value) || 1})}
+                                      className="w-full px-2 py-1 border border-gray-300 rounded"
+                                    />
+                                  ) : (
+                                    item.points
+                                  )}
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    item.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {item.is_active ? 'Active' : 'Inactive'}
+                                  </span>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  {editingMarketplaceItemDetail === item.id ? (
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => handleSaveMarketplaceItemDetail(item)}
+                                        disabled={isUpdating}
+                                        className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs"
+                                      >
+                                        <FaSave className="mr-1" />
+                                        {isUpdating ? 'Saving...' : 'Save'}
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setEditingMarketplaceItemDetail(null);
+                                          setEditMarketplaceItemDetailData({});
+                                        }}
+                                        className="flex items-center px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
+                                      >
+                                        <FaTimes className="mr-1" />
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex space-x-2">
+                                      <button
+                                        onClick={() => handleEditMarketplaceItemDetail(item)}
+                                        className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                                      >
+                                        <FaEdit className="mr-1" />
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteMarketplaceItemDetail(item)}
+                                        className="flex items-center px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                      >
+                                        <FaTrash className="mr-1" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -4167,6 +4234,224 @@ const AdminDashboard = () => {
               </div>
             )}
           </div>
+
+          {/* Sales History Section */}
+          {activeTab === 'sales' && (
+            <div className="p-6">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">Sales History & Analytics</h3>
+                
+                {/* Sales Statistics Cards */}
+                {salesStatisticsLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="bg-gray-200 p-4 rounded-lg animate-pulse">
+                        <div className="h-16 bg-gray-300 rounded"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : salesStatistics ? (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm opacity-90">Total Sales</p>
+                          <p className="text-2xl font-bold">{salesStatistics.totalSales}</p>
+                        </div>
+                        <FaChartLine className="text-3xl opacity-80" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm opacity-90">Total Revenue</p>
+                          <p className="text-2xl font-bold">€{salesStatistics.totalRevenue}</p>
+                        </div>
+                        <FaChartLine className="text-3xl opacity-80" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm opacity-90">Avg Order Value</p>
+                          <p className="text-2xl font-bold">€{salesStatistics.averageOrderValue}</p>
+                        </div>
+                        <FaChartLine className="text-3xl opacity-80" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm opacity-90">Categories</p>
+                          <p className="text-2xl font-bold">{Object.keys(salesStatistics.categoryStats || {}).length}</p>
+                        </div>
+                        <FaTags className="text-3xl opacity-80" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm opacity-90">Total Sales</p>
+                          <p className="text-2xl font-bold">{salesStatistics.totalSales}</p>
+                        </div>
+                        <FaChartLine className="text-3xl opacity-80" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm opacity-90">Total Revenue</p>
+                          <p className="text-2xl font-bold">€{salesStatistics.totalRevenue}</p>
+                        </div>
+                        <FaChartLine className="text-3xl opacity-80" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm opacity-90">Avg Order Value</p>
+                          <p className="text-2xl font-bold">€{salesStatistics.averageOrderValue}</p>
+                        </div>
+                        <FaChartLine className="text-3xl opacity-80" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-4 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm opacity-90">Categories</p>
+                          <p className="text-2xl font-bold">{Object.keys(salesStatistics.categoryStats || {}).length}</p>
+                        </div>
+                        <FaTags className="text-3xl opacity-80" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Category Statistics */}
+                {salesStatistics?.categoryStats && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-4">Sales by Category</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {Object.entries(salesStatistics.categoryStats).map(([category, stats]: [string, any]) => (
+                        <div key={category} className="bg-gray-50 p-3 rounded-lg">
+                          <h5 className="font-medium text-gray-800">{category}</h5>
+                          <p className="text-sm text-gray-600">Sales: {stats.count}</p>
+                          <p className="text-sm text-gray-600">Revenue: €{stats.revenue}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Sales History Table */}
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h4 className="text-lg font-semibold text-gray-800">Recent Sales</h4>
+                </div>
+                
+                {salesHistoryLoading ? (
+                  <div className="p-6 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Loading sales history...</p>
+                  </div>
+                ) : salesHistory.length === 0 ? (
+                  <div className="p-6 text-center">
+                    <FaChartLine className="text-4xl text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No sales history available</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Order ID
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Customer
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Item
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Category
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Quantity
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Total
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Date
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {salesHistory.map((sale) => (
+                          <tr key={sale.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {sale.order_id}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <div>
+                                <p className="font-medium">{sale.customer_name || 'N/A'}</p>
+                                <p className="text-gray-500">{sale.customer_email}</p>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {sale.item_name}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                                {sale.item_category || 'N/A'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {sale.quantity}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              €{sale.final_total}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {sale.created_at && !isNaN(new Date(sale.created_at).getTime()) 
+                                ? format(new Date(sale.created_at), 'MMM dd, yyyy')
+                                : 'N/A'
+                              }
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                sale.payment_status === 'completed' 
+                                  ? 'bg-green-100 text-green-800'
+                                  : sale.payment_status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : 'bg-red-100 text-red-800'
+                              }`}>
+                                {sale.payment_status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
     </div>

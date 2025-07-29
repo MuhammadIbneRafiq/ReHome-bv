@@ -486,6 +486,59 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       });
 
       if (response.ok) {
+        // Store sales history for each item in the cart
+        try {
+          for (const item of items) {
+            const salesHistoryData = {
+              orderId: orderNumber,
+              customerEmail: contactInfo.email,
+              customerName: `${contactInfo.firstName} ${contactInfo.lastName}`,
+              customerPhone: contactInfo.phone,
+              itemName: item.name,
+              itemCategory: item.category,
+              itemSubcategory: item.subcategory,
+              itemPoints: 0, // ReHome items don't have points
+              itemPrice: item.price,
+              quantity: item.quantity,
+              totalAmount: item.price * item.quantity,
+              paymentMethod: 'card',
+              paymentStatus: 'completed',
+              orderStatus: 'completed',
+              pickupAddress: '', // ReHome items don't have pickup address
+              dropoffAddress: deliveryAddress, // Use delivery address
+              pickupDate: null, // ReHome items don't have pickup date
+              pickupTime: null, // ReHome items don't have pickup time
+              deliveryFee: 0, // ReHome items have free delivery
+              assemblyFee: itemAssistance[item.id]?.needsAssembly ? getAssemblyCost() : 0,
+              carryingFee: itemAssistance[item.id]?.needsCarrying ? getCarryingCost() : 0,
+              extraHelperFee: 0,
+              studentDiscount: 0,
+              subtotal: item.price * item.quantity,
+              taxAmount: 0,
+              finalTotal: item.price * item.quantity + (itemAssistance[item.id]?.needsAssembly ? getAssemblyCost() : 0) + (itemAssistance[item.id]?.needsCarrying ? getCarryingCost() : 0),
+              currency: 'EUR',
+              notes: `ReHome Order: ${orderNumber}`
+            };
+
+            // Store sales history
+            const salesResponse = await fetch('/api/sales-history', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(salesHistoryData),
+            });
+
+            if (!salesResponse.ok) {
+              console.error('Failed to store sales history for item:', item.name, salesResponse.status, salesResponse.statusText);
+            }
+          }
+          console.log('✅ Sales history stored successfully');
+        } catch (salesError) {
+          console.error('❌ Error storing sales history:', salesError);
+          // Don't fail the order if sales history storage fails
+        }
+
         clearCart();
         onOrderComplete(orderNumber);
         toast.success('Order placed successfully!');
