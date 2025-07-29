@@ -1971,6 +1971,7 @@ const AdminDashboard = () => {
                             <div className="space-y-2">
                               <p><span className="font-medium">Helper Required:</span> {(selectedTransportRequest as any).helper ? 'Yes' : 'No'}</p>
                               <p><span className="font-medium">Assembly/Disassembly:</span> {(selectedTransportRequest as any).dismantling ? 'Yes' : 'No'}</p>
+                              <p><span className="font-medium">Carrying Service:</span> {(selectedTransportRequest as any).carrying_service ? 'Yes' : 'No'}</p>
                               <p><span className="font-medium">Total Items:</span> {(selectedTransportRequest as any).totalitems || 'N/A'}</p>
                               <p><span className="font-medium">Total Points:</span> {(selectedTransportRequest as any).totalpoints || 'N/A'}</p>
                               <p><span className="font-medium">Estimated Price:</span> €{(selectedTransportRequest as any).price || 'N/A'}</p>
