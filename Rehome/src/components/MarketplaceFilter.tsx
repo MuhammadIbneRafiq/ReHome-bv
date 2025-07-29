@@ -1,5 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { MARKETPLACE_CATEGORIES, CONDITION_OPTIONS } from '../constants/marketplaceConstants';
+import { getMarketplaceCategoriesDynamic, CONDITION_OPTIONS } from '../constants/marketplaceConstants';
+import { MarketplaceCategory } from '../services/marketplaceItemDetailsService';
 
 interface FilterProps {
   items: any[];
@@ -7,6 +8,27 @@ interface FilterProps {
 }
 
 const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => {
+  // Dynamic categories state
+  const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  // Load categories on component mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const dynamicCategories = await getMarketplaceCategoriesDynamic();
+        setCategories(dynamicCategories);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+    
+    loadCategories();
+  }, []);
+
   const [_, setCities] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
@@ -98,10 +120,6 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   // Pricing type filter
   const [selectedPricingType, setSelectedPricingType] = useState<string>('');
   
-  // Use categories and conditions from constants
-  const categories = MARKETPLACE_CATEGORIES;
-  const conditions = CONDITION_OPTIONS;
-
   // Analyze data to set up filter options
   useEffect(() => {
     if (items && items.length > 0) {
@@ -255,16 +273,19 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
               value={selectedCategory}
               onChange={handleCategoryChange}
               style={{ position: 'relative', zIndex: 5 }}
+              disabled={categoriesLoading}
             >
-              <option value="">All Categories</option>
-              {categories.map(category => (
+              <option value="">
+                {categoriesLoading ? 'Loading categories...' : 'All Categories'}
+              </option>
+              {categories.map((category: MarketplaceCategory) => (
                 <option key={category.name} value={category.name}>
                   {category.name}
                 </option>
               ))}
             </select>
             
-            {selectedCategory && categories.find(c => c.name === selectedCategory)?.subcategories && categories.find(c => c.name === selectedCategory)!.subcategories.length > 0 && (
+            {selectedCategory && categories.find((c: MarketplaceCategory) => c.name === selectedCategory)?.subcategories && categories.find((c: MarketplaceCategory) => c.name === selectedCategory)!.subcategories.length > 0 && (
               <select
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                 value={selectedSubCategory}
@@ -273,8 +294,8 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
               >
                 <option value="">All {selectedCategory}</option>
                 {categories
-                  .find(c => c.name === selectedCategory)
-                  ?.subcategories.map(sub => (
+                  .find((c: MarketplaceCategory) => c.name === selectedCategory)
+                  ?.subcategories.map((sub: string) => (
                     <option key={sub} value={sub}>
                       {sub}
                     </option>
@@ -388,7 +409,7 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
             style={{ position: 'relative', zIndex: 5 }}
           >
             <option value="">Any condition</option>
-            {conditions.map(condition => (
+            {CONDITION_OPTIONS.map(condition => (
               <option key={condition.value} value={condition.value}>
                 {condition.label}
               </option>

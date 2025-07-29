@@ -1,6 +1,8 @@
 // Marketplace Constants - Shared across SellPage, EditPage, and MarketplaceFilter
+import { getMarketplaceCategories, MarketplaceCategory } from '../services/marketplaceItemDetailsService';
 
-export const MARKETPLACE_CATEGORIES = [
+// Fallback categories in case API fails
+export const FALLBACK_MARKETPLACE_CATEGORIES: MarketplaceCategory[] = [
   { 
     name: 'Bathroom Furniture', 
     subcategories: [] 
@@ -67,18 +69,28 @@ export const MARKETPLACE_CATEGORIES = [
     subcategories: [] 
   },
   { 
-    name: 'Vases', 
-    subcategories: [] 
-  },
-  { 
     name: 'Kitchen equipment', 
     subcategories: [] 
   },
   { 
     name: 'Others', 
-    subcategories: [] 
+    subcategories: ['Vases'] 
   }
 ];
+
+// Dynamic function to get marketplace categories from API
+export const getMarketplaceCategoriesDynamic = async (): Promise<MarketplaceCategory[]> => {
+  try {
+    const categories = await getMarketplaceCategories();
+    return categories;
+  } catch (error) {
+    console.error('Failed to fetch marketplace categories from API, using fallback:', error);
+    return FALLBACK_MARKETPLACE_CATEGORIES;
+  }
+};
+
+// For backward compatibility, export the fallback as the default
+export const MARKETPLACE_CATEGORIES = FALLBACK_MARKETPLACE_CATEGORIES;
 
 export const CONDITION_OPTIONS = [
   { value: '1', label: 'Like New - Almost no signs of use, very well maintained' },
@@ -89,13 +101,19 @@ export const CONDITION_OPTIONS = [
 ];
 
 // Type definitions
-export type FurnitureCategory = typeof MARKETPLACE_CATEGORIES[number]['name'];
+export type FurnitureCategory = string; // Changed to string since it's now dynamic
 export type FurnitureCondition = typeof CONDITION_OPTIONS[number]['value'];
 
-// Helper functions
-export const getCategorySubcategories = (categoryName: FurnitureCategory): string[] => {
-    const category = MARKETPLACE_CATEGORIES.find(cat => cat.name === categoryName);
+// Helper functions - updated to work with dynamic categories
+export const getCategorySubcategories = async (categoryName: string): Promise<string[]> => {
+  try {
+    const categories = await getMarketplaceCategoriesDynamic();
+    const category = categories.find(cat => cat.name === categoryName);
     return [...(category?.subcategories || [])];
+  } catch (error) {
+    console.error('Error getting category subcategories:', error);
+    return [];
+  }
 };
 
 export const getConditionLabel = (conditionValue: FurnitureCondition): string => {

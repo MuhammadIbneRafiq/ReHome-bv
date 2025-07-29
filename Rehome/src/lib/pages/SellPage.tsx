@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import API_ENDPOINTS from '../api/config';
 import { PRICING_TYPES } from '../../types/marketplace';
 import useUserStore from '../../services/state/useUserSessionStore';
 import { FaTimes } from 'react-icons/fa';
 import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
-import { MARKETPLACE_CATEGORIES, CONDITION_OPTIONS } from '../../constants/marketplaceConstants';
+import { getMarketplaceCategoriesDynamic, CONDITION_OPTIONS } from '../../constants/marketplaceConstants';
+import { MarketplaceCategory } from '../../services/marketplaceItemDetailsService';
 
 const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) => {
     // Get current user from the store
     const user = useUserStore((state) => state.user);
     
+    // Dynamic categories state
+    const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+    // Load categories on component mount
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                setCategoriesLoading(true);
+                const dynamicCategories = await getMarketplaceCategoriesDynamic();
+                setCategories(dynamicCategories);
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+        
+        loadCategories();
+    }, []);
 
 
     const [photos, setPhotos] = useState<File[]>([]);
@@ -60,7 +81,6 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
         'info@rehomebv.com'
     ];
     // Use categories and conditions from constants
-    const categories = MARKETPLACE_CATEGORIES;
     const conditions = CONDITION_OPTIONS;
 
     // Handle category change
@@ -450,8 +470,11 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                         onChange={handleCategoryChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                         required
+                        disabled={categoriesLoading}
                     >
-                        <option value="">Select a category</option>
+                        <option value="">
+                            {categoriesLoading ? 'Loading categories...' : 'Select a category'}
+                        </option>
                         {categories.map(cat => (
                             <option key={cat.name} value={cat.name}>
                                 {cat.name}
@@ -475,7 +498,7 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                             <option value="">Select a subcategory (optional)</option>
                             {categories
                                 .find(c => c.name === category)
-                                ?.subcategories.map(sub => (
+                                ?.subcategories.map((sub: string) => (
                                     <option key={sub} value={sub}>
                                         {sub}
                                     </option>

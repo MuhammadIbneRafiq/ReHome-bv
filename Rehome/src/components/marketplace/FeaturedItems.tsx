@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { FurnitureItem } from '../../types/furniture';
-import { MARKETPLACE_CATEGORIES } from '../../constants/marketplaceConstants';
+import { getMarketplaceCategoriesDynamic } from '../../constants/marketplaceConstants';
+import { MarketplaceCategory } from '../../services/marketplaceItemDetailsService';
 import { API_ENDPOINTS } from '../../lib/api/config';
 import logoImage from "../../assets/logorehome.png";
 import AddToCartButton from './AddToCartButton';
@@ -22,12 +23,34 @@ const getFirstImageUrl = (item: FurnitureItem): string => {
 
 const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
   const { t } = useTranslation();
+  
+  // Dynamic categories state
+  const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  
   const [items, setItems] = useState<FurnitureItem[]>([]);
   const [allItems, setAllItems] = useState<FurnitureItem[]>([]);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [showMoreItems, setShowMoreItems] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Load categories on component mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const dynamicCategories = await getMarketplaceCategoriesDynamic();
+        setCategories(dynamicCategories);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+    
+    loadCategories();
+  }, []);
 
   // Fetch furniture items from API
   useEffect(() => {
@@ -197,15 +220,19 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
             <span className="text-sm font-medium text-gray-700 self-center mr-2">
               Filter:
             </span>
-            {MARKETPLACE_CATEGORIES.map(category => (
-              <button
-                key={category.name}
-                onClick={() => toggleCategoryExclusion(category.name)}
-                className={getCategoryButtonClass(category.name)}
-              >
-                {category.name}
-              </button>
-            ))}
+            {categoriesLoading ? (
+              <div className="text-sm text-gray-500">Loading categories...</div>
+            ) : (
+              categories.map((category: MarketplaceCategory) => (
+                <button
+                  key={category.name}
+                  onClick={() => toggleCategoryExclusion(category.name)}
+                  className={getCategoryButtonClass(category.name)}
+                >
+                  {category.name}
+                </button>
+              ))
+            )}
           </div>
         </div>
 

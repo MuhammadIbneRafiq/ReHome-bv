@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import API_ENDPOINTS from '../api/config';
 import { PRICING_TYPES } from '../../types/marketplace';
 import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
-import { MARKETPLACE_CATEGORIES, CONDITION_OPTIONS } from '../../constants/marketplaceConstants';
+import { getMarketplaceCategoriesDynamic, CONDITION_OPTIONS } from '../../constants/marketplaceConstants';
+import { MarketplaceCategory } from '../../services/marketplaceItemDetailsService';
 
 interface FurnitureItem {
     id: string;
@@ -38,6 +39,27 @@ interface EditPageProps {
 }
 
 const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
+    // Dynamic categories state
+    const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+    // Load categories on component mount
+    useEffect(() => {
+        const loadCategories = async () => {
+            try {
+                setCategoriesLoading(true);
+                const dynamicCategories = await getMarketplaceCategoriesDynamic();
+                setCategories(dynamicCategories);
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+        
+        loadCategories();
+    }, []);
+
     const [photos, setPhotos] = useState<File[]>([]);
     const [price, setPrice] = useState(item.price?.toString() || '');
     const [description, setDescription] = useState(item.description);
@@ -72,8 +94,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
     const [existingImages, setExistingImages] = useState<string[]>(item.image_url || []);
     // const navigate = useNavigate();
 
-    // Use categories and conditions from constants
-    const categories = MARKETPLACE_CATEGORIES;
+    // Use conditions from constants
     const conditions = CONDITION_OPTIONS;
 
     // Handle category change
@@ -349,9 +370,12 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                         value={category}
                         onChange={handleCategoryChange}
                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                        disabled={categoriesLoading}
                     >
-                        <option value="">Select a category</option>
-                        {categories.map(cat => (
+                        <option value="">
+                            {categoriesLoading ? 'Loading categories...' : 'Select a category'}
+                        </option>
+                        {categories.map((cat: MarketplaceCategory) => (
                             <option key={cat.name} value={cat.name}>
                                 {cat.name}
                             </option>
@@ -360,7 +384,7 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                 </div>
 
                 {/* Subcategory Selection (if applicable) */}
-                {category && categories.find(c => c.name === category)?.subcategories && categories.find(c => c.name === category)!.subcategories.length > 0 && (
+                {category && categories.find((c: MarketplaceCategory) => c.name === category)?.subcategories && categories.find((c: MarketplaceCategory) => c.name === category)!.subcategories.length > 0 && (
                     <div>
                         <label htmlFor="subcategory" className="block text-sm font-medium text-gray-700">
                             Subcategory
@@ -373,8 +397,8 @@ const EditPage = ({ item, onClose, onSave }: EditPageProps) => {
                         >
                             <option value="">Select a subcategory (optional)</option>
                             {categories
-                                .find(c => c.name === category)
-                                ?.subcategories.map(sub => (
+                                .find((c: MarketplaceCategory) => c.name === category)
+                                ?.subcategories.map((sub: string) => (
                                     <option key={sub} value={sub}>
                                         {sub}
                                     </option>
