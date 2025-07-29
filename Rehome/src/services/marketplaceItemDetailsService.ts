@@ -88,7 +88,6 @@ export const fetchMarketplaceItemDetailsByCategory = async (): Promise<Marketpla
 export const fetchMarketplaceItemPoints = async (category: string, subcategory?: string): Promise<MarketplaceItemPoints> => {
   try {
     const response = await fetch(API_ENDPOINTS.MARKETPLACE.ITEM_DETAILS);
-    console.log('response of item points', response);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
