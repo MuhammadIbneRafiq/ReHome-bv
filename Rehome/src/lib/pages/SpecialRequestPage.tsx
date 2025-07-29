@@ -74,23 +74,36 @@ const SpecialRequestPage = () => {
   };
 
   const validateForm = () => {
+    console.log('🔍 Starting form validation...');
     let isValid = true;
     const newErrors: { [key: string]: string } = {};
     
     if (!selectedService) {
       newErrors.selectedService = 'Please select a service.';
       isValid = false;
+      console.log('❌ No service selected');
     }
 
     if (selectedService) {
+      console.log('🔍 Validating fields for service:', selectedService);
       serviceFields[selectedService].forEach((field) => {
         if (field === 'contactInfo') {
           // Skip this field as we now handle phone and email separately
           return;
         }
+        if (field === 'services' && selectedService === 'fullInternationalMove') {
+          // For fullInternationalMove, check if any services are selected
+          if (selectedServices.length === 0) {
+            newErrors.services = 'Please select at least one service.';
+            isValid = false;
+            console.log('❌ No services selected for fullInternationalMove');
+          }
+          return;
+        }
         if (!fields[field] && field !== 'photos') {
           newErrors[field] = 'This field is required.';
           isValid = false;
+          console.log('❌ Missing required field:', field);
         }
       });
 
@@ -99,20 +112,24 @@ const SpecialRequestPage = () => {
         if (fields.moveDate === 'specific' && !fields.specificDate) {
           newErrors.specificDate = 'Please select a specific date.';
           isValid = false;
+          console.log('❌ Specific date not selected for specific move date');
         }
         
         if (fields.moveDate === 'flexible') {
           if (!fields.flexibleStartDate) {
             newErrors.flexibleStartDate = 'Please select a start date.';
             isValid = false;
+            console.log('❌ Flexible start date not selected');
           }
           if (!fields.flexibleEndDate) {
             newErrors.flexibleEndDate = 'Please select an end date.';
             isValid = false;
+            console.log('❌ Flexible end date not selected');
           }
           if (fields.flexibleStartDate && fields.flexibleEndDate && fields.flexibleStartDate > fields.flexibleEndDate) {
             newErrors.flexibleEndDate = 'End date must be after start date.';
             isValid = false;
+            console.log('❌ Flexible end date is before start date');
           }
         }
       }
@@ -122,40 +139,57 @@ const SpecialRequestPage = () => {
     if (photos.length === 0) {
       newErrors.photos = 'Please upload at least one photo.';
       isValid = false;
+      console.log('❌ No photos uploaded');
     }
 
     // Contact info validation - require both phone and email
     if (!contactInfo.phone.trim()) {
       newErrors.phone = 'Phone number is required.';
       isValid = false;
+      console.log('❌ Phone number is empty');
     } else {
       const phoneRegex = /^\+?[1-9]\d{1,14}$/;
       if (!phoneRegex.test(contactInfo.phone)) {
         newErrors.phone = 'Please enter a valid phone number.';
         isValid = false;
+        console.log('❌ Invalid phone number format');
       }
     }
 
     if (!contactInfo.email.trim()) {
       newErrors.email = 'Email is required.';
       isValid = false;
+      console.log('❌ Email is empty');
     } else {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(contactInfo.email)) {
         newErrors.email = 'Please enter a valid email address.';
         isValid = false;
+        console.log('❌ Invalid email address format');
       }
     }
 
     setErrors(newErrors);
+    console.log('✅ Form validation finished. Is valid:', isValid);
     return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    console.log('🚀 Special Request Form Submission Started');
+    console.log('📋 Selected Service:', selectedService);
+    console.log('📋 Fields:', fields);
+    console.log('📋 Contact Info:', contactInfo);
+    console.log('📋 Selected Services:', selectedServices);
+    console.log('📋 Photos:', photos.length);
     
+    if (!validateForm()) {
+      console.log('❌ Form validation failed');
+      return;
+    }
+    
+    console.log('✅ Form validation passed, proceeding with submission');
     setIsLoading(true);
     
     try {
@@ -174,6 +208,7 @@ const SpecialRequestPage = () => {
       // Add selected services for full/international move
       if (selectedService === 'fullInternationalMove' && selectedServices.length > 0) {
         formData.append('selectedServices', JSON.stringify(selectedServices));
+        formData.append('services', JSON.stringify(selectedServices)); // Also add to services field for backend compatibility
       }
 
       // Add date-related fields for full/international move
@@ -203,10 +238,19 @@ const SpecialRequestPage = () => {
         formData.append('photos', photo);
       });
       
+      console.log('📤 Preparing to send request to:', API_ENDPOINTS.SPECIAL_REQUESTS.SUBMIT);
+      console.log('📤 FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value);
+      }
+      
       const response = await fetch(API_ENDPOINTS.SPECIAL_REQUESTS.SUBMIT, {
         method: 'POST',
         body: formData,
       });
+      
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response ok:', response.ok);
       
       if (response.ok) {
         const result = await response.json();
@@ -221,10 +265,13 @@ const SpecialRequestPage = () => {
         setErrors({});
         setSelectedServices([]);
       } else {
-        throw new Error('Failed to submit request');
+        const errorText = await response.text();
+        console.error('❌ Response not ok. Status:', response.status);
+        console.error('❌ Error response:', errorText);
+        throw new Error(`Failed to submit request: ${response.status} - ${errorText}`);
       }
     } catch (error) {
-      console.error('Error submitting special request:', error);
+      console.error('❌ Error submitting special request:', error);
       toast.error('Failed to submit request. Please try again.');
     } finally {
       setIsLoading(false);
