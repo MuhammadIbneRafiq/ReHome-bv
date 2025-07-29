@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaTimes, FaInfoCircle, FaCheckCircle } from 'react-icons/fa';
 import { Switch } from "@headlessui/react";
 import { useCart } from '../../contexts/CartContext';
-import pricingService, { PricingInput } from '../../services/pricingService';
 import { toast } from 'react-toastify';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import { API_ENDPOINTS } from '../../lib/api/config';
+import { getMarketplaceItemPoints, fetchPricingMultipliers } from '../../services/marketplaceItemDetailsService';
 
 // TypeScript declarations for Google Maps API
 declare global {
@@ -258,17 +258,34 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [floor, setFloor] = useState('');
   const [elevatorAvailable, setElevatorAvailable] = useState(false);
-  const [setDeliveryPlace] = useState<any>(null);
   
   // Item assistance selections
   const [itemAssistance, setItemAssistance] = useState<ItemAssistanceState>({});
   
   // Pricing breakdown
-  const [pricingBreakdown, setPricingBreakdown] = useState<any>(null);
+  const [pricingBreakdown] = useState<any>(null);
   const [baseTotal, setBaseTotal] = useState(0);
+  const [totalCost, setTotalCost] = useState(0);
+  const [carryingCost, setCarryingCost] = useState(0);
+  const [assemblyCost, setAssemblyCost] = useState(0);
+  const [isHighPointsCategory, setIsHighPointsCategory] = useState(false);
+  const [pricingMultipliers, setPricingMultipliers] = useState<any>(null);
 
   // Filter only ReHome items
   const rehomeItems = items.filter(item => item.isrehome);
+
+  // Fetch pricing multipliers on component mount
+  useEffect(() => {
+    const fetchMultipliers = async () => {
+      try {
+        const multipliers = await fetchPricingMultipliers();
+        setPricingMultipliers(multipliers);
+      } catch (error) {
+        console.error('Error fetching pricing multipliers:', error);
+      }
+    };
+    fetchMultipliers();
+  }, []);
 
   // Calculate base total (item prices only)
   useEffect(() => {
@@ -276,147 +293,38 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     setBaseTotal(total);
   }, [rehomeItems]);
 
+  // Calculate total cost when items or assistance changes
+  useEffect(() => {
+    const calculateTotal = async () => {
+      const cost = await getTotalCost();
+      setTotalCost(cost);
+      
+      // Calculate carrying and assembly costs separately for display
+      const calculatedCarryingCost = getCarryingCost(isHighPointsCategory);
+      const calculatedAssemblyCost = getAssemblyCost(isHighPointsCategory);
+      setCarryingCost(calculatedCarryingCost);
+      setAssemblyCost(calculatedAssemblyCost);
+    };
+    calculateTotal();
+  }, [rehomeItems, itemAssistance, floor, elevatorAvailable, isHighPointsCategory]);
+
   // Initialize item assistance state - preserve existing selections
   useEffect(() => {
-    console.log('🏗️ Initializing item assistance state for items:', rehomeItems.map(i => i.id));
     setItemAssistance(prev => {
-      console.log('🔄 Previous assistance state:', prev);
       const assistanceState: ItemAssistanceState = { ...prev }; // Keep existing selections
       rehomeItems.forEach(item => {
         // Only initialize if item doesn't exist in state
         if (!assistanceState[item.id]) {
-          console.log('➕ Adding new item to assistance state:', item.id);
           assistanceState[item.id] = {
             needsCarrying: false,
             needsAssembly: false,
           };
-        } else {
-          console.log('✅ Item already exists in state:', item.id, assistanceState[item.id]);
         }
       });
-      console.log('🎯 Final assistance state:', assistanceState);
       return assistanceState;
     });
-  }, [rehomeItems]);
-
-  const calculateAdditionalCosts = async () => {
-    if (!deliveryAddress) {
-      setPricingBreakdown(null);
-      return;
-    }
-
-    try {
-      // Create item quantities for pricing service based on ReHome items
-      const itemQuantities: { [key: string]: number } = {};
-      const assemblyItems: { [key: string]: boolean } = {};
-      const carryingServiceItems: { [key: string]: boolean } = {};
-      
-      rehomeItems.forEach(item => {
-        // Map ReHome items to furniture item IDs based on category and subcategory
-        let furnitureItemId = 'big-furniture'; // Default fallback
-        
-        if (item.category && item.subcategory) {
-          const categoryLower = item.category.toLowerCase();
-          const subcategoryLower = item.subcategory.toLowerCase();
-          
-          // Map common furniture types to pricing service IDs
-          if (categoryLower.includes('sofa') || subcategoryLower.includes('sofa')) {
-            furnitureItemId = subcategoryLower.includes('3') ? 'sofa-3p' : 'sofa-2p';
-          } else if (categoryLower.includes('bed') || subcategoryLower.includes('bed')) {
-            furnitureItemId = subcategoryLower.includes('2') ? 'bed-2p' : 'bed-1p';
-          } else if (categoryLower.includes('chair') || subcategoryLower.includes('chair')) {
-            furnitureItemId = subcategoryLower.includes('office') ? 'office-chair' : 'chair';
-          } else if (categoryLower.includes('table') || subcategoryLower.includes('table')) {
-            if (subcategoryLower.includes('dining')) furnitureItemId = 'dining-table';
-            else if (subcategoryLower.includes('coffee')) furnitureItemId = 'coffee-table';
-            else if (subcategoryLower.includes('side')) furnitureItemId = 'side-table';
-            else furnitureItemId = 'office-table';
-          } else if (categoryLower.includes('closet') || subcategoryLower.includes('closet')) {
-            furnitureItemId = subcategoryLower.includes('3') ? 'closet-3d' : 'closet-2d';
-          } else if (categoryLower.includes('storage') || subcategoryLower.includes('storage')) {
-            if (subcategoryLower.includes('bookcase')) furnitureItemId = 'bookcase';
-            else if (subcategoryLower.includes('dressoir') || subcategoryLower.includes('drawer')) furnitureItemId = 'dressoir';
-            else if (subcategoryLower.includes('tv')) furnitureItemId = 'tv-table';
-            else furnitureItemId = 'cloth-rack';
-          } else if (categoryLower.includes('appliance') || subcategoryLower.includes('appliance')) {
-            if (subcategoryLower.includes('washing')) furnitureItemId = 'washing-machine';
-            else if (subcategoryLower.includes('dryer')) furnitureItemId = 'dryer';
-            else if (subcategoryLower.includes('fridge') || subcategoryLower.includes('freezer')) {
-              furnitureItemId = subcategoryLower.includes('big') ? 'fridge-big' : 'fridge-small';
-            } else furnitureItemId = 'small-appliance';
-          } else if (categoryLower.includes('mattress')) {
-            furnitureItemId = subcategoryLower.includes('2') ? 'mattress-2p' : 'mattress-1p';
-          } else if (categoryLower.includes('lamp')) {
-            furnitureItemId = 'standing-lamp';
-          } else if (categoryLower.includes('mirror')) {
-            furnitureItemId = 'mirror';
-          } else if (categoryLower.includes('tv')) {
-            furnitureItemId = 'tv';
-          } else if (categoryLower.includes('computer')) {
-            furnitureItemId = 'computer';
-          } else if (categoryLower.includes('bike')) {
-            furnitureItemId = 'bike';
-          } else if (categoryLower.includes('box') || categoryLower.includes('bag')) {
-            furnitureItemId = 'box';
-          } else if (categoryLower.includes('luggage')) {
-            furnitureItemId = 'luggage';
-          } else if (categoryLower.includes('small')) {
-            furnitureItemId = 'small-furniture';
-          }
-        }
-        
-        itemQuantities[furnitureItemId] = (itemQuantities[furnitureItemId] || 0) + item.quantity;
-        assemblyItems[furnitureItemId] = assemblyItems[furnitureItemId] || (itemAssistance[item.id]?.needsAssembly || false);
-        carryingServiceItems[furnitureItemId] = carryingServiceItems[furnitureItemId] || (itemAssistance[item.id]?.needsCarrying || false);
-      });
-
-      const pricingInput: PricingInput = {
-        serviceType: 'item-transport',
-        pickupLocation: 'Amsterdam, Netherlands', // Default pickup location for ReHome items
-        dropoffLocation: deliveryAddress,
-        selectedDate: new Date().toISOString().split('T')[0],
-        isDateFlexible: false,
-        itemQuantities,
-        floorPickup: 0, // Ground floor pickup for ReHome
-        floorDropoff: parseInt(floor) || 0,
-        elevatorPickup: true, // Assuming elevator at pickup
-        elevatorDropoff: elevatorAvailable,
-        assemblyItems,
-        extraHelperItems: {}, // Not applicable for ReHome delivery
-        carryingServiceItems, // Add carrying service items
-        isStudent: false,
-        hasStudentId: false,
-        isEarlyBooking: false,
-      };
-
-      const breakdown = await pricingService.calculatePricing(pricingInput);
-      setPricingBreakdown(breakdown);
-    } catch (error) {
-      console.error('Error calculating additional costs:', error);
-      setPricingBreakdown(null);
-    }
-  };
-
-  // Debounced price calculation for address changes
-  useEffect(() => {
-    const debounceTimer = setTimeout(() => {
-      if (deliveryAddress && deliveryAddress.trim().length > 3 && step >= 2) {
-        calculateAdditionalCosts();
-      } else {
-        setPricingBreakdown(null);
-      }
-    }, 400);
-
-    return () => clearTimeout(debounceTimer);
-  }, [deliveryAddress, step]);
-
-  // Immediate price calculation for other changes
-  useEffect(() => {
-    if (deliveryAddress && step >= 2) {
-      calculateAdditionalCosts();
-    }
-  }, [itemAssistance, floor, elevatorAvailable]);
-
+  }, [rehomeItems.map(i => i.id).sort().join(',')]);
+  
   const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setContactInfo(prev => ({
       ...prev,
@@ -429,12 +337,9 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   };
 
   const toggleItemAssistance = (itemId: string, type: 'carrying' | 'assembly') => {
-    console.log('🔧 Toggling assistance for item:', itemId, 'type:', type);
     
     setItemAssistance(prev => {
-      console.log('📋 Previous state:', prev);
       const currentState = prev[itemId] || { needsCarrying: false, needsAssembly: false };
-      console.log('📍 Current item state:', currentState);
       
       const newState = {
         ...currentState,
@@ -442,14 +347,11 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
         needsAssembly: type === 'assembly' ? !currentState.needsAssembly : currentState.needsAssembly,
       };
       
-      console.log('✨ New item state:', newState);
-      
       const newFullState = {
         ...prev,
         [itemId]: newState
       };
       
-      console.log('🎯 Full new state:', newFullState);
       return newFullState;
     });
   };
@@ -462,10 +364,110 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     return deliveryAddress && floor !== '';
   };
 
-  const getTotalCost = () => {
-    const assistanceCosts = pricingBreakdown ? 
-      (pricingBreakdown.carryingCost || 0) + (pricingBreakdown.assemblyCost || 0) : 0;
-    return baseTotal + assistanceCosts;
+  const getTotalCost = async () => {
+   
+    // Calculate total points and determine pricing category
+    let totalPoints = 0;
+    const itemPointsMap = new Map<string, number>();
+    
+    // Get points from the constants API (marketplace item details)
+    for (const item of rehomeItems) {
+      try {
+        // Get points for this marketplace item from the database
+        console.log('item', item);
+        const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
+        console.log('itemPoints', itemPoints);
+        itemPointsMap.set(item.id, itemPoints);
+        totalPoints += itemPoints * item.quantity;
+        console.log('totalPoints', totalPoints);
+      } catch (error) {
+        console.error('Error getting points for item:', item, error);
+        // Fallback to default points if API fails
+        const fallbackPoints = 3;
+        itemPointsMap.set(item.id, fallbackPoints);
+        totalPoints += fallbackPoints * item.quantity;
+      }
+    }
+    
+    // Determine pricing category based on dynamic threshold from multipliers
+    const threshold = pricingMultipliers?.points?.threshold || 6; // Fallback to 6 if not loaded
+    const isHighPointsCategory = totalPoints >= threshold;
+    setIsHighPointsCategory(isHighPointsCategory);
+        
+    const calculatedCarryingCost = getCarryingCost(isHighPointsCategory);
+    const calculatedAssemblyCost = getAssemblyCost(isHighPointsCategory);
+    
+    return baseTotal + calculatedCarryingCost + calculatedAssemblyCost;
+  };
+
+  const getCarryingCost = (isHighPointsCategory: boolean = false) => {   
+    // Use dynamic pricing multipliers from backend
+    const carryingMultipliers = pricingMultipliers?.carrying;
+    if (!carryingMultipliers) {
+      // Fallback to hardcoded values if multipliers not loaded
+      const baseCarryingCost = isHighPointsCategory ? 5 : 3;
+      const totalFloors = elevatorAvailable ? 1 : Math.max(0, parseInt(floor) || 0);
+      
+      if (totalFloors > 0) {
+        const itemsNeedingCarrying = Object.values(itemAssistance).filter(state => state.needsCarrying).length;
+        if (itemsNeedingCarrying > 0) {
+          console.log('totalFloors', totalFloors);
+          console.log('itemsNeedingCarrying', itemsNeedingCarrying);
+          console.log('baseCarryingCost', baseCarryingCost);
+          return totalFloors * itemsNeedingCarrying * baseCarryingCost;
+        }
+      }
+      return 0;
+    }
+
+    // Use dynamic multipliers
+    const baseCarryingCost = isHighPointsCategory 
+      ? carryingMultipliers.highPoints.cost 
+      : carryingMultipliers.lowPoints.cost;
+    
+    const totalFloors = elevatorAvailable ? 1 : Math.max(0, parseInt(floor) || 0);
+    
+    if (totalFloors > 0) {
+      const itemsNeedingCarrying = Object.values(itemAssistance).filter(state => state.needsCarrying).length;
+      if (itemsNeedingCarrying > 0) {
+        console.log('totalFloors', totalFloors);
+        console.log('itemsNeedingCarrying', itemsNeedingCarrying);
+        console.log('baseCarryingCost', baseCarryingCost);
+        return totalFloors * itemsNeedingCarrying * baseCarryingCost;
+      }
+    }
+    return 0;
+  };
+
+  const getAssemblyCost = (isHighPointsCategory: boolean = false) => {
+    // Use dynamic pricing multipliers from backend
+    const assemblyMultipliers = pricingMultipliers?.assembly;
+    if (!assemblyMultipliers) {
+      // Fallback to hardcoded values if multipliers not loaded
+      const baseAssemblyCost = isHighPointsCategory ? 80 : 60;
+      const itemsNeedingAssembly = Object.values(itemAssistance).filter(state => state.needsAssembly).length;
+      
+      if (itemsNeedingAssembly > 0) {
+        console.log('itemsNeedingAssembly', itemsNeedingAssembly);
+        console.log('baseAssemblyCost', baseAssemblyCost);
+        return itemsNeedingAssembly * baseAssemblyCost;
+      }
+      return 0;
+    }
+
+    // Use dynamic multipliers
+    const baseAssemblyCost = isHighPointsCategory 
+      ? assemblyMultipliers.highPoints.cost 
+      : assemblyMultipliers.lowPoints.cost;
+    
+    const itemsNeedingAssembly = Object.values(itemAssistance).filter(state => state.needsAssembly).length;
+    
+    if (itemsNeedingAssembly > 0) {
+      console.log('itemsNeedingAssembly', itemsNeedingAssembly);
+      console.log('baseAssemblyCost', baseAssemblyCost);
+      return itemsNeedingAssembly * baseAssemblyCost;
+    }
+    return 0;
   };
 
   const handleSubmit = async () => {
@@ -486,9 +488,8 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
         floor: parseInt(floor) || 0,
         elevatorAvailable,
         baseTotal,
-        assistanceCosts: pricingBreakdown ? 
-          (pricingBreakdown.carryingCost || 0) + (pricingBreakdown.assemblyCost || 0) : 0,
-        totalAmount: getTotalCost(),
+        assistanceCosts: totalCost, // Use the new getTotalCost function
+        totalAmount: totalCost,
         pricingBreakdown,
         createdAt: new Date().toISOString(),
       };
@@ -618,8 +619,8 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                     onChange={setDeliveryAddress}
                     placeholder="💡 Type in the street name, city, and postal code."
                     onPlaceSelect={(place) => {
-                      setDeliveryPlace(place);
-                      console.log('🎯 Delivery place selected with coordinates:', place);
+                      setDeliveryAddress(place);
+                      // console.log('🎯 Delivery place selected with coordinates:', place);
                     }}
                   />
                 </div>
@@ -733,7 +734,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                                 </div>
                                 {pricingBreakdown?.assemblyCost > 0 && assistanceState.needsAssembly && (
                                   <span className="text-sm font-medium text-orange-600">
-                                    €{(pricingBreakdown.assemblyCost / Object.values(itemAssistance).filter(state => state.needsAssembly).length).toFixed(2)}
+                                    € BLAHBLAH{(pricingBreakdown.assemblyCost / Object.values(itemAssistance).filter(state => state.needsAssembly).length).toFixed(2)}
                                   </span>
                                 )}
                               </div>
@@ -771,33 +772,31 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                 {/* Pricing Summary */}
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                   <h4 className="font-medium text-gray-900 mb-3">Order Summary</h4>
+                  
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Items Total:</span>
                       <span>{formatPrice(baseTotal)}</span>
                     </div>
                     
-                    {pricingBreakdown?.carryingCost > 0 && (
+                    {carryingCost > 0 && (
                       <div className="flex justify-between">
                         <span>Carrying Assistance:</span>
-                        <span>{formatPrice(pricingBreakdown.carryingCost)}</span>
+                        <span>{formatPrice(carryingCost)}</span>
                       </div>
                     )}
                     
-                    {pricingBreakdown?.assemblyCost > 0 && (
+                    {assemblyCost > 0 && (
                       <div className="flex justify-between">
                         <span>Assembly Assistance:</span>
-                        <span>{formatPrice(pricingBreakdown.assemblyCost)}</span>
+                        <span>{formatPrice(assemblyCost)}</span>
                       </div>
                     )}
                     
                     <div className="border-t border-orange-300 pt-2 mt-2">
                       <div className="flex justify-between font-semibold text-base">
                         <span>Total:</span>
-                        <span>
-                          {formatPrice(getTotalCost())
-                          }
-                        </span>
+                        <span>{formatPrice(totalCost)}</span>
                       </div>
                     </div>
                   </div>

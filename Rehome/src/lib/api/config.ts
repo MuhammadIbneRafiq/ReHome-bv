@@ -87,12 +87,20 @@ export const API_ENDPOINTS = {
     CREATE: `${API_BASE_URL}/api/rehome-orders`,
   },
 
+  // Marketplace Item Details
+  MARKETPLACE: {
+    ITEM_DETAILS: `${API_BASE_URL}/api/marketplace-item-details`,
+    PRICING_MULTIPLIERS: `${API_BASE_URL}/api/marketplace-pricing-multipliers`,
+  },
+
   // Admin (if needed)
   ADMIN: {
     LOGIN: `${API_BASE_URL}/api/admin/login`,
     LOGOUT: `${API_BASE_URL}/api/admin/logout`,
     FURNITURE_ITEMS: `${API_BASE_URL}/api/furniture-items`,
     AUDIT_LOGS: `${API_BASE_URL}/api/audit-logs`,
+    MARKETPLACE_ITEM_DETAILS: `${API_BASE_URL}/api/admin/marketplace-item-details`,
+    MARKETPLACE_ITEM_DETAIL: (id: string) => `${API_BASE_URL}/api/admin/marketplace-item-details/${id}`,
   },
 } as const;
 

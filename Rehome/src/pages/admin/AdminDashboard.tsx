@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe, FaExternalLinkAlt } from 'react-icons/fa';
+import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe, FaExternalLinkAlt, FaTags } from 'react-icons/fa';
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameMonth } from 'date-fns';
 import { toast } from 'react-toastify';
 import { supabase } from "../../lib/supabaseClient";
@@ -9,6 +9,13 @@ import { cityBaseCharges } from "../../lib/constants";
 import pricingConfigData from "../../lib/pricingConfig.json";
 import { CityPrice, MarketplaceItem, CalendarDay, TimeBlock, TransportRequest, ItemDonation, SpecialRequest } from '../../types/admin';
 import { API_ENDPOINTS } from '../../lib/api/config';
+import { 
+  adminFetchMarketplaceItemDetails, 
+  adminCreateMarketplaceItemDetail, 
+  adminUpdateMarketplaceItemDetail, 
+  adminDeleteMarketplaceItemDetail,
+  MarketplaceItemDetail 
+} from '../../services/marketplaceItemDetailsService';
 
 const AdminDashboard = () => {
   const { user } = useUserSessionStore();
@@ -62,7 +69,7 @@ const AdminDashboard = () => {
     images: [] as string[]
   });
   const [showAddListingForm, setShowAddListingForm] = useState(false);
-  const [marketplaceTab, setMarketplaceTab] = useState<'inventory' | 'supervision' | 'sales'>('inventory');
+  const [marketplaceTab, setMarketplaceTab] = useState<'inventory' | 'supervision' | 'sales' | 'item-details'>('inventory');
 
   // Items management state
   const [furnitureItemsData, setFurnitureItemsData] = useState<any[]>([]);
@@ -74,6 +81,17 @@ const AdminDashboard = () => {
     points: 0
   });
   const [showAddFurnitureForm, setShowAddFurnitureForm] = useState(false);
+  
+  // Marketplace item details management state
+  const [marketplaceItemDetails, setMarketplaceItemDetails] = useState<MarketplaceItemDetail[]>([]);
+  const [editingMarketplaceItemDetail, setEditingMarketplaceItemDetail] = useState<string | null>(null);
+  const [editMarketplaceItemDetailData, setEditMarketplaceItemDetailData] = useState<any>({});
+  const [newMarketplaceItemDetail, setNewMarketplaceItemDetail] = useState({
+    category: '',
+    subcategory: '',
+    points: 1
+  });
+  const [showAddMarketplaceItemDetailForm, setShowAddMarketplaceItemDetailForm] = useState(false);
   
   // State for editing
   const [editingTransportRequest, setEditingTransportRequest] = useState<string | null>(null);
@@ -281,6 +299,7 @@ const AdminDashboard = () => {
         fetchPricingData(),
         fetchMarketplaceData(),
         fetchFurnitureItemsData(),
+        fetchMarketplaceItemDetails(),
         loadScheduleData(),
         fetchAdminListings(),
         fetchUserListings(),
@@ -486,6 +505,22 @@ const AdminDashboard = () => {
       setFurnitureItemsData(data || []);
     } catch (error) {
       console.error('Error fetching furniture items data:', error);
+    }
+  };
+
+  // Fetch marketplace item details
+  const fetchMarketplaceItemDetails = async () => {
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      const data = await adminFetchMarketplaceItemDetails(token);
+      setMarketplaceItemDetails(data);
+    } catch (error) {
+      console.error('Error fetching marketplace item details:', error);
+      setError('Failed to fetch marketplace item details');
     }
   };
   
@@ -994,6 +1029,108 @@ const AdminDashboard = () => {
     } catch (error) {
       toast.error('Failed to delete listing');
       console.error('Delete error:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Marketplace item details handlers
+  const handleEditMarketplaceItemDetail = (item: MarketplaceItemDetail) => {
+    setEditingMarketplaceItemDetail(item.id);
+    setEditMarketplaceItemDetailData({
+      category: item.category,
+      subcategory: item.subcategory || '',
+      points: item.points,
+      is_active: item.is_active
+    });
+  };
+
+  const handleSaveMarketplaceItemDetail = async (item: MarketplaceItemDetail) => {
+    setIsUpdating(true);
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const updatedItem = await adminUpdateMarketplaceItemDetail(
+        token,
+        item.id,
+        editMarketplaceItemDetailData
+      );
+
+      setMarketplaceItemDetails(prev => 
+        prev.map(i => i.id === item.id ? updatedItem : i)
+      );
+
+      setEditingMarketplaceItemDetail(null);
+      setEditMarketplaceItemDetailData({});
+      toast.success('Marketplace item detail updated successfully');
+    } catch (error) {
+      toast.error('Failed to update marketplace item detail');
+      console.error('Update error:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteMarketplaceItemDetail = async (item: MarketplaceItemDetail) => {
+    if (!window.confirm('Are you sure you want to delete this marketplace item detail? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      await adminDeleteMarketplaceItemDetail(token, item.id);
+
+      setMarketplaceItemDetails(prev => prev.filter(i => i.id !== item.id));
+      toast.success('Marketplace item detail deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete marketplace item detail');
+      console.error('Delete error:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleAddMarketplaceItemDetail = async () => {
+    if (!newMarketplaceItemDetail.category || newMarketplaceItemDetail.points <= 0) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const newItem = await adminCreateMarketplaceItemDetail(
+        token,
+        {
+          category: newMarketplaceItemDetail.category,
+          subcategory: newMarketplaceItemDetail.subcategory || undefined,
+          points: newMarketplaceItemDetail.points
+        }
+      );
+
+      setMarketplaceItemDetails(prev => [...prev, newItem]);
+      setShowAddMarketplaceItemDetailForm(false);
+      setNewMarketplaceItemDetail({
+        category: '',
+        subcategory: '',
+        points: 1
+      });
+      toast.success('Marketplace item detail added successfully');
+    } catch (error) {
+      toast.error('Failed to add marketplace item detail');
+      console.error('Add error:', error);
     } finally {
       setIsUpdating(false);
     }
@@ -1888,7 +2025,8 @@ const AdminDashboard = () => {
                   {[
                     { id: 'inventory', label: 'My Inventory', icon: FaBox },
                     { id: 'supervision', label: 'User Listings', icon: FaSearch },
-                    { id: 'sales', label: 'Sales History', icon: FaCog }
+                    { id: 'sales', label: 'Sales History', icon: FaCog },
+                    { id: 'item-details', label: 'Item Details', icon: FaTags }
                   ].map(tab => (
                     <button
                       key={tab.id}
@@ -2104,6 +2242,172 @@ const AdminDashboard = () => {
                         💡 <strong>Tip:</strong> All sales are automatically recorded in the 'sales_history' table in Supabase 
                         when items are marked as sold or purchase requests are accepted.
                       </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Item Details Tab */}
+                {marketplaceTab === 'item-details' && (
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800">Marketplace Item Details Management</h3>
+                      <button
+                        onClick={() => setShowAddMarketplaceItemDetailForm(!showAddMarketplaceItemDetailForm)}
+                        className="flex items-center px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                      >
+                        <FaPlus className="mr-1" />
+                        Add Item Detail
+                      </button>
+                    </div>
+
+                    {/* Add Item Detail Form */}
+                    {showAddMarketplaceItemDetailForm && (
+                      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                        <h4 className="font-medium mb-3">Add New Marketplace Item Detail</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <input
+                            type="text"
+                            placeholder="Category"
+                            value={newMarketplaceItemDetail.category}
+                            onChange={(e) => setNewMarketplaceItemDetail({...newMarketplaceItemDetail, category: e.target.value})}
+                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                          <input
+                            type="text"
+                            placeholder="Subcategory (optional)"
+                            value={newMarketplaceItemDetail.subcategory}
+                            onChange={(e) => setNewMarketplaceItemDetail({...newMarketplaceItemDetail, subcategory: e.target.value})}
+                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                          <input
+                            type="number"
+                            placeholder="Points"
+                            value={newMarketplaceItemDetail.points}
+                            onChange={(e) => setNewMarketplaceItemDetail({...newMarketplaceItemDetail, points: parseInt(e.target.value) || 1})}
+                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          />
+                        </div>
+                        <div className="mt-3 flex space-x-2">
+                          <button
+                            onClick={handleAddMarketplaceItemDetail}
+                            disabled={isUpdating}
+                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                          >
+                            {isUpdating ? 'Adding...' : 'Add Item Detail'}
+                          </button>
+                          <button
+                            onClick={() => setShowAddMarketplaceItemDetailForm(false)}
+                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Marketplace Item Details Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">CATEGORY</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">SUBCATEGORY</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">POINTS</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {marketplaceItemDetails.map((item) => (
+                            <tr key={item.id} className="hover:bg-gray-50">
+                              <td className="border border-gray-300 px-4 py-2">
+                                {editingMarketplaceItemDetail === item.id ? (
+                                  <input
+                                    type="text"
+                                    value={editMarketplaceItemDetailData.category || ''}
+                                    onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, category: e.target.value})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded"
+                                  />
+                                ) : (
+                                  item.category
+                                )}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2">
+                                {editingMarketplaceItemDetail === item.id ? (
+                                  <input
+                                    type="text"
+                                    value={editMarketplaceItemDetailData.subcategory || ''}
+                                    onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, subcategory: e.target.value})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded"
+                                  />
+                                ) : (
+                                  item.subcategory || '-'
+                                )}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2">
+                                {editingMarketplaceItemDetail === item.id ? (
+                                  <input
+                                    type="number"
+                                    value={editMarketplaceItemDetailData.points || 1}
+                                    onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, points: parseInt(e.target.value) || 1})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded"
+                                  />
+                                ) : (
+                                  item.points
+                                )}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  item.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {item.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2">
+                                {editingMarketplaceItemDetail === item.id ? (
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => handleSaveMarketplaceItemDetail(item)}
+                                      disabled={isUpdating}
+                                      className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs"
+                                    >
+                                      <FaSave className="mr-1" />
+                                      {isUpdating ? 'Saving...' : 'Save'}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingMarketplaceItemDetail(null);
+                                        setEditMarketplaceItemDetailData({});
+                                      }}
+                                      className="flex items-center px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
+                                    >
+                                      <FaTimes className="mr-1" />
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => handleEditMarketplaceItemDetail(item)}
+                                      className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                                    >
+                                      <FaEdit className="mr-1" />
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteMarketplaceItemDetail(item)}
+                                      className="flex items-center px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                                    >
+                                      <FaTrash className="mr-1" />
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 )}
@@ -2973,6 +3277,413 @@ const AdminDashboard = () => {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Marketplace Pricing Configuration */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-4">Marketplace Pricing Configuration</h3>
+                      
+                      {/* Marketplace Assembly Multipliers */}
+                      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                        <h4 className="font-medium text-gray-700 mb-3">Marketplace Assembly Multipliers</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-3 bg-gray-50 rounded">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Low Points Items (≤6 points)</label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-500">Threshold (points)</label>
+                                {editingJsonConfig === 'marketplacePricing.assemblyMultipliers.lowPoints' ? (
+                                  <input
+                                    type="number"
+                                    value={editJsonConfigData.threshold}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.assemblyMultipliers?.lowPoints?.threshold || 6}</span>
+                                )}
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500">Multiplier</label>
+                                {editingJsonConfig === 'marketplacePricing.assemblyMultipliers.lowPoints' ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={editJsonConfigData.multiplier}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.assemblyMultipliers?.lowPoints?.multiplier || 1.5}</span>
+                                )}
+                              </div>
+                            </div>
+                            {editingJsonConfig === 'marketplacePricing.assemblyMultipliers.lowPoints' ? (
+                              <div className="mt-2 flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('marketplacePricing.assemblyMultipliers', 'lowPoints')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditJsonConfig('marketplacePricing.assemblyMultipliers', 'lowPoints')}
+                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="p-3 bg-gray-50 rounded">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">High Points Items (≥7 points)</label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-500">Multiplier</label>
+                                {editingJsonConfig === 'marketplacePricing.assemblyMultipliers.highPoints' ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={editJsonConfigData.multiplier}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.assemblyMultipliers?.highPoints?.multiplier || 3.0}</span>
+                                )}
+                              </div>
+                            </div>
+                            {editingJsonConfig === 'marketplacePricing.assemblyMultipliers.highPoints' ? (
+                              <div className="mt-2 flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('marketplacePricing.assemblyMultipliers', 'highPoints')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditJsonConfig('marketplacePricing.assemblyMultipliers', 'highPoints')}
+                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Marketplace Carrying Multipliers */}
+                      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                        <h4 className="font-medium text-gray-700 mb-3">Marketplace Carrying Multipliers</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-3 bg-gray-50 rounded">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Low Points Items (≤6 points)</label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-500">Threshold (points)</label>
+                                {editingJsonConfig === 'marketplacePricing.carryingMultipliers.lowPoints' ? (
+                                  <input
+                                    type="number"
+                                    value={editJsonConfigData.threshold}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, threshold: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.carryingMultipliers?.lowPoints?.threshold || 6}</span>
+                                )}
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500">Multiplier</label>
+                                {editingJsonConfig === 'marketplacePricing.carryingMultipliers.lowPoints' ? (
+                                  <input
+                                    type="number"
+                                    step="0.001"
+                                    value={editJsonConfigData.multiplier}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.carryingMultipliers?.lowPoints?.multiplier || 0.012}</span>
+                                )}
+                              </div>
+                            </div>
+                            {editingJsonConfig === 'marketplacePricing.carryingMultipliers.lowPoints' ? (
+                              <div className="mt-2 flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('marketplacePricing.carryingMultipliers', 'lowPoints')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditJsonConfig('marketplacePricing.carryingMultipliers', 'lowPoints')}
+                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="p-3 bg-gray-50 rounded">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">High Points Items (≥7 points)</label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-500">Multiplier</label>
+                                {editingJsonConfig === 'marketplacePricing.carryingMultipliers.highPoints' ? (
+                                  <input
+                                    type="number"
+                                    step="0.001"
+                                    value={editJsonConfigData.multiplier}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.carryingMultipliers?.highPoints?.multiplier || 0.030}</span>
+                                )}
+                              </div>
+                            </div>
+                            {editingJsonConfig === 'marketplacePricing.carryingMultipliers.highPoints' ? (
+                              <div className="mt-2 flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('marketplacePricing.carryingMultipliers', 'highPoints')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditJsonConfig('marketplacePricing.carryingMultipliers', 'highPoints')}
+                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Marketplace Base Multipliers */}
+                      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                        <h4 className="font-medium text-gray-700 mb-3">Marketplace Base Multipliers</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-3 bg-gray-50 rounded">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Item Transport Multiplier</label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-500">Multiplier</label>
+                                {editingJsonConfig === 'marketplacePricing.baseMultipliers.itemTransportMultiplier' ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={editJsonConfigData.multiplier}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.baseMultipliers?.itemTransportMultiplier || 1.2}</span>
+                                )}
+                              </div>
+                            </div>
+                            {editingJsonConfig === 'marketplacePricing.baseMultipliers.itemTransportMultiplier' ? (
+                              <div className="mt-2 flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('marketplacePricing.baseMultipliers', 'itemTransportMultiplier')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditJsonConfig('marketplacePricing.baseMultipliers', 'itemTransportMultiplier')}
+                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="p-3 bg-gray-50 rounded">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Addon Multiplier</label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-500">Multiplier</label>
+                                {editingJsonConfig === 'marketplacePricing.baseMultipliers.addonMultiplier' ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={editJsonConfigData.multiplier}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.baseMultipliers?.addonMultiplier || 2.5}</span>
+                                )}
+                              </div>
+                            </div>
+                            {editingJsonConfig === 'marketplacePricing.baseMultipliers.addonMultiplier' ? (
+                              <div className="mt-2 flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('marketplacePricing.baseMultipliers', 'addonMultiplier')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditJsonConfig('marketplacePricing.baseMultipliers', 'addonMultiplier')}
+                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Marketplace Charges */}
+                      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                        <h4 className="font-medium text-gray-700 mb-3">Marketplace Charges</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-3 bg-gray-50 rounded">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Minimum Charge (€)</label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-500">Amount</label>
+                                {editingJsonConfig === 'marketplacePricing.minimumCharge' ? (
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    value={editJsonConfigData.amount}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, amount: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.minimumCharge || 45.0}</span>
+                                )}
+                              </div>
+                            </div>
+                            {editingJsonConfig === 'marketplacePricing.minimumCharge' ? (
+                              <div className="mt-2 flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('marketplacePricing', 'minimumCharge')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditJsonConfig('marketplacePricing', 'minimumCharge')}
+                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="p-3 bg-gray-50 rounded">
+                            <label className="block text-sm font-medium text-gray-600 mb-1">Early Booking Discount</label>
+                            <div className="space-y-2">
+                              <div>
+                                <label className="block text-xs text-gray-500">Discount Rate</label>
+                                {editingJsonConfig === 'marketplacePricing.earlyBookingDiscount' ? (
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={editJsonConfigData.discount}
+                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, discount: parseFloat(e.target.value)})}
+                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                                  />
+                                ) : (
+                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.earlyBookingDiscount || 0.05}</span>
+                                )}
+                              </div>
+                            </div>
+                            {editingJsonConfig === 'marketplacePricing.earlyBookingDiscount' ? (
+                              <div className="mt-2 flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('marketplacePricing', 'earlyBookingDiscount')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditJsonConfig('marketplacePricing', 'earlyBookingDiscount')}
+                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

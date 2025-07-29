@@ -667,7 +667,7 @@ const SpecialRequestPage = () => {
                             value={fields.itemDescription || ''}
                             onChange={(e) => handleFieldChange('itemDescription', e.target.value)}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            placeholder="What items need to be moved internationally? Are the items on the ground floor, upstairs or outside?"
+                            placeholder="Please provide a list of your items and any other relevant information."
                             rows={4}
                             required
                           />

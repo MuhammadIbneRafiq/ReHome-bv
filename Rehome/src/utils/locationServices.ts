@@ -80,8 +80,6 @@ export async function findClosestSupportedCity(
     // Check if the location name contains any of our supported city names
     for (const supportedCity of Object.keys(cityBaseCharges)) {
       if (locationText.toLowerCase().includes(supportedCity.toLowerCase())) {
-        console.log(`[DEBUG] - Extra charge: €0 (exact city match)`);
-        
         return { 
           city: supportedCity, 
           distanceDifference: 0  // No extra charge for supported cities
