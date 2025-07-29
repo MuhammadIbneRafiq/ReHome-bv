@@ -279,6 +279,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     const fetchMultipliers = async () => {
       try {
         const multipliers = await fetchPricingMultipliers();
+        console.log('multipliers', multipliers);
         setPricingMultipliers(multipliers);
       } catch (error) {
         console.error('Error fetching pricing multipliers:', error);
@@ -374,7 +375,6 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     for (const item of rehomeItems) {
       try {
         // Get points for this marketplace item from the database
-        console.log('item', item);
         const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
         console.log('itemPoints', itemPoints);
         itemPointsMap.set(item.id, itemPoints);
@@ -382,10 +382,6 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
         console.log('totalPoints', totalPoints);
       } catch (error) {
         console.error('Error getting points for item:', item, error);
-        // Fallback to default points if API fails
-        const fallbackPoints = 3;
-        itemPointsMap.set(item.id, fallbackPoints);
-        totalPoints += fallbackPoints * item.quantity;
       }
     }
     
@@ -427,14 +423,12 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     
     const totalFloors = elevatorAvailable ? 1 : Math.max(0, parseInt(floor) || 0);
     
-    if (totalFloors > 0) {
-      const itemsNeedingCarrying = Object.values(itemAssistance).filter(state => state.needsCarrying).length;
-      if (itemsNeedingCarrying > 0) {
-        console.log('totalFloors', totalFloors);
-        console.log('itemsNeedingCarrying', itemsNeedingCarrying);
-        console.log('baseCarryingCost', baseCarryingCost);
-        return totalFloors * itemsNeedingCarrying * baseCarryingCost;
-      }
+    const itemsNeedingCarrying = Object.values(itemAssistance).filter(state => state.needsCarrying).length;
+    if (itemsNeedingCarrying > 0) {
+      console.log('totalFloors', totalFloors);
+      console.log('itemsNeedingCarrying', itemsNeedingCarrying);
+      console.log('baseCarryingCost', baseCarryingCost);
+      return totalFloors * itemsNeedingCarrying * baseCarryingCost;
     }
     return 0;
   };
@@ -442,23 +436,10 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   const getAssemblyCost = (isHighPointsCategory: boolean = false) => {
     // Use dynamic pricing multipliers from backend
     const assemblyMultipliers = pricingMultipliers?.assembly;
-    if (!assemblyMultipliers) {
-      // Fallback to hardcoded values if multipliers not loaded
-      const baseAssemblyCost = isHighPointsCategory ? 80 : 60;
-      const itemsNeedingAssembly = Object.values(itemAssistance).filter(state => state.needsAssembly).length;
-      
-      if (itemsNeedingAssembly > 0) {
-        console.log('itemsNeedingAssembly', itemsNeedingAssembly);
-        console.log('baseAssemblyCost', baseAssemblyCost);
-        return itemsNeedingAssembly * baseAssemblyCost;
-      }
-      return 0;
-    }
-
+    console.log('assemblyMultipliers', assemblyMultipliers);
+    console.log('isHighPointsCategory', isHighPointsCategory);
     // Use dynamic multipliers
-    const baseAssemblyCost = isHighPointsCategory 
-      ? assemblyMultipliers.highPoints.cost 
-      : assemblyMultipliers.lowPoints.cost;
+    const baseAssemblyCost = isHighPointsCategory ? assemblyMultipliers.highPoints.cost : assemblyMultipliers.lowPoints.cost;
     
     const itemsNeedingAssembly = Object.values(itemAssistance).filter(state => state.needsAssembly).length;
     

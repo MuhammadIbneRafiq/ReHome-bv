@@ -476,8 +476,8 @@ const ItemDonationPage = () => {
                      rows={3}
                      className="mt-1 focus:ring-orange-500 focus:border-orange-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
                      placeholder={mode === 'donate' 
-                       ? "Describe your items in detail. What type of furniture or appliances are you donating? Are they on the ground floor, upstairs or outside?"
-                       : "Describe your items in detail. What type of furniture or appliances are you selling? Are they on the ground floor, upstairs or outside?"
+                       ? "Describe your items in detail. What type of furniture or appliances are you donating?"
+                       : "Describe your items in detail. What type of furniture or appliances are you selling?"
                      }
                      required
                    />
