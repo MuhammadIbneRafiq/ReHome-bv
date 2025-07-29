@@ -847,23 +847,23 @@ const AdminDashboard = () => {
   const handleSaveFurnitureItem = async (item: any) => {
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`${API_ENDPOINTS.ADMIN.FURNITURE_ITEMS}/${item.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(editFurnitureItemData)
-      });
+      // Update in database using Supabase
+      const { error } = await supabase
+        .from('furniture_items')
+        .update({
+          name: editFurnitureItemData.name,
+          category: editFurnitureItemData.category,
+          points: editFurnitureItemData.points
+        })
+        .eq('id', item.id);
 
-      if (!response.ok) {
-        throw new Error('Failed to update furniture item');
+      if (error) {
+        throw error;
       }
 
       toast.success('Furniture item updated successfully');
       setEditingFurnitureItem(null);
-      fetchFurnitureItemsData(); // Refresh data
+      await fetchFurnitureItemsData(); // Refresh data
     } catch (error) {
       toast.error('Failed to update furniture item');
       console.error('Update error:', error);
@@ -880,20 +880,18 @@ const AdminDashboard = () => {
 
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`${API_ENDPOINTS.ADMIN.FURNITURE_ITEMS}/${item.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
+      // Delete from database using Supabase
+      const { error } = await supabase
+        .from('furniture_items')
+        .delete()
+        .eq('id', item.id);
 
-      if (!response.ok) {
-        throw new Error('Failed to delete furniture item');
+      if (error) {
+        throw error;
       }
 
       toast.success('Furniture item deleted successfully');
-      fetchFurnitureItemsData(); // Refresh data
+      await fetchFurnitureItemsData(); // Refresh data
     } catch (error) {
       toast.error('Failed to delete furniture item');
       console.error('Delete error:', error);
@@ -906,14 +904,23 @@ const AdminDashboard = () => {
   const handleAddFurnitureItem = async () => {
     setIsUpdating(true);
     try {
-      // Add to local state directly
-      const newItem = {
-        id: Date.now().toString(),
-        ...newFurnitureItem,
+      // Insert into database
+      const { error } = await supabase
+        .from('furniture_items')
+        .insert([{
+          name: newFurnitureItem.name,
+          category: newFurnitureItem.category,
+          points: newFurnitureItem.points,
         created_at: new Date().toISOString()
-      };
+        }])
+        .select();
 
-      setFurnitureItemsData(prev => [...prev, newItem]);
+      if (error) {
+        throw error;
+      }
+
+      // Refresh the data from database
+      await fetchFurnitureItemsData();
 
       toast.success('Furniture item added successfully');
       setShowAddFurnitureForm(false);
@@ -2087,7 +2094,7 @@ const AdminDashboard = () => {
                             <option value="Bathroom">Bathroom</option>
                             <option value="Office">Office</option>
                             <option value="Garden">Garden</option>
-                            <option value="Other">Other</option>
+                            <option value="Others">Others</option>
                           </select>
                           <select
                             value={newAdminListing.status}
@@ -2283,7 +2290,7 @@ const AdminDashboard = () => {
                             type="number"
                             placeholder="Points"
                             value={newMarketplaceItemDetail.points}
-                            onChange={(e) => setNewMarketplaceItemDetail({...newMarketplaceItemDetail, points: parseInt(e.target.value) || 1})}
+                            onChange={(e) => setNewMarketplaceItemDetail({...newMarketplaceItemDetail, points: parseFloat(e.target.value) || 1})}
                             className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
                           />
                         </div>
@@ -2349,7 +2356,7 @@ const AdminDashboard = () => {
                                   <input
                                     type="number"
                                     value={editMarketplaceItemDetailData.points || 1}
-                                    onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, points: parseInt(e.target.value) || 1})}
+                                    onChange={(e) => setEditMarketplaceItemDetailData({...editMarketplaceItemDetailData, points: parseFloat(e.target.value) || 1})}
                                     className="w-full px-2 py-1 border border-gray-300 rounded"
                                   />
                                 ) : (
@@ -3496,194 +3503,6 @@ const AdminDashboard = () => {
                           </div>
                         </div>
                       </div>
-
-                      {/* Marketplace Base Multipliers */}
-                      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
-                        <h4 className="font-medium text-gray-700 mb-3">Marketplace Base Multipliers</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="p-3 bg-gray-50 rounded">
-                            <label className="block text-sm font-medium text-gray-600 mb-1">Item Transport Multiplier</label>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs text-gray-500">Multiplier</label>
-                                {editingJsonConfig === 'marketplacePricing.baseMultipliers.itemTransportMultiplier' ? (
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    value={editJsonConfigData.multiplier}
-                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                  />
-                                ) : (
-                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.baseMultipliers?.itemTransportMultiplier || 1.2}</span>
-                                )}
-                              </div>
-                            </div>
-                            {editingJsonConfig === 'marketplacePricing.baseMultipliers.itemTransportMultiplier' ? (
-                              <div className="mt-2 flex space-x-1">
-                                <button
-                                  onClick={() => handleSaveJsonConfig('marketplacePricing.baseMultipliers', 'itemTransportMultiplier')}
-                                  disabled={isUpdating}
-                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingJsonConfig(null)}
-                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleEditJsonConfig('marketplacePricing.baseMultipliers', 'itemTransportMultiplier')}
-                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                              >
-                                Edit
-                              </button>
-                            )}
-                          </div>
-                          
-                          <div className="p-3 bg-gray-50 rounded">
-                            <label className="block text-sm font-medium text-gray-600 mb-1">Addon Multiplier</label>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs text-gray-500">Multiplier</label>
-                                {editingJsonConfig === 'marketplacePricing.baseMultipliers.addonMultiplier' ? (
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    value={editJsonConfigData.multiplier}
-                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, multiplier: parseFloat(e.target.value)})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                  />
-                                ) : (
-                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.baseMultipliers?.addonMultiplier || 2.5}</span>
-                                )}
-                              </div>
-                            </div>
-                            {editingJsonConfig === 'marketplacePricing.baseMultipliers.addonMultiplier' ? (
-                              <div className="mt-2 flex space-x-1">
-                                <button
-                                  onClick={() => handleSaveJsonConfig('marketplacePricing.baseMultipliers', 'addonMultiplier')}
-                                  disabled={isUpdating}
-                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingJsonConfig(null)}
-                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleEditJsonConfig('marketplacePricing.baseMultipliers', 'addonMultiplier')}
-                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                              >
-                                Edit
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Marketplace Charges */}
-                      <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
-                        <h4 className="font-medium text-gray-700 mb-3">Marketplace Charges</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="p-3 bg-gray-50 rounded">
-                            <label className="block text-sm font-medium text-gray-600 mb-1">Minimum Charge (€)</label>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs text-gray-500">Amount</label>
-                                {editingJsonConfig === 'marketplacePricing.minimumCharge' ? (
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    value={editJsonConfigData.amount}
-                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, amount: parseFloat(e.target.value)})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                  />
-                                ) : (
-                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.minimumCharge || 45.0}</span>
-                                )}
-                              </div>
-                            </div>
-                            {editingJsonConfig === 'marketplacePricing.minimumCharge' ? (
-                              <div className="mt-2 flex space-x-1">
-                                <button
-                                  onClick={() => handleSaveJsonConfig('marketplacePricing', 'minimumCharge')}
-                                  disabled={isUpdating}
-                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingJsonConfig(null)}
-                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleEditJsonConfig('marketplacePricing', 'minimumCharge')}
-                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                              >
-                                Edit
-                              </button>
-                            )}
-                          </div>
-                          
-                          <div className="p-3 bg-gray-50 rounded">
-                            <label className="block text-sm font-medium text-gray-600 mb-1">Early Booking Discount</label>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs text-gray-500">Discount Rate</label>
-                                {editingJsonConfig === 'marketplacePricing.earlyBookingDiscount' ? (
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    value={editJsonConfigData.discount}
-                                    onChange={(e) => setEditJsonConfigData({...editJsonConfigData, discount: parseFloat(e.target.value)})}
-                                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                                  />
-                                ) : (
-                                  <span className="text-sm font-medium">{(jsonPricingConfig as any).marketplacePricing?.earlyBookingDiscount || 0.05}</span>
-                                )}
-                              </div>
-                            </div>
-                            {editingJsonConfig === 'marketplacePricing.earlyBookingDiscount' ? (
-                              <div className="mt-2 flex space-x-1">
-                                <button
-                                  onClick={() => handleSaveJsonConfig('marketplacePricing', 'earlyBookingDiscount')}
-                                  disabled={isUpdating}
-                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingJsonConfig(null)}
-                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleEditJsonConfig('marketplacePricing', 'earlyBookingDiscount')}
-                                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                              >
-                                Edit
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -3730,13 +3549,15 @@ const AdminDashboard = () => {
                             <option value="Bathroom">Bathroom</option>
                             <option value="Office">Office</option>
                             <option value="Garden">Garden</option>
-                            <option value="Other">Other</option>
+                            <option value="Others">Others</option>
+                            <option value="Storage">Storage</option>
+
                           </select>
                           <input
                             type="number"
                             placeholder="Points"
                             value={newFurnitureItem.points}
-                            onChange={(e) => setNewFurnitureItem({...newFurnitureItem, points: parseInt(e.target.value)})}
+                            onChange={(e) => setNewFurnitureItem({...newFurnitureItem, points: parseFloat(e.target.value) || 0})}
                             className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
                           />
                         </div>
@@ -3797,7 +3618,7 @@ const AdminDashboard = () => {
                                     <option value="Bathroom">Bathroom</option>
                                     <option value="Office">Office</option>
                                     <option value="Garden">Garden</option>
-                                    <option value="Other">Other</option>
+                                    <option value="Others">Others</option>
                                   </select>
                                 ) : (
                                   item.category
@@ -3808,7 +3629,7 @@ const AdminDashboard = () => {
                                   <input
                                     type="number"
                                     value={editFurnitureItemData.points}
-                                    onChange={(e) => setEditFurnitureItemData({...editFurnitureItemData, points: parseInt(e.target.value)})}
+                                    onChange={(e) => setEditFurnitureItemData({...editFurnitureItemData, points: parseFloat(e.target.value) || 0})}
                                     className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
                                   />
                                 ) : (
