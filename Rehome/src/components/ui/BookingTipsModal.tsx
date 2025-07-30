@@ -143,21 +143,10 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                             </div>
                         </div>
                     </div>
-
-                    {/* Additional Tips */}
-                    <div className="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                        <h4 className="font-semibold text-gray-800 mb-2 text-sm sm:text-base">Pro Tips:</h4>
-                        <ul className="text-xs sm:text-sm text-gray-600 space-y-1">
-                            <li>• Book during off-peak times for better rates</li>
-                            <li>• Combine multiple services for package discounts</li>
-                            <li>• Provide accurate item counts to avoid price adjustments</li>
-                            <li>• Select 2 weeks in advance for a 10% discount on the total price.</li>
-                        </ul>
-                    </div>
                 </div>
 
                 {/* Footer */}
-                <div className="bg-gray-50 p-4 sm:p-6 rounded-b-xl border-t">
+                <div className="bg-gray-50 p-4 sm:p-6 rounded-b-xl">
                     <div className="flex justify-end">
                         <button
                             onClick={onContinue}

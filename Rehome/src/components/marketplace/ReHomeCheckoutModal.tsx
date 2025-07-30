@@ -768,7 +768,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                                 </div>
                                 {pricingBreakdown?.assemblyCost > 0 && assistanceState.needsAssembly && (
                                   <span className="text-sm font-medium text-orange-600">
-                                    € BLAHBLAH{(pricingBreakdown.assemblyCost / Object.values(itemAssistance).filter(state => state.needsAssembly).length).toFixed(2)}
+                                    €{(pricingBreakdown.assemblyCost / Object.values(itemAssistance).filter(state => state.needsAssembly).length).toFixed(2)}
                                   </span>
                                 )}
                               </div>
