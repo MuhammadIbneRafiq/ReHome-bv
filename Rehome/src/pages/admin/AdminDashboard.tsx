@@ -183,6 +183,7 @@ const AdminDashboard = () => {
   // Load schedule data from Supabase
   const loadScheduleData = async () => {
     try {
+      console.log('Loading schedule data from city_schedules table...');
       const { data, error } = await supabase
         .from('city_schedules')
         .select('*');
@@ -191,6 +192,8 @@ const AdminDashboard = () => {
         console.error('Error loading schedule data:', error);
         return;
       }
+
+      console.log('Raw schedule data from database:', data);
 
       // Convert to format: { '2024-01-15': [{ city, id }] }
       const scheduleMap: { [key: string]: { city: string, id: string }[] } = {};
@@ -202,6 +205,7 @@ const AdminDashboard = () => {
         scheduleMap[dateKey].push({ city: item.city, id: item.id });
       });
 
+      console.log('Processed schedule map:', scheduleMap);
       setScheduleData(scheduleMap);
     } catch (error) {
       console.error('Error loading schedule data:', error);
@@ -575,8 +579,7 @@ const AdminDashboard = () => {
   
   // Fetch schedule (placeholder function)
   const fetchSchedule = async () => {
-    // This function is kept for compatibility but doesn't do anything
-    // Schedule data is now handled by loadScheduleData()
+    await loadScheduleData();
   };
 
   // Filter transport requests based on search and filters
