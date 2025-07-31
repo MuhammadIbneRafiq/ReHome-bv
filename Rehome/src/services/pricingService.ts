@@ -399,25 +399,56 @@ class PricingService {
     const dropoffResult = await findClosestSupportedCity(input.dropoffPlace);
     const dropoffCity = dropoffResult.city || city;
 
-
-
     let baseCharge: number;
     let isCheapRate: boolean;
     
-    if (isEmpty) {
-      // Empty calendar for this city → cheap base charge(NOT ANYMORE) but the avg
-      baseCharge = (cityBaseCharges[city]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-      isCheapRate = true;
-    } else {
-      // Not empty → check if city is included on that date
-      const isIncluded = await this.isCityDay(city, selectedDate);
-      
-      if (isIncluded) {
+    // Check if pickup city is included OR date is empty (for "cheap base charge" logic)
+    const isIncludedPickup = await this.isCityDay(city, selectedDate);
+    const isCheapPickup = isIncludedPickup || isEmpty;
+    
+    // Check if dropoff city is included OR date is empty
+    const isIncludedDropoff = await this.isCityDay(dropoffCity, selectedDate);
+    const isEmptyDropoff = await this.isCompletelyEmptyCalendarDay(selectedDate);
+    const isCheapDropoff = isIncludedDropoff || isEmptyDropoff;
+    
+    const isSameCity = dropoffCity === city;
+    
+    // House Moving Fixed Date Pricing Logic based on exact specifications
+    if (isSameCity) {
+      // WITHIN CITY scenario
+      if (isCheapPickup) {
+        // City included in calendar on that date or empty date = cheap base charge
         baseCharge = cityBaseCharges[city]?.cityDay || 0;
         isCheapRate = true;
+        console.log(`[DEBUG] ${city} - House Moving Within City, cheap rate (included/empty): €${baseCharge}`);
       } else {
+        // City is not included in calendar on that date = standard base charge
         baseCharge = cityBaseCharges[city]?.normal || 0;
         isCheapRate = false;
+        console.log(`[DEBUG] ${city} - House Moving Within City, standard rate (not included): €${baseCharge}`);
+      }
+    } else {
+      // BETWEEN CITY scenario
+      if (isCheapPickup && isCheapDropoff) {
+        // If both cities are included = (cheap base charge pickup + cheap base charge dropoff) / 2
+        baseCharge = (cityBaseCharges[city]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+        isCheapRate = true;
+        console.log(`[DEBUG] House Moving Between Cities, both included: (€${cityBaseCharges[city]?.cityDay} + €${cityBaseCharges[dropoffCity]?.cityDay}) / 2 = €${baseCharge}`);
+      } else if (isCheapPickup && !isCheapDropoff) {
+        // If Pickup City is included but dropoff is not included on that date or date is empty in calendar = (cheap base charge pickup + standard base charge dropoff) / 2
+        baseCharge = (cityBaseCharges[city]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+        isCheapRate = false;
+        console.log(`[DEBUG] House Moving Between Cities, pickup included: (€${cityBaseCharges[city]?.cityDay} + €${cityBaseCharges[dropoffCity]?.normal}) / 2 = €${baseCharge}`);
+      } else if (!isCheapPickup && isCheapDropoff) {
+        // If Pickup City is not included on that date but dropoff is = (cheap base charge dropoff + standard base charge pickup) / 2
+        baseCharge = (cityBaseCharges[city]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+        isCheapRate = false;
+        console.log(`[DEBUG] House Moving Between Cities, dropoff included: (€${cityBaseCharges[city]?.normal} + €${cityBaseCharges[dropoffCity]?.cityDay}) / 2 = €${baseCharge}`);
+      } else {
+        // If none of the 2 cities is included = use the higher standard base charge of the 2 cities
+        baseCharge = Math.max(cityBaseCharges[city]?.normal, cityBaseCharges[dropoffCity]?.normal);
+        isCheapRate = false;
+        console.log(`[DEBUG] House Moving Between Cities, neither included: max(€${cityBaseCharges[city]?.normal}, €${cityBaseCharges[dropoffCity]?.normal}) = €${baseCharge}`);
       }
     }
     
