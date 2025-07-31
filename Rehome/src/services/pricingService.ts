@@ -228,19 +228,34 @@ class PricingService {
             }
           } else {
             // Not empty → check if city is included on that date
-            const isIncluded = await this.isCityDay(pickupCity, selectedDate);
+            const isIncludedPickup = await this.isCityDay(pickupCity, selectedDate);
+            const isIncludedDropoff = await this.isCityDay(dropoffCity, selectedDate);
+
             console.log(`[DEBUG] ${pickupCity} - Not empty, isCityDay: ${isIncluded}`);
 
-            if (isIncluded) {
-              if (dropoffCity === pickupCity) { 
+            if (isIncludedPickup & isIncludedDropoff) {
+              baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+              isCheapRate = true;
+              console.log(`[DEBUG] ${pickupCity} - City day, using cityDay rate: €${baseCharge}`);
+            
+            } else if (isIncludedPickup && !isIncludedDropoff) {
+              if (pickupCity === dropoffCity) {
                 baseCharge = cityBaseCharges[pickupCity]?.cityDay;
                 isCheapRate = true;
-                console.log(`[DEBUG] ${pickupCity} - City day, using cityDay rate: €${baseCharge}`);
               }
               else {
                 baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
                 isCheapRate = true;
                 console.log(`[DEBUG] ${pickupCity} - City day, using cityDay rate: €${baseCharge}`);
+              }
+            } else if (!isIncludedPickup && isIncludedDropoff) {
+              if (pickupCity === dropoffCity) {
+                baseCharge = cityBaseCharges[pickupCity]?.cityDay;
+                isCheapRate = true;
+              }
+              else {
+                baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+                isCheapRate = true;
               }
             } else {
               if (dropoffCity === pickupCity) { 
