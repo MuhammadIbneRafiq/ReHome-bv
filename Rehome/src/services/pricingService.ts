@@ -213,7 +213,7 @@ class PricingService {
           const isEmpty = await this.isCompletelyEmptyCalendarDay(selectedDate);
           let baseCharge: number;
           let isCheapRate: boolean;
-          
+          console.log(`[ITSEMPTUUU] ${isEmpty}`);
           if (isEmpty) {
             if (dropoffCity === pickupCity) { 
               baseCharge = cityBaseCharges[pickupCity]?.cityDay;
@@ -883,5 +883,6 @@ class PricingService {
   }
 }
 
+export { PricingService };
 export const pricingService = new PricingService();
 export default pricingService; 

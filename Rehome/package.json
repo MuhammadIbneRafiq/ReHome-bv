@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "deploy-build": "tsc --skipLibCheck && vite build",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",
@@ -107,6 +109,7 @@
     "prettier-plugin-tailwindcss": "^0.5.9",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.2.2",
-    "vite": "^5.2.11"
+    "vite": "^5.2.11",
+    "vitest": "^3.2.4"
   }
 }
