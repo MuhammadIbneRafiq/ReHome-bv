@@ -231,9 +231,8 @@ class PricingService {
             const isIncludedPickup = await this.isCityDay(pickupCity, selectedDate);
             const isIncludedDropoff = await this.isCityDay(dropoffCity, selectedDate);
 
-            console.log(`[DEBUG] ${pickupCity} - Not empty, isCityDay: ${isIncluded}`);
 
-            if (isIncludedPickup & isIncludedDropoff) {
+            if (isIncludedPickup && isIncludedDropoff) {
               baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
               isCheapRate = true;
               console.log(`[DEBUG] ${pickupCity} - City day, using cityDay rate: €${baseCharge}`);
