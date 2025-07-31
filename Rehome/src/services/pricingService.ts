@@ -222,7 +222,7 @@ class PricingService {
           // Check if calendar is empty for this date (treats as "included")
           const isEmpty = await this.isCompletelyEmptyCalendarDay(selectedDate);
           const isCheapPickup = isIncludedPickup || isEmpty;
-          const isCheapDropoff = isIncludedDropoff || isEmpty;
+          const isCheapDropoff = isIncludedDropoff;
           
           const isSameCity = dropoffCity === pickupCity;
           
