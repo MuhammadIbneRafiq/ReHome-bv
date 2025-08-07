@@ -292,6 +292,9 @@ const ItemMovingPage = () => {
     // Point limit constant
     const ITEM_TRANSPORT_POINT_LIMIT = 20;
 
+    // Guard against stale async pricing responses
+    const latestRequestIdRef = React.useRef(0);
+
     // Function to calculate total points
     const calculateTotalPoints = () => {
         return Object.entries(itemQuantities)
@@ -491,8 +494,11 @@ const ItemMovingPage = () => {
     };
 
     const calculatePrice = async () => {
+        const requestId = ++latestRequestIdRef.current;
         if (!firstLocation || !secondLocation) {
-            setPricingBreakdown(null);
+            if (requestId === latestRequestIdRef.current) {
+                setPricingBreakdown(null);
+            }
             return;
         }
 
@@ -501,7 +507,9 @@ const ItemMovingPage = () => {
             let calculatedDistance = 0;
             if (pickupPlace?.coordinates && dropoffPlace?.coordinates) {
                 calculatedDistance = await calculateDistance(pickupPlace, dropoffPlace);
-                setDistanceKm(calculatedDistance);
+                if (requestId === latestRequestIdRef.current) {
+                    setDistanceKm(calculatedDistance);
+                }
             }
 
             // For "Let ReHome choose" option, provide a 3-week window starting tomorrow
@@ -539,15 +547,21 @@ const ItemMovingPage = () => {
                 dropoffPlace: dropoffPlace,
             };
             const breakdown = await pricingService.calculatePricing(pricingInput);
-            setPricingBreakdown(breakdown);
+            if (requestId === latestRequestIdRef.current) {
+                setPricingBreakdown(breakdown);
+            }
             
             // Update distance state from pricing service result if we didn't calculate distance
             if (!calculatedDistance && breakdown?.breakdown?.distance?.distanceKm) {
-                setDistanceKm(breakdown.breakdown.distance.distanceKm);
+                if (requestId === latestRequestIdRef.current) {
+                    setDistanceKm(breakdown.breakdown.distance.distanceKm);
+                }
             }
         } catch (error) {
             console.error('Error calculating pricing:', error);
-            setPricingBreakdown(null);
+            if (requestId === latestRequestIdRef.current) {
+                setPricingBreakdown(null);
+            }
         }
     };
 

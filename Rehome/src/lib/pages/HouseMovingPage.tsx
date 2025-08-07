@@ -392,9 +392,15 @@ const HouseMovingPage = () => {
         setItemPhotos(prev => prev.filter((_, i) => i !== index));
     };
 
+    // Guard against stale async pricing responses
+    const latestRequestIdRef = React.useRef(0);
+
     const calculatePrice = async () => {
+        const requestId = ++latestRequestIdRef.current;
         if (!firstLocation || !secondLocation) {
-            setPricingBreakdown(null);
+            if (requestId === latestRequestIdRef.current) {
+                setPricingBreakdown(null);
+            }
             return;
         }
 
@@ -403,7 +409,9 @@ const HouseMovingPage = () => {
             let calculatedDistance = 0;
             if (pickupPlace?.coordinates && dropoffPlace?.coordinates) {
                 calculatedDistance = await calculateDistance(pickupPlace, dropoffPlace);
-                setDistanceKm(calculatedDistance);
+                if (requestId === latestRequestIdRef.current) {
+                    setDistanceKm(calculatedDistance);
+                }
             }
 
             // For "Let ReHome choose" option, provide a 3-week window starting tomorrow
@@ -439,14 +447,20 @@ const HouseMovingPage = () => {
 
             // Use async pricing calculation
             const result = await pricingService.calculatePricing(input);
-            setPricingBreakdown(result);
+            if (requestId === latestRequestIdRef.current) {
+                setPricingBreakdown(result);
+            }
             
             // Update distance state from pricing service result if we didn't calculate distance
             if (!calculatedDistance && result?.breakdown?.distance?.distanceKm) {
-                setDistanceKm(result.breakdown.distance.distanceKm);
+                if (requestId === latestRequestIdRef.current) {
+                    setDistanceKm(result.breakdown.distance.distanceKm);
+                }
             }
         } catch (error) {
-            setPricingBreakdown(null);
+            if (requestId === latestRequestIdRef.current) {
+                setPricingBreakdown(null);
+            }
         }
     };
 
