@@ -7,7 +7,6 @@ import API_ENDPOINTS from '../../lib/api/config';
 
 // Make fetch available in node test env and allow mocking per test
 const originalFetch = globalThis.fetch;
-
 describe('PricingService concurrency and async behavior', () => {
   let service: PricingService;
 
