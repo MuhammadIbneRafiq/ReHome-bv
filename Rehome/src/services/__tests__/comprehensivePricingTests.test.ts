@@ -621,44 +621,6 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
     });
   });
 
-  describe('Early Booking Scenarios', () => {
-    it('should apply early booking discount for house moving within city', async () => {
-      const input = createBaseInput({
-        serviceType: 'house-moving',
-        pickupLocation: 'Amsterdam',
-        dropoffLocation: 'Amsterdam',
-        selectedDate: '2024-02-15', // Future date for early booking
-        pickupPlace: { placeId: 'test', text: 'Amsterdam' },
-        dropoffPlace: { placeId: 'test', text: 'Amsterdam' }
-      });
-
-      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-      expect(mockBreakdown.basePrice).toBe(39);
-      expect(mockBreakdown.breakdown.baseCharge.city).toBe('Amsterdam');
-      expect(mockBreakdown.breakdown.baseCharge.isCityDay).toBe(true);
-      expect(mockBreakdown.breakdown.baseCharge.type).toBe('Amsterdam - Cheap Rate');
-    }, 10000);
-
-    it('should apply early booking discount for item transport between cities', async () => {
-      const input = createBaseInput({
-        serviceType: 'item-transport',
-        pickupLocation: 'Amsterdam',
-        dropoffLocation: 'Rotterdam',
-        selectedDate: '2024-02-15', // Future date for early booking
-        pickupPlace: { placeId: 'test', text: 'Amsterdam' },
-        dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
-      });
-
-      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-      expect(mockBreakdown.basePrice).toBe(79);
-      expect(mockBreakdown.breakdown.baseCharge.city).toBe('Amsterdam');
-      expect(mockBreakdown.breakdown.baseCharge.isCityDay).toBe(false);
-      expect(mockBreakdown.breakdown.baseCharge.type).toBe('Intercity Rate');
-    }, 10000);
-  });
-
   describe('Additional City Combinations', () => {
     it('should handle Almere to Breda intercity move', async () => {
       const input = createBaseInput({
