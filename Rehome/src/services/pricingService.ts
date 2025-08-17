@@ -48,40 +48,6 @@ async function getCachedScheduleStatus(city: string, dateStr: string, baseUrl: s
   inflight.set(key, promise);
   return promise;
 }
-
-async function getCachedEmptyStatus(dateStr: string, baseUrl: string): Promise<{ isEmpty: boolean }> {
-  const key = `empty:${dateStr}`;
-  const now = Date.now();
-  const cached = scheduleCache.get(key as any);
-  if (cached && cached.expiresAt > now) return { isEmpty: cached.value.isEmpty };
-  if (inflight.has(key)) {
-    const p = inflight.get(key)!;
-    const v = await p;
-    return { isEmpty: v.isEmpty };
-  }
-  const url = `${baseUrl}/api/check-all-cities-empty?date=${dateStr}`;
-  const promise = (async () => {
-    try {
-      const response = await fetchWithTimeout(url, 600);
-      if (!response.ok) throw new Error(`status ${response.status}`);
-      const result = await response.json();
-      if (!result.success) throw new Error(result.error || 'backend error');
-      const value: ScheduleStatus = { isScheduled: false, isEmpty: result.data.isEmpty };
-      scheduleCache.set(key as any, { value, expiresAt: now + cacheTtlMs });
-      return value;
-    } catch (e) {
-      const fallback: ScheduleStatus = { isScheduled: false, isEmpty: false };
-      scheduleCache.set(key as any, { value: fallback, expiresAt: now + 5_000 });
-      return fallback;
-    } finally {
-      inflight.delete(key);
-    }
-  })();
-  inflight.set(key, promise);
-  const v = await promise;
-  return { isEmpty: v.isEmpty };
-}
-
 export interface PricingBreakdown {
   basePrice: number;
   itemValue: number;
@@ -273,7 +239,6 @@ class PricingService {
       
       // FIXED DATE: isDateFlexible = false AND no selectedDateRange.end
       if (!input.isDateFlexible && !input.selectedDateRange?.end) {
-        console.log('🗓️ FIXED DATE MODE!', input.selectedDate || `pickup: ${input.pickupDate}, dropoff: ${input.dropoffDate}`);
          
         if (input.serviceType === 'item-transport') {
           // Item transport with different pickup/dropoff dates
@@ -288,7 +253,6 @@ class PricingService {
           const dropoffCity = dropoffResult.city || pickupCity;
           
           let baseCharge: number;
-          let isCheapRate: boolean;
           
           // Check if cities are included in calendar on that date
           const isIncludedPickup = await this.isCityDay(pickupCity, selectedDate);
@@ -307,12 +271,10 @@ class PricingService {
               // City included in calendar on that date or empty date = cheap base charge
               baseCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
               isCheapRate = true;
-              console.log(`[DEBUG] ${pickupCity} - House Moving Within City, cheap rate (included/empty): €${baseCharge}`);
             } else {
               // City is not included in calendar on that date = standard base charge
               baseCharge = cityBaseCharges[pickupCity]?.normal || 0;
               isCheapRate = false;
-              console.log(`[DEBUG] ${pickupCity} - House Moving Within City, standard rate (not included): €${baseCharge}`);
             }
           } else {
             // BETWEEN CITY scenario
@@ -320,34 +282,26 @@ class PricingService {
               // If both cities are included = (cheap base charge pickup + cheap base charge dropoff) / 2
               baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
               isCheapRate = true;
-              console.log(`[DEBUG] House Moving Between Cities, both included: (€${cityBaseCharges[pickupCity]?.cityDay} + €${cityBaseCharges[dropoffCity]?.cityDay}) / 2 = €${baseCharge}`);
             } else if (isCheapPickup && !isCheapDropoff) {
               // If Pickup City is included but dropoff is not included on that date or date is empty in calendar = (cheap base charge pickup + standard base charge dropoff) / 2
               baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
               isCheapRate = false;
-              console.log(`[DEBUG] House Moving Between Cities, pickup included: (€${cityBaseCharges[pickupCity]?.cityDay} + €${cityBaseCharges[dropoffCity]?.normal}) / 2 = €${baseCharge}`);
             } else if (!isCheapPickup && isCheapDropoff) {
               // If Pickup City is not included on that date but dropoff is = (cheap base charge dropoff + standard base charge pickup) / 2
               baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
               isCheapRate = false;
-              console.log(`[DEBUG] House Moving Between Cities, dropoff included: (€${cityBaseCharges[pickupCity]?.normal} + €${cityBaseCharges[dropoffCity]?.cityDay}) / 2 = €${baseCharge}`);
             } else {
               // If none of the 2 cities is included = use the higher standard base charge of the 2 cities
               baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
               isCheapRate = false;
-              console.log(`[DEBUG] House Moving Between Cities, neither included: max(€${cityBaseCharges[pickupCity]?.normal}, €${cityBaseCharges[dropoffCity]?.normal}) = €${baseCharge}`);
             }
           }
           
           // Add extra km charge ONLY if distance difference > 8km
           if (pickupDistanceDifference > 8) {
             const extraCharge = Math.round((pickupDistanceDifference - 8) * 3);
-            console.log(`[DEBUG] ${pickupCity} - Adding extra km charge: €${extraCharge} for ${Math.round(pickupDistanceDifference - 8)}km beyond 8km`);
             baseCharge += extraCharge;
-          }
-          
-          console.log(`[DEBUG] ${pickupCity} - Final charge: €${baseCharge} (isCheapRate: ${isCheapRate})`);
-          
+          }          
           finalCharge = baseCharge;
           breakdown.breakdown.baseCharge.city = pickupCity;
           chargeType = isSameCity ? 'Within City Rate' : 'Between City Rate';
@@ -355,7 +309,6 @@ class PricingService {
       } 
       // FLEXIBLE DATE RANGE: isDateFlexible = false AND selectedDateRange.start AND selectedDateRange.end
       else if (!input.isDateFlexible && input.selectedDateRange?.start && input.selectedDateRange?.end) {
-        console.log('📅 FLEXIBLE DATE RANGE MODE!', input.selectedDateRange);
         const startDate = new Date(input.selectedDateRange.start);
         const endDate = new Date(input.selectedDateRange.end);
         const rangeDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -369,7 +322,6 @@ class PricingService {
           // Range 1 week or below → check if city has actual city days during range
           const hasCityDaysInRange = await this.checkCityDaysInRange(pickupCity, startDate, endDate);
           const isEmpty = await this.isCompletelyEmptyCalendarDay(startDate);
-          console.log('🔍 [DEBUG] hasCityDaysInRange for', pickupCity, ':', hasCityDaysInRange);
           if (hasCityDaysInRange) {
             if (dropoffCity === pickupCity) { 
               finalCharge = cityBaseCharges[pickupCity]?.cityDay;
@@ -408,7 +360,6 @@ class PricingService {
                 
       } else if (input.isDateFlexible && !input.selectedDateRange?.start) {
         // ReHome suggest date → always cheapest base price for pickup city
-        console.log('🏠 REHOME CHOOSE MODE! (Cheapest rates)');
         finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
         isCheapRate = true;
         chargeType += 'ReHome- Cheap Rate';
@@ -455,92 +406,84 @@ class PricingService {
   ): Promise<number> {
     // Check if calendar is empty for THIS specific city on this date
     const isEmptyPickup = await this.isCompletelyEmptyCalendarDay(new Date(input.pickupDate || ''));
-    // const isEmptyDropoff = await this.isCompletelyEmptyCalendarDay(new Date(input.dropoffDate || ''));
+    const isEmptyDropoff = await this.isCompletelyEmptyCalendarDay(new Date(input.dropoffDate || ''));
+
     let baseCharge: number = 0; // Initialize with default value
     const isIncludedPickup = await this.isCityDay(pickupCity, new Date(input.pickupDate || ''));
     const isIncludedDropoff = await this.isCityDay(dropoffCity, new Date(input.dropoffDate || ''));
     
-    // Check if city is included OR date is empty (for "cheap base charge" logic)
-    const isCheapPickup = isIncludedPickup || isEmptyPickup;
-    const isCheapDropoff = isIncludedDropoff;
     const isSameDate = input.pickupDate === input.dropoffDate;
     const isSameCity = dropoffCity === pickupCity;
     
     // Item Transport Pricing Logic based on exact specifications
-    if (isSameCity) {
-      // WITHIN CITY scenarios
-      if (isSameDate) {
-        // Within city, same date
-        if (isCheapPickup) {
-          // City included in calendar on that date or empty date = cheap base charge
-          baseCharge = cityBaseCharges[pickupCity]?.cityDay;
-          console.log(`[DEBUG] ${pickupCity} - Within city, same date, cheap rate (included/empty): €${baseCharge}`);
-        } else {
-          // City is not included in calendar on that date = standard base charge
-          baseCharge = cityBaseCharges[pickupCity]?.normal;
-          console.log(`[DEBUG] ${pickupCity} - Within city, same date, standard rate (not included): €${baseCharge}`);
-        }
+    if (isSameCity && isSameDate) {
+      // Within city, same date
+      if (isIncludedPickup || isEmptyPickup) {
+        // City included in calendar on that date or empty date = cheap base charge
+        baseCharge = cityBaseCharges[pickupCity]?.cityDay;
       } else {
-        // Within city, different date
-        if (isCheapPickup && isCheapDropoff) {
-          // City is included in calendar or empty on both dates = cheap base charge
-          baseCharge = cityBaseCharges[pickupCity]?.cityDay;
-          console.log(`[DEBUG] ${pickupCity} - Within city, different dates, both cheap: €${baseCharge}`);
-        } else if (isCheapPickup || isCheapDropoff) {
-          // City is included in calendar or empty only on one date = (cheap base charge + standard base charge) / 2
-          const cheapRate = cityBaseCharges[pickupCity]?.cityDay;
-          const standardRate = cityBaseCharges[pickupCity]?.normal;
-          baseCharge = (cheapRate + standardRate) / 2;
-          console.log(`[DEBUG] ${pickupCity} - Within city, different dates, one cheap: (€${cheapRate} + €${standardRate}) / 2 = €${baseCharge}`);
+        // City is not included in calendar on that date = standard base charge
+        baseCharge = cityBaseCharges[pickupCity]?.normal;
+      }
+
+    } else if (isSameCity && !isSameDate) {
+      // Within city, different date
+      if ( (isIncludedPickup && isIncludedDropoff)|| (isEmptyPickup && isEmptyDropoff)) {
+        // City is included in calendar or empty on both dates = cheap base charge
+        baseCharge = cityBaseCharges[pickupCity]?.cityDay;
+      } else if ((isIncludedPickup && !isIncludedDropoff )|| (isEmptyPickup && !isEmptyDropoff)) {
+        // City is included in calendar or empty only on one date = (cheap base charge + standard base charge) / 2
+        baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+      } else if ((!isIncludedPickup && isIncludedDropoff) || (!isEmptyPickup && isEmptyDropoff)) {
+        baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+      } else{
+        // City is included in calendar on none of the 2 dates = standard base charge
+        baseCharge = cityBaseCharges[pickupCity]?.normal;
+      }
+    } else if (!isSameCity && isSameDate) {
+      // Between city, same date
+      if (isEmptyDropoff && isEmptyPickup) {
+        baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+      } else {
+        if (isIncludedPickup && isIncludedDropoff) {
+          baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+        } else if (isIncludedPickup && !isIncludedDropoff) {
+          baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+        } else if (!isIncludedPickup && isIncludedDropoff) {
+          baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
         } else {
-          // City is included in calendar on none of the 2 dates = standard base charge
-          baseCharge = cityBaseCharges[pickupCity]?.normal;
-          console.log(`[DEBUG] ${pickupCity} - Within city, different dates, neither cheap: €${baseCharge}`);
+          baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
         }
       }
     } else {
-      // BETWEEN CITY scenarios
-      if (isSameDate) {
-        // Between city, same date
-        if (isCheapPickup && isCheapDropoff) {
-          // Pickup city and dropoff city are included = (cheap base charge pickup + cheap base charge dropoff) / 2
-          baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-          console.log(`[DEBUG] Between cities, same date, both included: (€${cityBaseCharges[pickupCity]?.cityDay} + €${cityBaseCharges[dropoffCity]?.cityDay}) / 2 = €${baseCharge}`);
-        } else if (!isCheapPickup && isCheapDropoff) {
-          // Only one of the 2 is included = (cheap base charge for included city + standard base charge for non-included) / 2
-          const cheapCity = isCheapPickup ? pickupCity : dropoffCity;
-          const standardCity = isCheapPickup ? dropoffCity : pickupCity;
-          baseCharge = (cityBaseCharges[cheapCity]?.cityDay + cityBaseCharges[standardCity]?.normal) / 2;
-          console.log(`[DEBUG] Between cities, same date, one included: (€${cityBaseCharges[cheapCity]?.cityDay} + €${cityBaseCharges[standardCity]?.normal}) / 2 = €${baseCharge}`);
-        } else if (isCheapPickup && !isCheapDropoff) {
-          // If Pickup City is included but dropoff is not included = (cheap base charge pickup + standard base charge dropoff) / 2
-          baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
-          console.log(`[DEBUG] Between cities, same date, pickup included: (€${cityBaseCharges[pickupCity]?.cityDay} + €${cityBaseCharges[dropoffCity]?.normal}) / 2 = €${baseCharge}`);
-        } else if (!isCheapPickup && !isCheapDropoff) {
-          // If none of the 2 cities is included = use the higher standard base charge of the 2 cities
-          baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
-          console.log(`[DEBUG] Between cities, same date, neither included: max(€${cityBaseCharges[pickupCity]?.normal}, €${cityBaseCharges[dropoffCity]?.normal}) = €${baseCharge}`);
-        }
+      // Between city, different date
+      console.log(`[DEBUG] Between city, different date branch - Pickup: ${pickupCity}, Dropoff: ${dropoffCity}`);
+      console.log(`[DEBUG] Status: isIncludedPickup=${isIncludedPickup}, isIncludedDropoff=${isIncludedDropoff}, isEmptyPickup=${isEmptyPickup}, isEmptyDropoff=${isEmptyDropoff}`);
+      console.log(`[DEBUG] Rates: Pickup normal=${cityBaseCharges[pickupCity]?.normal}, cityDay=${cityBaseCharges[pickupCity]?.cityDay}`);
+      console.log(`[DEBUG] Rates: Dropoff normal=${cityBaseCharges[dropoffCity]?.normal}, cityDay=${cityBaseCharges[dropoffCity]?.cityDay}`);
+
+      if ((isIncludedPickup && isIncludedDropoff) || (isEmptyPickup && isEmptyDropoff)) {
+        console.log('[DEBUG] BRANCH 1: Both cities included or both dates empty');
+        // Both cities included in calendar on their date or both dates empty = (cheap base charge pickup + cheap base charge dropoff) / 2
+        baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.cityDay} + ${cityBaseCharges[dropoffCity]?.cityDay}) / 2`);
+      } else if ((isIncludedPickup && !isIncludedDropoff) && !(isEmptyPickup && isIncludedDropoff)) {
+        console.log('[DEBUG] BRANCH 2: Only pickup city included');
+        // Only pickup city is included in calendar on its date = (cheap base charge for pickup + standard base charge for dropoff) / 2
+        baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.cityDay} + ${cityBaseCharges[dropoffCity]?.normal}) / 2`);
+      } else if ((!isIncludedPickup && isIncludedDropoff) || (isEmptyPickup && isIncludedDropoff)) {
+        console.log('[DEBUG] BRANCH 3: Only dropoff city included');
+        baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.normal} + ${cityBaseCharges[dropoffCity]?.cityDay}) / 2`);
       } else {
-        // Between city, different date
-        if (isCheapPickup && isCheapDropoff) {
-          // Both cities included in calendar on their date or both dates empty = (cheap base charge pickup + cheap base charge dropoff) / 2
-          baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-          console.log(`[DEBUG] Between cities, different dates, both included: (€${cityBaseCharges[pickupCity]?.cityDay} + €${cityBaseCharges[dropoffCity]?.cityDay}) / 2 = €${baseCharge}`);
-        } else if (isCheapPickup || isCheapDropoff) {
-          // Only one city is included in calendar on their date or date is empty = (cheap base charge for that city + standard base charge for the other) / 2
-          const cheapCity = isCheapPickup ? pickupCity : dropoffCity;
-          const standardCity = isCheapPickup ? dropoffCity : pickupCity;
-          baseCharge = (cityBaseCharges[cheapCity]?.cityDay + cityBaseCharges[standardCity]?.normal) / 2;
-          console.log(`[DEBUG] Between cities, different dates, one included: (€${cityBaseCharges[cheapCity]?.cityDay} + €${cityBaseCharges[standardCity]?.normal}) / 2 = €${baseCharge}`);
-        } else {
-          // None of the 2 dates include the respective city or an empty date = use the higher standard base charge of the 2 cities
-          baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
-          console.log(`[DEBUG] Between cities, different dates, neither included: max(€${cityBaseCharges[pickupCity]?.normal}, €${cityBaseCharges[dropoffCity]?.normal}) = €${baseCharge}`);
-        }
+        console.log('[DEBUG] BRANCH 4: Neither city included and no empty dates');
+        // None of the 2 dates include the respective city or an empty date = use the higher standard base charge of the 2 cities
+        baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
+        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = Math.max(${cityBaseCharges[pickupCity]?.normal}, ${cityBaseCharges[dropoffCity]?.normal})`);
       }
     }
-
+    
     // Add extra km charge ONLY if distance difference > 8km
     if (pickupDistanceDifference > 8) {
       const extraCharge = Math.round((pickupDistanceDifference - 8) * 3);
@@ -674,9 +617,23 @@ class PricingService {
     try {
       const dateStr = date.toISOString().split('T')[0];
       const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-      const { isEmpty } = await getCachedEmptyStatus(dateStr, baseUrl);
-      console.log(`[DEBUG] All cities empty on ${dateStr}:`, isEmpty);
-      return isEmpty;
+      const url = `${baseUrl}/api/check-all-cities-empty?date=${dateStr}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.warn(`Failed to fetch all cities empty status: ${response.status}`);
+        return false; // Fallback to not empty
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        console.warn(`Backend error: ${result.error}`);
+        return false;
+      }
+      
+      console.log(`[DEBUG] All cities empty on ${dateStr}:`, result.data.isEmpty);
+      return result.data.isEmpty;
     } catch (error) {
       return false; // Fallback to not empty
     }
