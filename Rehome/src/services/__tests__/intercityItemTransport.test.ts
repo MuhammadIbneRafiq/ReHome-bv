@@ -1,10 +1,22 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { PricingService, PricingInput, PricingBreakdown } from '../pricingService';
 import { initDynamicConstants } from '../../lib/constants';
+import { mockCityServices } from './testUtils';
+
+// Track mock restorations
+let restoreMocks: () => void;
 
 // Initialize dynamic constants before running tests
 beforeAll(async () => {
   await initDynamicConstants();
+  
+  // Mock city services to avoid network requests during tests
+  restoreMocks = mockCityServices();
+});
+
+// Restore original implementations after tests
+afterAll(() => {
+  if (restoreMocks) restoreMocks();
 });
 
 describe('PricingService - calculateIntercityItemTransportCharge', () => {

@@ -64,7 +64,9 @@ export default async function handler(req: Request): Promise<Response> {
   inflight.set(key, p);
   return p;
 }
+// Import serve from Deno Deploy runtime
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
 // deno-lint-ignore no-explicit-any
-// @ts-ignore Supabase runtime export
 serve(handler as any);
 

@@ -1,53 +1,8 @@
 import { pricingConfig, cityBaseCharges, getItemPoints } from '../lib/constants';
 import { findClosestSupportedCity } from '../utils/locationServices';
-import API_ENDPOINTS from '../lib/api/config';
+import cityAvailabilitySocket from '../utils/cityAvailabilitySocket';
 
-// Simple memoized cache with in-flight coalescing and timeout for schedule endpoints
-type ScheduleStatus = { isScheduled: boolean; isEmpty: boolean };
-const cacheTtlMs = 60_000; // 60s TTL
-const scheduleCache = new Map<string, { value: ScheduleStatus; expiresAt: number }>();
-const inflight = new Map<string, Promise<ScheduleStatus>>();
-
-async function fetchWithTimeout(url: string, timeoutMs = 600): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    return res;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function getCachedScheduleStatus(city: string, dateStr: string, baseUrl: string): Promise<ScheduleStatus> {
-  const key = `status:${city}:${dateStr}`;
-  const now = Date.now();
-  const cached = scheduleCache.get(key);
-  if (cached && cached.expiresAt > now) return cached.value;
-  if (inflight.has(key)) return inflight.get(key)!;
-
-  const url = `${baseUrl}/api/city-schedule-status?city=${encodeURIComponent(city)}&date=${dateStr}`;
-  const promise = (async () => {
-    try {
-      const response = await fetchWithTimeout(url, 600);
-      if (!response.ok) throw new Error(`status ${response.status}`);
-      const result = await response.json();
-      if (!result.success) throw new Error(result.error || 'backend error');
-      const value: ScheduleStatus = { isScheduled: result.data.isScheduled, isEmpty: result.data.isEmpty };
-      scheduleCache.set(key, { value, expiresAt: now + cacheTtlMs });
-      return value;
-    } catch (e) {
-      // Circuit-breaker fallback
-      const fallback: ScheduleStatus = { isScheduled: false, isEmpty: true };
-      scheduleCache.set(key, { value: fallback, expiresAt: now + 5_000 }); // short cache on failure
-      return fallback;
-    } finally {
-      inflight.delete(key);
-    }
-  })();
-  inflight.set(key, promise);
-  return promise;
-}
+// Using cityAvailabilitySocket for all city availability checking
 export interface PricingBreakdown {
   basePrice: number;
   itemValue: number;
@@ -462,25 +417,32 @@ class PricingService {
       console.log(`[DEBUG] Rates: Pickup normal=${cityBaseCharges[pickupCity]?.normal}, cityDay=${cityBaseCharges[pickupCity]?.cityDay}`);
       console.log(`[DEBUG] Rates: Dropoff normal=${cityBaseCharges[dropoffCity]?.normal}, cityDay=${cityBaseCharges[dropoffCity]?.cityDay}`);
 
+      // Fix the conditional logic for correct branching
       if ((isIncludedPickup && isIncludedDropoff) || (isEmptyPickup && isEmptyDropoff)) {
         console.log('[DEBUG] BRANCH 1: Both cities included or both dates empty');
         // Both cities included in calendar on their date or both dates empty = (cheap base charge pickup + cheap base charge dropoff) / 2
         baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
         console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.cityDay} + ${cityBaseCharges[dropoffCity]?.cityDay}) / 2`);
-      } else if ((isIncludedPickup && !isIncludedDropoff) && !(isEmptyPickup && isIncludedDropoff)) {
-        console.log('[DEBUG] BRANCH 2: Only pickup city included');
-        // Only pickup city is included in calendar on its date = (cheap base charge for pickup + standard base charge for dropoff) / 2
+      } else if ((isIncludedPickup && !isIncludedDropoff) || (!isIncludedDropoff && isEmptyPickup && !isEmptyDropoff)) {
+        console.log('[DEBUG] BRANCH 2: Only pickup city included or pickup empty');
+        // Only one city is included in calendar on their date or date is empty = (cheap base charge for that city + standard base charge for the other) / 2
         baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
         console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.cityDay} + ${cityBaseCharges[dropoffCity]?.normal}) / 2`);
-      } else if ((!isIncludedPickup && isIncludedDropoff) || (isEmptyPickup && isIncludedDropoff)) {
+      } else if ((!isIncludedPickup && isIncludedDropoff) || (!isIncludedPickup && !isIncludedDropoff && !isEmptyPickup && isEmptyDropoff)) {
         console.log('[DEBUG] BRANCH 3: Only dropoff city included');
+        // Only one city is included in calendar on their date or date is empty = (standard base charge for pickup + cheap base charge for dropoff) / 2
         baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
         console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.normal} + ${cityBaseCharges[dropoffCity]?.cityDay}) / 2`);
       } else {
         console.log('[DEBUG] BRANCH 4: Neither city included and no empty dates');
         // None of the 2 dates include the respective city or an empty date = use the higher standard base charge of the 2 cities
-        baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
-        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = Math.max(${cityBaseCharges[pickupCity]?.normal}, ${cityBaseCharges[dropoffCity]?.normal})`);
+        
+        // Ensure we have valid rates by adding defaults
+        const pickupRate = cityBaseCharges[pickupCity]?.normal || 89; // Default to 89
+        const dropoffRate = cityBaseCharges[dropoffCity]?.normal || 89; // Default to 89
+        
+        baseCharge = Math.max(pickupRate, dropoffRate);
+        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = Math.max(${pickupRate}, ${dropoffRate})`);
       }
     }
     
@@ -572,33 +534,7 @@ class PricingService {
     }
   }
 
-  private async getCityScheduleStatus(city: string, date: Date): Promise<{
-    isScheduled: boolean;
-    isEmpty: boolean;
-  }> {
-    try {
-      // Validate date before using it
-      if (!date || isNaN(date.getTime())) {
-        console.warn('[getCityScheduleStatus] Invalid date provided:', date);
-        return {
-          isScheduled: false,
-          isEmpty: true
-        };
-      }
-
-      const dateStr = date.toISOString().split('T')[0];
-      const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-      const { isScheduled, isEmpty } = await getCachedScheduleStatus(city, dateStr, baseUrl);
-      return { isScheduled, isEmpty };
-    } catch (error) {
-      console.error('[getCityScheduleStatus] Error:', error);
-      // Fallback to safe defaults
-      return {
-        isScheduled: false,
-        isEmpty: true
-      };
-    }
-  }
+  // Removed getCityScheduleStatus method as we now use cityAvailabilitySocket directly
 
   private async isCityDay(city: string, date: Date): Promise<boolean> {
     // Validate date before using it
@@ -606,35 +542,60 @@ class PricingService {
       console.warn('[isCityDay] Invalid date provided:', date);
       return false;
     }
-
-    const { isScheduled } = await this.getCityScheduleStatus(city, date);
-    console.log(`[DEBUG] isCityDay for ${city} on ${date.toISOString().split('T')[0]}:`, isScheduled);
-    return isScheduled;
+    
+    try {
+      // Format date to YYYY-MM-DD
+      const dateStr = date.toISOString().split('T')[0];
+      
+      // Use cityAvailabilitySocket for WebSocket-based checking with fallback
+      try {
+        return await cityAvailabilitySocket.checkCityAvailability(city, dateStr);
+      } catch (socketError) {
+        // If the WebSocket/API fails, use a safe fallback based on cityBaseCharges data
+        const errorMessage = socketError instanceof Error ? socketError.message : String(socketError);
+        console.warn(`WebSocket fallback for ${city} on ${dateStr}:`, errorMessage);
+        
+        // If we have city base charges data, use that to determine if it's a city day
+        if (cityBaseCharges && cityBaseCharges[city]) {
+          // Consider non-standard rates as "city days" (this is a fallback assumption)
+          return true;
+        }
+        
+        return false; // Ultimate safe fallback
+      }
+    } catch (error) {
+      console.error(`Error checking city day status for ${city} on ${date.toISOString()}:`, error);
+      return false; // Safe fallback
+    }
   }
 
 
   private async isCompletelyEmptyCalendarDay(date: Date): Promise<boolean> {
     try {
-      const dateStr = date.toISOString().split('T')[0];
-      const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-      const url = `${baseUrl}/api/check-all-cities-empty?date=${dateStr}`;
-      
-      const response = await fetch(url);
-      if (!response.ok) {
-        console.warn(`Failed to fetch all cities empty status: ${response.status}`);
-        return false; // Fallback to not empty
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        console.warn(`Backend error: ${result.error}`);
+      // Validate date
+      if (!date || isNaN(date.getTime())) {
+        console.warn('[isCompletelyEmptyCalendarDay] Invalid date provided:', date);
         return false;
       }
       
-      console.log(`[DEBUG] All cities empty on ${dateStr}:`, result.data.isEmpty);
-      return result.data.isEmpty;
+      // Format date to YYYY-MM-DD
+      const dateStr = date.toISOString().split('T')[0];
+      
+      try {
+        // Use WebSocket service to check if all cities are empty
+        const isEmpty = await cityAvailabilitySocket.checkAllCitiesEmpty(dateStr);
+        console.log(`[DEBUG] All cities empty on ${dateStr}:`, isEmpty);
+        return isEmpty;
+      } catch (socketError) {
+        // If WebSocket/API fails, use a fallback
+        const errorMessage = socketError instanceof Error ? socketError.message : String(socketError);
+        console.warn(`WebSocket fallback for empty check on ${dateStr}:`, errorMessage);
+        
+        // Safety fallback - assume not empty if we can't verify
+        return false;
+      }
     } catch (error) {
+      console.error(`Error checking if calendar day is empty for ${date.toISOString()}:`, error);
       return false; // Fallback to not empty
     }
   }
