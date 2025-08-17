@@ -1,4 +1,12 @@
-# Pricing Service Test Scenarios Documentation
+# Pricing Test Checklist
+
+- Base charge scenarios (within/between cities, fixed/flexible, rehome)
+- Early booking discount application
+- Distance cost tiers (<10, <=50, >50)
+- Carrying/assembly/extra helper calculations
+- Async schedule endpoints success/failure
+- Concurrency: parallel calculatePricing calls
+- UI usage in `ItemMovingPage.tsx` and `HouseMovingPage.tsx`
 
 This document outlines all the test scenarios covered for the `calculateBaseChargeBreakdown` function and `calculateIntercityItemTransportCharge` function, organized according to the business requirements.
 
@@ -147,20 +155,8 @@ This document outlines all the test scenarios covered for the `calculateBaseChar
 - **Edge Cases**: 4 tests
 - **Intercity Item Transport**: 20+ tests
 
-### Key Features Tested
-- ✅ All pricing calculation logic
-- ✅ Distance-based charges
-- ✅ Calendar state handling (empty, city day, normal)
-- ✅ Intercity vs within-city logic
-- ✅ Date range calculations
-- ✅ Error handling and edge cases
-- ✅ Multiple city combinations
-- ✅ Different service types (house-moving, item-transport)
-
 ### Mock Strategy
 - **findClosestSupportedCity**: Mocked to return specific cities and distance differences
 - **isCompletelyEmptyCalendarDay**: Mocked to return boolean values for empty calendar states
 - **isCityDay**: Mocked to return boolean values for city day inclusion
 - **checkCityDaysInRange**: Mocked to return boolean values for city days in date ranges
-
-This comprehensive test suite ensures that all business logic scenarios are covered and the pricing calculations work correctly under all conditions. 

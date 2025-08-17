@@ -1,5 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PricingService, PricingInput } from '../pricingService';
+import { initDynamicConstants } from '../../lib/constants';
+import { fetchConstants, getCityStatus, expectedWithinCityBase } from './helpers/livePricingFixture';
 import * as locationServices from '../../utils/locationServices';
 import API_ENDPOINTS from '../../lib/api/config';
 
@@ -11,6 +13,8 @@ describe('PricingService concurrency and async behavior', () => {
 
   beforeAll(() => {
     service = new PricingService();
+    // Ensure cityBaseCharges/pricingConfig are populated for numeric base charges
+    return initDynamicConstants().catch(() => undefined);
   });
 
   beforeEach(() => {
@@ -48,7 +52,7 @@ describe('PricingService concurrency and async behavior', () => {
     const scheduleUrlPrefix = `${baseUrl}/api/city-schedule-status`;
     const emptyUrlPrefix = `${baseUrl}/api/check-all-cities-empty`;
 
-    vi.spyOn(globalThis as any, 'fetch').mockImplementation((input: RequestInfo | URL) => {
+    vi.spyOn(globalThis as any, 'fetch').mockImplementation((input: any) => {
       const url = String(input);
       const respond = (body: any) =>
         Promise.resolve({ ok: true, json: async () => ({ success: true, data: body }) } as Response);
@@ -95,16 +99,18 @@ describe('PricingService concurrency and async behavior', () => {
     expect(typeof r2.total).toBe('number');
   });
 
-  it('applies early booking discount deterministically when date >= 14 days', async () => {
-    vi.spyOn(locationServices, 'findClosestSupportedCity')
-      .mockResolvedValue(mockCity('Amsterdam'));
-    mockScheduleEndpoints({ isScheduled: true, isEmpty: false });
+  it('aligns base price with live schedule for within-city on an August date', async () => {
+    const { cityBaseCharges } = await fetchConstants();
+    const dateStr = `${new Date().getFullYear()}-08-15`;
 
-    const result = await service.calculatePricing(
-      baseInput({ selectedDate: new Date(Date.now() + 15 * 24 * 3600 * 1000).toISOString() })
-    );
-    expect(result.earlyBookingDiscount).toBeGreaterThanOrEqual(0);
-    expect(result.total).toBeGreaterThan(0);
+    const status = await getCityStatus('Amsterdam', dateStr);
+    const expectedBase = expectedWithinCityBase(cityBaseCharges, 'Amsterdam', status);
+
+    vi.spyOn(locationServices, 'findClosestSupportedCity').mockResolvedValue(mockCity('Amsterdam'));
+    mockScheduleEndpoints({ isScheduled: status.isScheduled, isEmpty: status.isEmpty });
+
+    const result = await service.calculatePricing(baseInput({ selectedDate: dateStr, pickupLocation: 'Amsterdam', dropoffLocation: 'Amsterdam' }));
+    expect(result.basePrice).toBe(expectedBase);
   });
 
   it('gracefully handles backend errors from schedule endpoints', async () => {
@@ -114,7 +120,7 @@ describe('PricingService concurrency and async behavior', () => {
     const scheduleUrlPrefix = `${baseUrl}/api/city-schedule-status`;
     const emptyUrlPrefix = `${baseUrl}/api/check-all-cities-empty`;
 
-    vi.spyOn(globalThis as any, 'fetch').mockImplementation((input: RequestInfo | URL) => {
+    vi.spyOn(globalThis as any, 'fetch').mockImplementation((input: any) => {
       const url = String(input);
       if (url.startsWith(scheduleUrlPrefix) || url.startsWith(emptyUrlPrefix)) {
         return Promise.resolve({ ok: false, status: 500 } as Response);

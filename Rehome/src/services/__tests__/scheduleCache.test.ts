@@ -18,7 +18,7 @@ describe('schedule caching/coalescing/timeout', () => {
     const emptyUrlPrefix = `${baseUrl}/api/check-all-cities-empty`;
 
     const calls: string[] = [];
-    vi.spyOn(globalThis as any, 'fetch').mockImplementation((input: RequestInfo | URL) => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);
       calls.push(url);
       // Delay past timeout to trigger fallback for empty endpoint, respond fast for status
