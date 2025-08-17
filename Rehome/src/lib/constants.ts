@@ -1,4 +1,5 @@
 import { API_ENDPOINTS } from "./api/config";
+import { supabase } from "./supabaseClient";
 
 // Pricing configuration type
 export type PricingConfig = {
@@ -83,7 +84,7 @@ export let pricingConfig: PricingConfig = defaultPricingConfig;
 
 // Types for dynamic data
 export type FurnitureItem = { id: string; name: string; category: string; points: number };
-export type ItemCategory = { name: string; items: { id: string; name: string }[] };
+export type ItemCategory = { name: string; subcategories: string[]; is_active: boolean };
 export type CityBaseCharge = { normal: number; cityDay: number; dayOfWeek: number };
 
 // Fetch all constants from backend API endpoint in one request
@@ -130,25 +131,92 @@ export let constantsLoaded = false;
  * Export this function so it can be awaited in the app entry point.
  */
 export async function initDynamicConstants() {
-  
   try {
-    const constants = await fetchAllConstants();
-    
-    furnitureItems = constants.furnitureItems;
-    
-    itemCategories = constants.itemCategories;
-    
-    cityBaseCharges = constants.cityBaseCharges;
-    
-    // Update pricing config with data from API
-    if (constants.pricingConfig) {
-      pricingConfig = constants.pricingConfig;
-      console.log('[Constants] ✅ Pricing config loaded from API');
-    } else {
-      console.log('[Constants] ⚠️ Using default pricing config (no API data)');
+    // First try to load data directly from Supabase tables
+    try {
+      // Load pricing config
+      const { data: configData, error: configError } = await supabase
+        .from('pricing_config')
+        .select('*')
+        .limit(1)
+        .single();
+        
+      if (configError) throw configError;
+      if (configData) {
+        pricingConfig = configData as PricingConfig;
+        console.log('[Constants] ✅ Pricing config loaded from Supabase');
+      }
+      
+      // Load furniture items
+      const { data: itemsData, error: itemsError } = await supabase
+        .from('furniture_items')
+        .select('*');
+        
+      if (itemsError) throw itemsError;
+      if (itemsData) {
+        furnitureItems = itemsData as FurnitureItem[];
+        console.log('[Constants] ✅ Furniture items loaded from Supabase');
+      }
+      
+      // Load item categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('furniture_categories')
+        .select('*');
+        
+      if (categoriesError) throw categoriesError;
+      if (categoriesData) {
+        itemCategories = categoriesData as ItemCategory[];
+        console.log('[Constants] ✅ Item categories loaded from Supabase');
+      }
+      
+      // Load city base charges
+      const { data: cityChargesData, error: cityChargesError } = await supabase
+        .from('city_base_charges')
+        .select('*');
+        
+      if (cityChargesError) throw cityChargesError;
+      if (cityChargesData) {
+        // Transform from array to record
+        cityBaseCharges = cityChargesData.reduce((acc, city) => {
+          acc[city.city] = {
+            normal: city.normal_rate,
+            cityDay: city.city_day_rate,
+            dayOfWeek: city.day_of_week
+          };
+          return acc;
+        }, {} as Record<string, CityBaseCharge>);
+        console.log('[Constants] ✅ City base charges loaded from Supabase');
+      }
+      
+      constantsLoaded = true;
+      
+    } catch (supabaseError) {
+      console.warn('[Constants] ⚠️ Error loading from Supabase, falling back to API:', supabaseError);
+      
+      // Fall back to API endpoint if Supabase direct query fails
+      const constants = await fetchAllConstants();
+      
+      furnitureItems = constants.furnitureItems;
+      itemCategories = constants.itemCategories;
+      cityBaseCharges = constants.cityBaseCharges;
+      
+      // Update pricing config with data from API
+      if (constants.pricingConfig) {
+        pricingConfig = constants.pricingConfig;
+        console.log('[Constants] ✅ Pricing config loaded from API');
+      } else {
+        console.log('[Constants] ⚠️ Using default pricing config (no API data)');
+      }
+      
+      constantsLoaded = true;
     }
     
-    constantsLoaded = true;
+    // Set up Realtime subscriptions after initial load
+    import('../services/realtimeService').then(({ initRealtimeService }) => {
+      initRealtimeService();
+      console.log('[Constants] ✅ Realtime subscriptions initialized');
+    });
+    
   } catch (error) {
     console.error('[Constants] ❌ Error loading constants:', error);
     constantsLoaded = false;

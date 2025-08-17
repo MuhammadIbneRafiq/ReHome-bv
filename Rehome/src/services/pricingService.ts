@@ -1,53 +1,9 @@
 import { pricingConfig, cityBaseCharges, getItemPoints } from '../lib/constants';
 import { findClosestSupportedCity } from '../utils/locationServices';
 import API_ENDPOINTS from '../lib/api/config';
+import { getCityScheduleStatus, checkAllCitiesEmpty } from '../services/realtimeService';
 
-// Simple memoized cache with in-flight coalescing and timeout for schedule endpoints
-type ScheduleStatus = { isScheduled: boolean; isEmpty: boolean };
-const cacheTtlMs = 60_000; // 60s TTL
-const scheduleCache = new Map<string, { value: ScheduleStatus; expiresAt: number }>();
-const inflight = new Map<string, Promise<ScheduleStatus>>();
-
-async function fetchWithTimeout(url: string, timeoutMs = 600): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, { signal: controller.signal });
-    return res;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-async function getCachedScheduleStatus(city: string, dateStr: string, baseUrl: string): Promise<ScheduleStatus> {
-  const key = `status:${city}:${dateStr}`;
-  const now = Date.now();
-  const cached = scheduleCache.get(key);
-  if (cached && cached.expiresAt > now) return cached.value;
-  if (inflight.has(key)) return inflight.get(key)!;
-
-  const url = `${baseUrl}/api/city-schedule-status?city=${encodeURIComponent(city)}&date=${dateStr}`;
-  const promise = (async () => {
-    try {
-      const response = await fetchWithTimeout(url, 600);
-      if (!response.ok) throw new Error(`status ${response.status}`);
-      const result = await response.json();
-      if (!result.success) throw new Error(result.error || 'backend error');
-      const value: ScheduleStatus = { isScheduled: result.data.isScheduled, isEmpty: result.data.isEmpty };
-      scheduleCache.set(key, { value, expiresAt: now + cacheTtlMs });
-      return value;
-    } catch (e) {
-      // Circuit-breaker fallback
-      const fallback: ScheduleStatus = { isScheduled: false, isEmpty: true };
-      scheduleCache.set(key, { value: fallback, expiresAt: now + 5_000 }); // short cache on failure
-      return fallback;
-    } finally {
-      inflight.delete(key);
-    }
-  })();
-  inflight.set(key, promise);
-  return promise;
-}
+// Using ScheduleStatus type from realtimeService
 export interface PricingBreakdown {
   basePrice: number;
   itemValue: number;
@@ -586,10 +542,9 @@ class PricingService {
         };
       }
 
-      const dateStr = date.toISOString().split('T')[0];
+      // Use Realtime service which handles caching and subscriptions
       const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-      const { isScheduled, isEmpty } = await getCachedScheduleStatus(city, dateStr, baseUrl);
-      return { isScheduled, isEmpty };
+      return await getCityScheduleStatus(city, date, baseUrl);
     } catch (error) {
       console.error('[getCityScheduleStatus] Error:', error);
       // Fallback to safe defaults
@@ -615,26 +570,16 @@ class PricingService {
 
   private async isCompletelyEmptyCalendarDay(date: Date): Promise<boolean> {
     try {
-      const dateStr = date.toISOString().split('T')[0];
-      const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-      const url = `${baseUrl}/api/check-all-cities-empty?date=${dateStr}`;
-      
-      const response = await fetch(url);
-      if (!response.ok) {
-        console.warn(`Failed to fetch all cities empty status: ${response.status}`);
-        return false; // Fallback to not empty
-      }
-      
-      const result = await response.json();
-      
-      if (!result.success) {
-        console.warn(`Backend error: ${result.error}`);
+      if (!date || isNaN(date.getTime())) {
+        console.warn('[isCompletelyEmptyCalendarDay] Invalid date provided:', date);
         return false;
       }
       
-      console.log(`[DEBUG] All cities empty on ${dateStr}:`, result.data.isEmpty);
-      return result.data.isEmpty;
+      // Use Realtime service which handles caching and subscriptions
+      const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
+      return await checkAllCitiesEmpty(date, baseUrl);
     } catch (error) {
+      console.error('[isCompletelyEmptyCalendarDay] Error:', error);
       return false; // Fallback to not empty
     }
   }

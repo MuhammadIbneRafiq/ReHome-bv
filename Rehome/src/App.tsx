@@ -11,6 +11,7 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useState, useEffect } from 'react';
 import { initDynamicConstants, constantsLoaded } from './lib/constants';
+import { cleanupRealtimeService } from './services/realtimeService';
 
 // Import Pages
 import LandingPage from "./lib/pages/LandingPage";
@@ -90,6 +91,12 @@ const App = () => {
     };
 
     loadConstants();
+    
+    // Cleanup Realtime subscriptions on component unmount
+    return () => {
+      console.log('[App] Cleaning up Realtime subscriptions');
+      cleanupRealtimeService();
+    };
   }, []);
 
   // Show error screen if constants failed to load
