@@ -41,18 +41,13 @@ describe('PricingService - calculateIntercityItemTransportCharge', () => {
       const input = createBaseInput({
         pickupLocation: 'Amsterdam',
         dropoffLocation: 'Rotterdam',
+        selectedDate: '2024-01-15',
         pickupPlace: { placeId: 'test', text: 'Amsterdam' },
         dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
       });
 
       const result = await pricingService['calculateIntercityItemTransportCharge'](
-        input,
-        'Amsterdam',
-        'Rotterdam',
-        0,
-        0
-      );
-
+        input, 'Amsterdam', 'Rotterdam', 0, 0);
       expect(result).toBe(119);
     });
 
@@ -60,12 +55,13 @@ describe('PricingService - calculateIntercityItemTransportCharge', () => {
       const input = createBaseInput({
         pickupLocation: 'The Hague',
         dropoffLocation: 'Utrecht',
+        selectedDate: '2024-01-15',
         pickupPlace: { placeId: 'test', text: 'The Hague' },
         dropoffPlace: { placeId: 'test', text: 'Utrecht' }
       });
 
       const result = await pricingService['calculateIntercityItemTransportCharge'](
-        input,
+        input, 
         'The Hague',
         'Utrecht',
         0,
@@ -79,6 +75,7 @@ describe('PricingService - calculateIntercityItemTransportCharge', () => {
       const input = createBaseInput({
         pickupLocation: 'Eindhoven',
         dropoffLocation: 'Groningen',
+        selectedDate: '2024-01-15',
         pickupPlace: { placeId: 'test', text: 'Eindhoven' },
         dropoffPlace: { placeId: 'test', text: 'Groningen' }
       });
@@ -98,6 +95,7 @@ describe('PricingService - calculateIntercityItemTransportCharge', () => {
       const input = createBaseInput({
         pickupLocation: 'Amsterdam',
         dropoffLocation: 'Rotterdam',
+        selectedDate: '2024-01-15',
         pickupPlace: { placeId: 'test', text: 'Amsterdam' },
         dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
       });
@@ -117,6 +115,7 @@ describe('PricingService - calculateIntercityItemTransportCharge', () => {
       const input = createBaseInput({
         pickupLocation: 'Tilburg',
         dropoffLocation: 'Almere',
+        selectedDate: '2024-01-15',
         pickupPlace: { placeId: 'test', text: 'Tilburg' },
         dropoffPlace: { placeId: 'test', text: 'Almere' }
       });
@@ -136,6 +135,7 @@ describe('PricingService - calculateIntercityItemTransportCharge', () => {
       const input = createBaseInput({
         pickupLocation: 'Breda',
         dropoffLocation: 'Nijmegen',
+        selectedDate: '2024-01-15',
         pickupPlace: { placeId: 'test', text: 'Breda' },
         dropoffPlace: { placeId: 'test', text: 'Nijmegen' }
       });

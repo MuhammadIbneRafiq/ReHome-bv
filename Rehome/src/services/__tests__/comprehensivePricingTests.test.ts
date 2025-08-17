@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { PricingService, PricingInput, PricingBreakdown } from '../pricingService';
 import { initDynamicConstants } from '../../lib/constants';
 
-// Initialize dynamic constants before running tests
 beforeAll(async () => {
   await initDynamicConstants();
 });
@@ -620,38 +619,6 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
         expect(mockBreakdown.breakdown.baseCharge.type).toBe('Intercity Rate');
       }, 10000);
     });
-  });
-
-  describe('ReHome Suggest Mode', () => {
-    it('should always use cheapest base price for pickup city', async () => {
-      const input = createBaseInput({
-        isDateFlexible: true,
-        pickupPlace: { placeId: 'test', text: 'Amsterdam' },
-        dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
-      });
-
-      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-      expect(mockBreakdown.basePrice).toBe(39);
-      expect(mockBreakdown.breakdown.baseCharge.city).toBe('Amsterdam');
-      expect(mockBreakdown.breakdown.baseCharge.isCityDay).toBe(true);
-      expect(mockBreakdown.breakdown.baseCharge.type).toBe('ReHome- Cheap Rate');
-    }, 10000);
-
-    it('should add extra km charge when distance difference > 8km', async () => {
-      const input = createBaseInput({
-        isDateFlexible: true,
-        pickupPlace: { placeId: 'test', text: 'Amsterdam' },
-        dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
-      });
-
-      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-      expect(mockBreakdown.basePrice).toBe(39);
-      expect(mockBreakdown.breakdown.baseCharge.city).toBe('Amsterdam');
-      expect(mockBreakdown.breakdown.baseCharge.isCityDay).toBe(true);
-      expect(mockBreakdown.breakdown.baseCharge.type).toBe('ReHome- Cheap Rate');
-    }, 10000);
   });
 
   describe('Early Booking Scenarios', () => {

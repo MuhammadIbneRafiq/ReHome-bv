@@ -1,9 +1,5 @@
-import { 
-  pricingConfig, 
-  cityBaseCharges, 
-  getItemPoints, 
-} from '../lib/constants';
-import { findClosestSupportedCity} from '../utils/locationServices';
+import { pricingConfig, cityBaseCharges, getItemPoints } from '../lib/constants';
+import { findClosestSupportedCity } from '../utils/locationServices';
 import API_ENDPOINTS from '../lib/api/config';
 
 // Simple memoized cache with in-flight coalescing and timeout for schedule endpoints
@@ -248,8 +244,7 @@ class PricingService {
    * Calculate base charge breakdown based on location, date, and service type
    */
   private async calculateBaseChargeBreakdown(input: PricingInput, breakdown: PricingBreakdown) {
-    try {     
-      // Determine if this is an intercity move
+    try {
       const pickupResult = await findClosestSupportedCity(input.pickupPlace);
       const dropoffResult = await findClosestSupportedCity(input.dropoffPlace);
       const pickupCity = pickupResult.city;
@@ -632,50 +627,6 @@ class PricingService {
       breakdown.distanceCost = 0;
       breakdown.breakdown.distance.distanceKm = 0;
     }
-  }
-
-  /**
-   * Calculate base charge based on location and date
-   */
-  async calculateBaseCharge(distanceKm: number, pickup: string, date?: Date, placeObject?: any): Promise<{ charge: number; type: string; city: string; distance: number }> {
-    // No pricing without both pickup location and date
-    if (!pickup || !date) {
-      return { charge: 0, type: 'No estimate available', city: '', distance: 0 };
-    }
-    // Find closest supported city
-    const { city, distanceDifference } = await findClosestSupportedCity(placeObject);
-    if (!city) {
-      return { charge: 0, type: 'Location not supported', city: '', distance: 0 };
-    }
-
-    // Check if it's a city day (scheduled in that city)
-    const isScheduledDay = await this.isCityDay(city, date);
-    // Check if it's an early booking (at least 21 days in advance)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    // Determine base charge
-    let baseCharge: number;
-    let chargeType: string;
-    if (isScheduledDay) {
-      // City day pricing - aligned with schedule
-      baseCharge = cityBaseCharges[city]?.cityDay || 0;
-      chargeType = `${city} - Cheap Rate`;
-    } else {
-      // Normal pricing - doesn't align with schedule and not early booking
-      baseCharge = cityBaseCharges[city]?.normal || 0;
-      chargeType = `${city} - Normal Rate`;
-    }
-    // Apply city center extra charge if beyond city center range
-    if (distanceDifference > 0) {
-      const extraCharge = Math.round(distanceDifference * 3); // €3 per km beyond 8km
-      baseCharge += extraCharge;
-    }
-    return {
-      charge: baseCharge,
-      type: chargeType,
-      city,
-      distance: Math.round(distanceKm * 10) / 10 // Round to 1 decimal
-    };
   }
 
   private async getCityScheduleStatus(city: string, date: Date): Promise<{

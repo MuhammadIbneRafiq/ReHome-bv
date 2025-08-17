@@ -1,5 +1,6 @@
 /* @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import HouseMovingPage from '../HouseMovingPage';
@@ -52,7 +53,7 @@ describe('HouseMovingPage – interactions and recalculation', () => {
     await userEvent.selectOptions(dateOption, 'rehome');
 
     await waitFor(() => expect(spy).toHaveBeenCalled());
-    await waitFor(() => expect(screen.getByText(/Total:/i)).toBeInTheDocument());
+    await waitFor(() => expect(!!screen.queryByText(/Total:/i)).toBe(true));
   });
 });
 
