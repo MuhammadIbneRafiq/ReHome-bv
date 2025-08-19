@@ -1,4 +1,3 @@
-import { API_ENDPOINTS } from "./api/config";
 import { supabase } from "./supabaseClient";
 
 // Pricing configuration type
@@ -87,36 +86,6 @@ export type FurnitureItem = { id: string; name: string; category: string; points
 export type ItemCategory = { name: string; subcategories: string[]; is_active: boolean };
 export type CityBaseCharge = { normal: number; cityDay: number; dayOfWeek: number };
 
-// Fetch all constants from backend API endpoint in one request
-async function fetchAllConstants(): Promise<{
-  furnitureItems: FurnitureItem[];
-  itemCategories: ItemCategory[];
-  cityBaseCharges: Record<string, CityBaseCharge>;
-  pricingConfig: PricingConfig;
-}> {
-  try {
-    // Use the backend endpoint from config
-    const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-    const response = await fetch(`${baseUrl}/api/constants`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch constants: ${response.status} ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(`Backend error: ${result.error}`);
-    }
-    
-    return result.data;
-  } catch (error) {
-    console.error('[Constants] Error fetching from backend:', error);
-    throw error;
-  }
-}
-
-
 // --- DYNAMIC CONSTANTS INIT ---
 // These will be populated at runtime by the internal call to initDynamicConstants()
 export let furnitureItems: FurnitureItem[] = [];
@@ -141,10 +110,15 @@ export async function initDynamicConstants() {
         .limit(1)
         .single();
         
-      if (configError) throw configError;
+      if (configError) {
+        console.warn('[Constants] ⚠️ Pricing config error:', configError);
+        throw configError;
+      }
       if (configData) {
         pricingConfig = configData as PricingConfig;
         console.log('[Constants] ✅ Pricing config loaded from Supabase');
+      } else {
+        console.log('[Constants] ⚠️ No pricing config data found');
       }
       
       // Load furniture items
@@ -152,21 +126,33 @@ export async function initDynamicConstants() {
         .from('furniture_items')
         .select('*');
         
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.warn('[Constants] ⚠️ Furniture items error:', itemsError);
+        throw itemsError;
+      }
       if (itemsData) {
         furnitureItems = itemsData as FurnitureItem[];
-        console.log('[Constants] ✅ Furniture items loaded from Supabase');
+        console.log(`[Constants] ✅ Furniture items loaded from Supabase: ${itemsData.length} items`);
+      } else {
+        console.log('[Constants] ⚠️ No furniture items data found');
       }
       
       // Load item categories
+      console.log('[Constants] 📋 Loading item categories...');
       const { data: categoriesData, error: categoriesError } = await supabase
-        .from('furniture_categories')
+        .from('item_categories')
         .select('*');
         
-      if (categoriesError) throw categoriesError;
+      if (categoriesError) {
+        console.warn('[Constants] ⚠️ Item categories error:', categoriesError);
+        throw categoriesError;
+      }
       if (categoriesData) {
         itemCategories = categoriesData as ItemCategory[];
-        console.log('[Constants] ✅ Item categories loaded from Supabase');
+        console.log(`[Constants] ✅ Item categories loaded from Supabase: ${categoriesData.length} categories`);
+      } else {
+        console.log('[Constants] ⚠️ No item categories data found');
+        itemCategories = [];
       }
       
       // Load city base charges
@@ -178,37 +164,26 @@ export async function initDynamicConstants() {
       if (cityChargesData) {
         // Transform from array to record
         cityBaseCharges = cityChargesData.reduce((acc, city) => {
-          acc[city.city] = {
-            normal: city.normal_rate,
-            cityDay: city.city_day_rate,
+          acc[city.city_name] = {
+            normal: city.normal,
+            cityDay: city.city_day,
             dayOfWeek: city.day_of_week
           };
           return acc;
         }, {} as Record<string, CityBaseCharge>);
         console.log('[Constants] ✅ City base charges loaded from Supabase');
+        console.log('[Constants] 📊 City base charges sample:', Object.keys(cityBaseCharges).slice(0, 3).map(city => ({
+          city,
+          data: cityBaseCharges[city]
+        })));
       }
       
       constantsLoaded = true;
+      console.log(`[Constants] 🎉 Constants initialization complete!`);
+      console.log(`[Constants] 📊 Summary: ${furnitureItems.length} items, ${itemCategories.length} categories, ${Object.keys(cityBaseCharges).length} cities`);
       
     } catch (supabaseError) {
-      console.warn('[Constants] ⚠️ Error loading from Supabase, falling back to API:', supabaseError);
-      
-      // Fall back to API endpoint if Supabase direct query fails
-      const constants = await fetchAllConstants();
-      
-      furnitureItems = constants.furnitureItems;
-      itemCategories = constants.itemCategories;
-      cityBaseCharges = constants.cityBaseCharges;
-      
-      // Update pricing config with data from API
-      if (constants.pricingConfig) {
-        pricingConfig = constants.pricingConfig;
-        console.log('[Constants] ✅ Pricing config loaded from API');
-      } else {
-        console.log('[Constants] ⚠️ Using default pricing config (no API data)');
-      }
-      
-      constantsLoaded = true;
+      console.warn('[Constants] ⚠️ Error loading from Supabase:', supabaseError);
     }
     
     // Set up Realtime subscriptions after initial load

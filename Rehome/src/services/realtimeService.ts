@@ -93,7 +93,7 @@ export function subscribeToConstants(onUpdate?: ConstantsSubscriptionHandler): (
         {
           event: '*',
           schema: 'public',
-          table: 'furniture_categories'
+          table: 'item_categories'
         },
         (payload) => {
           console.log('[RealtimeService] Item categories updated:', payload);

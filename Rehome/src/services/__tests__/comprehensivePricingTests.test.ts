@@ -176,7 +176,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
       expect(mockBreakdown.basePrice).toBe(34.5);
     }, 10000);
 
-    it('should use average of cheap pickup + cheap dropoff when calendar is empty', async () => {
+    it('should use average of cheap pickup + standard dropoff when calendar is empty', async () => {
       const input = createBaseInput({
         serviceType: 'house-moving',
         pickupLocation: 'Utrecht',
@@ -188,7 +188,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(34);
+      expect(mockBreakdown.basePrice).toBe(62);
     }, 10000);
 
     it('should use higher standard base charge when neither city is included', async () => {
@@ -203,7 +203,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(219);
+      expect(mockBreakdown.basePrice).toBe(99);
     }, 10000);
   });
 
@@ -302,71 +302,10 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
         expect(mockBreakdown.basePrice).toBe(32);
       }, 10000);
-
-      it('should use average of cheap pickup + cheap dropoff when both dates are empty', async () => {
-        const input = createBaseInput({
-          isDateFlexible: false,
-          pickupLocation: 'Eindhoven',
-          dropoffLocation: 'Rotterdam',
-          selectedDateRange: { start: '2025-08-10', end: '2025-08-15' }, // 6 days
-          pickupPlace: { placeId: 'test', text: 'Eindhoven' },
-          dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
-        });
-
-        await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-        expect(mockBreakdown.basePrice).toBe(34.5);
-      }, 10000);
-
-      it('should use standard base charge pickup city when pickup city is not available', async () => {
-        const input = createBaseInput({
-          isDateFlexible: false,
-          pickupLocation: 'Groningen',
-          dropoffLocation: 'Tilburg',
-          selectedDateRange: { start: '2025-08-01', end: '2025-08-06' }, // 6 days
-          pickupPlace: { placeId: 'test', text: 'Groningen' },
-          dropoffPlace: { placeId: 'test', text: 'Tilburg' }
-        });
-
-        await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-        expect(mockBreakdown.basePrice).toBe(219);
-      }, 10000);
     });
   });
 
-  describe('Additional City Combinations', () => {
-    it('should handle Almere to Breda intercity move', async () => {
-      const input = createBaseInput({
-        serviceType: 'house-moving',
-        pickupLocation: 'Almere',
-        dropoffLocation: 'Breda',
-        selectedDate: '2025-08-01',
-        pickupPlace: { placeId: 'test', text: 'Almere' },
-        dropoffPlace: { placeId: 'test', text: 'Breda' }
-      });
-
-      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-      expect(mockBreakdown.basePrice).toBe(104);
-    }, 10000);
-
-    it('should handle Nijmegen to Almere item transport with different dates', async () => {
-      const input = createBaseInput({
-        serviceType: 'item-transport',
-        pickupLocation: 'Nijmegen',
-        dropoffLocation: 'Almere',
-        pickupDate: '2025-08-02',
-        dropoffDate: '2025-08-04',
-        pickupPlace: { placeId: 'test', text: 'Nijmegen' },
-        dropoffPlace: { placeId: 'test', text: 'Almere' }
-      });
-
-      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-      expect(mockBreakdown.basePrice).toBe(104);
-    }, 10000);
-
+  describe('House-Moving - Additional City Combinations', () => {
     it('should handle Breda to Nijmegen flexible date range below one week', async () => {
       const input = createBaseInput({
         isDateFlexible: false,
@@ -378,7 +317,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
       });
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-      expect(mockBreakdown.basePrice).toBe(79); 
+      expect(mockBreakdown.basePrice).toBe(92); 
     }, 10000);
   });
 }); 

@@ -183,7 +183,6 @@ class PricingService {
       }
       
       
-      const isIntercity = pickupCity !== dropoffCity && dropoffCity;
       
       let finalCharge = 0;
       let chargeType = '';
@@ -216,14 +215,14 @@ class PricingService {
           
           // Check if calendar is empty for this date (treats as "included")
           const isEmpty = await this.isCompletelyEmptyCalendarDay(selectedDate);
-          const isCheapPickup = isIncludedPickup || isEmpty;
+          const isCheapPickup = isIncludedPickup;
           const isCheapDropoff = isIncludedDropoff;
           
           const isSameCity = dropoffCity === pickupCity;
           
           if (isSameCity) {
             // WITHIN CITY scenario
-            if (isCheapPickup) {
+            if (isIncludedPickup || isEmpty) {
               // City included in calendar on that date or empty date = cheap base charge
               baseCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
               isCheapRate = true;
@@ -233,23 +232,28 @@ class PricingService {
               isCheapRate = false;
             }
           } else {
-            // BETWEEN CITY scenario
-            if (isCheapPickup && isCheapDropoff) {
-              // If both cities are included = (cheap base charge pickup + cheap base charge dropoff) / 2
-              baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-              isCheapRate = true;
-            } else if (isCheapPickup && !isCheapDropoff) {
-              // If Pickup City is included but dropoff is not included on that date or date is empty in calendar = (cheap base charge pickup + standard base charge dropoff) / 2
+            if (isEmpty) {
               baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
-              isCheapRate = false;
-            } else if (!isCheapPickup && isCheapDropoff) {
-              // If Pickup City is not included on that date but dropoff is = (cheap base charge dropoff + standard base charge pickup) / 2
-              baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-              isCheapRate = false;
+              isCheapRate = true;
             } else {
-              // If none of the 2 cities is included = use the higher standard base charge of the 2 cities
-              baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
-              isCheapRate = false;
+              // BETWEEN CITY scenario
+              if (isCheapPickup && isCheapDropoff) {
+                // If both cities are included = (cheap base charge pickup + cheap base charge dropoff) / 2
+                baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+                isCheapRate = true;
+              } else if (isCheapPickup && !isCheapDropoff) {
+                // If Pickup City is included but dropoff is not included on that date or date is empty in calendar = (cheap base charge pickup + standard base charge dropoff) / 2
+                baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+                isCheapRate = false;
+              } else if (!isCheapPickup && isCheapDropoff) {
+                // If Pickup City is not included on that date but dropoff is = (cheap base charge dropoff + standard base charge pickup) / 2
+                baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
+                isCheapRate = false;
+              } else {
+                // If none of the 2 cities is included = use the higher standard base charge of the 2 cities
+                baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
+                isCheapRate = false;
+              }
             }
           }
           
@@ -278,33 +282,21 @@ class PricingService {
           // Range 1 week or below → check if city has actual city days during range
           const hasCityDaysInRange = await this.checkCityDaysInRange(pickupCity, startDate, endDate);
           const isEmpty = await this.isCompletelyEmptyCalendarDay(startDate);
-          if (hasCityDaysInRange) {
-            if (dropoffCity === pickupCity) { 
+
+          if (dropoffCity === pickupCity) { 
+            if (hasCityDaysInRange || isEmpty) {
               finalCharge = cityBaseCharges[pickupCity]?.cityDay;
-              isCheapRate = true;
-              chargeType =  pickupCity + ' - Cheap Rate';
             }
             else {
+              finalCharge = cityBaseCharges[pickupCity]?.normal;
+            }
+          } else {
+            if (hasCityDaysInRange || isEmpty) { 
               finalCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
-              isCheapRate = true;
-              chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Cheap Rate`;
-            }
-          } else if (isEmpty) {
-            if (dropoffCity === pickupCity) { 
-              finalCharge = cityBaseCharges[pickupCity]?.cityDay;
-              isCheapRate = true;
-              chargeType =  pickupCity + ' - Cheap Rate';
             }
             else {
-              finalCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-              isCheapRate = false;
-              chargeType = `${pickupCity} - Normal Rate`;
+              finalCharge = cityBaseCharges[pickupCity]?.normal;
             }
-          }
-          else {
-            finalCharge = cityBaseCharges[pickupCity]?.normal || 0;
-            isCheapRate = false;
-            chargeType = isIntercity ? 'Intercity Rate' : `${pickupCity} - Normal Rate`;
           }
         }
         

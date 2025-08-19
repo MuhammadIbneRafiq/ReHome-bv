@@ -3,7 +3,7 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaMinus, FaPlus, FaInfoCircle
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { itemCategories, getItemPoints } from '../../lib/constants';
+import { itemCategories, furnitureItems, getItemPoints, constantsLoaded } from '../../lib/constants';
 import { useTranslation } from 'react-i18next';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
@@ -225,6 +225,22 @@ function GooglePlacesAutocomplete({
 
 const HouseMovingPage = () => {
     const { t } = useTranslation();
+    const [isDataLoaded, setIsDataLoaded] = useState(constantsLoaded);
+    
+    // Check if constants are loaded
+    useEffect(() => {
+        if (!constantsLoaded || furnitureItems.length === 0) {
+            const checkLoaded = setInterval(() => {
+                if (constantsLoaded && furnitureItems.length > 0) {
+                    setIsDataLoaded(true);
+                    clearInterval(checkLoaded);
+                }
+            }, 100);
+            return () => clearInterval(checkLoaded);
+        } else {
+            setIsDataLoaded(true);
+        }
+    }, []);
     const [step, setStep] = useState(1);
     
     // Check for transferred data from item transport
@@ -881,9 +897,7 @@ const HouseMovingPage = () => {
                             <div className="mt-2 space-y-1">
                                 {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
                                     const quantity = itemQuantities[itemId];
-                                    const itemData = itemCategories
-                                        .flatMap(category => category.items)
-                                        .find(item => item.id === itemId);
+                                    const itemData = furnitureItems.find(item => item.id === itemId);                 
                                     const itemName = itemData ? itemData.name : itemId;
                                     
                                     return (
@@ -965,6 +979,18 @@ const HouseMovingPage = () => {
     };
 
 
+
+    // Show loading state if data isn't ready
+    if (!isDataLoaded) {
+        return (
+            <div className="min-h-screen bg-orange-50 pt-24 pb-12">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+                    <p className="text-lg text-gray-600">Loading furniture data...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-orange-50 pt-24 pb-12">
@@ -1222,9 +1248,9 @@ const HouseMovingPage = () => {
                                         <div key={category.name} className="mb-6">
                                             <h3 className="text-lg font-medium text-gray-900 mb-3">{category.name}</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                {category.items.map((item) => {
-                                                    const itemId = item.id;
-                                                    const quantity = itemQuantities[itemId] || 0;
+                                                                                {furnitureItems.filter(item => item.category === category.name).map((item) => {
+                                    const itemId = item.id;
+                                    const quantity = itemQuantities[itemId] || 0;
                                                     
                                                     return (
                                                         <div key={itemId} className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
@@ -1360,9 +1386,8 @@ const HouseMovingPage = () => {
                                                             </label>
                                                         </div>
                                                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
-                                                            const itemData = itemCategories
-                                                                .find(category => category.items.some(i => i.id === itemId));
-                                                            const itemName = itemData ? itemData.items.find(i => i.id === itemId)?.name : itemId;
+                                                            const itemData = furnitureItems.find(item => item.id === itemId);
+                                                            const itemName = itemData ? itemData.name : itemId;
                                                             
                                                             return (
                                                                 <div key={index} className="flex items-center">
@@ -1479,8 +1504,8 @@ const HouseMovingPage = () => {
                                                             </label>
                                                         </div>
                                                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
-                                                            const itemData = itemCategories.find(category => category.items.some(i => i.id === itemId));
-                                                            const itemName = itemData ? itemData.items.find(i => i.id === itemId)?.name : itemId;
+                                                            const itemData = furnitureItems.find(item => item.id === itemId);
+                                                            const itemName = itemData ? itemData.name : itemId;
                                                             return (
                                                                 <div key={index} className="flex items-center">
                                                                     <input
@@ -1731,9 +1756,8 @@ const HouseMovingPage = () => {
                                             {Object.keys(itemQuantities).length > 0 ? (
                                                 <ul className="mt-2 space-y-1">
                                                     {Object.entries(itemQuantities).map(([itemId, quantity]) => {
-                                                        const itemData = itemCategories
-                                                            .find(category => category.items.some(i => i.id === itemId));
-                                                        const itemName = itemData ? itemData.items.find(i => i.id === itemId)?.name : itemId;
+                                                        const itemData = furnitureItems.find(item => item.id === itemId);
+                                                        const itemName = itemData ? itemData.name : itemId;
                                                         
                                                         return (
                                                             <li key={itemId} className="flex justify-between text-sm">
