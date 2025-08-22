@@ -1,11 +1,22 @@
 /* @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+// Import jest-dom matchers - commented out until proper Vitest setup
+// import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
+import { BrowserRouter } from 'react-router-dom';
 import ItemMovingPage from '../ItemMovingPage';
 import * as pricing from '../../../services/pricingService';
 
 vi.mock('../../api/config', () => ({ default: { MOVING: { ITEM_REQUEST: '/api/mock' }, AUTH: { LOGIN: '/api/auth/login' } } }));
+
+// Mock i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { changeLanguage: vi.fn() }
+  })
+}));
 
 const mockPricingResult = (overrides: Partial<ReturnType<any>> = {}) => ({
   basePrice: 50,
@@ -36,34 +47,45 @@ describe('ItemMovingPage – interactions and edge cases', () => {
 
   it('recalculates when toggling flexible/fixed/rehome date options', async () => {
     const spy = vi.spyOn(pricing.pricingService, 'calculatePricing').mockResolvedValue(mockPricingResult());
-    render(<ItemMovingPage />);
+    render(<BrowserRouter><ItemMovingPage /></BrowserRouter>);
 
     // Step 1
-    await userEvent.click(await screen.findByText(/Private Address/i));
+    await userEvent.click((await screen.findAllByText(/Private Address/i))[0]);
     await userEvent.type(await screen.findByPlaceholderText(/Enter pickup address/i), 'Ams');
     await userEvent.type(await screen.findByPlaceholderText(/Enter dropoff address/i), 'Ams');
-    await userEvent.click(await screen.findByRole('button', { name: /next/i }));
+    await userEvent.click((await screen.findAllByRole('button', { name: /next/i }))[0]);
 
-    const dateSelect = await screen.findByLabelText(/Date Option/i);
+    // Wait for the button click to complete and move to step 2 (date selection)
+    await waitFor(() => {
+      expect(screen.queryByText(/Select your preferred date and time/i)).not.toBeNull();
+    });
+    
+    // Now we're on the date selection screen
+    const dateSelect = screen.getByLabelText(/Date Option/i);
+    
+    // Wait for each option change to complete and trigger a new calculation
     await userEvent.selectOptions(dateSelect, 'flexible');
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    
     await userEvent.selectOptions(dateSelect, 'fixed');
+    await waitFor(() => expect(spy).toHaveBeenCalled());
+    
     await userEvent.selectOptions(dateSelect, 'rehome');
-
     await waitFor(() => expect(spy).toHaveBeenCalled());
   });
 
   it('applies student discount only when isStudent and hasStudentId', async () => {
     const spy = vi.spyOn(pricing.pricingService, 'calculatePricing').mockResolvedValue(mockPricingResult({ studentDiscount: 6, total: 54 }));
-    render(<ItemMovingPage />);
+    render(<BrowserRouter><ItemMovingPage /></BrowserRouter>);
 
-    await userEvent.click(await screen.findByText(/Private Address/i));
+    await userEvent.click((await screen.findAllByText(/Private Address/i))[0]);
     await userEvent.type(await screen.findByPlaceholderText(/Enter pickup address/i), 'Ams');
     await userEvent.type(await screen.findByPlaceholderText(/Enter dropoff address/i), 'Ams');
-    await userEvent.click(await screen.findByRole('button', { name: /next/i }));
+    await userEvent.click((await screen.findAllByRole('button', { name: /next/i }))[0]);
 
     // Go to add-ons step to toggle student
-    await userEvent.click(await screen.findByRole('button', { name: /next/i }));
-    await userEvent.click(await screen.findByRole('button', { name: /next/i }));
+    await userEvent.click((await screen.findAllByRole('button', { name: /next/i }))[0]);
+    await userEvent.click((await screen.findAllByRole('button', { name: /next/i }))[0]);
 
     const studentCheckbox = await screen.findByLabelText(/I am a student/i);
     await userEvent.click(studentCheckbox);
@@ -74,15 +96,15 @@ describe('ItemMovingPage – interactions and edge cases', () => {
     const spy = vi.spyOn(pricing.pricingService, 'calculatePricing').mockResolvedValue(
       mockPricingResult({ carryingCost: 15, assemblyCost: 20, subtotal: 85, total: 85 })
     );
-    render(<ItemMovingPage />);
+    render(<BrowserRouter><ItemMovingPage /></BrowserRouter>);
 
-    await userEvent.click(await screen.findByText(/Private Address/i));
+    await userEvent.click((await screen.findAllByText(/Private Address/i))[0]);
     await userEvent.type(await screen.findByPlaceholderText(/Enter pickup address/i), 'Ams');
     await userEvent.type(await screen.findByPlaceholderText(/Enter dropoff address/i), 'Ams');
-    await userEvent.click(await screen.findByRole('button', { name: /next/i }));
+    await userEvent.click((await screen.findAllByRole('button', { name: /next/i }))[0]);
 
     // Step 3: items
-    await userEvent.click(await screen.findByRole('button', { name: /next/i }));
+    await userEvent.click((await screen.findAllByRole('button', { name: /next/i }))[0]);
     // Step 4: add-ons
     await userEvent.click(await screen.findByRole('checkbox', { name: /assembly/i }));
     await userEvent.click(await screen.findByRole('checkbox', { name: /carrying/i }));

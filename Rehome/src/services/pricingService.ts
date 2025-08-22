@@ -587,9 +587,16 @@ class PricingService {
       }
     }
 
+    // Ensure we have baseMultipliers, if not use defaults
+    const baseMultipliers = pricingConfig?.baseMultipliers || {
+      houseMovingItemMultiplier: 2.0,
+      itemTransportMultiplier: 1.0,
+      addonMultiplier: 3.0
+    };
+    
     const multiplier = input.serviceType === 'house-moving' 
-      ? pricingConfig.baseMultipliers.houseMovingItemMultiplier 
-      : pricingConfig.baseMultipliers.itemTransportMultiplier;
+      ? baseMultipliers.houseMovingItemMultiplier 
+      : baseMultipliers.itemTransportMultiplier;
 
     breakdown.breakdown.items.totalPoints = totalPoints;
     breakdown.breakdown.items.multiplier = multiplier;
@@ -666,9 +673,10 @@ class PricingService {
         
         if (needsCarrying) {
           const points = getItemPoints(itemId);
-          const multiplier = points <= pricingConfig.carryingMultipliers.lowValue.threshold
-            ? pricingConfig.carryingMultipliers.lowValue.multiplier
-            : pricingConfig.carryingMultipliers.highValue.multiplier;
+          const carryingLowThreshold = pricingConfig?.carryingMultipliers?.lowValue?.threshold ?? 10;
+          const carryingLowMultiplier = pricingConfig?.carryingMultipliers?.lowValue?.multiplier ?? 1;
+          const carryingHighMultiplier = pricingConfig?.carryingMultipliers?.highValue?.multiplier ?? 1.5;
+          const multiplier = points <= carryingLowThreshold ? carryingLowMultiplier : carryingHighMultiplier;
           
           const itemCarryingPoints = points * multiplier * totalFloors * quantity;
           totalCarryingPoints += itemCarryingPoints;
@@ -677,13 +685,15 @@ class PricingService {
             itemId,
             points: points * quantity,
             multiplier: multiplier * totalFloors,
-            cost: itemCarryingPoints * pricingConfig.baseMultipliers.addonMultiplier
+            cost: itemCarryingPoints * (pricingConfig?.baseMultipliers?.addonMultiplier || 3.0)
           });
         }
       }
     }
     // Apply x3 multiplier for add-ons as per pricing rules
-    const totalCost = totalCarryingPoints * pricingConfig.baseMultipliers.addonMultiplier;
+    // Ensure we have baseMultipliers and addonMultiplier
+    const addonMultiplier = pricingConfig?.baseMultipliers?.addonMultiplier || 3.0;
+    const totalCost = totalCarryingPoints * addonMultiplier;
 
     breakdown.breakdown.carrying.itemBreakdown = itemBreakdown;
     breakdown.breakdown.carrying.totalCost = totalCost;
@@ -703,9 +713,10 @@ class PricingService {
       if (needsAssembly && input.itemQuantities[itemId] > 0) {
         const points = getItemPoints(itemId);
         const quantity = input.itemQuantities[itemId];
-        const multiplier = points <= pricingConfig.assemblyMultipliers.lowValue.threshold
-          ? pricingConfig.assemblyMultipliers.lowValue.multiplier
-          : pricingConfig.assemblyMultipliers.highValue.multiplier;
+        const assemblyLowThreshold = pricingConfig?.assemblyMultipliers?.lowValue?.threshold ?? 10;
+        const assemblyLowMultiplier = pricingConfig?.assemblyMultipliers?.lowValue?.multiplier ?? 1;
+        const assemblyHighMultiplier = pricingConfig?.assemblyMultipliers?.highValue?.multiplier ?? 1.5;
+        const multiplier = points <= assemblyLowThreshold ? assemblyLowMultiplier : assemblyHighMultiplier;
         
         const itemAssemblyPoints = points * multiplier * quantity;
         totalAssemblyPoints += itemAssemblyPoints;
@@ -714,13 +725,15 @@ class PricingService {
           itemId,
           points: points * quantity,
           multiplier,
-          cost: itemAssemblyPoints * pricingConfig.baseMultipliers.addonMultiplier
+          cost: itemAssemblyPoints * (pricingConfig?.baseMultipliers?.addonMultiplier || 3.0)
         });
       }
     }
 
     // Apply x3 multiplier for add-ons as per pricing rules
-    const totalCost = totalAssemblyPoints * pricingConfig.baseMultipliers.addonMultiplier;
+    // Ensure we have baseMultipliers and addonMultiplier
+    const addonMultiplier = pricingConfig?.baseMultipliers?.addonMultiplier || 3.0;
+    const totalCost = totalAssemblyPoints * addonMultiplier;
 
     breakdown.breakdown.assembly.itemBreakdown = itemBreakdown;
     breakdown.breakdown.assembly.totalCost = totalCost;
@@ -745,10 +758,11 @@ class PricingService {
       }
     }
 
-    const category = totalQuantity <= pricingConfig.extraHelperPricing.smallMove.threshold ? 'small' : 'big';
-    const cost = category === 'small' 
-      ? pricingConfig.extraHelperPricing.smallMove.price 
-      : pricingConfig.extraHelperPricing.bigMove.price;
+    const smallThreshold = pricingConfig?.extraHelperPricing?.smallMove?.threshold ?? 5;
+    const smallPrice = pricingConfig?.extraHelperPricing?.smallMove?.price ?? 25;
+    const bigPrice = pricingConfig?.extraHelperPricing?.bigMove?.price ?? 45;
+    const category = totalQuantity <= smallThreshold ? 'small' : 'big';
+    const cost = category === 'small' ? smallPrice : bigPrice;
 
     breakdown.breakdown.extraHelper.totalPoints = totalQuantity;
     breakdown.breakdown.extraHelper.category = category;
@@ -761,8 +775,9 @@ class PricingService {
                         breakdown.carryingCost + breakdown.assemblyCost + breakdown.extraHelperCost;
 
     // Apply student discount if applicable
+    const studentDiscountRate = pricingConfig?.studentDiscount ?? 0;
     if (input.isStudent && input.hasStudentId) {
-      breakdown.studentDiscount = breakdown.subtotal * pricingConfig.studentDiscount;
+      breakdown.studentDiscount = breakdown.subtotal * studentDiscountRate;
       breakdown.total = breakdown.subtotal - breakdown.studentDiscount;
     } else {
       breakdown.studentDiscount = 0;

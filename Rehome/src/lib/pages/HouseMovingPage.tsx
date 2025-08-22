@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaMinus, FaPlus, FaInfoCircle, FaToolbox } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
@@ -88,72 +88,91 @@ function GooglePlacesAutocomplete({
     }
   };
 
-  const searchPlaces = async (query: string) => {
-    if (query.length < 3) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Use the new Places API v1 autocomplete endpoint
-      const response = await fetch(
-        'https://places.googleapis.com/v1/places:autocomplete',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
-          },
-          body: JSON.stringify({
-            input: query,
-            locationBias: {
-              circle: {
-                center: {
-                  latitude: 52.3676,
-                  longitude: 4.9041
-                },
-                radius: 50000.0
-              }
-            },
-            languageCode: 'en',
-            regionCode: 'NL',
-            includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
-            includedRegionCodes: ['nl']
-          })
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.suggestions) {
-          const placeSuggestions = data.suggestions
-            .filter((suggestion: any) => suggestion.placePrediction)
-            .map((suggestion: any) => ({
-              text: suggestion.placePrediction.text?.text || 'Unknown address',
-              placeId: suggestion.placePrediction.placeId,
-              structuredFormat: suggestion.placePrediction.structuredFormat
-            }));
-          setSuggestions(placeSuggestions);
-          setShowSuggestions(true);
-        }
-      } else {
-        console.error('Places API error:', response.status, response.statusText);
-        const errorData = await response.text();
-        console.error('Error details:', errorData);
+  // Debounced search function with caching
+  const searchPlaces = useMemo(() => {
+    // Create a cache for API responses
+    const cache = new Map();
+    
+    // The actual search function
+    const search = async (query: string) => {
+      if (query.length < 3) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
       }
-    } catch (error) {
-      console.error('Places API error:', error);
-      // Fallback to simple input
-      setSuggestions([]);
-      setShowSuggestions(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      
+      // Check cache first
+      if (cache.has(query)) {
+        setSuggestions(cache.get(query));
+        setShowSuggestions(true);
+        return;
+      }
+  
+      setIsLoading(true);
+      try {
+        // Use the new Places API v1 autocomplete endpoint
+        const response = await fetch(
+          'https://places.googleapis.com/v1/places:autocomplete',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
+            },
+            body: JSON.stringify({
+              input: query,
+              locationBias: {
+                circle: {
+                  center: {
+                    latitude: 52.3676,
+                    longitude: 4.9041
+                  },
+                  radius: 50000.0
+                }
+              },
+              languageCode: 'en',
+              regionCode: 'NL',
+              includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
+              includedRegionCodes: ['nl']
+            })
+          }
+        );
+  
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.suggestions) {
+            const placeSuggestions = data.suggestions
+              .filter((suggestion: any) => suggestion.placePrediction)
+              .map((suggestion: any) => ({
+                text: suggestion.placePrediction.text?.text || 'Unknown address',
+                placeId: suggestion.placePrediction.placeId,
+                structuredFormat: suggestion.placePrediction.structuredFormat
+              }));
+              
+            // Cache the results
+            cache.set(query, placeSuggestions);
+            
+            setSuggestions(placeSuggestions);
+            setShowSuggestions(true);
+          }
+        } else {
+          console.error('Places API error:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('Places API error:', error);
+        // Fallback to simple input
+        setSuggestions([]);
+        setShowSuggestions(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Return the debounced search function
+    return search;
+  }, [apiKey]); // Only recreate if API key changes
 
   const handleSuggestionClick = async (suggestion: any) => {
     onChange(suggestion.text);
@@ -175,17 +194,26 @@ function GooglePlacesAutocomplete({
     setSuggestions([]);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    onChange(newValue);
+  // Create a debounced input handler
+  const handleInputChange = useMemo(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
     
-    // Debounce the search
-    const timeoutId = setTimeout(() => {
-      searchPlaces(newValue);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  };
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      onChange(newValue);
+      
+      // Clear any existing timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      // Set a new timeout
+      timeoutId = setTimeout(() => {
+        searchPlaces(newValue);
+        timeoutId = null;
+      }, 300);
+    };
+  }, [onChange, searchPlaces]);
 
 
   return (
@@ -482,28 +510,50 @@ const HouseMovingPage = () => {
 
     // Debounced price calculation to avoid excessive API calls while typing
     useEffect(() => {
+        // Skip calculation if locations are not set
+        if (!firstLocation || !secondLocation || 
+            firstLocation.trim().length <= 3 || secondLocation.trim().length <= 3) {
+            setPricingBreakdown(null);
+            return;
+        }
+        
+        // Increment the request ID to prevent race conditions
+        ++latestRequestIdRef.current;
+        
         const debounceTimer = setTimeout(() => {
-                       
-            // Only calculate price if we have both complete locations
-            if (firstLocation && secondLocation && 
-                firstLocation.trim().length > 3 && secondLocation.trim().length > 3) {
-                calculatePrice();
-            } else {
-                // Clear price if locations are incomplete
-                setPricingBreakdown(null);
-                
-            }
+            calculatePrice();
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
     }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, isDateFlexible, dateOption, isFixedDate]);
 
+    // Create a memoized pricing input object to reduce unnecessary recalculations
+    const pricingInputDependencies = useMemo(() => {
+        return {
+            itemQuantities,
+            floorPickup: parseInt(floorPickup) || 0,
+            floorDropoff: parseInt(floorDropoff) || 0,
+            disassembly,
+            extraHelper,
+            carryingService,
+            elevatorPickup,
+            elevatorDropoff,
+            disassemblyItems,
+            extraHelperItems,
+            carryingServiceItems,
+            isStudent,
+            hasStudentId: !!studentId
+        };
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, 
+        elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, 
+        isStudent, studentId]);
+    
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff, disassembly, disassemblyItems, extraHelperItems, extraHelper, carryingService, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace]);
+    }, [pricingInputDependencies, pickupPlace, dropoffPlace]);
 
     // Add handlers for select all functionality
     const handleSelectAllAssembly = (checked: boolean) => {
@@ -602,14 +652,15 @@ const HouseMovingPage = () => {
         setStep(2); // Move to date selection step
     };
 
-    const incrementItem = (itemId: string) => {
+    // Memoize the item increment/decrement functions for better performance
+    const incrementItem = useCallback((itemId: string) => {
         setItemQuantities(prevQuantities => ({
             ...prevQuantities,
             [itemId]: (prevQuantities[itemId] || 0) + 1,
         }));
-    };
+    }, []);
 
-    const decrementItem = (itemId: string) => {
+    const decrementItem = useCallback((itemId: string) => {
         setItemQuantities(prevQuantities => {
             const newQuantity = (prevQuantities[itemId] || 0) - 1;
             if (newQuantity <= 0) {
@@ -618,7 +669,7 @@ const HouseMovingPage = () => {
             }
             return { ...prevQuantities, [itemId]: newQuantity };
         });
-    };
+    }, []);
 
     const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
@@ -1140,32 +1191,38 @@ const HouseMovingPage = () => {
                                             value={dateOption}
                                             onChange={e => {
                                                 const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome';
-                                                setDateOption(newDateOption);
                                                 
-                                                // Clear all date-related states first
-                                                setSelectedDateRange({ start: '', end: '' });
-                                                setIsDateFlexible(false);
-                                                setIsFixedDate(false);
-                                                
-                                                // Set appropriate states based on option
-                                                if (newDateOption === 'rehome') {
-                                                    // ReHome choose: isDateFlexible=true, no dates set
-                                                    setIsDateFlexible(true);
-                                                } else if (newDateOption === 'flexible') {
-                                                    // Flexible range: isDateFlexible=false, user will set date range
-                                                    setIsDateFlexible(false);
-                                                } else if (newDateOption === 'fixed') {
-                                                    // Fixed date: isDateFlexible=false, user will set single date
-                                                    setIsDateFlexible(false);
-                                                    setIsFixedDate(true);
-                                                }
-                                                
-                                                // Trigger immediate price calculation after state change
-                                                setTimeout(() => {
-                                                    if (firstLocation && secondLocation) {
-                                                        calculatePrice();
+                                                // Use a single state update function to batch all changes
+                                                const updateStates = () => {
+                                                    setDateOption(newDateOption);
+                                                    
+                                                    // Clear all date-related states first
+                                                    setSelectedDateRange({ start: '', end: '' });
+                                                    
+                                                    // Set appropriate states based on option
+                                                    if (newDateOption === 'rehome') {
+                                                        // ReHome choose: isDateFlexible=true, no dates set
+                                                        setIsDateFlexible(true);
+                                                        setIsFixedDate(false);
+                                                    } else if (newDateOption === 'flexible') {
+                                                        // Flexible range: isDateFlexible=false, user will set date range
+                                                        setIsDateFlexible(false);
+                                                        setIsFixedDate(false);
+                                                    } else if (newDateOption === 'fixed') {
+                                                        // Fixed date: isDateFlexible=false, user will set single date
+                                                        setIsDateFlexible(false);
+                                                        setIsFixedDate(true);
                                                     }
-                                                }, 50);
+                                                    
+                                                    // Increment request ID to ensure fresh calculation
+                                                    latestRequestIdRef.current++;
+                                                };
+                                                
+                                                // Execute all state updates at once
+                                                updateStates();
+                                                
+                                                // No need for setTimeout - React will batch these updates
+                                                // and the useEffect will trigger calculatePrice when needed
                                             }}
                                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                         >
@@ -1248,10 +1305,10 @@ const HouseMovingPage = () => {
                                         <div key={category.name} className="mb-6">
                                             <h3 className="text-lg font-medium text-gray-900 mb-3">{category.name}</h3>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                                                {furnitureItems.filter(item => item.category === category.name).map((item) => {
-                                    const itemId = item.id;
-                                    const quantity = itemQuantities[itemId] || 0;
-                                                    
+                                            {furnitureItems.filter(item => item.category === category.name).map((item) => {
+                                                    const itemId = item.id;
+                                                    const quantity = itemQuantities[itemId] || 0;
+                                                            
                                                     return (
                                                         <div key={itemId} className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
                                                             <span className="text-gray-800">{item.name}</span>

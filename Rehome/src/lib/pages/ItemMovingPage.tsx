@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { itemCategories, getItemPoints } from '../../lib/constants';
+import { itemCategories, getItemPoints, furnitureItems, constantsLoaded } from '../../lib/constants';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
@@ -239,6 +239,22 @@ function GooglePlacesAutocomplete({
 
 const ItemMovingPage = () => {
     const { t } = useTranslation();
+    const [isDataLoaded, setIsDataLoaded] = useState(constantsLoaded);
+
+    useEffect(() => {
+        if (!constantsLoaded || furnitureItems.length === 0) {
+            const checkLoaded = setInterval(() => {
+                if (constantsLoaded) {
+                    setIsDataLoaded(true);
+                    clearInterval(checkLoaded);
+                }
+            }, 100);
+            return () => clearInterval(checkLoaded);
+        } else {
+            setIsDataLoaded(true);
+        }
+    }, []);
+
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [disassembly, setDisassembly] = useState(false);
@@ -1059,9 +1075,7 @@ const ItemMovingPage = () => {
                             <div className="mt-2 space-y-1">
                                 {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
                                     const quantity = itemQuantities[itemId];
-                                    const itemData = itemCategories
-                                        .flatMap(category => category.items)
-                                        .find(item => item.id === itemId);
+                                    const itemData = furnitureItems.find(item => item.id === itemId);
                                     const itemName = itemData ? itemData.name : itemId;
                                     
                                     return (
@@ -1141,6 +1155,18 @@ const ItemMovingPage = () => {
             </div>
         );
     };
+
+    // Show loading state if data isn't ready
+    if (!isDataLoaded) {
+        return (
+            <div className="min-h-screen bg-orange-50 pt-24 pb-12">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+                    <p className="text-lg text-gray-600">Loading furniture data...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-orange-50 pt-24 pb-12">
@@ -1454,7 +1480,7 @@ const ItemMovingPage = () => {
                                             <div key={index} className="border border-gray-200 rounded-lg p-4">
                                                 <h3 className="text-md font-medium text-gray-800 mb-3">{category.name}</h3>
                                                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                                    {[...category.items, ...(index === 0 && !category.items.some(i => i.id === 'box-bag') ? [{ id: 'box-bag', name: 'Box/Bag' }] : [])].map((item, itemIndex) => {
+                                                    {[...furnitureItems, ...(index === 0 && !furnitureItems.some(i => i.id === 'box-bag') ? [{ id: 'box-bag', name: 'Box/Bag' }] : [])].map((item, itemIndex) => {
                                                         const itemKey = item.id;
                                                         const quantity = itemQuantities[itemKey] || 0;
                                                         return (
@@ -1463,7 +1489,7 @@ const ItemMovingPage = () => {
                                                                     <div className="text-sm text-gray-700">{item.name}</div>
                                                                    
                                                                 </div>
-                                                                <div className="flex items-center space-x-2 ml-4">
+                                                                <div className="flex items-center space-x-2">
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => decrementItem(itemKey)}
@@ -1583,7 +1609,7 @@ const ItemMovingPage = () => {
                                                 </div>
                                                 {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
                                                     const quantity: number = itemQuantities[itemId];
-                                                    const itemData = itemCategories.flatMap(category => category.items).find(item => item.id === itemId);
+                                                    const itemData = furnitureItems.find(item => item.id === itemId);
                                                     const itemName = itemData ? itemData.name : itemId;
                                                     return (
                                                         <div key={index} className="flex items-center justify-between">
@@ -1665,7 +1691,7 @@ const ItemMovingPage = () => {
                                                 </div>
                                                 {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
                                                     const quantity: number = itemQuantities[itemId];
-                                                    const itemData = itemCategories.flatMap(category => category.items).find(item => item.id === itemId);
+                                                    const itemData = furnitureItems.find(item => item.id === itemId);
                                                     const itemName = itemData ? itemData.name : itemId;
                                                     return (
                                                         <div key={index} className="flex items-center justify-between">
@@ -1899,9 +1925,7 @@ const ItemMovingPage = () => {
                                         <ul className="space-y-2 text-sm">
                                             {Object.keys(itemQuantities).map((itemId, index) => {
                                                 const quantity = itemQuantities[itemId];
-                                                const itemData = itemCategories
-                                                    .flatMap(category => category.items)
-                                                    .find(item => item.id === itemId);
+                                                const itemData = furnitureItems.find(item => item.id === itemId);
                                                 const itemName = itemData ? itemData.name : itemId;
                                                 
                                                 return (

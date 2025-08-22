@@ -40,7 +40,7 @@ export type PricingConfig = {
 };
 
 // Default pricing config (fallback)
-const defaultPricingConfig: PricingConfig = {
+export const defaultPricingConfig: PricingConfig = {
   baseMultipliers: {
     houseMovingItemMultiplier: 2.0,
     itemTransportMultiplier: 1.0,
