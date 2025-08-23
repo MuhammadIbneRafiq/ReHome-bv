@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaMinus, FaPlus, FaInfoCircle, FaToolbox } from "react-icons/fa";
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
@@ -54,125 +54,94 @@ function GooglePlacesAutocomplete({
 
   // Function to get place details including coordinates from placeId
   const getPlaceDetails = async (placeId: string) => {
+    const response = await fetch(
+    'https://places.googleapis.com/v1/places/' + placeId,
+    {
+        method: 'GET',
+        headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'location,displayName,formattedAddress'
+        }
+    }
+    );
+    const data = await response.json();
+    return {
+        placeId,
+        coordinates: data.location ? {
+        lat: data.location.latitude,
+        lng: data.location.longitude
+        } : null,
+        formattedAddress: data.formattedAddress,
+        displayName: data.displayName?.text
+    };
+};
+
+  const searchPlaces = async (query: string) => {
+    if (query.length < 3) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsLoading(true);
     try {
+      // Use the new Places API v1 autocomplete endpoint
       const response = await fetch(
-        'https://places.googleapis.com/v1/places/' + placeId,
+        'https://places.googleapis.com/v1/places:autocomplete',
         {
-          method: 'GET',
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'location,displayName,formattedAddress'
-          }
+            'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
+          },
+          body: JSON.stringify({
+            input: query,
+            locationBias: {
+              circle: {
+                center: {
+                  latitude: 52.3676,
+                  longitude: 4.9041
+                },
+                radius: 50000.0
+              }
+            },
+            languageCode: 'en',
+            regionCode: 'NL',
+            includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
+            includedRegionCodes: ['nl']
+          })
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        return {
-          placeId,
-          coordinates: data.location ? {
-            lat: data.location.latitude,
-            lng: data.location.longitude
-          } : null,
-          formattedAddress: data.formattedAddress,
-          displayName: data.displayName?.text
-        };
+        
+        if (data.suggestions) {
+          const placeSuggestions = data.suggestions
+            .filter((suggestion: any) => suggestion.placePrediction)
+            .map((suggestion: any) => ({
+              text: suggestion.placePrediction.text?.text || 'Unknown address',
+              placeId: suggestion.placePrediction.placeId,
+              structuredFormat: suggestion.placePrediction.structuredFormat
+            }));
+            
+          setSuggestions(placeSuggestions);
+          setShowSuggestions(true);
+        }
       } else {
-        console.error('Place details API error:', response.status, response.statusText);
-        return null;
+        console.error('Places API error:', response.status, response.statusText);
       }
     } catch (error) {
-      console.error('Error getting place details:', error);
-      return null;
+      console.error('Places API error:', error);
+      // Fallback to simple input
+      setSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Debounced search function with caching
-  const searchPlaces = useMemo(() => {
-    // Create a cache for API responses
-    const cache = new Map();
-    
-    // The actual search function
-    const search = async (query: string) => {
-      if (query.length < 3) {
-        setSuggestions([]);
-        setShowSuggestions(false);
-        return;
-      }
-      
-      // Check cache first
-      if (cache.has(query)) {
-        setSuggestions(cache.get(query));
-        setShowSuggestions(true);
-        return;
-      }
-  
-      setIsLoading(true);
-      try {
-        // Use the new Places API v1 autocomplete endpoint
-        const response = await fetch(
-          'https://places.googleapis.com/v1/places:autocomplete',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Goog-Api-Key': apiKey,
-              'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
-            },
-            body: JSON.stringify({
-              input: query,
-              locationBias: {
-                circle: {
-                  center: {
-                    latitude: 52.3676,
-                    longitude: 4.9041
-                  },
-                  radius: 50000.0
-                }
-              },
-              languageCode: 'en',
-              regionCode: 'NL',
-              includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
-              includedRegionCodes: ['nl']
-            })
-          }
-        );
-  
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data.suggestions) {
-            const placeSuggestions = data.suggestions
-              .filter((suggestion: any) => suggestion.placePrediction)
-              .map((suggestion: any) => ({
-                text: suggestion.placePrediction.text?.text || 'Unknown address',
-                placeId: suggestion.placePrediction.placeId,
-                structuredFormat: suggestion.placePrediction.structuredFormat
-              }));
-              
-            // Cache the results
-            cache.set(query, placeSuggestions);
-            
-            setSuggestions(placeSuggestions);
-            setShowSuggestions(true);
-          }
-        } else {
-          console.error('Places API error:', response.status, response.statusText);
-        }
-      } catch (error) {
-        console.error('Places API error:', error);
-        // Fallback to simple input
-        setSuggestions([]);
-        setShowSuggestions(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    // Return the debounced search function
-    return search;
-  }, [apiKey]); // Only recreate if API key changes
 
   const handleSuggestionClick = async (suggestion: any) => {
     onChange(suggestion.text);
@@ -194,68 +163,57 @@ function GooglePlacesAutocomplete({
     setSuggestions([]);
   };
 
-  // Create a debounced input handler
-  const handleInputChange = useMemo(() => {
-    let timeoutId: NodeJS.Timeout | null = null;
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    onChange(newValue);
     
-    return (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      onChange(newValue);
-      
-      // Clear any existing timeout
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      
-      // Set a new timeout
-      timeoutId = setTimeout(() => {
-        searchPlaces(newValue);
-        timeoutId = null;
-      }, 300);
-    };
-  }, [onChange, searchPlaces]);
+    // Debounce the search
+    const timeoutId = setTimeout(() => {
+      searchPlaces(newValue);
+    }, 300);
 
+    return () => clearTimeout(timeoutId);
+};
 
-  return (
-    <div className="relative">
-      <input
-        type="text"
-        value={value}
-        onChange={handleInputChange}
-        placeholder={placeholder || 'Enter address'}
-        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-      />
-      
-      {isLoading && (
-        <div className="absolute right-2 top-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
-        </div>
-      )}
-
-      {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-          {suggestions.map((suggestion, index) => (
-            <div
-              key={index}
-              className="px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0"
-              onClick={() => handleSuggestionClick(suggestion)}
-            >
-              <div className="flex items-start">
-                <div className="text-sm text-gray-900">{suggestion.text}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+return (
+<div className="relative">
+    <input
+    type="text"
+    value={value}
+    onChange={handleInputChange}
+    placeholder={placeholder || 'Enter address'}
+    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+    />
+    
+    {isLoading && (
+    <div className="absolute right-2 top-2">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
     </div>
-  );
+    )}
+
+    {showSuggestions && suggestions.length > 0 && (
+    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+        {suggestions.map((suggestion, index) => (
+        <div
+            key={index}
+            className="px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0"
+            onClick={() => handleSuggestionClick(suggestion)}
+        >
+            <div className="flex items-start">
+            <div className="text-sm text-gray-900">{suggestion.text}</div>
+            </div>
+        </div>
+        ))}
+    </div>
+    )}
+</div>
+);
 }
 
 const HouseMovingPage = () => {
     const { t } = useTranslation();
     const [isDataLoaded, setIsDataLoaded] = useState(constantsLoaded);
     
-    // Check if constants are loaded
     useEffect(() => {
         if (!constantsLoaded || furnitureItems.length === 0) {
             const checkLoaded = setInterval(() => {
@@ -269,6 +227,7 @@ const HouseMovingPage = () => {
             setIsDataLoaded(true);
         }
     }, []);
+    
     const [step, setStep] = useState(1);
     
     // Check for transferred data from item transport
@@ -465,6 +424,12 @@ const HouseMovingPage = () => {
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 selectedDateForPricing = tomorrow.toISOString().split('T')[0];
             }
+            
+            // Validate that we have a proper date for pricing
+            if (!selectedDateForPricing || selectedDateForPricing === '') {
+                console.warn('No valid date selected for pricing calculation');
+                return; // Exit early if no valid date
+            }
 
             const input: PricingInput = {
                 serviceType: 'house-moving',
@@ -526,34 +491,13 @@ const HouseMovingPage = () => {
 
         return () => clearTimeout(debounceTimer);
     }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, isDateFlexible, dateOption, isFixedDate]);
-
-    // Create a memoized pricing input object to reduce unnecessary recalculations
-    const pricingInputDependencies = useMemo(() => {
-        return {
-            itemQuantities,
-            floorPickup: parseInt(floorPickup) || 0,
-            floorDropoff: parseInt(floorDropoff) || 0,
-            disassembly,
-            extraHelper,
-            carryingService,
-            elevatorPickup,
-            elevatorDropoff,
-            disassemblyItems,
-            extraHelperItems,
-            carryingServiceItems,
-            isStudent,
-            hasStudentId: !!studentId
-        };
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, 
-        elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, 
-        isStudent, studentId]);
     
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
         if (firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [pricingInputDependencies, pickupPlace, dropoffPlace]);
+    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace]);
 
     // Add handlers for select all functionality
     const handleSelectAllAssembly = (checked: boolean) => {
@@ -652,15 +596,14 @@ const HouseMovingPage = () => {
         setStep(2); // Move to date selection step
     };
 
-    // Memoize the item increment/decrement functions for better performance
-    const incrementItem = useCallback((itemId: string) => {
+    const incrementItem = (itemId: string) => {
         setItemQuantities(prevQuantities => ({
             ...prevQuantities,
             [itemId]: (prevQuantities[itemId] || 0) + 1,
         }));
-    }, []);
+    };
 
-    const decrementItem = useCallback((itemId: string) => {
+    const decrementItem = (itemId: string) => {
         setItemQuantities(prevQuantities => {
             const newQuantity = (prevQuantities[itemId] || 0) - 1;
             if (newQuantity <= 0) {
@@ -669,7 +612,7 @@ const HouseMovingPage = () => {
             }
             return { ...prevQuantities, [itemId]: newQuantity };
         });
-    }, []);
+    };
 
     const handleContactInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setContactInfo({ ...contactInfo, [e.target.id]: e.target.value });
@@ -832,7 +775,7 @@ const HouseMovingPage = () => {
                     elevator: elevatorDropoff
                 },
                 schedule: {
-                    date: isDateFlexible ? 'Flexible' : new Date(selectedDateRange.start).toLocaleDateString(),
+                    date: isDateFlexible ? 'Flexible' : (selectedDateRange.start ? new Date(selectedDateRange.start).toLocaleDateString() : 'Not specified'),
                     time: preferredTimeSpan ? (
                         preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
                         preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
@@ -1790,7 +1733,7 @@ const HouseMovingPage = () => {
                                                 {isDateFlexible 
                                                     ? "Flexible date (we'll contact you to confirm)" 
                                                     : selectedDateRange.start 
-                                                        ? new Date(selectedDateRange.start).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+                                                        ? (selectedDateRange.start ? new Date(selectedDateRange.start).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : 'Not specified')
                                                         : "Not specified"
                                                 }
                                             </p>
@@ -1969,17 +1912,6 @@ const HouseMovingPage = () => {
                 onContinue={handleContinueFromTips}
                 serviceType="house-moving"
             />
-            {/* What's Next Section
-            <div className="bg-orange-50 p-4 rounded-lg mt-6">
-              <h3 className="text-lg font-bold text-orange-700 mb-2">What's Next?</h3>
-              <ol className="list-decimal list-inside space-y-2 text-gray-700">
-                <li>1️⃣ Review – We will review your request and match it with our schedule.</li>
-                <li>2️⃣ Contact – You will receive a final quote and proposal via email or WhatsApp.</li>
-                <li>3️⃣ Arrange – If the proposed date/time does not work for you, please contact us via WhatsApp or Email with a screenshot of the mail. We will work together to find a suitable date.</li>
-                <li>4️⃣ Confirmation – Once we agree on a date and time, we will send you a confirmation email with an invoice.</li>
-                <li>5️⃣ Completion – We will carry out the service as scheduled. You can pay by card after the service was carried out or later by bank transfer.</li>
-              </ol>
-            </div> */}
         </div>
     );
 };

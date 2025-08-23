@@ -3,14 +3,15 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { itemCategories, getItemPoints, furnitureItems, constantsLoaded } from '../../lib/constants';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { itemCategories, getItemPoints, furnitureItems, constantsLoaded } from '../../lib/constants';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
 import API_ENDPOINTS from '../api/config';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import BookingTipsModal from '../../components/ui/BookingTipsModal';
+import { GooglePlaceObject } from '../../utils/locationServices';
 
 // TypeScript declarations for Google Maps API
 declare global {
@@ -29,212 +30,177 @@ interface ContactInfo {
 
 // Google Places Autocomplete input component using new Places API
 function GooglePlacesAutocomplete({ 
-  value, 
-  onChange, 
-  placeholder,
-  onPlaceSelect 
+    value, 
+    onChange, 
+    placeholder,
+    onPlaceSelect 
 }: { 
-  value: string, 
-  onChange: (val: string, place?: any) => void, 
-  placeholder?: string,
-  onPlaceSelect?: (place: any) => void 
+    value: string, 
+    onChange: (val: string, place?: any) => void, 
+    placeholder?: string,
+    onPlaceSelect?: (place: GooglePlaceObject) => void 
 }) {
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
-
-  // Function to get place details including coordinates and address components from placeId
-  const getPlaceDetails = async (placeId: string) => {
-    try {
+    const [suggestions, setSuggestions] = useState<any[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
+  
+    // Function to get place details including coordinates from placeId
+    const getPlaceDetails = async (placeId: string) => {
       const response = await fetch(
-        'https://places.googleapis.com/v1/places/' + placeId,
-        {
+      'https://places.googleapis.com/v1/places/' + placeId,
+      {
           method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'location,displayName,formattedAddress,addressComponents'
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'location,displayName,formattedAddress'
           }
-        }
+      }
       );
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Extract city from address components
-        let city = null;
-        if (data.addressComponents) {
-          // Look for locality (city) in address components
-          console.log(data.addressComponents)
-          const localityComponent = data.addressComponents.find((component: any) => 
-            component.types && component.types.includes('locality')
-          );
-          if (localityComponent) {
-            city = localityComponent.longText;
-          }
-          
-          // If no locality found, try administrative_area_level_1 (province/state)
-          if (!city) {
-            const adminComponent = data.addressComponents.find((component: any) => 
-              component.types && component.types.includes('administrative_area_level_1')
-            );
-            if (adminComponent) {
-              city = adminComponent.longText;
-            }
-          }
-        }
-        
-        return {
+      const data = await response.json();
+      return {
           placeId,
           coordinates: data.location ? {
-            lat: data.location.latitude,
-            lng: data.location.longitude
+          lat: data.location.latitude,
+          lng: data.location.longitude
           } : null,
           formattedAddress: data.formattedAddress,
-          displayName: data.displayName?.text,
-          city: city
-        };
-      } else {
-        console.error('Place details API error:', response.status, response.statusText);
-        return null;
-      }
-    } catch (error) {
-      console.error('Error getting place details:', error);
-      return null;
-    }
-  };
-
-  const searchPlaces = async (query: string) => {
-    if (query.length < 3) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Use the new Places API v1 autocomplete endpoint
-      const response = await fetch(
-        'https://places.googleapis.com/v1/places:autocomplete',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
-          },
-          body: JSON.stringify({
-            input: query,
-            locationBias: {
-              circle: {
-                center: {
-                  latitude: 52.3676,
-                  longitude: 4.9041
-                },
-                radius: 50000.0
-              }
-            },
-            languageCode: 'en',
-            regionCode: 'NL',
-            includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
-            includedRegionCodes: ['nl']
-          })
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Places API response:', data);
-        
-        if (data.suggestions) {
-          const placeSuggestions = data.suggestions
-            .filter((suggestion: any) => suggestion.placePrediction)
-            .map((suggestion: any) => ({
-              text: suggestion.placePrediction.text?.text || 'Unknown address',
-              placeId: suggestion.placePrediction.placeId,
-              structuredFormat: suggestion.placePrediction.structuredFormat
-            }));
-          setSuggestions(placeSuggestions);
-          setShowSuggestions(true);
-        }
-      } else {
-        console.error('Places API error:', response.status, response.statusText);
-        const errorData = await response.text();
-        console.error('Error details:', errorData);
-      }
-    } catch (error) {
-      console.error('Places API error:', error);
-      // Fallback to simple input
-      setSuggestions([]);
-      setShowSuggestions(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSuggestionClick = async (suggestion: any) => {
-    onChange(suggestion.text);
-    
-    if (onPlaceSelect) {
-      // Get place details with coordinates
-      const placeDetails = await getPlaceDetails(suggestion.placeId);
-      const placeWithDetails = {
-        ...suggestion,
-        ...placeDetails
+          displayName: data.displayName?.text
       };
-      onPlaceSelect(placeWithDetails);
-    }
-    
-    setShowSuggestions(false);
-    setSuggestions([]);
   };
+  
+    const searchPlaces = async (query: string) => {
+      if (query.length < 3) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+  
+      setIsLoading(true);
+      try {
+        // Use the new Places API v1 autocomplete endpoint
+        const response = await fetch(
+          'https://places.googleapis.com/v1/places:autocomplete',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
+            },
+            body: JSON.stringify({
+              input: query,
+              locationBias: {
+                circle: {
+                  center: {
+                    latitude: 52.3676,
+                    longitude: 4.9041
+                  },
+                  radius: 50000.0
+                }
+              },
+              languageCode: 'en',
+              regionCode: 'NL',
+              includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
+              includedRegionCodes: ['nl']
+            })
+          }
+        );
+  
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.suggestions) {
+            const placeSuggestions = data.suggestions
+              .filter((suggestion: any) => suggestion.placePrediction)
+              .map((suggestion: any) => ({
+                text: suggestion.placePrediction.text?.text || 'Unknown address',
+                placeId: suggestion.placePrediction.placeId,
+                structuredFormat: suggestion.placePrediction.structuredFormat
+              }));
+              
+            setSuggestions(placeSuggestions);
+            setShowSuggestions(true);
+          }
+        } else {
+          console.error('Places API error:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('Places API error:', error);
+        // Fallback to simple input
+        setSuggestions([]);
+        setShowSuggestions(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+  
+    const handleSuggestionClick = async (suggestion: any) => {
+      onChange(suggestion.text);
+      
+      if (onPlaceSelect) {
+        // Get place details with coordinates
+        const placeDetails = await getPlaceDetails(suggestion.placeId);
+        const placeWithDetails: GooglePlaceObject = {
+          placeId: suggestion.placeId,
+          coordinates: placeDetails?.coordinates || undefined,
+          formattedAddress: placeDetails?.formattedAddress || undefined,
+          displayName: placeDetails?.displayName || undefined,
+          text: suggestion.text
+        };
+        onPlaceSelect(placeWithDetails);
+      }
+      
+      setShowSuggestions(false);
+      setSuggestions([]);
+    };
+  
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = e.target.value;
+        onChange(newValue);
+        
+        // Debounce the search
+        const timeoutId = setTimeout(() => {
+        searchPlaces(newValue);
+        }, 300);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    onChange(newValue);
-    
-    // Debounce the search
-    const timeoutId = setTimeout(() => {
-      searchPlaces(newValue);
-    }, 300);
+        return () => clearTimeout(timeoutId);
+};
 
-    return () => clearTimeout(timeoutId);
-  };
-
-  return (
+return (
     <div className="relative">
-      <input
+        <input
         type="text"
         value={value}
         onChange={handleInputChange}
         placeholder={placeholder || 'Enter address'}
         className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-      />
-      
-      {isLoading && (
+        />
+        
+        {isLoading && (
         <div className="absolute right-2 top-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
         </div>
-      )}
+        )}
 
-      {showSuggestions && suggestions.length > 0 && (
+        {showSuggestions && suggestions.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-          {suggestions.map((suggestion, index) => (
+            {suggestions.map((suggestion, index) => (
             <div
-              key={index}
-              className="px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0"
-              onClick={() => handleSuggestionClick(suggestion)}
+                key={index}
+                className="px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0"
+                onClick={() => handleSuggestionClick(suggestion)}
             >
-              <div className="flex items-start">
+                <div className="flex items-start">
                 <div className="text-sm text-gray-900">{suggestion.text}</div>
-              </div>
+                </div>
             </div>
-          ))}
+            ))}
         </div>
-      )}
+        )}
     </div>
-  );
+    );
 }
 
 const ItemMovingPage = () => {
@@ -294,8 +260,8 @@ const ItemMovingPage = () => {
     const [showConfirmationModal, setShowConfirmationModal] = useState(false);
     const [showBookingTips, setShowBookingTips] = useState(false);
     const [showPointLimitModal, setShowPointLimitModal] = useState(false);
-    const [pickupPlace, setPickupPlace] = useState<any>(null);
-    const [dropoffPlace, setDropoffPlace] = useState<any>(null);
+    const [pickupPlace, setPickupPlace] = useState<GooglePlaceObject | null>(null);
+    const [dropoffPlace, setDropoffPlace] = useState<GooglePlaceObject | null>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
     const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome'>('fixed');
     const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({});
@@ -445,43 +411,31 @@ const ItemMovingPage = () => {
     };
 
     // Calculate distance using Google Maps Distance Matrix API with fallback to straight-line
-    const calculateDistance = async (place1: any, place2: any): Promise<number> => {
-        if (!place1?.coordinates || !place2?.coordinates) {
-            return 0;
-        }
-
-        console.log('📏 Calculating distance between:', place1.text || place1.formattedAddress, 'and', place2.text || place2.formattedAddress);
+    const calculateDistance = async (place1: any, place2: any): Promise<number> => {         // Ensure Google Maps API is loaded
+        await loadGoogleMapsAPI();
         
-        try {
-            // Ensure Google Maps API is loaded
-            await loadGoogleMapsAPI();
-            
-            // Use Distance Matrix API for accurate driving distance
-            return new Promise((resolve) => {
-                const service = new google.maps.DistanceMatrixService();
-                const origins = [new google.maps.LatLng(place1.coordinates.lat, place1.coordinates.lng)];
-                const destinations = [new google.maps.LatLng(place2.coordinates.lat, place2.coordinates.lng)];
+        // Use Distance Matrix API for accurate driving distance
+        return new Promise((resolve) => {
+            const service = new google.maps.DistanceMatrixService();
+            const origins = [new google.maps.LatLng(place1.coordinates.lat, place1.coordinates.lng)];
+            const destinations = [new google.maps.LatLng(place2.coordinates.lat, place2.coordinates.lng)];
 
-                service.getDistanceMatrix({
-                    origins,
-                    destinations,
-                    travelMode: google.maps.TravelMode.DRIVING,
-                    unitSystem: google.maps.UnitSystem.METRIC,
-                }, (response, status) => {
-                    if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK') {
-                        const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
-                        console.log('📏 Distance Matrix API distance:', distanceKm.toFixed(2), 'km');
-                        resolve(distanceKm);
-                    } else {
-                        console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
-                        resolve(calculateStraightLineDistance(place1, place2));
-                    }
-                });
+            service.getDistanceMatrix({
+                origins,
+                destinations,
+                travelMode: google.maps.TravelMode.DRIVING,
+                unitSystem: google.maps.UnitSystem.METRIC,
+            }, (response, status) => {
+                if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK') {
+                    const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
+                    console.log('📏 Distance Matrix API distance:', distanceKm.toFixed(2), 'km');
+                    resolve(distanceKm);
+                } else {
+                    console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
+                    resolve(calculateStraightLineDistance(place1, place2));
+                }
             });
-        } catch (error) {
-            console.warn('⚠️ Error loading Google Maps API, falling back to straight-line calculation:', error);
-            return calculateStraightLineDistance(place1, place2);
-        }
+        });
     };
 
     // Fallback function for straight-line distance calculation

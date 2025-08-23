@@ -261,9 +261,7 @@ export async function getCityScheduleStatus(
   try {
     // Fetch from API if not in cache or cache is stale
     const url = `${baseUrl}/api/city-schedule-status?city=${encodeURIComponent(city)}&date=${dateStr}`;
-    const response = await fetch(url, { 
-      headers: { 'Cache-Control': 'no-cache' } 
-    });
+    const response = await fetch(url);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch schedule status: ${response.status}`);
@@ -328,9 +326,7 @@ export async function checkAllCitiesEmpty(date: Date, baseUrl: string): Promise<
     }
     
     const url = `${baseUrl}/api/check-all-cities-empty?date=${dateStr}`;
-    const response = await fetch(url, {
-      headers: { 'Cache-Control': 'no-cache' }
-    });
+    const response = await fetch(url);
     
     if (!response.ok) {
       throw new Error(`Failed to check all cities empty: ${response.status}`);
