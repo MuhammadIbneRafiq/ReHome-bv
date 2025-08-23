@@ -28,6 +28,10 @@ interface ContactInfo {
     isPhoneValid?: boolean;
 }
 
+interface PriceSummaryProps {
+    pricingBreakdown: PricingBreakdown | null;
+}
+
 // Google Places Autocomplete input component using new Places API
 function GooglePlacesAutocomplete({ 
     value, 
@@ -206,6 +210,9 @@ return (
 const ItemMovingPage = () => {
     const { t } = useTranslation();
     const [isDataLoaded, setIsDataLoaded] = useState(constantsLoaded);
+// for house moving stuff actually
+    const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+
 
     useEffect(() => {
         if (!constantsLoaded || furnitureItems.length === 0) {
@@ -426,9 +433,8 @@ const ItemMovingPage = () => {
                 travelMode: google.maps.TravelMode.DRIVING,
                 unitSystem: google.maps.UnitSystem.METRIC,
             }, (response, status) => {
-                if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK') {
+                if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK' && response?.rows?.[0]?.elements?.[0]?.distance?.value) {
                     const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
-                    console.log('📏 Distance Matrix API distance:', distanceKm.toFixed(2), 'km');
                     resolve(distanceKm);
                 } else {
                     console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
@@ -637,8 +643,14 @@ const ItemMovingPage = () => {
         setShowBookingTips(false);
         setStep(2); // Move to date selection step
     };
+    const incrementItemHouse = (itemId: string) => {
+        setItemQuantities(prevQuantities => ({
+            ...prevQuantities,
+            [itemId]: (prevQuantities[itemId] || 0) + 1,
+        }));
+    };
 
-    const incrementItem = (itemId: string) => {
+    const incrementItemItemMoving = (itemId: string) => {
         setItemQuantities(prevQuantities => {
             const newQuantities = {
                 ...prevQuantities,
@@ -943,9 +955,282 @@ const ItemMovingPage = () => {
             <span className="ml-2 text-sm text-gray-700">{label}</span>
         </div>
     );
+    const handleSubmitHouse = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!isFormValid()) {
+            toast.error("Please fill in all required fields correctly.");
+            return;
+        }
+
+        // Prepare furniture items array for backend
+        const furnitureItems = Object.entries(itemQuantities)
+            .filter(([_, quantity]) => quantity > 0)
+            .map(([itemId, quantity]) => ({
+                name: itemId.replace(/-/g, ' - '),
+                quantity,
+                points: getItemPoints(itemId) * quantity,
+                value: getItemPoints(itemId) * quantity * 2 // €2 per point for house moving
+            }));
+
+        // Calculate total item points
+        const totalItemPoints = Object.entries(itemQuantities)
+            .filter(([_, quantity]) => quantity > 0)
+            .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
+
+        // Use already calculated distance from state of the GOOGLE DISTANCE MATRIX ONLYYYY
+        const finalDistance = distanceKm;
+
+        // Prepare payload in the format expected by backend
+        const payload = {
+            pickupType: pickupType || 'house',
+            furnitureItems,
+            customItem,
+            floorPickup: parseInt(floorPickup) || 0,
+            floorDropoff: parseInt(floorDropoff) || 0,
+            contactInfo,
+            estimatedPrice: pricingBreakdown?.total || 0,
+            selectedDateRange,
+            isDateFlexible,
+            pickupDate: dateOption === 'fixed' ? pickupDate : undefined,
+            dropoffDate: dateOption === 'fixed' ? dropoffDate : undefined,
+            dateOption,
+            preferredTimeSpan,
+            extraInstructions,
+            elevatorPickup,
+            elevatorDropoff,
+            disassembly,
+            extraHelper,
+            carryingService,
+            isStudent,
+            studentId,
+            storeProofPhoto,
+            disassemblyItems,
+            extraHelperItems,
+            carryingServiceItems,
+            basePrice: pricingBreakdown?.basePrice || 0,
+            itemPoints: totalItemPoints,
+            carryingCost: pricingBreakdown?.carryingCost || 0,
+            disassemblyCost: pricingBreakdown?.assemblyCost || 0,
+            distanceCost: pricingBreakdown?.distanceCost || 0,
+            extraHelperCost: pricingBreakdown?.extraHelperCost || 0,
+            distanceKm: finalDistance, // Pre-calculated distance
+            firstlocation: firstLocation,
+            secondlocation: secondLocation,
+            firstlocation_coords: pickupPlace?.coordinates,
+            secondlocation_coords: dropoffPlace?.coordinates,
+            // Complete order summary for email
+            orderSummary: {
+                pickupDetails: {
+                    address: firstLocation,
+                    floor: floorPickup || '0',
+                    elevator: elevatorPickup
+                },
+                deliveryDetails: {
+                    address: secondLocation,
+                    floor: floorDropoff || '0',
+                    elevator: elevatorDropoff
+                },
+                schedule: {
+                    date: isDateFlexible ? 'Flexible' : (selectedDateRange.start ? new Date(selectedDateRange.start).toLocaleDateString() : 'Not specified'),
+                    time: preferredTimeSpan ? (
+                        preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
+                        preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
+                        preferredTimeSpan === 'evening' ? 'Evening (16:00 - 20:00)' : 'Anytime'
+                    ) : 'Not specified'
+                },
+                items: furnitureItems,
+                additionalServices: {
+                    assembly: (pricingBreakdown?.assemblyCost ?? 0) > 0 ? (pricingBreakdown?.assemblyCost ?? 0) : 0,
+                    extraHelper: (pricingBreakdown?.extraHelperCost ?? 0) > 0 ? (pricingBreakdown?.extraHelperCost ?? 0) : 0,
+                    carrying: (pricingBreakdown?.carryingCost ?? 0) > 0 ? (pricingBreakdown?.carryingCost ?? 0) : 0,
+                    studentDiscount: (pricingBreakdown?.studentDiscount ?? 0) > 0 ? (pricingBreakdown?.studentDiscount ?? 0) : 0
+                },
+                contactInfo: {
+                    name: `${contactInfo.firstName} ${contactInfo.lastName}`,
+                    email: contactInfo.email,
+                    phone: contactInfo.phone
+                },
+                totalPrice: pricingBreakdown?.total || 0
+            }
+        };
+
+        try {
+            // Create FormData for file uploads
+            const formData = new FormData();
+            
+            // Add all the JSON data as a string
+            formData.append('data', JSON.stringify(payload));
+            
+            // Add photos if any
+            if (itemPhotos.length > 0) {
+                itemPhotos.forEach((photo) => {
+                    formData.append('photos', photo);
+                });
+            }
+            
+            // Submit the house moving request with FormData
+            const response = await fetch(API_ENDPOINTS.MOVING.HOUSE_REQUEST, {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) { 
+                const errorData = await response.json();
+                throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
+            }
+
+            // Show confirmation modal instead of toast
+            setShowOrderConfirmation(true);
+        } catch (error) {
+            console.error("Error submitting house moving request:", error);
+            toast.error("An error occurred while submitting your request.");
+        }
+    };
+    // Add a real-time pricing display component that will be shown throughout the process
+    const PriceSummaryHouse: React.FC<PriceSummaryProps> = ({ pricingBreakdown }) => {
+        // Step 1: Don't show any pricing estimate yet - only after locations AND date
+        if (step === 1) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">Complete location details to continue</p>
+                </div>
+            );
+        }
+
+        // Step 2+: Show pricing only if we have both locations and date
+        if (!pricingBreakdown) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">Select a date to see base pricing</p>
+                </div>
+            );
+        }
+
+        // Check if we have valid base pricing (location + date provided)
+        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && (isDateFlexible || selectedDateRange.start);
+        
+        if (!hasValidBasePricing) {
+            return (
+                <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                    <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                    <p className="text-gray-500">
+                        {!firstLocation || !secondLocation ? "Enter both pickup and dropoff locations" : 
+                         !isDateFlexible && !selectedDateRange.start ? "Select a date to see base pricing" : 
+                         "Calculating pricing..."}
+                    </p>
+                </div>
+            );
+        }
+        
+        return (
+            <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
+                <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                <div className="space-y-2">
+                    <div className="flex justify-between">
+                        <span>Base Price:</span>
+                        <span>€{pricingBreakdown.basePrice.toFixed(2)}</span>
+                    </div>
+                    {pricingBreakdown.breakdown.baseCharge.city && (
+                        <div className="text-xs text-gray-500 ml-4">
+                            {pricingBreakdown.breakdown.baseCharge.type}
+                        </div>
+                    )}
+                    {/* Items Section - Show detailed breakdown */}
+                    <div className="border-t pt-3">
+                        <div className="flex justify-between font-medium">
+                            <span>Items:</span>
+                            <span>€{pricingBreakdown.itemValue.toFixed(2)}</span>
+                        </div>
+                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length > 0 && (
+                            <div className="mt-2 space-y-1">
+                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId, index) => {
+                                    const quantity = itemQuantities[itemId];
+                                    const itemData = furnitureItems.find(item => item.id === itemId);                 
+                                    const itemName = itemData ? itemData.name : itemId;
+                                    
+                                    return (
+                                        <div key={index} className="flex justify-between text-xs text-gray-600 ml-4">
+                                            <span>{itemName} ({quantity}x)</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
+                            <div className="text-xs text-gray-500 ml-4">No items selected</div>
+                        )}
+                    </div>
+                    {pricingBreakdown.distanceCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                            <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {pricingBreakdown.distanceCost === 0 && pricingBreakdown.breakdown.distance.distanceKm > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                            <span>Free</span>
+                        </div>
+                    )}
+                    {pricingBreakdown.carryingCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>
+                                Carrying:
+                            </span>
+                            <span>€{pricingBreakdown.carryingCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {/* Elevator discount explanation */}
+                    {pricingBreakdown.carryingCost > 0 && ((elevatorPickup && parseInt(floorPickup) > 1) || (elevatorDropoff && parseInt(floorDropoff) > 1)) && (
+                        <div className="text-xs text-green-700 ml-6">
+                            <span>Elevator discount applied.</span>
+                        </div>
+                    )}
+                    {pricingBreakdown.assemblyCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Assembly:</span>
+                            <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    {pricingBreakdown.extraHelperCost > 0 && (
+                        <div className="flex justify-between">
+                            <span>Extra Helper:</span>
+                            <span>€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
+                        </div>
+                    )}
+                    <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between font-semibold">
+                            <span>Subtotal:</span>
+                            <span>€{pricingBreakdown.subtotal.toFixed(2)}</span>
+                        </div>
+                        {pricingBreakdown.studentDiscount > 0 && (
+                            <div className="flex justify-between text-green-600">
+                                <span>Student Discount (10%):</span>
+                                <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {/* Early Booking Discount */}
+                    {pricingBreakdown.earlyBookingDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                            <span>Early Booking Discount (10%):</span>
+                            <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
+                        </div>
+                    )}
+                        <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                            <span>Total:</span>
+                            <span>€{pricingBreakdown.total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     // Add a real-time pricing display component that will be shown throughout the process
-    const PriceSummary = ({ pricingBreakdown }: { pricingBreakdown: PricingBreakdown | null }) => {
+    const PriceSummaryItem = ({ pricingBreakdown }: { pricingBreakdown: PricingBreakdown | null }) => {
         // Step 1: Don't show any pricing estimate yet - only after locations AND date
         if (step === 1) {
             return (
@@ -1455,7 +1740,7 @@ const ItemMovingPage = () => {
                                                                     <span className="text-sm w-6 text-center">{quantity}</span>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => incrementItem(itemKey)}
+                                                                        onClick={() => incrementItemItemMoving(itemKey)}
                                                                         className="w-8 h-8 flex items-center justify-center rounded-full border border-orange-500 text-orange-500 hover:bg-orange-50"
                                                                     >
                                                                         <FaPlus className="h-3 w-3" />
@@ -2029,7 +2314,7 @@ const ItemMovingPage = () => {
                     
                     {/* Pricing Display - Right 1/3 */}
                     <div className="md:col-span-1">
-                        <PriceSummary 
+                        <PriceSummaryItem 
                             pricingBreakdown={pricingBreakdown}
                         />
                     </div>

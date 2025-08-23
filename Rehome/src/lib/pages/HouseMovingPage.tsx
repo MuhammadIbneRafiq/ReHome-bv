@@ -227,7 +227,7 @@ const HouseMovingPage = () => {
             setIsDataLoaded(true);
         }
     }, []);
-    
+
     const [step, setStep] = useState(1);
     
     // Check for transferred data from item transport
@@ -423,12 +423,6 @@ const HouseMovingPage = () => {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
                 selectedDateForPricing = tomorrow.toISOString().split('T')[0];
-            }
-            
-            // Validate that we have a proper date for pricing
-            if (!selectedDateForPricing || selectedDateForPricing === '') {
-                console.warn('No valid date selected for pricing calculation');
-                return; // Exit early if no valid date
             }
 
             const input: PricingInput = {
