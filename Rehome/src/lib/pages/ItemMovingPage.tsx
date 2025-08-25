@@ -12,8 +12,8 @@ import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import BookingTipsModal from '../../components/ui/BookingTipsModal';
 import { GooglePlaceObject } from '../../utils/locationServices';
+import { GooglePlacesAutocomplete } from '../../components/ui/GooglePlacesAutocomplete';
 
-// TypeScript declarations for Google Maps API
 declare global {
     interface Window {
         google: any;
@@ -31,187 +31,17 @@ interface ContactInfo {
 interface PriceSummaryProps {
     pricingBreakdown: PricingBreakdown | null;
 }
-
-// Google Places Autocomplete input component using new Places API
-function GooglePlacesAutocomplete({ 
-    value, 
-    onChange, 
-    placeholder,
-    onPlaceSelect 
-}: { 
-    value: string, 
-    onChange: (val: string, place?: any) => void, 
-    placeholder?: string,
-    onPlaceSelect?: (place: GooglePlaceObject) => void 
-}) {
-    const [suggestions, setSuggestions] = useState<any[]>([]);
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
-  
-    // Function to get place details including coordinates from placeId
-    const getPlaceDetails = async (placeId: string) => {
-      const response = await fetch(
-      'https://places.googleapis.com/v1/places/' + placeId,
-      {
-          method: 'GET',
-          headers: {
-          'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'location,displayName,formattedAddress'
-          }
-      }
-      );
-      const data = await response.json();
-      return {
-          placeId,
-          coordinates: data.location ? {
-          lat: data.location.latitude,
-          lng: data.location.longitude
-          } : null,
-          formattedAddress: data.formattedAddress,
-          displayName: data.displayName?.text
-      };
-  };
-  
-    const searchPlaces = async (query: string) => {
-      if (query.length < 3) {
-        setSuggestions([]);
-        setShowSuggestions(false);
-        return;
-      }
-  
-      setIsLoading(true);
-      try {
-        // Use the new Places API v1 autocomplete endpoint
-        const response = await fetch(
-          'https://places.googleapis.com/v1/places:autocomplete',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Goog-Api-Key': apiKey,
-              'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
-            },
-            body: JSON.stringify({
-              input: query,
-              locationBias: {
-                circle: {
-                  center: {
-                    latitude: 52.3676,
-                    longitude: 4.9041
-                  },
-                  radius: 50000.0
-                }
-              },
-              languageCode: 'en',
-              regionCode: 'NL',
-              includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
-              includedRegionCodes: ['nl']
-            })
-          }
-        );
-  
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data.suggestions) {
-            const placeSuggestions = data.suggestions
-              .filter((suggestion: any) => suggestion.placePrediction)
-              .map((suggestion: any) => ({
-                text: suggestion.placePrediction.text?.text || 'Unknown address',
-                placeId: suggestion.placePrediction.placeId,
-                structuredFormat: suggestion.placePrediction.structuredFormat
-              }));
-              
-            setSuggestions(placeSuggestions);
-            setShowSuggestions(true);
-          }
-        } else {
-          console.error('Places API error:', response.status, response.statusText);
-        }
-      } catch (error) {
-        console.error('Places API error:', error);
-        // Fallback to simple input
-        setSuggestions([]);
-        setShowSuggestions(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-  
-    const handleSuggestionClick = async (suggestion: any) => {
-      onChange(suggestion.text);
-      
-      if (onPlaceSelect) {
-        // Get place details with coordinates
-        const placeDetails = await getPlaceDetails(suggestion.placeId);
-        const placeWithDetails: GooglePlaceObject = {
-          placeId: suggestion.placeId,
-          coordinates: placeDetails?.coordinates || undefined,
-          formattedAddress: placeDetails?.formattedAddress || undefined,
-          displayName: placeDetails?.displayName || undefined,
-          text: suggestion.text
-        };
-        onPlaceSelect(placeWithDetails);
-      }
-      
-      setShowSuggestions(false);
-      setSuggestions([]);
-    };
-  
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newValue = e.target.value;
-        onChange(newValue);
-        
-        // Debounce the search
-        const timeoutId = setTimeout(() => {
-        searchPlaces(newValue);
-        }, 300);
-
-        return () => clearTimeout(timeoutId);
-};
-
-return (
-    <div className="relative">
-        <input
-        type="text"
-        value={value}
-        onChange={handleInputChange}
-        placeholder={placeholder || 'Enter address'}
-        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-        />
-        
-        {isLoading && (
-        <div className="absolute right-2 top-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
-        </div>
-        )}
-
-        {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
-            {suggestions.map((suggestion, index) => (
-            <div
-                key={index}
-                className="px-4 py-3 cursor-pointer hover:bg-orange-50 border-b border-gray-100 last:border-b-0"
-                onClick={() => handleSuggestionClick(suggestion)}
-            >
-                <div className="flex items-start">
-                <div className="text-sm text-gray-900">{suggestion.text}</div>
-                </div>
-            </div>
-            ))}
-        </div>
-        )}
-    </div>
-    );
+interface MovingPageProps {
+    serviceType?: 'item-transport' | 'house-moving';
 }
 
-const ItemMovingPage = () => {
+const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transport' }) => {
     const { t } = useTranslation();
     const [isDataLoaded, setIsDataLoaded] = useState(constantsLoaded);
-// for house moving stuff actually
+    // Order confirmation modal state - used in handleSubmit for house moving
     const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+    const isItemTransport = serviceType === 'item-transport';
+    const isHouseMoving = serviceType === 'house-moving';
 
 
     useEffect(() => {
@@ -227,6 +57,57 @@ const ItemMovingPage = () => {
             setIsDataLoaded(true);
         }
     }, []);
+    
+    // Check for transferred data from item transport when in house moving mode
+    useEffect(() => {
+        if (isHouseMoving) {
+            const transferredData = sessionStorage.getItem('itemTransportToHouseMoving');
+            if (transferredData) {
+                try {
+                    const data = JSON.parse(transferredData);
+                    
+                    // Populate form with transferred data
+                    if (data.pickupType) setPickupType(data.pickupType);
+                    if (data.firstLocation) setFirstLocation(data.firstLocation);
+                    if (data.secondLocation) setSecondLocation(data.secondLocation);
+                    if (data.floorPickup) setFloorPickup(data.floorPickup);
+                    if (data.floorDropoff) setFloorDropoff(data.floorDropoff);
+                    if (data.elevatorPickup !== undefined) setElevatorPickup(data.elevatorPickup);
+                    if (data.elevatorDropoff !== undefined) setElevatorDropoff(data.elevatorDropoff);
+                    if (data.selectedDateRange) setSelectedDateRange(data.selectedDateRange);
+                    if (data.pickupDate) setPickupDate(data.pickupDate);
+                    if (data.dropoffDate) setDropoffDate(data.dropoffDate);
+                    if (data.dateOption) setDateOption(data.dateOption);
+                    if (data.isDateFlexible !== undefined) setIsDateFlexible(data.isDateFlexible);
+                    if (data.preferredTimeSpan) setPreferredTimeSpan(data.preferredTimeSpan);
+                    if (data.itemQuantities) setItemQuantities(data.itemQuantities);
+                    if (data.customItem) setCustomItem(data.customItem);
+                    if (data.disassembly !== undefined) setDisassembly(data.disassembly);
+                    if (data.extraHelper !== undefined) setExtraHelper(data.extraHelper);
+                    if (data.carryingService !== undefined) setCarryingService(data.carryingService);
+                    if (data.isStudent !== undefined) setIsStudent(data.isStudent);
+                    if (data.studentId) setStudentId(data.studentId);
+                    if (data.storeProofPhoto) setStoreProofPhoto(data.storeProofPhoto);
+                    if (data.disassemblyItems) setDisassemblyItems(data.disassemblyItems);
+                    if (data.extraHelperItems) setExtraHelperItems(data.extraHelperItems);
+                    if (data.carryingServiceItems) setCarryingServiceItems(data.carryingServiceItems);
+                    if (data.pickupPlace) setPickupPlace(data.pickupPlace);
+                    if (data.dropoffPlace) setDropoffPlace(data.dropoffPlace);
+                    if (data.distanceKm) setDistanceKm(data.distanceKm);
+                    if (data.extraInstructions) setExtraInstructions(data.extraInstructions);
+                    
+                    // Show success message
+                    toast.success("Your information has been transferred from item transport. Please review and continue.");
+                    
+                    // Clear the transferred data
+                    sessionStorage.removeItem('itemTransportToHouseMoving');
+                    
+                } catch (error) {
+                    console.error('Error parsing transferred data:', error);
+                }
+            }
+        }
+    }, [isHouseMoving]);
 
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
@@ -258,6 +139,7 @@ const ItemMovingPage = () => {
     const [storeProofPhoto, setStoreProofPhoto] = useState<File | null>(null);
     const [itemPhotos, setItemPhotos] = useState<File[]>([]);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
+    const [isFixedDate] = useState(false);
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({});
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
@@ -497,16 +379,18 @@ const ItemMovingPage = () => {
             }
 
             const pricingInput: PricingInput = {
-                serviceType: 'item-transport',
+                serviceType: serviceType,
                 pickupLocation: firstLocation,
                 dropoffLocation: secondLocation,
                 distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateForPricing,
-                selectedDateRange: dateOption === 'flexible' ? selectedDateRange : { start: '', end: '' }, // Only pass date range for flexible dates
-                // For fixed dates, use separate pickup/dropoff dates
-                // For flexible/rehome, don't set pickup/dropoff dates
-                pickupDate: dateOption === 'fixed' ? pickupDate : undefined,
-                dropoffDate: dateOption === 'fixed' ? dropoffDate : undefined,
+                selectedDateRange: dateOption === 'flexible' ? selectedDateRange : 
+                                  (dateOption === 'fixed' && isHouseMoving) ? { start: selectedDateRange.start, end: '' } :
+                                  { start: '', end: '' }, // Only pass date range for flexible dates or house moving fixed date
+                // For item transport fixed dates, use separate pickup/dropoff dates
+                // For house moving, always use selectedDateRange
+                pickupDate: dateOption === 'fixed' && isItemTransport ? pickupDate : undefined,
+                dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
                 isDateFlexible: dateOption === 'rehome', // Only true for ReHome choose option
                 itemQuantities,
                 floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
@@ -543,19 +427,22 @@ const ItemMovingPage = () => {
 
     // Debounced price calculation to avoid excessive API calls while typing
     useEffect(() => {
+        // Skip calculation if locations are not set
+        if (!firstLocation || !secondLocation || 
+            firstLocation.trim().length <= 3 || secondLocation.trim().length <= 3) {
+            setPricingBreakdown(null);
+            return;
+        }
+        
+        // Increment the request ID to prevent race conditions
+        ++latestRequestIdRef.current;
+        
         const debounceTimer = setTimeout(() => {
-            // Only calculate price if we have both complete locations
-            if (firstLocation && secondLocation && 
-                firstLocation.trim().length > 3 && secondLocation.trim().length > 3) {
-                calculatePrice();
-            } else {
-                // Clear price if locations are incomplete
-                setPricingBreakdown(null);
-            }
+            calculatePrice();
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isDateFlexible, dateOption]);
+    }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isDateFlexible, dateOption, isFixedDate]);
 
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
@@ -571,21 +458,36 @@ const ItemMovingPage = () => {
             return;
         }
 
-        // Check point limit when moving to step 3 (items) or later
-        if (step >= 2) {
+        // Check point limit when moving to step 3 (items) or later - only for item transport
+        if (isItemTransport && step >= 2) {
             if (checkPointLimitAndRedirect()) {
                 return;
             }
         }
 
-        // Validate date selection in step 4
-        if (step === 4) {
+        // Validate date selection - different steps for different service types
+        if (isItemTransport && step === 4) {
+            // Item transport: validate dates in step 4
             if (dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
                 toast.error("Please select both pickup and dropoff dates.");
                 return;
             }
             if (dateOption === 'flexible' && (!selectedDateRange.start || !selectedDateRange.end)) {
                 toast.error("Please select both start and end dates for your flexible date range.");
+                return;
+            }
+            if (!isDateFlexible && dateOption === 'flexible' && (!selectedDateRange.start || !selectedDateRange.end)) {
+                toast.error("Please select a date or indicate that your date is flexible.");
+                return;
+            }
+        } else if (isHouseMoving && step === 2) {
+            // House moving: validate dates in step 2
+            if (dateOption === 'flexible' && (!selectedDateRange.start || !selectedDateRange.end)) {
+                toast.error("Please select both start and end dates for your flexible date range.");
+                return;
+            }
+            if (dateOption === 'fixed' && (!selectedDateRange.start)) {
+                toast.error("Please select a moving date.");
                 return;
             }
         }
@@ -643,12 +545,7 @@ const ItemMovingPage = () => {
         setShowBookingTips(false);
         setStep(2); // Move to date selection step
     };
-    const incrementItemHouse = (itemId: string) => {
-        setItemQuantities(prevQuantities => ({
-            ...prevQuantities,
-            [itemId]: (prevQuantities[itemId] || 0) + 1,
-        }));
-    };
+    // Removed unused incrementItemHouse function
 
     const incrementItemItemMoving = (itemId: string) => {
         setItemQuantities(prevQuantities => {
@@ -747,14 +644,29 @@ const ItemMovingPage = () => {
     }, [itemQuantities, carryingService]);
 
     const isFormValid = () => {        
-        if (dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
-            console.log('❌ Date validation failed - missing pickup or dropoff date');
-            return false;
+        // Date validation
+        if (isItemTransport) {
+            if (dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
+                console.log('❌ Date validation failed - missing pickup or dropoff date');
+                return false;
+            }
+            if (dateOption === 'flexible' && (!selectedDateRange.start || !selectedDateRange.end)) {
+                console.log('❌ Date validation failed - missing flexible date range');
+                return false;
+            }
+        } else {
+            // House moving date validation
+            if (dateOption === 'flexible' && (!selectedDateRange.start || !selectedDateRange.end)) {
+                console.log('❌ Date validation failed - missing flexible date range');
+                return false;
+            }
+            if (dateOption === 'fixed' && !selectedDateRange.start) {
+                console.log('❌ Date validation failed - missing moving date');
+                return false;
+            }
         }
-        if (dateOption === 'flexible' && (!selectedDateRange.start || !selectedDateRange.end)) {
-            console.log('❌ Date validation failed - missing flexible date range');
-            return false;
-        }
+        
+        // Contact info validation - same for both
         if (!contactInfo.firstName.trim() || !contactInfo.lastName.trim() || 
             !contactInfo.email.trim() || !contactInfo.phone.trim()) {
             console.log('❌ Contact info validation failed');
@@ -798,13 +710,14 @@ const ItemMovingPage = () => {
         }
 
         // Prepare furniture items array for backend
+        const itemValueMultiplier = isItemTransport ? 1 : 2; // €1 per point for items, €2 for house
         const furnitureItems = Object.entries(itemQuantities)
             .filter(([_, quantity]) => quantity > 0)
             .map(([itemId, quantity]) => ({
                 name: itemId.replace(/-/g, ' - '),
                 quantity,
                 points: getItemPoints(itemId) * quantity,
-                value: getItemPoints(itemId) * quantity * 1 // €1 per point
+                value: getItemPoints(itemId) * quantity * itemValueMultiplier
             }));
 
         // Calculate total item points
@@ -812,13 +725,13 @@ const ItemMovingPage = () => {
             .filter(([_, quantity]) => quantity > 0)
             .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
 
-        // Use already calculated distance from state, or fallback to straight-line if needed
+        // Use already calculated distance from state
         const finalDistance = distanceKm || (pickupPlace?.coordinates && dropoffPlace?.coordinates 
             ? calculateStraightLineDistance(pickupPlace, dropoffPlace) : 0);
 
         // Prepare payload in the format expected by backend
         const payload = {
-            pickupType,
+            pickupType: pickupType || 'house',
             furnitureItems,
             customItem,
             floorPickup: parseInt(floorPickup) || 0,
@@ -827,10 +740,8 @@ const ItemMovingPage = () => {
             estimatedPrice: pricingBreakdown?.total || 0,
             selectedDateRange,
             isDateFlexible,
-            pickupDate: dateOption === 'fixed' ? pickupDate : 
-                       dateOption === 'flexible' ? selectedDateRange.start : null,
-            dropoffDate: dateOption === 'fixed' ? dropoffDate : 
-                        dateOption === 'flexible' ? selectedDateRange.end : null,
+            pickupDate: dateOption === 'fixed' && isItemTransport ? pickupDate : undefined,
+            dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
             dateOption,
             preferredTimeSpan,
             extraInstructions,
@@ -874,8 +785,10 @@ const ItemMovingPage = () => {
                           (selectedDateRange.start && selectedDateRange.end ? 
                            `${new Date(selectedDateRange.start).toLocaleDateString()} - ${new Date(selectedDateRange.end).toLocaleDateString()}` : 
                            'Flexible date range') : 
-                          dateOption === 'fixed' && pickupDate && dropoffDate ? 
+                          dateOption === 'fixed' && isItemTransport && pickupDate && dropoffDate ? 
                           `Pickup: ${new Date(pickupDate).toLocaleDateString()}, Dropoff: ${new Date(dropoffDate).toLocaleDateString()}` :
+                          dateOption === 'fixed' && isHouseMoving && selectedDateRange.start ?
+                          `${new Date(selectedDateRange.start).toLocaleDateString()}` :
                           'Date not specified',
                     time: preferredTimeSpan ? (
                         preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
@@ -913,8 +826,9 @@ const ItemMovingPage = () => {
                 });
             }
             
-            // Submit the moving request with FormData
-            const response = await fetch(API_ENDPOINTS.MOVING.ITEM_REQUEST, {
+            // Submit the moving request with FormData - use the appropriate endpoint
+            const endpoint = isItemTransport ? API_ENDPOINTS.MOVING.ITEM_REQUEST : API_ENDPOINTS.MOVING.HOUSE_REQUEST;
+            const response = await fetch(endpoint, {
                 method: "POST",
                 body: formData,
             });
@@ -925,10 +839,14 @@ const ItemMovingPage = () => {
             }
 
             // Show confirmation modal instead of toast
-            setShowConfirmationModal(true);
+            if (isItemTransport) {
+                setShowConfirmationModal(true);
+            } else {
+                setShowOrderConfirmation(true);
+            }
 
         } catch (error) {
-            console.error("Error submitting the moving request:", error);
+            console.error(`Error submitting the ${isItemTransport ? 'item transport' : 'house moving'} request:`, error);
             toast.error("An error occurred while submitting your request.");
         }
     };
@@ -955,140 +873,9 @@ const ItemMovingPage = () => {
             <span className="ml-2 text-sm text-gray-700">{label}</span>
         </div>
     );
-    const handleSubmitHouse = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!isFormValid()) {
-            toast.error("Please fill in all required fields correctly.");
-            return;
-        }
-
-        // Prepare furniture items array for backend
-        const furnitureItems = Object.entries(itemQuantities)
-            .filter(([_, quantity]) => quantity > 0)
-            .map(([itemId, quantity]) => ({
-                name: itemId.replace(/-/g, ' - '),
-                quantity,
-                points: getItemPoints(itemId) * quantity,
-                value: getItemPoints(itemId) * quantity * 2 // €2 per point for house moving
-            }));
-
-        // Calculate total item points
-        const totalItemPoints = Object.entries(itemQuantities)
-            .filter(([_, quantity]) => quantity > 0)
-            .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
-
-        // Use already calculated distance from state of the GOOGLE DISTANCE MATRIX ONLYYYY
-        const finalDistance = distanceKm;
-
-        // Prepare payload in the format expected by backend
-        const payload = {
-            pickupType: pickupType || 'house',
-            furnitureItems,
-            customItem,
-            floorPickup: parseInt(floorPickup) || 0,
-            floorDropoff: parseInt(floorDropoff) || 0,
-            contactInfo,
-            estimatedPrice: pricingBreakdown?.total || 0,
-            selectedDateRange,
-            isDateFlexible,
-            pickupDate: dateOption === 'fixed' ? pickupDate : undefined,
-            dropoffDate: dateOption === 'fixed' ? dropoffDate : undefined,
-            dateOption,
-            preferredTimeSpan,
-            extraInstructions,
-            elevatorPickup,
-            elevatorDropoff,
-            disassembly,
-            extraHelper,
-            carryingService,
-            isStudent,
-            studentId,
-            storeProofPhoto,
-            disassemblyItems,
-            extraHelperItems,
-            carryingServiceItems,
-            basePrice: pricingBreakdown?.basePrice || 0,
-            itemPoints: totalItemPoints,
-            carryingCost: pricingBreakdown?.carryingCost || 0,
-            disassemblyCost: pricingBreakdown?.assemblyCost || 0,
-            distanceCost: pricingBreakdown?.distanceCost || 0,
-            extraHelperCost: pricingBreakdown?.extraHelperCost || 0,
-            distanceKm: finalDistance, // Pre-calculated distance
-            firstlocation: firstLocation,
-            secondlocation: secondLocation,
-            firstlocation_coords: pickupPlace?.coordinates,
-            secondlocation_coords: dropoffPlace?.coordinates,
-            // Complete order summary for email
-            orderSummary: {
-                pickupDetails: {
-                    address: firstLocation,
-                    floor: floorPickup || '0',
-                    elevator: elevatorPickup
-                },
-                deliveryDetails: {
-                    address: secondLocation,
-                    floor: floorDropoff || '0',
-                    elevator: elevatorDropoff
-                },
-                schedule: {
-                    date: isDateFlexible ? 'Flexible' : (selectedDateRange.start ? new Date(selectedDateRange.start).toLocaleDateString() : 'Not specified'),
-                    time: preferredTimeSpan ? (
-                        preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
-                        preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
-                        preferredTimeSpan === 'evening' ? 'Evening (16:00 - 20:00)' : 'Anytime'
-                    ) : 'Not specified'
-                },
-                items: furnitureItems,
-                additionalServices: {
-                    assembly: (pricingBreakdown?.assemblyCost ?? 0) > 0 ? (pricingBreakdown?.assemblyCost ?? 0) : 0,
-                    extraHelper: (pricingBreakdown?.extraHelperCost ?? 0) > 0 ? (pricingBreakdown?.extraHelperCost ?? 0) : 0,
-                    carrying: (pricingBreakdown?.carryingCost ?? 0) > 0 ? (pricingBreakdown?.carryingCost ?? 0) : 0,
-                    studentDiscount: (pricingBreakdown?.studentDiscount ?? 0) > 0 ? (pricingBreakdown?.studentDiscount ?? 0) : 0
-                },
-                contactInfo: {
-                    name: `${contactInfo.firstName} ${contactInfo.lastName}`,
-                    email: contactInfo.email,
-                    phone: contactInfo.phone
-                },
-                totalPrice: pricingBreakdown?.total || 0
-            }
-        };
-
-        try {
-            // Create FormData for file uploads
-            const formData = new FormData();
-            
-            // Add all the JSON data as a string
-            formData.append('data', JSON.stringify(payload));
-            
-            // Add photos if any
-            if (itemPhotos.length > 0) {
-                itemPhotos.forEach((photo) => {
-                    formData.append('photos', photo);
-                });
-            }
-            
-            // Submit the house moving request with FormData
-            const response = await fetch(API_ENDPOINTS.MOVING.HOUSE_REQUEST, {
-                method: "POST",
-                body: formData,
-            });
-
-            if (!response.ok) { 
-                const errorData = await response.json();
-                throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
-            }
-
-            // Show confirmation modal instead of toast
-            setShowOrderConfirmation(true);
-        } catch (error) {
-            console.error("Error submitting house moving request:", error);
-            toast.error("An error occurred while submitting your request.");
-        }
-    };
-    // Add a real-time pricing display component that will be shown throughout the process
-    const PriceSummaryHouse: React.FC<PriceSummaryProps> = ({ pricingBreakdown }) => {
+    // We're using the unified handleSubmit function for both item transport and house moving
+    // Combined pricing summary component for both item transport and house moving
+    const PriceSummaryComponent: React.FC<PriceSummaryProps> = ({ pricingBreakdown }) => {
         // Step 1: Don't show any pricing estimate yet - only after locations AND date
         if (step === 1) {
             return (
@@ -1252,7 +1039,10 @@ const ItemMovingPage = () => {
         }
 
         // Check if we have valid base pricing (location + date provided)
-        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && (isDateFlexible || selectedDateRange.start || (dateOption === 'fixed' && pickupDate && dropoffDate));
+        const hasValidBasePricing = pricingBreakdown.basePrice > 0 && firstLocation && secondLocation && 
+            (isDateFlexible || selectedDateRange.start || 
+             (dateOption === 'fixed' && isItemTransport && pickupDate && dropoffDate) ||
+             (dateOption === 'fixed' && isHouseMoving && selectedDateRange.start));
         
         if (!hasValidBasePricing) {
             return (
@@ -1260,7 +1050,9 @@ const ItemMovingPage = () => {
                     <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
                     <p className="text-gray-500">
                         {!firstLocation || !secondLocation ? "Enter both pickup and dropoff locations" : 
-                         !isDateFlexible && !selectedDateRange.start && !(dateOption === 'fixed' && pickupDate && dropoffDate) ? "Select a date to see base pricing" : 
+                         !isDateFlexible && !selectedDateRange.start && 
+                         !(dateOption === 'fixed' && isItemTransport && pickupDate && dropoffDate) &&
+                         !(dateOption === 'fixed' && isHouseMoving && selectedDateRange.start) ? "Select a date to see base pricing" : 
                          "Calculating pricing..."}
                     </p>
                 </div>
@@ -1410,8 +1202,16 @@ const ItemMovingPage = () => {
     return (
         <div className="min-h-screen bg-orange-50 pt-24 pb-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('itemMoving.title', 'Item Transport')}</h1>
-                <p className="text-lg text-gray-600 mb-6">{t('itemMoving.subtitle', 'Transport your items safely and affordably')}</p>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    {isItemTransport 
+                        ? t('itemMoving.title', 'Item Transport') 
+                        : t('houseMoving.title', 'House Moving')}
+                </h1>
+                <p className="text-lg text-gray-600 mb-6">
+                    {isItemTransport 
+                        ? t('itemMoving.subtitle', 'Transport your items safely and affordably')
+                        : t('houseMoving.subtitle', 'Professional house moving services')}
+                </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Main Content - Left 2/3 */}
@@ -1428,7 +1228,7 @@ const ItemMovingPage = () => {
                                             {s < step ? <FaCheckCircle className="h-6 w-6" /> : s}
                                         </div>
                                         <div className="text-xs text-center">
-                                            {s === 1 && 'Pickup Type'}
+                                            {s === 1 && (isItemTransport ? 'Pickup Type' : 'Location')}
                                             {s === 2 && 'Date & Time'}
                                             {s === 3 && 'Items'}
                                             {s === 4 && 'Add-ons'}
@@ -1450,60 +1250,66 @@ const ItemMovingPage = () => {
                             {/* Step 1: Pickup Selection */}
                             {step === 1 && (
                                 <div className="space-y-6">
-                                    <p className="text-sm text-gray-600 mb-4">
-                                        Select the type of pickup location for your items.
-                                    </p>
+                                    {/* Item Transport: Show pickup type selection */}
+                                    {isItemTransport && (
+                                        <>
+                                            <p className="text-sm text-gray-600 mb-4">
+                                                Select the type of pickup location for your items.
+                                            </p>
+                                            
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                                <div 
+                                                    className={`border rounded-lg p-6 cursor-pointer transition-colors ${
+                                                        pickupType === 'private' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                                                    }`}
+                                                    onClick={() => setPickupType('private')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        <div className={`rounded-full p-3 ${pickupType === 'private' ? 'bg-orange-500' : 'bg-gray-200'}`}>
+                                                            <FaHome className={`h-6 w-6 ${pickupType === 'private' ? 'text-white' : 'text-gray-600'}`} />
+                                                        </div>
+                                                        <h3 className="ml-3 text-lg font-medium text-gray-900">Private Address</h3>
+                                                    </div>
+                                                    <p className="mt-2 text-sm text-gray-500">
+                                                        Pick up items from a home, apartment, or other residential location.
+                                                    </p>
+                                                </div>
+                                                
+                                                <div 
+                                                    className={`border rounded-lg p-6 cursor-pointer transition-colors ${
+                                                        pickupType === 'store' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                                                    }`}
+                                                    onClick={() => setPickupType('store')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        <div className={`rounded-full p-3 ${pickupType === 'store' ? 'bg-orange-500' : 'bg-gray-200'}`}>
+                                                            <FaStore className={`h-6 w-6 ${pickupType === 'store' ? 'text-white' : 'text-gray-600'}`} />
+                                                        </div>
+                                                        <h3 className="ml-3 text-lg font-medium text-gray-900">Store/Business</h3>
+                                                    </div>
+                                                    <p className="mt-2 text-sm text-gray-500">
+                                                        Pick up items from a store, warehouse, or other business location.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
                                     
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                        <div 
-                                            className={`border rounded-lg p-6 cursor-pointer transition-colors ${
-                                                pickupType === 'private' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
-                                            }`}
-                                            onClick={() => setPickupType('private')}
-                                        >
-                                            <div className="flex items-center">
-                                                <div className={`rounded-full p-3 ${pickupType === 'private' ? 'bg-orange-500' : 'bg-gray-200'}`}>
-                                                    <FaHome className={`h-6 w-6 ${pickupType === 'private' ? 'text-white' : 'text-gray-600'}`} />
-                                                </div>
-                                                <h3 className="ml-3 text-lg font-medium text-gray-900">Private Address</h3>
-                                            </div>
-                                            <p className="mt-2 text-sm text-gray-500">
-                                                Pick up items from a home, apartment, or other residential location.
-                                            </p>
-                                        </div>
-                                        
-                                        <div 
-                                            className={`border rounded-lg p-6 cursor-pointer transition-colors ${
-                                                pickupType === 'store' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
-                                            }`}
-                                            onClick={() => setPickupType('store')}
-                                        >
-                                            <div className="flex items-center">
-                                                <div className={`rounded-full p-3 ${pickupType === 'store' ? 'bg-orange-500' : 'bg-gray-200'}`}>
-                                                    <FaStore className={`h-6 w-6 ${pickupType === 'store' ? 'text-white' : 'text-gray-600'}`} />
-                                                </div>
-                                                <h3 className="ml-3 text-lg font-medium text-gray-900">Store/Business</h3>
-                                            </div>
-                                            <p className="mt-2 text-sm text-gray-500">
-                                                Pick up items from a store, warehouse, or other business location.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {pickupType && (
-                                        <div className="mt-8 space-y-6">
+                                    {/* Show location fields for house moving OR after pickup type is selected for item transport */}
+                                    {(!isItemTransport || pickupType) && (
+                                        <div className={isItemTransport ? "mt-8 space-y-6" : "space-y-6"}>
                                             <div>
-                                                                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Address</label>
-                                    <GooglePlacesAutocomplete
-                                        value={firstLocation}
-                                        onChange={setFirstLocation}
-                                        placeholder="Enter pickup address"
-                                        onPlaceSelect={(place) => {
-                                            setPickupPlace(place);
-                                        }}
-                                    />
-                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Address</label>
+                                                    <GooglePlacesAutocomplete
+                                                        value={firstLocation}
+                                                        onChange={setFirstLocation}
+                                                        placeholder="Enter pickup address"
+                                                        onPlaceSelect={(place) => {
+                                                            setPickupPlace(place);
+                                                        }}
+                                                    />
+                                                </div>
                                                 
                                                 <div className="mt-3">
                                                     <label className="block text-sm font-medium text-gray-700">
@@ -1528,18 +1334,18 @@ const ItemMovingPage = () => {
                                                 </div>
                                             </div>
 
-                                                                        <div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Address</label>
-                                    <GooglePlacesAutocomplete
-                                        value={secondLocation}
-                                        onChange={setSecondLocation}
-                                        placeholder="Enter dropoff address"
-                                        onPlaceSelect={(place) => {
-                                            setDropoffPlace(place);
-                                        }}
-                                    />
-                                </div>
+                                            <div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Address</label>
+                                                    <GooglePlacesAutocomplete
+                                                        value={secondLocation}
+                                                        onChange={setSecondLocation}
+                                                        placeholder="Enter dropoff address"
+                                                        onPlaceSelect={(place) => {
+                                                            setDropoffPlace(place);
+                                                        }}
+                                                    />
+                                                </div>
                                                 
                                                 <div className="mt-3">
                                                     <label className="block text-sm font-medium text-gray-700">
@@ -1650,36 +1456,57 @@ const ItemMovingPage = () => {
                                             </div>
                                         </>
                                     )}
-                                    {dateOption === 'fixed' && (
-                                        <>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={pickupDate}
-                                                    onChange={e => {
-                                                        setPickupDate(e.target.value);
-                                                        setSelectedDateRange({ start: '', end: '' });
-                                                    }}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Date</label>
-                                                <input
-                                                    type="date"
-                                                    value={dropoffDate}
-                                                    onChange={e => {
-                                                        setDropoffDate(e.target.value);
-                                                        setSelectedDateRange({ start: '', end: '' });
-                                                    }}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                    required
-                                                />
-                                            </div>
-                                        </>
-                                    )}
+                                                        {dateOption === 'fixed' && (
+                        <>
+                            {isItemTransport ? (
+                                // Item transport: Show both pickup and dropoff dates
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
+                                        <input
+                                            type="date"
+                                            value={pickupDate}
+                                            onChange={e => {
+                                                setPickupDate(e.target.value);
+                                                setSelectedDateRange({ start: '', end: '' });
+                                            }}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Date</label>
+                                        <input
+                                            type="date"
+                                            value={dropoffDate}
+                                            onChange={e => {
+                                                setDropoffDate(e.target.value);
+                                                setSelectedDateRange({ start: '', end: '' });
+                                            }}
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                            required
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                // House moving: Show only one date
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Moving Date</label>
+                                    <input
+                                        type="date"
+                                        value={selectedDateRange.start}
+                                        onChange={e => {
+                                            setSelectedDateRange({ start: e.target.value, end: '' });
+                                            setPickupDate('');
+                                            setDropoffDate('');
+                                        }}
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
+                                        required
+                                    />
+                                </div>
+                            )}
+                        </>
+                    )}
                                     {dateOption === 'rehome' && (
                                         <div className="p-3 bg-blue-50 rounded text-blue-700 text-sm">
                                             ReHome will suggest the most efficient and cost-effective moving date for you.
@@ -2136,19 +1963,21 @@ const ItemMovingPage = () => {
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
                                         <h4 className="text-md font-medium text-gray-800 mb-3">Schedule</h4>
                                         <div className="text-sm">
-                                            {dateOption === 'rehome' || isDateFlexible ? (
-                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">
-                                                    {dateOption === 'rehome' ? 'Let ReHome Choose' : 'Flexible'}
-                                                </span></p>
-                                            ) : (
-                                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">
-                            {dateOption === 'fixed' && pickupDate && dropoffDate ? 
+                                                                        {dateOption === 'rehome' || isDateFlexible ? (
+                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">
+                                    {dateOption === 'rehome' ? 'Let ReHome Choose' : 'Flexible'}
+                                </span></p>
+                            ) : (
+                                <p><span className="text-gray-500">Date:</span> <span className="font-medium">
+                            {dateOption === 'fixed' && isItemTransport && pickupDate && dropoffDate ? 
                              `Pickup: ${new Date(pickupDate).toLocaleDateString()}, Dropoff: ${new Date(dropoffDate).toLocaleDateString()}` :
+                             dateOption === 'fixed' && isHouseMoving && selectedDateRange.start ?
+                             `${new Date(selectedDateRange.start).toLocaleDateString()}` :
                              dateOption === 'flexible' && selectedDateRange.start && selectedDateRange.end ?
                              `${new Date(selectedDateRange.start).toLocaleDateString()} - ${new Date(selectedDateRange.end).toLocaleDateString()}` :
                              'Date not selected'}
                         </span></p>
-                                            )}
+                            )}
                                             {preferredTimeSpan && (
                                                 <p className="mt-1"><span className="text-gray-500">Time:</span> <span className="font-medium">
                                                     {preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
@@ -2280,9 +2109,9 @@ const ItemMovingPage = () => {
                                         <button 
                                             type="button"
                                             onClick={nextStep}
-                                            disabled={step === 1 && !pickupType}
+                                            disabled={isItemTransport ? (step === 1 && !pickupType) : false}
                                             className={`inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${
-                                                step === 1 && !pickupType ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700'
+                                                isItemTransport && step === 1 && !pickupType ? 'bg-gray-400 cursor-not-allowed' : 'bg-orange-600 hover:bg-orange-700'
                                             } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500`}
                                         >
                                             Next <FaArrowRight className="ml-2 -mr-1 h-5 w-5" />
@@ -2312,11 +2141,17 @@ const ItemMovingPage = () => {
                         </div>
                     </div>
                     
-                    {/* Pricing Display - Right 1/3 */}
+                                        {/* Pricing Display - Right 1/3 */}
                     <div className="md:col-span-1">
-                        <PriceSummaryItem 
-                            pricingBreakdown={pricingBreakdown}
-                        />
+                        {isItemTransport ? (
+                            <PriceSummaryItem 
+                                pricingBreakdown={pricingBreakdown}
+                            />
+                        ) : (
+                            <PriceSummaryComponent 
+                                pricingBreakdown={pricingBreakdown}
+                            />
+                        )}
                     </div>
                 </div>
             </div>
@@ -2329,12 +2164,20 @@ const ItemMovingPage = () => {
                 isReHomeOrder={false}
                 isMovingRequest={true}
             />
+            {/* Order Confirmation Modal for House Moving */}
+            <OrderConfirmationModal
+                isOpen={showOrderConfirmation}
+                onClose={() => setShowOrderConfirmation(false)}
+                orderNumber=""
+                isReHomeOrder={false}
+                isMovingRequest={true}
+            />
 
             {/* Booking Tips Modal */}
             <BookingTipsModal
                 isOpen={showBookingTips}
                 onContinue={handleContinueFromTips}
-                serviceType="item-transport"
+                serviceType={serviceType}
             />
 
             {/* Point Limit Modal */}
@@ -2376,6 +2219,11 @@ const ItemMovingPage = () => {
             )}
         </div>
     );
+};
+
+// Create a wrapper component for House Moving
+export const HouseMovingPage: React.FC = () => {
+    return <ItemMovingPage serviceType="house-moving" />;
 };
 
 export default ItemMovingPage;

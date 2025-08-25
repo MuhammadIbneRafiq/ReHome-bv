@@ -160,4 +160,4 @@ export function getSupportedCities(): string[] {
  */
 export function isCitySupported(cityName: string): boolean {
   return !!cityBaseCharges[cityName];
-} 
+}
