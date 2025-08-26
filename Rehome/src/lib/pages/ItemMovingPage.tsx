@@ -145,6 +145,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
+    const [isGoogleReady, setIsGoogleReady] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [showConfirmationModal, setShowConfirmationModal] = useState(false);
     const [showBookingTips, setShowBookingTips] = useState(false);
@@ -299,9 +300,26 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         });
     };
 
+    // Eagerly pre-load Google Maps to avoid first-use lag
+    useEffect(() => {
+        loadGoogleMapsAPI()
+            .then(() => {
+                setIsGoogleReady(true);
+                console.log('✅ Google Maps API ready');
+            })
+            .catch((error) => {
+                setIsGoogleReady(false);
+                console.error('❌ Google Maps API failed to load:', error);
+            });
+    }, []);
+
     // Calculate distance using Google Maps Distance Matrix API with fallback to straight-line
-    const calculateDistance = async (place1: any, place2: any): Promise<number> => {         // Ensure Google Maps API is loaded
-        await loadGoogleMapsAPI();
+    const calculateDistance = async (place1: any, place2: any): Promise<number> => {         
+        // Guard: ensure Google Maps is ready before attempting API calls
+        if (!isGoogleReady) {
+            console.warn('⚠️ Google Maps not ready, using straight-line calculation');
+            return calculateStraightLineDistance(place1, place2);
+        }
         
         // Use Distance Matrix API for accurate driving distance
         return new Promise((resolve) => {
@@ -352,6 +370,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     };
 
     const calculatePrice = async () => {
+        // Guard: ensure dynamic constants and minimal inputs are ready
+        if (!isDataLoaded) {
+            return;
+        }
         const requestId = ++latestRequestIdRef.current;
         if (!firstLocation || !secondLocation) {
             if (requestId === latestRequestIdRef.current) {
@@ -427,8 +449,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
     // Debounced price calculation to avoid excessive API calls while typing
     useEffect(() => {
-        // Skip calculation if locations are not set
-        if (!firstLocation || !secondLocation || 
+        // Skip calculation if locations are not set or constants not ready
+        if (!isDataLoaded || !firstLocation || !secondLocation || 
             firstLocation.trim().length <= 3 || secondLocation.trim().length <= 3) {
             setPricingBreakdown(null);
             return;
@@ -442,14 +464,14 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isDateFlexible, dateOption, isFixedDate]);
+    }, [isDataLoaded, firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isDateFlexible, dateOption, isFixedDate]);
 
     // Immediate price calculation for non-location changes and when places with coordinates change
     useEffect(() => {
-        if (firstLocation && secondLocation) {
+        if (isDataLoaded && firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace, pickupDate, dropoffDate, dateOption]);
+    }, [isDataLoaded, itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace, pickupDate, dropoffDate, dateOption]);
 
     const nextStep = () => {
         // Show booking tips after step 1 (locations)
@@ -915,6 +937,17 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         return (
             <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
                 <h3 className="font-semibold text-lg mb-3">Your Price Estimate</h3>
+                
+                {/* Google Maps readiness indicator */}
+                {!isGoogleReady && (
+                    <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-md">
+                        <div className="flex items-center text-xs text-blue-700">
+                            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-500 mr-2"></div>
+                            <span>Loading Google Maps for accurate distance calculation...</span>
+                        </div>
+                    </div>
+                )}
+                
                 <div className="space-y-2">
                     <div className="flex justify-between">
                         <span>Base Price:</span>

@@ -3,8 +3,8 @@ import '@testing-library/jest-dom/vitest';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HouseMovingPage } from '../ItemMovingPage';
-import * as pricing from '../../../services/pricingService';
+import { HouseMovingPage } from '../../lib/pages/ItemMovingPage';
+import * as pricing from '../pricingService';
 
 vi.mock('../../api/config', () => ({ default: { MOVING: { ITEM_REQUEST: '/api/mock' }, AUTH: { LOGIN: '/api/auth/login' } } }));
 

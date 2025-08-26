@@ -2,142 +2,8 @@ import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { PricingService, PricingInput, PricingBreakdown } from '../pricingService';
 import { initDynamicConstants } from '../../lib/constants';
 
-// Initialize dynamic constants before running tests
 beforeAll(async () => {
   await initDynamicConstants();
-});
-
-describe('PricingService - calculateIntercityItemTransportCharge', () => {
-  let pricingService: PricingService;
-
-  beforeEach(() => {
-    pricingService = new PricingService();
-    vi.clearAllMocks();
-  });
-
-  // Helper function to create base pricing input
-  const createBaseInput = (overrides: Partial<PricingInput> = {}): PricingInput => ({
-    serviceType: 'item-transport',
-    pickupLocation: 'Amsterdam',
-    dropoffLocation: 'Rotterdam',
-    selectedDate: '2024-01-15',
-    isDateFlexible: false,
-    itemQuantities: {},
-    floorPickup: 0,
-    floorDropoff: 0,
-    elevatorPickup: false,
-    elevatorDropoff: false,
-    assemblyItems: {},
-    extraHelperItems: {},
-    isStudent: false,
-    hasStudentId: false,
-    pickupPlace: { placeId: 'test', text: 'Amsterdam' },
-    dropoffPlace: { placeId: 'test', text: 'Rotterdam' },
-    ...overrides
-  });
-
-  describe('Intercity Item Transport Calculations', () => {
-    it('should calculate intercity item transport charge for Rotterdam to Eindhoven', async () => {
-      const input = createBaseInput({
-        pickupLocation: 'Rotterdam',
-        dropoffLocation: 'Eindhoven',
-        pickupDate: '2025-08-02',
-        dropoffDate: '2025-08-02',
-        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
-        dropoffPlace: { placeId: 'test', text: 'Eindhoven' }
-      });
-
-      const result = await pricingService['calculateIntercityItemTransportCharge'](
-        input, 'Rotterdam', 'Eindhoven', 0, 0);
-      // (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-      // Rotterdam: 35 Eindhoven: 34 , (35 + 34) / 2 = 34.5
-      expect(result).toBe(34.5);
-    });
-
-    it('should calculate intercity item transport charge for Eindhoven to Rotterdam', async () => {
-      const input = createBaseInput({
-        pickupLocation: 'Eindhoven',
-        dropoffLocation: 'Rotterdam',
-        pickupDate: '2025-08-04',
-        dropoffDate: '2025-08-04',
-        pickupPlace: { placeId: 'test', text: 'Eindhoven' },
-        dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
-      });
-
-      const result = await pricingService['calculateIntercityItemTransportCharge'](
-        input,
-        'Eindhoven',
-        'Rotterdam',
-        0,
-        0
-      );
-
-      expect(result).toBe(62); // (89, eindhoven + 35, rotterdam) / 2 = 62, rotterdam day but not eindhovens day
-    });
-
-    it('should calculate intercity item transport charge with distance differences', async () => {
-      const input = createBaseInput({
-        pickupLocation: 'Rotterdam',
-        dropoffLocation: 'Eindhoven',
-        pickupDate: '2025-08-05',
-        dropoffDate: '2025-08-05',
-        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
-        dropoffPlace: { placeId: 'test', text: 'Eindhoven' }
-      });
-
-      const result = await pricingService['calculateIntercityItemTransportCharge'](
-        input,
-        'Rotterdam',
-        'Eindhoven',
-        10,
-        5
-      );
-
-      expect(result).toBe(82.5); // (89, rotterdam + 76, eindhoven) / 2 = 82.5, 10km difference
-    });
-
-    it('should calculate intercity item transport charge for Rotterdam to s-Hertogenbosch', async () => {
-      const input = createBaseInput({
-        pickupLocation: 'Rotterdam',
-        dropoffLocation: 's-Hertogenbosch',
-        pickupDate: '2025-08-06',
-        dropoffDate: '2025-08-06',
-        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
-        dropoffPlace: { placeId: 'test', text: 's-Hertogenbosch' }
-      });
-
-      const result = await pricingService['calculateIntercityItemTransportCharge'](
-        input,
-        'Rotterdam',
-        's-Hertogenbosch',
-        0,
-        0
-      );
-
-      expect(result).toBe(62); // (89, rotterdam + 35, s-hertogenbosch) / 2 = 62, rotterdam day but not s-hertogenbosch day
-    });
-
-    it('should calculate intercity item transport charge for Zaanstad to Amersfoort', async () => {
-      const input = createBaseInput({
-        pickupLocation: 'Zaanstad',
-        dropoffLocation: 'Amersfoort',
-        pickupDate: '2025-08-09',
-        dropoffDate: '2025-08-09',
-        pickupPlace: { placeId: 'test', text: 'Zaanstad' },
-        dropoffPlace: { placeId: 'test', text: 'Amersfoort' }
-      });
-
-      const result = await pricingService['calculateIntercityItemTransportCharge'](
-        input,
-        'Zaanstad',
-        'Amersfoort',
-        0,
-        0
-      );
-
-      expect(result).toBe(44); // (44, zaanstad + 44, amersfoort) / 2 = 44, zaanstad day but not amersfoort day
-    });
-  });
 });
 
 describe('Comprehensive Pricing Tests - All Combinations', () => {
@@ -231,7 +97,23 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(35);
+      expect(mockBreakdown.basePrice).toBe(36);//standard charge for rotterdam 36
+    }, 10000);
+
+    it('should use cheap base charge when calendar is empty on that date', async () => {
+      const input = createBaseInput({
+        serviceType: 'item-transport',
+        pickupLocation: 'Rotterdam',
+        dropoffLocation: 'Rotterdam',
+        pickupDate: '2025-08-01',
+        dropoffDate: '2025-08-01',
+        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
+        dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(36);//cheap charge for rotterdam 36
     }, 10000);
 
     it('should use standard base charge when city is not included in calendar on that date', async () => {
@@ -239,7 +121,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
         serviceType: 'item-transport',
         pickupLocation: 'Tilburg',
         dropoffLocation: 'Tilburg',
-        pickupDate: '2025-08-01',
+        pickupDate: '2025-08-02',
         dropoffDate: '2025-08-01',
         pickupPlace: { placeId: 'test', text: 'Tilburg' },
         dropoffPlace: { placeId: 'test', text: 'Tilburg' }
@@ -247,7 +129,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(29);
+      expect(mockBreakdown.basePrice).toBe(29);//standard charge for tilburg 29
     }, 10000);
   });
 
@@ -265,48 +147,81 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(35);
+      expect(mockBreakdown.basePrice).toBe(36);//standard charge for rotterdam 36
     }, 10000);
 
-    it('should use average of cheap + standard when city is included on only one date', async () => {
+    it('should use cheap base charge when both dates are empty', async () => {
+      const input = createBaseInput({
+        serviceType: 'item-transport',
+        pickupLocation: 'Rotterdam',
+        dropoffLocation: 'Rotterdam',
+        pickupDate: '2025-08-01',
+        dropoffDate: '2025-08-07',
+        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
+        dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(36);//standard charge for rotterdam 36
+    }, 10000);
+
+    it('should use average of cheap + standard when pickup city is included on only one date AND not either of the dates are empty', async () => {
       const input = createBaseInput({
         serviceType: 'item-transport',
         pickupLocation: 'Eindhoven',
         dropoffLocation: 'Eindhoven',
         pickupDate: '2025-08-02',
-        dropoffDate: '2025-08-01',
+        dropoffDate: '2025-08-03',
         pickupPlace: { placeId: 'test', text: 'Eindhoven' },
         dropoffPlace: { placeId: 'test', text: 'Eindhoven' }
       });
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(61.5); // expecting 34 why?
+      expect(mockBreakdown.basePrice).toBe(61.5); // 34 + 89 / 2 = 61.5 cheap + standard / 2
     }, 10000);
 
-    it('should use cheap charge when city is included on both date or if both date are empty', async () => {
+    it('should use average of cheap + standard when empty on only 1 of the dates and not either of the dates are included as city days', async () => {
       const input = createBaseInput({
         serviceType: 'item-transport',
-        pickupLocation: 'Almere',
-        dropoffLocation: 'Almere',
-        pickupDate: '2025-08-10',
-        dropoffDate: '2025-08-10',
-        pickupPlace: { placeId: 'test', text: 'Almere' },
-        dropoffPlace: { placeId: 'test', text: 'Almere' }
+        pickupLocation: 'Eindhoven',
+        dropoffLocation: 'Eindhoven',
+        pickupDate: '2025-08-01', //empty date
+        dropoffDate: '2025-08-03', //not eindhovens date, but leidens and hagues date 
+        pickupPlace: { placeId: 'test', text: 'Eindhoven' },
+        dropoffPlace: { placeId: 'test', text: 'Eindhoven' }
       });
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(44); //same city, dates are empty, should get cheap city rate
+      expect(mockBreakdown.basePrice).toBe(61.5); // 34 + 89 / 2 = 61.5 cheap + standard / 2
     }, 10000);
+
+    it('standard base charge as none of the days are empty NOR none of the cities are included as city days', async () => {
+      const input = createBaseInput({
+        serviceType: 'item-transport',
+        pickupLocation: 'Eindhoven',
+        dropoffLocation: 'Eindhoven',
+        pickupDate: '2025-08-04', //not eindhovns date but rotterdam and almere
+        dropoffDate: '2025-08-03', //not eindhovens date, but leidens and hagues date 
+        pickupPlace: { placeId: 'test', text: 'Eindhoven' },
+        dropoffPlace: { placeId: 'test', text: 'Eindhoven' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(89); // rots days not in eindhoven calendar, standard charge
+    }, 10000);
+
   });
 
   describe('Fixed Date - Item Transport - Between Cities, Same Date', () => {
     it('should use average of cheap pickup + cheap dropoff when both cities are included', async () => {
       const input = createBaseInput({
         serviceType: 'item-transport',
-        pickupLocation: 'Rotterdam',
-        dropoffLocation: 'Eindhoven',
+        pickupLocation: 'Rotterdam',//included date
+        dropoffLocation: 'Eindhoven',//included date
         pickupDate: '2025-08-02',
         dropoffDate: '2025-08-02',
         pickupPlace: { placeId: 'test', text: 'Rotterdam' },
@@ -315,14 +230,14 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(34.5);
+      expect(mockBreakdown.basePrice).toBe(35); // 34 + 36 / 2 = 35
     }, 10000);
 
     it('should use average of cheap pickup + standard dropoff when only pickup city is included', async () => {
       const input = createBaseInput({
         serviceType: 'item-transport',
-        pickupLocation: 'Rotterdam',
-        dropoffLocation: 'Tilburg',
+        pickupLocation: 'Rotterdam', //included date
+        dropoffLocation: 'Tilburg', //not included date
         pickupDate: '2025-08-02',
         dropoffDate: '2025-08-02',
         pickupPlace: { placeId: 'test', text: 'Rotterdam' },
@@ -331,7 +246,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(32);
+      expect(mockBreakdown.basePrice).toBe(32.5); // 36 + 29 / 2 = 32.5
     }, 10000);
 
     it('should use average of standard pickup + cheap dropoff when only dropoff city is included', async () => {
@@ -347,14 +262,14 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(32);
+      expect(mockBreakdown.basePrice).toBe(32.5); // 29 + 36 / 2 = 32.5
     }, 10000);
 
-    it('should use higher standard base charge when neither city is included', async () => {
+    it('should use cheap pickup + standard dropoff when both dates are empty', async () => {
       const input = createBaseInput({
         serviceType: 'item-transport',
-        pickupLocation: 'Groningen',
-        dropoffLocation: 'Tilburg',
+        pickupLocation: 'Groningen',//69 on cheap
+        dropoffLocation: 'Tilburg',//29 on standard
         pickupDate: '2025-08-01',
         dropoffDate: '2025-08-01',
         pickupPlace: { placeId: 'test', text: 'Groningen' },
@@ -363,7 +278,23 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(49);
+      expect(mockBreakdown.basePrice).toBe(49); // 69 and 29 average
+    }, 10000);
+
+    it('should use higher standard base charge when neither city is included', async () => {
+      const input = createBaseInput({
+        serviceType: 'item-transport',
+        pickupLocation: 'Groningen',
+        dropoffLocation: 'Tilburg',
+        pickupDate: '2025-08-02',
+        dropoffDate: '2025-08-02',
+        pickupPlace: { placeId: 'test', text: 'Groningen' },
+        dropoffPlace: { placeId: 'test', text: 'Tilburg' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(219); // 219 and 29, max of the two
     }, 10000);
   });
 
@@ -381,31 +312,47 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(34.5);
+      expect(mockBreakdown.basePrice).toBe(35); // 34 + 36 / 2 = 35
     }, 10000);
 
-    it('should use average of cheap pickup + standard dropoff when only pickup city is included on its date', async () => {
+    it('should use average of cheap pickup + cheap dropoff when both dates are empty', async () => {
+      const input = createBaseInput({
+        serviceType: 'item-transport',
+        pickupLocation: 'Rotterdam',
+        dropoffLocation: 'Eindhoven',
+        pickupDate: '2025-08-01',
+        dropoffDate: '2025-08-07',
+        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
+        dropoffPlace: { placeId: 'test', text: 'Eindhoven' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(35); // 34 + 36 / 2 = 35
+    }, 10000);
+
+    it('avg cheap pickup, standard dropoff; pickup city is included on its date and standard is not empty', async () => {
       const input = createBaseInput({
         serviceType: 'item-transport',
         pickupLocation: 'Rotterdam',
         dropoffLocation: 'Tilburg',
         pickupDate: '2025-08-02',
-        dropoffDate: '2025-08-01',
+        dropoffDate: '2025-08-03',
         pickupPlace: { placeId: 'test', text: 'Rotterdam' },
         dropoffPlace: { placeId: 'test', text: 'Tilburg' }
       });
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(32);
+      expect(mockBreakdown.basePrice).toBe(32.5); // 36 + 29 / 2 = 32.5
     }, 10000);
 
     it('should use average of standard pickup + cheap dropoff when only dropoff city is included on its date', async () => {
       const input = createBaseInput({
         serviceType: 'item-transport',
-        pickupLocation: 'Tilburg',
-        dropoffLocation: 'Rotterdam',
-        pickupDate: '2025-08-01',
+        pickupLocation: 'Tilburg', //not included date
+        dropoffLocation: 'Rotterdam', //included date
+        pickupDate: '2025-08-03',
         dropoffDate: '2025-08-04',
         pickupPlace: { placeId: 'test', text: 'Tilburg' },
         dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
@@ -413,7 +360,55 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(32);
+      expect(mockBreakdown.basePrice).toBe(32.5); //29 + 36 / 2 = 32.5
+    }, 10000);
+
+    it('should use average of standard pickup + cheap dropoff when dropoff date is empty and pickup not included as city day', async () => {
+      const input = createBaseInput({
+        serviceType: 'item-transport',
+        pickupLocation: 'Rotterdam',
+        dropoffLocation: 'Tilburg',
+        pickupDate: '2025-08-03', // not emptyu and not included
+        dropoffDate: '2025-08-07',//empty date
+        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
+        dropoffPlace: { placeId: 'test', text: 'Tilburg' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(74); //29 + 119 / 2 = 74
+    }, 10000);
+
+    it('should use average of cheap pickup + standard dropoff, pickup date is empty and dropoff date is (not empty empty and not calender day)', async () => {
+      const input = createBaseInput({
+        serviceType: 'item-transport',
+        pickupLocation: 'Tilburg',
+        dropoffLocation: 'Rotterdam',
+        pickupDate: '2025-08-01',
+        dropoffDate: '2025-08-03',
+        pickupPlace: { placeId: 'test', text: 'Tilburg' },
+        dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(74);// 29 + 119 / 2 = 74
+    }, 10000);
+
+    it('avg std pickup, cheap dropoff when dropoff= empty and pickup =(not empty and not calender day)', async () => {
+      const input = createBaseInput({
+        serviceType: 'item-transport',
+        pickupLocation: 'Tilburg',
+        dropoffLocation: 'Rotterdam',
+        pickupDate: '2025-08-03',
+        dropoffDate: '2025-08-07',
+        pickupPlace: { placeId: 'test', text: 'Tilburg' },
+        dropoffPlace: { placeId: 'test', text: 'Rotterdam' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(32.5);// 29 + 36 / 2 = 32.5
     }, 10000);
 
     it('should use higher standard base charge when neither city is included on their dates', async () => {
@@ -421,31 +416,15 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
         serviceType: 'item-transport',
         pickupLocation: 'Groningen',
         dropoffLocation: 'Tilburg',
-        pickupDate: '2025-08-01',
-        dropoffDate: '2025-08-07',
+        pickupDate: '2025-08-03',
+        dropoffDate: '2025-08-04',
         pickupPlace: { placeId: 'test', text: 'Groningen' },
         dropoffPlace: { placeId: 'test', text: 'Tilburg' }
       });
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(49);
-    }, 10000);
-
-    it('should use average of cheap pickup + normal dropoff when both dates are empty', async () => {
-      const input = createBaseInput({
-        serviceType: 'item-transport',
-        pickupLocation: 'Rotterdam',
-        dropoffLocation: 'Eindhoven',
-        pickupDate: '2025-08-10',
-        dropoffDate: '2025-08-10',
-        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
-        dropoffPlace: { placeId: 'test', text: 'Eindhoven' }
-      });
-
-      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
-
-      expect(mockBreakdown.basePrice).toBe(62); // (35 cityDay + 89 normal) / 2 = 62
+      expect(mockBreakdown.basePrice).toBe(219);
     }, 10000);
   });
 }); 

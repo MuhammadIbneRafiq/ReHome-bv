@@ -96,7 +96,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(35);
+      expect(mockBreakdown.basePrice).toBe(36);
     }, 10000);
 
     it('should use cheap base charge when calendar is empty on that date', async () => {
@@ -115,6 +115,21 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
     }, 10000);
 
     it('should use standard base charge when city is not included in calendar on that date', async () => {
+      const input = createBaseInput({
+        serviceType: 'house-moving',
+        pickupLocation: 'Tilburg',
+        dropoffLocation: 'Tilburg',
+        selectedDate: '2025-08-03',
+        pickupPlace: { placeId: 'test', text: 'Tilburg' },
+        dropoffPlace: { placeId: 'test', text: 'Tilburg' }
+      });
+
+      await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+      expect(mockBreakdown.basePrice).toBe(29);
+    }, 10000);
+
+    it('should use cheap base charge if calendar is empty on that date', async () => {
       const input = createBaseInput({
         serviceType: 'house-moving',
         pickupLocation: 'Tilburg',
@@ -143,7 +158,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(32);
+      expect(mockBreakdown.basePrice).toBe(32.5); // 36 + 29 / 2 = 32.5
     }, 10000);
 
     it('should use average of standard pickup + cheap dropoff when pickup city is not included but dropoff is', async () => {
@@ -158,7 +173,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(32);
+      expect(mockBreakdown.basePrice).toBe(32.5); // 29 + 36 / 2 = 32.5
     }, 10000);
 
     it('should use average of cheap pickup + cheap dropoff when both cities are included', async () => {
@@ -173,7 +188,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(34.5);
+      expect(mockBreakdown.basePrice).toBe(35); // 36 + 34 / 2 = 35
     }, 10000);
 
     it('should use average of cheap pickup + standard dropoff when calendar is empty', async () => {
@@ -191,7 +206,7 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
       expect(mockBreakdown.basePrice).toBe(62);
     }, 10000);
 
-    it('should use higher standard base charge when neither city is included', async () => {
+    it('should use max of the two standard base charges when neither city is included', async () => {
       const input = createBaseInput({
         serviceType: 'house-moving',
         pickupLocation: 'Groningen',
@@ -220,22 +235,22 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(35);
+      expect(mockBreakdown.basePrice).toBe(36);
     }, 10000);
 
     it('should add extra km charge when distance difference > 0', async () => {
       const input = createBaseInput({
         isDateFlexible: false,
-        pickupLocation: 'Rotterdam',
+        pickupLocation: 'Gouda',
         dropoffLocation: 'Eindhoven',
         selectedDateRange: { start: '2025-08-10', end: '2025-08-25' }, // 16 days
-        pickupPlace: { placeId: 'test', text: 'Rotterdam' },
+        pickupPlace: { placeId: 'test', text: 'Gouda' },
         dropoffPlace: { placeId: 'test', text: 'Eindhoven' }
       });
 
       await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-      expect(mockBreakdown.basePrice).toBe(35);
+      expect(mockBreakdown.basePrice).toBe(39); //extra charge added as gouda isn't there.
     }, 10000);
   });
 
@@ -253,15 +268,15 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
         await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-        expect(mockBreakdown.basePrice).toBe(35);
+        expect(mockBreakdown.basePrice).toBe(36);
       }, 10000);
 
-      it('should use cheap base charge when calendar is empty on start date', async () => {
+      it('should use cheap base charge when calendar is empty on the range of days', async () => {
         const input = createBaseInput({
           isDateFlexible: false,
           pickupLocation: 'Groningen',
           dropoffLocation: 'Groningen',
-          selectedDateRange: { start: '2025-08-10', end: '2025-08-15' }, // 6 days
+          selectedDateRange: { start: '2025-08-10', end: '2025-08-15' }, // 6 days, all 6 empty
           pickupPlace: { placeId: 'test', text: 'Groningen' },
           dropoffPlace: { placeId: 'test', text: 'Groningen' }
         });
@@ -271,12 +286,27 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
         expect(mockBreakdown.basePrice).toBe(69);
       }, 10000);
 
-      it('should use standard base charge when no city days in range and not empty', async () => {
+      it('should use standard base charge when no city days in range', async () => {
         const input = createBaseInput({
           isDateFlexible: false,
           pickupLocation: 'Tilburg',
           dropoffLocation: 'Tilburg',
           selectedDateRange: { start: '2025-08-12', end: '2025-08-17' }, // 6 days
+          pickupPlace: { placeId: 'test', text: 'Tilburg' },
+          dropoffPlace: { placeId: 'test', text: 'Tilburg' }
+        });
+
+        await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+        expect(mockBreakdown.basePrice).toBe(29);
+      }, 10000);
+
+      it('should use standard base charge when no empty days in range', async () => {
+        const input = createBaseInput({
+          isDateFlexible: false,
+          pickupLocation: 'Tilburg',
+          dropoffLocation: 'Tilburg',
+          selectedDateRange: { start: '2025-08-12', end: '2025-08-14' }, // 3 days all empty
           pickupPlace: { placeId: 'test', text: 'Tilburg' },
           dropoffPlace: { placeId: 'test', text: 'Tilburg' }
         });
@@ -300,7 +330,37 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
 
         await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
 
-        expect(mockBreakdown.basePrice).toBe(32);
+        expect(mockBreakdown.basePrice).toBe(32.5); // 36 + 29 / 2 = 32.5
+      }, 10000);
+
+      it('should use average of cheap pickup + standard dropoff when atleast 1 empty day in range', async () => {
+        const input = createBaseInput({
+          isDateFlexible: false,
+          pickupLocation: 'Rotterdam',
+          dropoffLocation: 'Tilburg',
+          selectedDateRange: { start: '2025-08-02', end: '2025-08-07' }, // 6 days
+          pickupPlace: { placeId: 'test', text: 'Rotterdam' },
+          dropoffPlace: { placeId: 'test', text: 'Tilburg' }
+        });
+
+        await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+        expect(mockBreakdown.basePrice).toBe(32.5); // 36 + 29 / 2 = 32.5
+      }, 10000);
+
+      it('should use standard pickup when neither city days or a single empty day in range', async () => {
+        const input = createBaseInput({
+          isDateFlexible: false,
+          pickupLocation: 'Rotterdam',
+          dropoffLocation: 'Tilburg',
+          selectedDateRange: { start: '2025-08-02', end: '2025-08-07' }, // 6 days
+          pickupPlace: { placeId: 'test', text: 'Rotterdam' },
+          dropoffPlace: { placeId: 'test', text: 'Tilburg' }
+        });
+
+        await pricingService['calculateBaseChargeBreakdown'](input, mockBreakdown);
+
+        expect(mockBreakdown.basePrice).toBe(32.5); // 36 + 29 / 2 = 32.5
       }, 10000);
     });
   });

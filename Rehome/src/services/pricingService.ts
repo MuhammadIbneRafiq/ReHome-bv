@@ -1,4 +1,4 @@
-import { pricingConfig, cityBaseCharges, getItemPoints } from '../lib/constants';
+import { pricingConfig, cityBaseCharges, getItemPoints, constantsLoaded } from '../lib/constants';
 import { findClosestSupportedCity } from '../utils/locationServices';
 import API_ENDPOINTS from '../lib/api/config';
 import { getCityScheduleStatus, checkAllCitiesEmpty } from '../services/realtimeService';
@@ -90,6 +90,30 @@ export interface PricingInput {
 class PricingService {
 
   async calculatePricing(input: PricingInput): Promise<PricingBreakdown> {
+    // Deterministic guard: avoid calculating with uninitialized constants
+    if (!constantsLoaded) {
+      // Return a stable empty breakdown rather than calculating with partial data
+      return {
+        basePrice: 0,
+        itemValue: 0,
+        distanceCost: 0,
+        carryingCost: 0,
+        assemblyCost: 0,
+        extraHelperCost: 0,
+        subtotal: 0,
+        studentDiscount: 0,
+        total: 0,
+        earlyBookingDiscount: 0,
+        breakdown: {
+          baseCharge: { city: null, isCityDay: false, isEarlyBooking: false, originalPrice: 0, finalPrice: 0 },
+          items: { totalPoints: 0, multiplier: 1, cost: 0 },
+          distance: { distanceKm: 0, category: 'small', rate: 0, cost: 0 },
+          carrying: { floors: 0, itemBreakdown: [], totalCost: 0 },
+          assembly: { itemBreakdown: [], totalCost: 0 },
+          extraHelper: { totalPoints: 0, category: 'small', cost: 0 },
+        },
+      };
+    }
   
     const breakdown: PricingBreakdown = {
       basePrice: 0,
@@ -360,6 +384,9 @@ class PricingService {
     const isIncludedPickup = await this.isCityDay(pickupCity, new Date(input.pickupDate || ''));
     const isIncludedDropoff = await this.isCityDay(dropoffCity, new Date(input.dropoffDate || ''));
     
+    const cheapPickup = isIncludedPickup || isEmptyPickup;
+    const cheapDropoff = isIncludedDropoff || isEmptyDropoff;
+
     const isSameDate = input.pickupDate === input.dropoffDate;
     const isSameCity = dropoffCity === pickupCity;
     
@@ -404,31 +431,22 @@ class PricingService {
         }
       }
     } else {
-      // Between city, different date
-      console.log(`[DEBUG] Between city, different date branch - Pickup: ${pickupCity}, Dropoff: ${dropoffCity}`);
-      console.log(`[DEBUG] Status: isIncludedPickup=${isIncludedPickup}, isIncludedDropoff=${isIncludedDropoff}, isEmptyPickup=${isEmptyPickup}, isEmptyDropoff=${isEmptyDropoff}`);
-      console.log(`[DEBUG] Rates: Pickup normal=${cityBaseCharges[pickupCity]?.normal}, cityDay=${cityBaseCharges[pickupCity]?.cityDay}`);
-      console.log(`[DEBUG] Rates: Dropoff normal=${cityBaseCharges[dropoffCity]?.normal}, cityDay=${cityBaseCharges[dropoffCity]?.cityDay}`);
+      if (cheapPickup && cheapDropoff) {
 
-      if ((isIncludedPickup && isIncludedDropoff) || (isEmptyPickup && isEmptyDropoff)) {
-        console.log('[DEBUG] BRANCH 1: Both cities included or both dates empty');
-        // Both cities included in calendar on their date or both dates empty = (cheap base charge pickup + cheap base charge dropoff) / 2
         baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.cityDay} + ${cityBaseCharges[dropoffCity]?.cityDay}) / 2`);
-      } else if ((isIncludedPickup && !isIncludedDropoff) && !(isEmptyPickup && isIncludedDropoff)) {
-        console.log('[DEBUG] BRANCH 2: Only pickup city included');
-        // Only pickup city is included in calendar on its date = (cheap base charge for pickup + standard base charge for dropoff) / 2
+
+      } else if (cheapPickup && !cheapDropoff) {
+      
         baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
-        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.cityDay} + ${cityBaseCharges[dropoffCity]?.normal}) / 2`);
-      } else if ((!isIncludedPickup && isIncludedDropoff) || (isEmptyPickup && isIncludedDropoff)) {
-        console.log('[DEBUG] BRANCH 3: Only dropoff city included');
+
+      } else if (!cheapPickup && cheapDropoff) {
+
         baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
-        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = (${cityBaseCharges[pickupCity]?.normal} + ${cityBaseCharges[dropoffCity]?.cityDay}) / 2`);
+
       } else {
-        console.log('[DEBUG] BRANCH 4: Neither city included and no empty dates');
-        // None of the 2 dates include the respective city or an empty date = use the higher standard base charge of the 2 cities
+
         baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
-        console.log(`[DEBUG] Calculated baseCharge: ${baseCharge} = Math.max(${cityBaseCharges[pickupCity]?.normal}, ${cityBaseCharges[dropoffCity]?.normal})`);
+
       }
     }
     
