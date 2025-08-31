@@ -77,7 +77,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                                     </h3>
                                     <p className="text-sm sm:text-base text-blue-700">
                                         Selecting a date range or letting us suggest a moving date can unlock major savings. 
-                                        The more flexible you are, the more we can optimize our routes and pass the savings to you.
+                                        The more flexible you are, the more we can optimize our routes and pass the savings on to you.
                                     </p>
                                 </div>
                             </div>
@@ -96,7 +96,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                                         Customize your {serviceType === 'item-transport' ? 'transport' : 'move'} and Save
                                     </h3>
                                     <p className="text-sm sm:text-base text-orange-700">
-                                        Need help with stair carrying or furniture assembly? Our add-on services are here 
+                                        Need help with carrying upstairs or assembling the furniture? Our add-on services are here 
                                         to assist you beyond the transport alone. To keep the cost low, select these add-on 
                                         services only for the items where it's truly needed. You can select for each item 
                                         if you require our assistance. If you only need transport, leave them unchecked 
@@ -141,6 +141,32 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                                     </p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+                {/* Pro Tips Section */}
+                <div className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Pro Tips:</h3>
+                    
+                                         {/* First three bullet points grouped together */}
+                     <div className="space-y-1 mb-4">
+                        <div className="flex items-start space-x-3">
+                            <span className="text-gray-600 mt-1">•</span>
+                            <span className="text-sm sm:text-base text-gray-700">
+                                Book during off-peak times for better rates
+                            </span>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                            <span className="text-gray-600 mt-1">•</span>
+                            <span className="text-sm sm:text-base text-gray-700">
+                                Combine multiple services for package discounts
+                            </span>
+                        </div>
+                        <div className="flex items-start space-x-3">
+                            <span className="text-gray-600 mt-1">•</span>
+                            <span className="text-sm sm:text-base text-gray-700">
+                                Provide accurate item counts to avoid price adjustments
+                            </span>
                         </div>
                     </div>
                 </div>
