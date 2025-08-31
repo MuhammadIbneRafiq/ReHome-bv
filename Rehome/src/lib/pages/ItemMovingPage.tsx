@@ -763,14 +763,20 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
         // Prepare furniture items array for backend
         const itemValueMultiplier = isItemTransport ? 1 : 2; // €1 per point for items, €2 for house
-        const furnitureItems = Object.entries(itemQuantities)
+        const furnitureItemsArray = Object.entries(itemQuantities)
             .filter(([_, quantity]) => quantity > 0)
-            .map(([itemId, quantity]) => ({
-                name: itemId.replace(/-/g, ' - '),
-                quantity,
-                points: getItemPoints(itemId) * quantity,
-                value: getItemPoints(itemId) * quantity * itemValueMultiplier
-            }));
+            .map(([itemId, quantity]) => {
+                const itemData = furnitureItems.find(item => item.id === itemId);
+                const itemName = itemData ? itemData.name : itemId;
+                return {
+                    name: itemName,
+                    quantity,
+                    points: getItemPoints(itemId) * quantity,
+                    value: getItemPoints(itemId) * quantity * itemValueMultiplier
+                };
+            });
+                
+        console.log('HERE IS FURNITURE ITEMS ID!')
 
         // Calculate total item points
         const totalItemPoints = Object.entries(itemQuantities)
@@ -784,7 +790,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         // Prepare payload in the format expected by backend
         const payload = {
             pickupType: pickupType || 'house',
-            furnitureItems,
+            furnitureItems: furnitureItemsArray,
             customItem,
             floorPickup: parseInt(floorPickup) || 0,
             floorDropoff: parseInt(floorDropoff) || 0,
@@ -848,7 +854,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         preferredTimeSpan === 'evening' ? 'Evening (16:00 - 20:00)' : 'Anytime'
                     ) : 'Not specified'
                 },
-                items: furnitureItems,
+                items: furnitureItemsArray,
                 additionalServices: {
                     assembly: (pricingBreakdown?.assemblyCost ?? 0) > 0 ? (pricingBreakdown?.assemblyCost ?? 0) : 0,
                     extraHelper: (pricingBreakdown?.extraHelperCost ?? 0) > 0 ? (pricingBreakdown?.extraHelperCost ?? 0) : 0,

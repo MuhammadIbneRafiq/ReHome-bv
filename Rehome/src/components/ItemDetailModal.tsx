@@ -713,14 +713,11 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
 
                     <div className="prose text-gray-600">
                       {/* <h3 className="text-lg font-semibold mb-2">Product Details</h3> */}
+                      {/* Description first */}
+                      <p className="whitespace-pre-line mb-4">{description}</p>
+                      
                       {/* Product meta fields */}
                       <ul className="mb-2">
-                        {/* Condition label mapping */}
-                        {item.condition_rating && (
-                          <li>
-                            <span className="font-medium">Condition:</span> {getConditionLabel(item.condition_rating.toString())}
-                          </li>
-                        )}
                         {/* Dimensions (from item.dimensions or direct fields) */}
                         {(item.height_cm || item.width_cm || item.depth_cm) && (
                           <li>
@@ -734,8 +731,13 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                             </span>
                           </li>
                         )}
+                        {/* Condition label mapping */}
+                        {item.condition_rating && (
+                          <li>
+                            <span className="font-medium">Condition:</span> {getConditionLabel(item.condition_rating.toString())}
+                          </li>
+                        )}
                       </ul>
-                      <p className="whitespace-pre-line">{description}</p>
                     </div>
                   </div>
 
