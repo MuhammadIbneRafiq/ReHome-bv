@@ -139,7 +139,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [storeProofPhoto, setStoreProofPhoto] = useState<File | null>(null);
     const [itemPhotos, setItemPhotos] = useState<File[]>([]);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
-    const [isFixedDate] = useState(false);
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({});
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
@@ -166,6 +165,24 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
     // Guard against stale async pricing responses
     const latestRequestIdRef = React.useRef(0);
+
+    // Create a stable identifier for the current date configuration to prevent flickering
+    // This ensures pricing calculations only happen when the actual date configuration changes,
+    // not when individual state variables are being updated during user interactions
+    const dateConfigId = React.useMemo(() => {
+        if (dateOption === 'rehome') {
+            return `rehome-${serviceType}`;
+        } else if (dateOption === 'flexible') {
+            return `flexible-${serviceType}-${selectedDateRange.start}-${selectedDateRange.end}`;
+        } else if (dateOption === 'fixed') {
+            if (isItemTransport) {
+                return `fixed-${serviceType}-${pickupDate}-${dropoffDate}`;
+            } else {
+                return `fixed-${serviceType}-${selectedDateRange.start}`;
+            }
+        }
+        return `unknown-${serviceType}`;
+    }, [dateOption, serviceType, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isItemTransport]);
 
     // Function to calculate total points
     const calculateTotalPoints = () => {
@@ -448,6 +465,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     };
 
     // Debounced price calculation to avoid excessive API calls while typing
+    // Uses dateConfigId to prevent flickering during date option changes
     useEffect(() => {
         // Skip calculation if locations are not set or constants not ready
         if (!isDataLoaded || !firstLocation || !secondLocation || 
@@ -464,14 +482,15 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         }, 400); // 400ms debounce - faster pricing updates
 
         return () => clearTimeout(debounceTimer);
-    }, [isDataLoaded, firstLocation, secondLocation, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isDateFlexible, dateOption, isFixedDate]);
+    }, [isDataLoaded, firstLocation, secondLocation, dateConfigId]);
 
     // Immediate price calculation for non-location changes and when places with coordinates change
+    // Uses dateConfigId to prevent flickering during date option changes
     useEffect(() => {
         if (isDataLoaded && firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [isDataLoaded, itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace, pickupDate, dropoffDate, dateOption]);
+    }, [isDataLoaded, itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace, dateConfigId]);
 
     const nextStep = () => {
         // Show booking tips after step 1 (locations)
@@ -1442,12 +1461,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                     setIsDateFlexible(false);
                                                 }
                                                 
-                                                // Trigger immediate price calculation after state change
-                                                setTimeout(() => {
-                                                    if (firstLocation && secondLocation) {
-                                                        calculatePrice();
-                                                    }
-                                                }, 50);
+                                                // Pricing calculation will be handled automatically by useEffect with dateConfigId
                                             }}
                                             className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                         >
@@ -1466,8 +1480,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                     value={selectedDateRange.start}
                                                     onChange={e => {
                                                         setSelectedDateRange(r => ({ ...r, start: e.target.value }));
-                                                        setPickupDate('');
-                                                        setDropoffDate('');
                                                     }}
                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                                     required
@@ -1480,8 +1492,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                     value={selectedDateRange.end}
                                                     onChange={e => {
                                                         setSelectedDateRange(r => ({ ...r, end: e.target.value }));
-                                                        setPickupDate('');
-                                                        setDropoffDate('');
                                                     }}
                                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                                     required
@@ -1501,7 +1511,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             value={pickupDate}
                                             onChange={e => {
                                                 setPickupDate(e.target.value);
-                                                setSelectedDateRange({ start: '', end: '' });
                                             }}
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                             required
@@ -1514,7 +1523,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             value={dropoffDate}
                                             onChange={e => {
                                                 setDropoffDate(e.target.value);
-                                                setSelectedDateRange({ start: '', end: '' });
                                             }}
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                             required
@@ -1530,8 +1538,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                         value={selectedDateRange.start}
                                         onChange={e => {
                                             setSelectedDateRange({ start: e.target.value, end: '' });
-                                            setPickupDate('');
-                                            setDropoffDate('');
                                         }}
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                         required
