@@ -52,8 +52,8 @@ export const defaultPricingConfig: PricingConfig = {
     longDistance: { rate: 0.5 }
   },
   carryingMultipliers: {
-    lowValue: { threshold: 6, multiplier: 0.015 },
-    highValue: { multiplier: 0.040 }
+    lowValue: { threshold: 6, multiplier: 1.35 },
+    highValue: { multiplier: 1.35 }
   },
   assemblyMultipliers: {
     lowValue: { threshold: 6, multiplier: 1.80 },

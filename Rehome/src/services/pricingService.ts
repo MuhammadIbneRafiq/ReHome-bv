@@ -706,8 +706,8 @@ class PricingService {
         if (needsCarrying) {
           const points = getItemPoints(itemId);
           const carryingLowThreshold = pricingConfig?.carryingMultipliers?.lowValue?.threshold ?? 10;
-          const carryingLowMultiplier = pricingConfig?.carryingMultipliers?.lowValue?.multiplier ?? 1;
-          const carryingHighMultiplier = pricingConfig?.carryingMultipliers?.highValue?.multiplier ?? 1.5;
+          const carryingLowMultiplier = pricingConfig?.carryingMultipliers?.lowValue?.multiplier ?? 1.35;
+          const carryingHighMultiplier = pricingConfig?.carryingMultipliers?.highValue?.multiplier ?? 1.35;
           const multiplier = points <= carryingLowThreshold ? carryingLowMultiplier : carryingHighMultiplier;
           
           const itemCarryingPoints = points * multiplier * totalFloors * quantity;
@@ -722,10 +722,10 @@ class PricingService {
         }
       }
     }
-    // Apply x3 multiplier for add-ons as per pricing rules
+    // Apply +25 multiplier for add-ons as per pricing rules
     // Ensure we have baseMultipliers and addonMultiplier
-    const addonMultiplier = pricingConfig?.baseMultipliers?.addonMultiplier || 3.0;
-    const totalCost = totalCarryingPoints * addonMultiplier;
+    const addonMultiplier = 25.0;
+    const totalCost = totalCarryingPoints + addonMultiplier;
 
     breakdown.breakdown.carrying.itemBreakdown = itemBreakdown;
     breakdown.breakdown.carrying.totalCost = totalCost;
@@ -753,19 +753,35 @@ class PricingService {
         const itemAssemblyPoints = points * multiplier * quantity;
         totalAssemblyPoints += itemAssemblyPoints;
 
+        if (itemId ==="3-Doors Closet") {
+          totalAssemblyPoints == 35;        
+        }
+        else if (itemId ==="2-Doors Closet") {
+          console.log(itemAssemblyPoints, 'itemAssemblyPoints')
+          totalAssemblyPoints == 30;        
+        }
+        else if (itemId ==="1-Person Bed") {
+          console.log(itemAssemblyPoints, 'itemAssemblyPoints')
+          totalAssemblyPoints == 20;
+        }
+        else if (itemId ==="2-Person Bed") {
+          console.log(itemAssemblyPoints, 'itemAssemblyPoints')
+          totalAssemblyPoints == 30;
+        }
+        else {
+          totalAssemblyPoints == 0;
+          console.log(totalAssemblyPoints, 'itemAssemblyPoints')
+
         itemBreakdown.push({
           itemId,
           points: points * quantity,
           multiplier,
-          cost: itemAssemblyPoints * (pricingConfig?.baseMultipliers?.addonMultiplier || 3.0)
+          cost: totalAssemblyPoints
         });
       }
     }
-
-    // Apply x3 multiplier for add-ons as per pricing rules
-    // Ensure we have baseMultipliers and addonMultiplier
-    const addonMultiplier = pricingConfig?.baseMultipliers?.addonMultiplier || 3.0;
-    const totalCost = totalAssemblyPoints * addonMultiplier;
+  }
+    const totalCost = totalAssemblyPoints;
 
     breakdown.breakdown.assembly.itemBreakdown = itemBreakdown;
     breakdown.breakdown.assembly.totalCost = totalCost;
