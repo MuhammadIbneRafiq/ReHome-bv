@@ -15,7 +15,7 @@ const serviceFields: ServiceFieldsType = {
     'itemDescription', 'storageStartDate', 'storageEndDate', 'pickupPreference', 'contactInfo'
   ],
   junkRemoval: [
-    'itemDescription', 'address', 'removalDate', 'contactInfo'
+    'itemDescription', 'address', 'earliestRemovalDate', 'removalDate', 'contactInfo'
   ],
   fullInternationalMove: [
     'pickupAddress', 'dropoffAddress', 'pickupFloor', 'pickupElevator', 'dropoffFloor', 'dropoffElevator', 'itemDescription', 'services', 'contactInfo'
@@ -133,6 +133,14 @@ const SpecialRequestPage = () => {
           }
         }
       }
+      // Additional validation for junk removal date fields
+      if (selectedService === 'junkRemoval') {
+        if (fields.earliestRemovalDate && fields.removalDate && fields.earliestRemovalDate > fields.removalDate) {
+          newErrors.earliestRemovalDate = 'Earliest removal date must be before or equal to latest removal date.';
+          isValid = false;
+          console.log('❌ Earliest removal date is after latest removal date');
+        }
+      }
     }
 
     // Photo validation - mandatory for all services
@@ -204,6 +212,16 @@ const SpecialRequestPage = () => {
           formData.append(key, fields[key]);
         }
       });
+
+      // Ensure both removal dates are sent for junk removal
+      if (selectedService === 'junkRemoval') {
+        if (fields.earliestRemovalDate) {
+          formData.append('earliestRemovalDate', fields.earliestRemovalDate);
+        }
+        if (fields.removalDate) {
+          formData.append('removalDate', fields.removalDate);
+        }
+      }
 
       // Add selected services for full/international move
       if (selectedService === 'fullInternationalMove' && selectedServices.length > 0) {
@@ -591,18 +609,33 @@ const SpecialRequestPage = () => {
                         </div>
 
                         {/* Removal Date */}
-                        <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Latest Removal Date
-                          </label>
-                          <input
-                            type="date"
-                            value={fields.removalDate || ''}
-                            onChange={(e) => handleFieldChange('removalDate', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            required
-                          />
-                          {errors.removalDate && <p className="text-red-500 text-sm mt-1">{errors.removalDate}</p>}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Earliest Removal Date
+                            </label>
+                            <input
+                              type="date"
+                              value={fields.earliestRemovalDate || ''}
+                              onChange={(e) => handleFieldChange('earliestRemovalDate', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              required
+                            />
+                            {errors.earliestRemovalDate && <p className="text-red-500 text-sm mt-1">{errors.earliestRemovalDate}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Latest Removal Date
+                            </label>
+                            <input
+                              type="date"
+                              value={fields.removalDate || ''}
+                              onChange={(e) => handleFieldChange('removalDate', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              required
+                            />
+                            {errors.removalDate && <p className="text-red-500 text-sm mt-1">{errors.removalDate}</p>}
+                          </div>
                         </div>
                       </div>
                     )}

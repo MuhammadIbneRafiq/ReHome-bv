@@ -30,7 +30,7 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
   
   const [items, setItems] = useState<FurnitureItem[]>([]);
   const [allItems, setAllItems] = useState<FurnitureItem[]>([]);
-  const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [showMoreItems, setShowMoreItems] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +42,8 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
         setCategoriesLoading(true);
         const dynamicCategories = await getMarketplaceCategoriesDynamic();
         setCategories(dynamicCategories);
+        // Initialize with all categories selected
+        setSelectedCategories(dynamicCategories.map(cat => cat.name));
       } catch (error) {
         console.error('Error loading categories:', error);
       } finally {
@@ -100,9 +102,9 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
       return;
     }
 
-    // Filter out excluded categories and sold items
+    // Filter items by selected categories and exclude sold items
     const availableItems = allItems.filter(item => 
-      !excludedCategories.includes(item.category || '') && !item.sold
+      selectedCategories.includes(item.category || '') && !item.sold
     );
     
     // Group items by category
@@ -155,11 +157,11 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
     }
     
     setItems(result);
-  }, [allItems, excludedCategories, maxItems, showMoreItems]);
+  }, [allItems, selectedCategories, maxItems, showMoreItems]);
 
-  // Toggle category exclusion
-  const toggleCategoryExclusion = (category: string) => {
-    setExcludedCategories(prev => 
+  // Toggle category selection
+  const toggleCategorySelection = (category: string) => {
+    setSelectedCategories(prev => 
       prev.includes(category)
         ? prev.filter(c => c !== category)
         : [...prev, category]
@@ -169,9 +171,9 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
   // Generate a className for category filter buttons
   const getCategoryButtonClass = (category: string) => {
     return `px-3 py-1 rounded-full text-sm font-medium ${
-      excludedCategories.includes(category)
-        ? 'bg-gray-200 text-gray-500'
-        : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+      selectedCategories.includes(category)
+        ? 'bg-orange-500 text-white hover:bg-orange-600'
+        : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
     }`;
   };
 
@@ -226,7 +228,7 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
               categories.map((category: MarketplaceCategory) => (
                 <button
                   key={category.name}
-                  onClick={() => toggleCategoryExclusion(category.name)}
+                  onClick={() => toggleCategorySelection(category.name)}
                   className={getCategoryButtonClass(category.name)}
                 >
                   {category.name}
@@ -240,7 +242,10 @@ const FeaturedItems: React.FC<FeaturedItemsProps> = ({ maxItems = 3 }) => {
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {items.length === 0 ? (
             <div className="col-span-full text-center text-gray-500">
-              No featured items available at the moment.
+              {selectedCategories.length === 0 
+                ? 'Please select at least one category to view items.'
+                : 'No items available in the selected categories at the moment.'
+              }
             </div>
           ) : (
             items.map((item) => (
