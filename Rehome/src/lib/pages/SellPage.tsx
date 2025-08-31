@@ -6,6 +6,8 @@ import { FaTimes } from 'react-icons/fa';
 import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
 import { getMarketplaceCategoriesDynamic, CONDITION_OPTIONS } from '../../constants/marketplaceConstants';
 import { MarketplaceCategory } from '../../services/marketplaceItemDetailsService';
+import { GooglePlacesAutocomplete } from '../../components/ui/GooglePlacesAutocomplete';
+import { GooglePlaceObject } from '../../utils/locationServices';
 
 const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) => {
     // Get current user from the store
@@ -65,7 +67,7 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
     const [submitError, setSubmitError] = useState<string | null>(null); // Error state for submit
     const [cityName, setCityName] = useState(''); // Added city name.
     const [addressError, setAddressError] = useState<string | null>(null); // Address length error
-    const [locationCoords] = useState<{lat: number, lon: number} | null>(null);
+    const [locationCoords, setLocationCoords] = useState<{lat: number, lon: number} | null>(null);
 
     // Terms and Conditions agreement state
     const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -96,6 +98,18 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
         } catch (error) {
             console.error('Error opening Terms of Service:', error);
         }
+    };
+
+    // Handle place selection from Google Places Autocomplete
+    const handlePlaceSelect = (place: GooglePlaceObject) => {
+        setCityName(place.formattedAddress || place.text || '');
+        if (place.coordinates) {
+            setLocationCoords({
+                lat: place.coordinates.lat,
+                lon: place.coordinates.lng
+            });
+        }
+        setAddressError(null);
     };
 
     // Handle Privacy Policy viewing
@@ -601,12 +615,9 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                     <label htmlFor="location" className="block text-sm font-medium text-gray-700">
                         Address *
                     </label>
-                    <input
-                        type="text"
-                        id="location"
+                    <GooglePlacesAutocomplete
                         value={cityName}
-                        onChange={(e) => {
-                            const value = e.target.value;
+                        onChange={(value) => {
                             setCityName(value);
                             if (value.length > 100) {
                                 setAddressError('Address cannot exceed 100 characters.');
@@ -614,10 +625,8 @@ const SellPage = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () 
                                 setAddressError(null);
                             }
                         }}
-                        className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border ${addressError ? 'border-red-500' : ''}`}
                         placeholder="Enter your address (street, city, etc.)"
-                        required
-                        maxLength={100}
+                        onPlaceSelect={handlePlaceSelect}
                     />
                     <div className="flex justify-between items-center mt-1">
                         <span className="text-xs text-gray-500">{cityName.length}/100 characters</span>
