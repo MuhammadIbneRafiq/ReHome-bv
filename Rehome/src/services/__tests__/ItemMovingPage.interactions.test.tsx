@@ -20,7 +20,7 @@ vi.mock('../../lib/constants', () => ({
   cityBaseCharges: {
     'Amsterdam': { normal: 119, cityDay: 39, dayOfWeek: 1 }
   },
-  getItemPoints: vi.fn((id: string) => 5)
+  getItemPoints: vi.fn((_id: string) => 5)
 }));
 
 // Mock realtime service to prevent errors

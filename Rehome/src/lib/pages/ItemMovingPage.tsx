@@ -97,7 +97,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                     if (data.extraInstructions) setExtraInstructions(data.extraInstructions);
                     
                     // Show success message
-                    toast.success("Your information has been transferred from item transport. Please review and continue.");
+                    // toast.success("Your information has been transferred from item transport. Please review and continue.");
                     
                     // Clear the transferred data
                     sessionStorage.removeItem('itemTransportToHouseMoving');

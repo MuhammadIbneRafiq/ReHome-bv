@@ -1,9 +1,5 @@
 /* @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
-import ItemMovingPage, { HouseMovingPage } from '../../lib/pages/ItemMovingPage';
 import * as pricing from '../pricingService';
 import * as constants from '../../lib/constants';
 

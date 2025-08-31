@@ -41,7 +41,7 @@ vi.mock('../../lib/constants', () => ({
     'Eindhoven': { normal: 119, cityDay: 39, dayOfWeek: 1 },
     'Groningen': { normal: 119, cityDay: 39, dayOfWeek: 1 }
   },
-  getItemPoints: vi.fn((id: string) => 5),
+  getItemPoints: vi.fn((_id: string) => 5),
   initDynamicConstants: vi.fn().mockResolvedValue(undefined),
   defaultPricingConfig: {
     cityDayRate: 0.33,
@@ -207,7 +207,7 @@ describe('PricingService concurrency and async behavior', () => {
   it('aligns base price with live schedule for within-city on an August date', async () => {
     // Use a valid date format that the service expects
     const dateStr = '2025-08-15';
-    const dateObj = new Date(dateStr + 'T00:00:00Z'); // Create proper Date object with time
+    // Create proper Date object with time
     
     // Mock the schedule endpoints to return predictable values
     mockScheduleEndpoints({ isScheduled: false, isEmpty: false });

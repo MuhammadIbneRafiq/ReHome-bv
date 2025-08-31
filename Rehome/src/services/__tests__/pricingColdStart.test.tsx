@@ -22,7 +22,7 @@ describe('Cold start readiness gating', () => {
       furnitureItems: [],
       itemCategories: [],
       cityBaseCharges: {},
-      getItemPoints: vi.fn((id: string) => 0)
+      getItemPoints: vi.fn((_id: string) => 0)
     }));
 
     // Import the mocked module
@@ -75,7 +75,7 @@ describe('Cold start readiness gating', () => {
       cityBaseCharges: {
         'Amsterdam': { normal: 119, cityDay: 39, dayOfWeek: 1 }
       },
-      getItemPoints: vi.fn((id: string) => 5)
+      getItemPoints: vi.fn((_id: string) => 5)
     }));
 
     // Import the mocked module
@@ -119,7 +119,7 @@ describe('Cold start readiness gating', () => {
       furnitureItems: [],
       itemCategories: [],
       cityBaseCharges: {},
-      getItemPoints: vi.fn((id: string) => 0)
+      getItemPoints: vi.fn((_id: string) => 0)
     }));
 
     // Import the mocked module

@@ -16,7 +16,7 @@ vi.mock('../../lib/constants', () => ({
   cityBaseCharges: {
     'Amsterdam': { normal: 119, cityDay: 39, dayOfWeek: 1 }
   },
-  getItemPoints: vi.fn((id: string) => 5)
+  getItemPoints: vi.fn((_id: string) => 5)
 }));
 
 describe('requestId guard prevents stale overwrites', () => {
@@ -114,7 +114,7 @@ describe('requestId guard prevents stale overwrites', () => {
   it('handles multiple concurrent pricing requests without race conditions', async () => {
     // Create multiple promises that resolve at different times
     const promises = [];
-    const results = [];
+    // const results = [];
     
     for (let i = 0; i < 3; i++) {
       const delay = (i + 1) * 50; // Different delays for each request
