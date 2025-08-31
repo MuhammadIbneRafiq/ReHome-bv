@@ -46,15 +46,17 @@ const ShareButton: React.FC<ShareButtonProps> = ({
         };
         
         await navigator.share(shareData);
-        toast.success('Link is copied!');
+        // Don't show "Link is copied!" for native share - it's not actually copied
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           console.error('Share failed:', error);
-          setShowDialog(true);
+          // If native share fails, copy to clipboard instead
+          await copyToClipboard();
         }
       }
     } else {
-      setShowDialog(true);
+      // If native share is not available, copy to clipboard directly
+      await copyToClipboard();
     }
   };
 
