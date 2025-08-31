@@ -3,7 +3,7 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { itemCategories, getItemPoints, furnitureItems, constantsLoaded } from '../../lib/constants';
+import { getItemPoints, furnitureItems, constantsLoaded } from '../../lib/constants';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
@@ -1580,44 +1580,56 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </p>
                                     
                                     <div className="space-y-6">
-                                        {/* Add 'Box/Bag' to the first category if not present */}
-                                        {itemCategories.map((category, index) => (
-                                            <div key={index} className="border border-gray-200 rounded-lg p-4">
-                                                <h3 className="text-md font-medium text-gray-800 mb-3">{category.name}</h3>
-                                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                                    {[...furnitureItems, ...(index === 0 && !furnitureItems.some(i => i.id === 'box-bag') ? [{ id: 'box-bag', name: 'Box/Bag' }] : [])].map((item, itemIndex) => {
-                                                        const itemKey = item.id;
-                                                        const quantity = itemQuantities[itemKey] || 0;
-                                                        return (
-                                                            <div key={itemIndex} className="flex items-center justify-between py-3 px-3 bg-gray-50 rounded-md">
-                                                                <div className="flex-1">
-                                                                    <div className="text-sm text-gray-700">{item.name}</div>
-                                                                   
+                                        {(() => {
+                                            // Group items by category
+                                            const itemsByCategory = furnitureItems.reduce((groups, item) => {
+                                                const category = item.category || 'Others';
+                                                if (!groups[category]) {
+                                                    groups[category] = [];
+                                                }
+                                                groups[category].push(item);
+                                                return groups;
+                                            }, {} as Record<string, typeof furnitureItems>);
+
+                                            
+                                            return Object.entries(itemsByCategory).map(([categoryName, categoryItems]) => (
+                                                <div key={categoryName} className="border border-gray-200 rounded-lg p-4">
+                                                    <h3 className="text-md font-medium text-gray-800 mb-3">{categoryName}</h3>
+                                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                                        {categoryItems.map((item, itemIndex) => {
+                                                            const itemKey = item.id;
+                                                            const quantity = itemQuantities[itemKey] || 0;
+                                                            return (
+                                                                <div key={itemIndex} className="flex items-center justify-between py-3 px-3 bg-gray-50 rounded-md">
+                                                                    <div className="flex-1">
+                                                                        <div className="text-sm text-gray-700">{item.name}</div>
+                                                                       
+                                                                    </div>
+                                                                    <div className="flex items-center space-x-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => decrementItem(itemKey)}
+                                                                            className={`w-8 h-8 flex items-center justify-center rounded-full border ${quantity > 0 ? 'border-orange-500 text-orange-500 hover:bg-orange-50' : 'border-gray-300 text-gray-300 cursor-not-allowed'}`}
+                                                                            disabled={quantity === 0}
+                                                                        >
+                                                                            <FaMinus className="h-3 w-3" />
+                                                                        </button>
+                                                                        <span className="text-sm w-6 text-center">{quantity}</span>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => incrementItemItemMoving(itemKey)}
+                                                                            className="w-8 h-8 flex items-center justify-center rounded-full border border-orange-500 text-orange-500 hover:bg-orange-50"
+                                                                        >
+                                                                            <FaPlus className="h-3 w-3" />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex items-center space-x-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => decrementItem(itemKey)}
-                                                                        className={`w-8 h-8 flex items-center justify-center rounded-full border ${quantity > 0 ? 'border-orange-500 text-orange-500 hover:bg-orange-50' : 'border-gray-300 text-gray-300 cursor-not-allowed'}`}
-                                                                        disabled={quantity === 0}
-                                                                    >
-                                                                        <FaMinus className="h-3 w-3" />
-                                                                    </button>
-                                                                    <span className="text-sm w-6 text-center">{quantity}</span>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => incrementItemItemMoving(itemKey)}
-                                                                        className="w-8 h-8 flex items-center justify-center rounded-full border border-orange-500 text-orange-500 hover:bg-orange-50"
-                                                                    >
-                                                                        <FaPlus className="h-3 w-3" />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ));
+                                        })()}
                                     </div>
                                     {/* Extra Information field */}
                                     <div className="mt-6">

@@ -137,24 +137,31 @@ export async function initDynamicConstants() {
         console.log('[Constants] ⚠️ No furniture items data found');
       }
       
-      // Load item categories
-      console.log('[Constants] 📋 Loading item categories...');
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('item_categories')
+      // Load item categories from furniture_item table
+      console.log('[Constants] 📋 Loading item categories from furniture_item...');
+      const { data: categoriesData, error: categoriesItemError } = await supabase
+        .from('furniture_items')
         .select('*');
         
-      if (categoriesError) {
-        console.warn('[Constants] ⚠️ Item categories error:', categoriesError);
-        throw categoriesError;
+      if (categoriesItemError) {
+        console.warn('[Constants] ⚠️ Furniture item error:', categoriesItemError);
+        throw categoriesItemError;
       }
       if (categoriesData) {
-        itemCategories = categoriesData as ItemCategory[];
-        console.log(`[Constants] ✅ Item categories loaded from Supabase: ${categoriesData.length} categories`);
+        // Transform the furniture_item data to match our ItemCategory type
+        itemCategories = categoriesData.map(cat => ({
+          name: cat.name,
+          subcategories: [cat.name], // The category name itself is the subcategory to match
+          is_active: cat.is_active !== false // default to true if not specified
+        })) as ItemCategory[];
+        console.log(`[Constants] ✅ Furniture item loaded from Supabase: ${categoriesData.length} categories`);
+        console.log('[Constants] 🔍 Furniture item structure:', categoriesData);
+        console.log('[Constants] 🔍 Transformed item:', itemCategories);
       } else {
-        console.log('[Constants] ⚠️ No item categories data found');
+        console.log('[Constants] ⚠️ No furniture item data found');
         itemCategories = [];
       }
-      
+
       // Load city base charges
       const { data: cityChargesData, error: cityChargesError } = await supabase
         .from('city_base_charges')
