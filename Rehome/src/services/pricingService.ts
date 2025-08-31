@@ -283,6 +283,8 @@ class PricingService {
             }
           }
           
+          console.log('pickupDistanceDifference', pickupDistanceDifference);
+          console.log('dropoffDistanceDifference', dropoffDistanceDifference);
           // Add extra km charge ONLY if distance difference > 8km
           if (pickupDistanceDifference > 8) {
             const extraCharge = Math.round((pickupDistanceDifference - 8) * 3);

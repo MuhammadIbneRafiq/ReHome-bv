@@ -1,32 +1,31 @@
 import { cityBaseCharges } from '../lib/constants';
 
-// Supported cities with their approximate coordinates (center of the city)
 const SUPPORTED_CITIES_COORDS: { [key: string]: { lat: number; lng: number } } = {
-  'Amsterdam': { lat: 52.3676, lng: 4.9041 },
-  'Utrecht': { lat: 52.0907, lng: 5.1214 },
-  'Almere': { lat: 52.3708, lng: 5.2647 },
-  'Haarlem': { lat: 52.3874, lng: 4.6462 },
-  'Zaanstad': { lat: 52.4391, lng: 4.8270 },
-  'Amersfoort': { lat: 52.1561, lng: 5.3878 },
-  's-Hertogenbosch': { lat: 51.6978, lng: 5.3037 },
-  'Hoofddorp': { lat: 52.3030, lng: 4.6890 },
-  'Rotterdam': { lat: 51.9244, lng: 4.4777 },
-  'The Hague': { lat: 52.0705, lng: 4.3007 },
-  'Breda': { lat: 51.5719, lng: 4.7683 },
-  'Leiden': { lat: 52.1601, lng: 4.4970 },
-  'Dordrecht': { lat: 51.8133, lng: 4.6901 },
-  'Zoetermeer': { lat: 52.0575, lng: 4.4937 },
-  'Delft': { lat: 52.0116, lng: 4.3571 },
-  'Eindhoven': { lat: 51.4416, lng: 5.4697 },
-  'Maastricht': { lat: 50.8514, lng: 5.6909 },
-  'Tilburg': { lat: 51.5555, lng: 5.0913 },
-  'Groningen': { lat: 53.2194, lng: 6.5665 },
-  'Nijmegen': { lat: 51.8426, lng: 5.8518 },
-  'Enschede': { lat: 52.2215, lng: 6.8937 },
-  'Arnhem': { lat: 51.9851, lng: 5.8987 },
-  'Apeldoorn': { lat: 52.2112, lng: 5.9699 },
-  'Deventer': { lat: 52.2551, lng: 6.1639 },
-  'Zwolle': { lat: 52.5168, lng: 6.0830 },
+  'Amsterdam': { lat: 52.37833, lng: 4.90000 },        // Amsterdam Centraal [web:14]
+  'Utrecht': { lat: 52.0894, lng: 5.1100 },            // Utrecht Centraal [web:17]
+  'Almere': { lat: 52.3731, lng: 5.2180 },             // Almere Centrum [web:17]
+  'Haarlem': { lat: 52.3872, lng: 4.6371 },            // Haarlem Centraal [web:17]
+  'Zaanstad': { lat: 52.4402, lng: 4.8119 },           // Zaandam station (main for Zaanstad) [web:17]
+  'Amersfoort': { lat: 52.1538, lng: 5.3725 },         // Amersfoort Centraal [web:17]
+  's-Hertogenbosch': { lat: 51.6900, lng: 5.2930 },    // 's-Hertogenbosch [web:17]
+  'Hoofddorp': { lat: 52.3022, lng: 4.7032 },          // Hoofddorp [web:17]
+  'Rotterdam': { lat: 51.9225, lng: 4.4821 },          // Rotterdam Centraal [web:17]
+  'The Hague': { lat: 52.0800, lng: 4.3240 },          // Den Haag Centraal [web:17]
+  'Breda': { lat: 51.5841, lng: 4.7988 },              // Breda [web:17]
+  'Leiden': { lat: 52.1667, lng: 4.4825 },             // Leiden Centraal [web:17]
+  'Dordrecht': { lat: 51.8103, lng: 4.6736 },          // Dordrecht [web:17]
+  'Zoetermeer': { lat: 52.0627, lng: 4.4971 },         // Zoetermeer station [web:17]
+  'Delft': { lat: 52.0067, lng: 4.3556 },              // Delft [web:17]
+  'Eindhoven': { lat: 51.4416, lng: 5.4810 },          // Eindhoven [web:17]
+  'Maastricht': { lat: 50.8499, lng: 5.7059 },         // Maastricht [web:17]
+  'Tilburg': { lat: 51.5553, lng: 5.0910 },            // Tilburg [web:17]
+  'Groningen': { lat: 53.2114, lng: 6.5641 },          // Groningen [web:17]
+  'Nijmegen': { lat: 51.8447, lng: 5.8625 },           // Nijmegen [web:17]
+  'Enschede': { lat: 52.2219, lng: 6.8937 },           // Enschede [web:17]
+  'Arnhem': { lat: 51.9852, lng: 5.8980 },             // Arnhem [web:17]
+  'Apeldoorn': { lat: 52.2118, lng: 5.9635 },          // Apeldoorn [web:17]
+  'Deventer': { lat: 52.2515, lng: 6.1592 },           // Deventer [web:17]
+  'Zwolle': { lat: 52.5058, lng: 6.0923 },             // Zwolle [web:17]
 };
 
 // Interface for place objects coming from Google Places API
@@ -39,6 +38,50 @@ export interface GooglePlaceObject {
   formattedAddress?: string;
   displayName?: string;
   text?: string;
+}
+
+/**
+ * Calculate road distance using Google Maps Distance Matrix API
+ * @param originLat Origin latitude
+ * @param originLng Origin longitude
+ * @param destLat Destination latitude
+ * @param destLng Destination longitude
+ * @returns Promise<number> Distance in kilometers
+ */
+async function calculateRoadDistance(
+  originLat: number, 
+  originLng: number, 
+  destLat: number, 
+  destLng: number
+): Promise<number> {
+  // Check if Google Maps API is available
+  if (typeof google === 'undefined' || !google.maps || !google.maps.DistanceMatrixService) {
+    console.warn('⚠️ Google Maps API not available, falling back to straight-line calculation');
+    return calculateDistanceKm(originLat, originLng, destLat, destLng);
+  }
+  console.log('DIIRECR API Calculating road distance from:', originLat, originLng, 'to:', destLat, destLng);
+
+  return new Promise((resolve) => {
+    const service = new google.maps.DistanceMatrixService();
+    const origins = [new google.maps.LatLng(originLat, originLng)];
+    const destinations = [new google.maps.LatLng(destLat, destLng)];
+
+    service.getDistanceMatrix({
+      origins,
+      destinations,
+      travelMode: google.maps.TravelMode.DRIVING,
+      unitSystem: google.maps.UnitSystem.METRIC,
+    }, (response, status) => {
+      if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK' && response?.rows?.[0]?.elements?.[0]?.distance?.value) {
+        const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
+        console.log(`📏 Road distance calculated: ${distanceKm.toFixed(2)} km`);
+        resolve(distanceKm);
+      } else {
+        console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
+        resolve(calculateDistanceKm(originLat, originLng, destLat, destLng));
+      }
+    });
+  });
 }
 
 /**
@@ -74,19 +117,6 @@ async function findClosestSupportedCityInternal(
   }
 
   // First check: Is this location in one of our top 25 supported cities?
-  const locationText = placeObject.text || placeObject.displayName || placeObject.formattedAddress || '';
-  
-  // Check if the location name contains any of our supported city names
-  for (const supportedCity of Object.keys(cityBaseCharges)) {
-    if (locationText.toLowerCase().includes(supportedCity.toLowerCase())) {
-      return { 
-        city: supportedCity, 
-        distanceDifference: 0,  // No extra charge for supported cities
-        isReliable: true  // Very reliable - exact city name match
-      };
-    }
-  }
-      
   if (placeObject.coordinates?.lat && placeObject.coordinates?.lng) {
     let targetLat = placeObject.coordinates.lat;
     let targetLng = placeObject.coordinates.lng;
@@ -94,22 +124,20 @@ async function findClosestSupportedCityInternal(
     let nearestCity: string | null = null;
     let shortestDistance = Infinity;
 
-    // Find the closest city from our supported cities (top 25)
+    // Find the closest city from our supported cities (top 25) using road distance
     for (const [cityName, cityCoords] of Object.entries(SUPPORTED_CITIES_COORDS)) {
-      const distance = calculateDistanceKm(targetLat, targetLng, cityCoords.lat, cityCoords.lng);
+      const distance = await calculateRoadDistance(targetLat, targetLng, cityCoords.lat, cityCoords.lng);
       if (distance < shortestDistance) {
         shortestDistance = distance;
         nearestCity = cityName;
       }
     }
 
-    if (nearestCity) {
-      // Calculate extra km charge: €3 per km beyond 8km city center range
-      const extraKmBeyondRange = Math.max(0, shortestDistance - 8);
-      
+    console.log('Nearest city:', nearestCity, '!!!Shortest distance:', shortestDistance);
+    if (nearestCity) {      
       return { 
         city: nearestCity, 
-        distanceDifference: extraKmBeyondRange,
+        distanceDifference: shortestDistance,
         isReliable: true  // Reliable - based on GPS coordinates
       };
     }
@@ -201,29 +229,6 @@ export async function findClosestSupportedCity(
   // All retries failed - return null to let calling code handle appropriately
   console.error('[findClosestSupportedCity] All attempts failed, last error:', lastError);
   return { city: null, distanceDifference: 0 };
-}
-
-/**
- * Calculate distance from city center (for pricing calculations)
- * @param placeObject The place object from Google Places API
- * @param cityName The city name to calculate distance from
- * @returns number Distance in kilometers from city center, or 0 if coordinates not available
- */
-export function calculateDistanceFromCityCenter(
-  placeObject?: GooglePlaceObject, 
-  cityName?: string
-): number {
-  if (!placeObject?.coordinates || !cityName || !SUPPORTED_CITIES_COORDS[cityName]) {
-    return 0;
-  }
-
-  const cityCenter = SUPPORTED_CITIES_COORDS[cityName];
-  return calculateDistanceKm(
-    placeObject.coordinates.lat,
-    placeObject.coordinates.lng,
-    cityCenter.lat,
-    cityCenter.lng
-  );
 }
 
 /**
