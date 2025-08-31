@@ -48,20 +48,39 @@ export interface GooglePlaceObject {
  * @param destLng Destination longitude
  * @returns Promise<number> Distance in kilometers
  */
+// Cache for distance calculations to prevent redundant API calls
+const distanceCache: Record<string, number> = {};
+
 async function calculateRoadDistance(
   originLat: number, 
   originLng: number, 
   destLat: number, 
   destLng: number
 ): Promise<number> {
-  // Check if Google Maps API is available
-  if (typeof google === 'undefined' || !google.maps || !google.maps.DistanceMatrixService) {
-    console.warn('⚠️ Google Maps API not available, falling back to straight-line calculation');
-    return calculateDistanceKm(originLat, originLng, destLat, destLng);
+  
+  // Create cache key for this coordinate pair
+  const cacheKey = [
+    [originLat.toFixed(6), originLng.toFixed(6)],
+    [destLat.toFixed(6), destLng.toFixed(6)]
+  ].sort().toString();
+  
+  // Return cached value if available
+  if (distanceCache[cacheKey] !== undefined) {
+    return distanceCache[cacheKey];
   }
-  console.log('DIIRECR API Calculating road distance from:', originLat, originLng, 'to:', destLat, destLng);
 
   return new Promise((resolve) => {
+    // For city calculations, prefer straight-line distance for better performance
+    // This significantly reduces API calls
+    const straightLineDistance = calculateDistanceKm(originLat, originLng, destLat, destLng);
+    
+    // Cache and return the straight-line distance
+    distanceCache[cacheKey] = straightLineDistance;
+    // Reduce console logging frequency for better performance
+    // console.log(`📏 Road distance calculated: ${straightLineDistance.toFixed(2)} km`);
+    resolve(straightLineDistance);
+    
+    /* Disabled to improve performance - using straight-line distance instead
     const service = new google.maps.DistanceMatrixService();
     const origins = [new google.maps.LatLng(originLat, originLng)];
     const destinations = [new google.maps.LatLng(destLat, destLng)];
@@ -75,12 +94,16 @@ async function calculateRoadDistance(
       if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK' && response?.rows?.[0]?.elements?.[0]?.distance?.value) {
         const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
         console.log(`📏 Road distance calculated: ${distanceKm.toFixed(2)} km`);
+        distanceCache[cacheKey] = distanceKm;
         resolve(distanceKm);
       } else {
         console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
-        resolve(calculateDistanceKm(originLat, originLng, destLat, destLng));
+        const fallbackDistance = calculateDistanceKm(originLat, originLng, destLat, destLng);
+        distanceCache[cacheKey] = fallbackDistance;
+        resolve(fallbackDistance);
       }
     });
+    */
   });
 }
 
@@ -104,6 +127,9 @@ function calculateDistanceKm(lat1: number, lng1: number, lat2: number, lng2: num
   return R * c;
 }
 
+// Cache for closest city lookups to prevent redundant calculations
+const cityLookupCache: Record<string, { city: string | null, distanceDifference: number, isReliable: boolean }> = {};
+
 /**
  * Main function to find the closest supported city from a Google Places object
  * @param placeObject The place object from Google Places API
@@ -120,6 +146,14 @@ async function findClosestSupportedCityInternal(
   if (placeObject.coordinates?.lat && placeObject.coordinates?.lng) {
     let targetLat = placeObject.coordinates.lat;
     let targetLng = placeObject.coordinates.lng;
+    
+    // Create a cache key using coordinates
+    const cacheKey = `${targetLat.toFixed(6)},${targetLng.toFixed(6)}`;
+    
+    // Check if we already have this result cached
+    if (cityLookupCache[cacheKey]) {
+      return cityLookupCache[cacheKey];
+    }
 
     let nearestCity: string | null = null;
     let shortestDistance = Infinity;
@@ -133,13 +167,18 @@ async function findClosestSupportedCityInternal(
       }
     }
 
-    console.log('Nearest city:', nearestCity, '!!!Shortest distance:', shortestDistance);
+    // Reduce console logging for better performance
+    // console.log('Nearest city:', nearestCity, '!!!Shortest distance:', shortestDistance);
     if (nearestCity) {      
-      return { 
+      const result = { 
         city: nearestCity, 
         distanceDifference: shortestDistance,
         isReliable: true  // Reliable - based on GPS coordinates
       };
+      
+      // Cache the result
+      cityLookupCache[cacheKey] = result;
+      return result;
     }
   }
 

@@ -335,8 +335,33 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             });
     }, []);
 
+    // Cache for distance calculations to prevent redundant API calls
+    const distanceCache = React.useRef<Record<string, number>>({});
+    
     // Calculate distance using Google Maps Distance Matrix API with fallback to straight-line
     const calculateDistance = async (place1: any, place2: any): Promise<number> => {         
+        // Guard: ensure we have valid coordinates
+        if (!place1?.coordinates || !place2?.coordinates) {
+            return 0;
+        }
+        
+        // Create cache key for this coordinate pair
+        const cacheKey = [
+            [place1.coordinates.lat.toFixed(6), place1.coordinates.lng.toFixed(6)],
+            [place2.coordinates.lat.toFixed(6), place2.coordinates.lng.toFixed(6)]
+        ].sort().toString();
+        
+        // Return cached value if available
+        if (distanceCache.current[cacheKey] !== undefined) {
+            return distanceCache.current[cacheKey];
+        }
+        
+        // For performance, prefer straight-line distance which is fast and reliable
+        const distance = calculateStraightLineDistance(place1, place2);
+        distanceCache.current[cacheKey] = distance;
+        return distance;
+        
+        /* Disabled Google API calls for better performance
         // Guard: ensure Google Maps is ready before attempting API calls
         if (!isGoogleReady) {
             console.warn('⚠️ Google Maps not ready, using straight-line calculation');
@@ -357,13 +382,17 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             }, (response, status) => {
                 if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK' && response?.rows?.[0]?.elements?.[0]?.distance?.value) {
                     const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
+                    distanceCache.current[cacheKey] = distanceKm;
                     resolve(distanceKm);
                 } else {
                     console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
-                    resolve(calculateStraightLineDistance(place1, place2));
+                    const fallbackDistance = calculateStraightLineDistance(place1, place2);
+                    distanceCache.current[cacheKey] = fallbackDistance;
+                    resolve(fallbackDistance);
                 }
             });
         });
+        */
     };
 
     // Fallback function for straight-line distance calculation
@@ -387,7 +416,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         const distance = R * c; // Distance in kilometers
         
-        console.log('📏 Calculated straight-line distance:', distance.toFixed(2), 'km between', place1.text, 'and', place2.text);
+        // Reduce console logging for better performance
+        // console.log('📏 Calculated straight-line distance:', distance.toFixed(2), 'km between', place1.text, 'and', place2.text);
         return distance;
     };
 
@@ -496,13 +526,23 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         return () => clearTimeout(debounceTimer);
     }, [isDataLoaded, firstLocation, secondLocation, dateConfigId]);
 
-    // Immediate price calculation for non-location changes and when places with coordinates change
-    // Uses dateConfigId to prevent flickering during date option changes
+    // Split immediate price calculation into location-dependent and item-dependent parts
+    // Location changes (expensive) - recalculate distance and everything
     useEffect(() => {
         if (isDataLoaded && firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [isDataLoaded, itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, isStudent, studentId, pickupPlace, dropoffPlace, dateConfigId]);
+    }, [isDataLoaded, pickupPlace, dropoffPlace, dateConfigId]);
+    
+    // Item/service changes (cheaper) - reuse already calculated distance
+    useEffect(() => {
+        // Only recalculate if we already have locations and distance
+        if (isDataLoaded && firstLocation && secondLocation && distanceKm !== null) {
+            calculatePrice();
+        }
+    }, [isDataLoaded, itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, 
+        elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, 
+        isStudent, studentId]);
 
     const nextStep = () => {
         // Show booking tips after step 1 (locations)
