@@ -338,7 +338,7 @@ class PricingService {
         // ReHome suggest date → always cheapest base price for pickup city
         finalCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
         isCheapRate = true;
-        chargeType += 'City Day Rate';
+        chargeType = 'City Day Rate';
         // Add extra km charge for pickup location if non-base city
         if (pickupDistanceDifference > 8) {
           const extraCharge = Math.round((pickupDistanceDifference - 8) * 3);
