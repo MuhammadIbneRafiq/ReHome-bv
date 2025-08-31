@@ -115,8 +115,8 @@ export async function initDynamicConstants() {
         throw configError;
       }
       if (configData) {
-        pricingConfig = configData as PricingConfig;
-        console.log('[Constants] ✅ Pricing config loaded from Supabase');
+        // The database stores the config as a JSON object with a 'config' field
+        pricingConfig = configData.config as PricingConfig;
       } else {
         console.log('[Constants] ⚠️ No pricing config data found');
       }

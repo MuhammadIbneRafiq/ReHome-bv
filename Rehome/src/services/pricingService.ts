@@ -808,12 +808,41 @@ class PricingService {
 
     // Apply student discount if applicable
     const studentDiscountRate = pricingConfig?.studentDiscount ?? 0;
-    if (input.isStudent && input.hasStudentId) {
+    console.log('[DEBUG] Student discount check:', {
+      isStudent: input.isStudent,
+      hasStudentId: input.hasStudentId,
+      studentDiscountRate,
+      subtotal: breakdown.subtotal,
+      pricingConfigLoaded: !!pricingConfig,
+      pricingConfigStudentDiscount: pricingConfig?.studentDiscount,
+      constantsLoaded
+    });
+    
+    // Show student discount preview when checkbox is checked, but only apply it when file is uploaded
+    if (input.isStudent) {
       breakdown.studentDiscount = breakdown.subtotal * studentDiscountRate;
-      breakdown.total = breakdown.subtotal - breakdown.studentDiscount;
+      if (input.hasStudentId) {
+        // File uploaded - apply the discount
+        breakdown.total = breakdown.subtotal - breakdown.studentDiscount;
+        console.log('[DEBUG] Student discount applied:', {
+          discount: breakdown.studentDiscount,
+          newTotal: breakdown.total
+        });
+      } else {
+        // Checkbox checked but no file - show preview but don't apply
+        breakdown.total = breakdown.subtotal;
+        console.log('[DEBUG] Student discount preview shown (file not uploaded):', {
+          previewDiscount: breakdown.studentDiscount,
+          total: breakdown.total
+        });
+      }
     } else {
       breakdown.studentDiscount = 0;
       breakdown.total = breakdown.subtotal;
+      console.log('[DEBUG] Student discount NOT applied - reason:', {
+        isStudent: input.isStudent,
+        hasStudentId: input.hasStudentId
+      });
     }
 
     const referenceDate = new Date(input.selectedDate);
@@ -827,7 +856,9 @@ class PricingService {
     if (isEarlyBooking) {
       input.isEarlyBooking = true;
       breakdown.earlyBookingDiscount = Math.round(breakdown.total * 0.10 * 100) / 100;
-      breakdown.total = Math.round((breakdown.subtotal - breakdown.earlyBookingDiscount) * 100) / 100;
+      // breakdown.total = Math.round((breakdown.subtotal - breakdown.earlyBookingDiscount) * 100) / 100;
+      breakdown.total = Math.round((breakdown.total - breakdown.earlyBookingDiscount) * 100) / 100;
+
     } else {
       breakdown.earlyBookingDiscount = 0;
     }

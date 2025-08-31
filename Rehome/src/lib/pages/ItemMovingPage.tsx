@@ -276,6 +276,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
+        console.log('[DEBUG] Student ID upload:', {
+          file: file?.name,
+          hasFile: !!file,
+          isStudent
+        });
         setStudentId(file || null);
     };
 
@@ -439,12 +444,19 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 assemblyItems: disassemblyItems,
                 extraHelperItems,
                 isStudent,
-                hasStudentId: !!studentId,
+                hasStudentId: !!studentId, // Only true if file is uploaded
                 isEarlyBooking: false,
                 carryingServiceItems,
                 pickupPlace: pickupPlace,
                 dropoffPlace: dropoffPlace,
             };
+            
+            console.log('[DEBUG] Pricing input:', {
+                isStudent: pricingInput.isStudent,
+                hasStudentId: pricingInput.hasStudentId,
+                studentIdFile: studentId?.name,
+                timestamp: new Date().toISOString()
+            });
             const breakdown = await pricingService.calculatePricing(pricingInput);
             if (requestId === latestRequestIdRef.current) {
                 setPricingBreakdown(breakdown);
@@ -1050,6 +1062,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
                             </div>
                         )}
+                        {pricingBreakdown.studentDiscount > 0 && !studentId && (
+                            <div className="text-xs text-orange-600 ml-4">
+                                Upload student ID to apply discount
+                            </div>
+                        )}
                         {/* Early Booking Discount */}
                     {pricingBreakdown.earlyBookingDiscount > 0 && (
                         <div className="flex justify-between text-green-600">
@@ -1219,6 +1236,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                             <div className="flex justify-between text-green-600">
                                 <span>Student Discount (10%):</span>
                                 <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
+                            </div>
+                        )}
+                        {pricingBreakdown.studentDiscount > 0 && !studentId && (
+                            <div className="text-xs text-orange-600 ml-4">
+                                Upload student ID to apply discount
                             </div>
                         )}
                         {/* Early Booking Discount */}
