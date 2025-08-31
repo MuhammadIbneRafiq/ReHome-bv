@@ -1,6 +1,5 @@
 /* @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import * as pricing from '../pricingService';
 import * as constants from '../../lib/constants';
 
 // Mock API config
