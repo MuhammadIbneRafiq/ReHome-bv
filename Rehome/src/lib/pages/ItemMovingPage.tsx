@@ -161,7 +161,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [extraInstructions, setExtraInstructions] = useState('');
 
     // Point limit constant
-    const ITEM_TRANSPORT_POINT_LIMIT = 20;
+    const ITEM_TRANSPORT_ITEM_LIMIT = 3;// Maximum number of items allowed
+
 
     // Guard against stale async pricing responses
     const latestRequestIdRef = React.useRef(0);
@@ -184,17 +185,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         return `unknown-${serviceType}`;
     }, [dateOption, serviceType, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isItemTransport]);
 
-    // Function to calculate total points
-    const calculateTotalPoints = () => {
-        return Object.entries(itemQuantities)
-            .filter(([_, quantity]) => quantity > 0)
-            .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
+    // Function to calculate total number of items
+    const calculateTotalItems = () => {
+        return Object.values(itemQuantities)
+            .reduce((total, quantity) => total + quantity, 0);
     };
 
-    // Function to check point limit and redirect if exceeded
-    const checkPointLimitAndRedirect = () => {
-        const totalPoints = calculateTotalPoints();
-        if (totalPoints > ITEM_TRANSPORT_POINT_LIMIT) {
+    // Function to check item limit and redirect if exceeded
+    const checkItemLimitAndRedirect = () => {
+        const totalItems = calculateTotalItems();
+        if (totalItems > ITEM_TRANSPORT_ITEM_LIMIT) {
             setShowPointLimitModal(true);
             return true;
         }
@@ -501,7 +501,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
         // Check point limit when moving to step 3 (items) or later - only for item transport
         if (isItemTransport && step >= 2) {
-            if (checkPointLimitAndRedirect()) {
+            if (checkItemLimitAndRedirect()) {
                 return;
             }
         }
@@ -595,12 +595,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 [itemId]: (prevQuantities[itemId] || 0) + 1,
             };
             
-            // Check if this increment would exceed the limit
-            const newTotalPoints = Object.entries(newQuantities)
-                .filter(([_, quantity]) => quantity > 0)
-                .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
+            // Check if this increment would exceed the item limit
+            const newTotalItems = Object.values(newQuantities)
+                .reduce((total, quantity) => total + quantity, 0);
             
-            if (newTotalPoints > ITEM_TRANSPORT_POINT_LIMIT) {
+            if (newTotalItems > ITEM_TRANSPORT_ITEM_LIMIT) {
                 // Show the modal immediately when limit is exceeded
                 setTimeout(() => setShowPointLimitModal(true), 100);
             }
@@ -1116,8 +1115,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             .filter(([_, quantity]) => quantity > 0)
             .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
         
-        const isApproachingLimit = totalItemPoints >= ITEM_TRANSPORT_POINT_LIMIT * 0.8; // 80% of limit (16/20)
-        const isExceedingLimit = totalItemPoints > ITEM_TRANSPORT_POINT_LIMIT;
+        const isApproachingLimit = totalItemPoints >= ITEM_TRANSPORT_ITEM_LIMIT * 2/3; // 200% of limit (40/20)
+        const isExceedingLimit = totalItemPoints > ITEM_TRANSPORT_ITEM_LIMIT;
         
         return (
             <div className="bg-white p-4 rounded-lg shadow-md sticky top-24">
