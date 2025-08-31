@@ -1,13 +1,17 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getMarketplaceCategoriesDynamic, CONDITION_OPTIONS } from '../constants/marketplaceConstants';
 import { MarketplaceCategory } from '../services/marketplaceItemDetailsService';
+import { GooglePlacesAutocomplete } from './ui/GooglePlacesAutocomplete';
+import { GooglePlaceObject } from '../utils/locationServices';
+import { FaMapMarkerAlt, FaRuler } from 'react-icons/fa';
 
 interface FilterProps {
   items: any[];
   onFilterChange: (filteredItems: any[]) => void;
+  onLocationSearch?: (location: string, radius?: number, selectedPlace?: GooglePlaceObject) => void;
 }
 
-const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => {
+const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange, onLocationSearch }) => {
   // Dynamic categories state
   const [categories, setCategories] = useState<MarketplaceCategory[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -29,104 +33,26 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     loadCategories();
   }, []);
 
-  const [_, setCities] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
-  const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [selectedPriceRange, setSelectedPriceRange] = useState<[number, number]>([0, 500]);
   const [showRehomeOnly, setShowRehomeOnly] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
   const [selectedCondition, setSelectedCondition] = useState<string>('');
 
-  const [locationKeyword, setLocationKeyword] = useState('');
-  const [showLocationSuggestions, setShowLocationSuggestions] = useState(false);
-  const [activeLocationSuggestion, setActiveLocationSuggestion] = useState(-1);
-  const locationInputRef = useRef<HTMLInputElement>(null);
-  const locationSuggestionsRef = useRef<HTMLDivElement>(null);
-
-  // Extract unique location values from items
-  const uniqueLocations = useMemo(() => {
-    const locationSet = new Set<string>();
-    items.forEach(item => {
-      [item.city_name, item.address, item.postcode, item.postal_code, item.zip_code].forEach(field => {
-        if (typeof field === 'string' && field.trim() !== '') {
-          locationSet.add(field.trim());
-        }
-      });
-    });
-    return Array.from(locationSet);
-  }, [items]);
-
-  const locationSuggestions = useMemo(() => {
-    if (!locationKeyword) return [];
-    return uniqueLocations.filter(loc => loc.toLowerCase().includes(locationKeyword.toLowerCase()));
-  }, [locationKeyword, uniqueLocations]);
-
-  const handleLocationInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocationKeyword(e.target.value);
-    setShowLocationSuggestions(e.target.value.length > 0 && locationSuggestions.length > 0);
-    setActiveLocationSuggestion(-1);
-  };
-
-  const handleLocationSuggestionClick = (suggestion: string) => {
-    setLocationKeyword(suggestion);
-    setShowLocationSuggestions(false);
-    setTimeout(() => locationInputRef.current?.focus(), 0);
-  };
-
-  const handleLocationKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!showLocationSuggestions) return;
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setActiveLocationSuggestion(prev => prev < locationSuggestions.length - 1 ? prev + 1 : prev);
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setActiveLocationSuggestion(prev => prev > 0 ? prev - 1 : -1);
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (activeLocationSuggestion >= 0) {
-          handleLocationSuggestionClick(locationSuggestions[activeLocationSuggestion]);
-        }
-        setShowLocationSuggestions(false);
-        break;
-      case 'Escape':
-        setShowLocationSuggestions(false);
-        setActiveLocationSuggestion(-1);
-        break;
-    }
-  };
-
-  const handleLocationInputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    setTimeout(() => {
-      if (!locationSuggestionsRef.current?.contains(e.relatedTarget as Node)) {
-        setShowLocationSuggestions(false);
-        setActiveLocationSuggestion(-1);
-      }
-    }, 150);
-  };
-
-  const handleLocationInputFocus = () => {
-    if (locationKeyword && locationSuggestions.length > 0) {
-      setShowLocationSuggestions(true);
-    }
-  };
+  // Google Places Autocomplete state
+  const [locationSearch, setLocationSearch] = useState('');
+  const [selectedRadius, setSelectedRadius] = useState<number>(25);
+  const [selectedLocation, setSelectedLocation] = useState<GooglePlaceObject | null>(null);
 
   const [allowFlexibleDate, setAllowFlexibleDate] = useState(false);
   const [rehomeSuggestDate, setRehomeSuggestDate] = useState(false);
   const [dateRange, setDateRange] = useState<{start: string, end: string}>({start: '', end: ''});
-  // Pricing type filter
   const [selectedPricingType, setSelectedPricingType] = useState<string>('');
   
   // Analyze data to set up filter options
   useEffect(() => {
     if (items && items.length > 0) {
-      // Extract unique cities
-      const uniqueCities = [...new Set(items.map(item => item.city_name).filter(Boolean))];
-      setCities(uniqueCities);
-      
       // Set fixed price range from 0 to 500
       setPriceRange([0, 500]);
       setSelectedPriceRange([0, 500]);
@@ -136,13 +62,6 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   // Enhanced apply filters with better location handling
   const applyFilters = async () => {
     let filteredItems = [...items];
-    
-    // Filter by city if any selected
-    if (selectedCities.length > 0) {
-      filteredItems = filteredItems.filter(item => 
-        item.city_name && selectedCities.includes(item.city_name)
-      );
-    }
     
     // Filter by price range - FIXED: Handle free items and null prices properly
     filteredItems = filteredItems.filter(item => {
@@ -205,33 +124,23 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
       });
     }
     
-    // Replace location filter with keyword search
-    if (locationKeyword.trim() !== '') {
-      const keyword = locationKeyword.trim().toLowerCase();
-      filteredItems = filteredItems.filter(item => {
-        const fields = [item.city_name, item.address, item.postcode, item.postal_code, item.zip_code];
-        return fields.some(field =>
-          typeof field === 'string' && field.toLowerCase().includes(keyword)
-        );
-      });
-    }
-    
     onFilterChange(filteredItems);
   };
 
   // Enhanced reset filters
   const resetFilters = () => {
-    setSelectedCities([]);
     setSelectedPriceRange(priceRange);
     setShowRehomeOnly(false);
     setSelectedCategory('');
     setSelectedSubCategory('');
     setSelectedCondition('');
-    setLocationKeyword(''); // Clear location keyword
     setAllowFlexibleDate(false);
     setRehomeSuggestDate(false);
     setDateRange({start: '', end: ''});
     setSelectedPricingType('');
+    setLocationSearch('');
+    setSelectedLocation(null);
+    setSelectedRadius(25);
     onFilterChange(items); // Reset to original items
   };
 
@@ -239,11 +148,6 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
   const handlePriceChange = (min: number, max: number) => {
     setSelectedPriceRange([min, max]);
   };
-
-  // Toggle filter visibility
-  // const toggleFilter = () => {
-  //   setIsFilterOpen(!isFilterOpen);
-  // };
   
   // Handle category change
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -251,10 +155,26 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
     setSelectedSubCategory(''); // Reset subcategory when category changes
   };
 
+  // Handle place selection from Google Places Autocomplete
+  const handleLocationSelect = (place: GooglePlaceObject) => {
+    const locationText = place.formattedAddress || place.text || '';
+    setLocationSearch(locationText);
+    setSelectedLocation(place);
+    // Don't trigger search until radius is selected
+  };
+
+  // Handle radius change
+  const handleRadiusChange = (radius: number) => {
+    setSelectedRadius(radius);
+    if (selectedLocation && onLocationSearch) {
+      onLocationSearch(locationSearch, radius, selectedLocation);
+    }
+  };
+
   // Apply filters when any filter changes
   useEffect(() => {
     applyFilters();
-  }, [selectedCities, selectedPriceRange, selectedCategory, selectedSubCategory, selectedCondition, selectedPricingType, showRehomeOnly, locationKeyword]);
+  }, [selectedPriceRange, selectedCategory, selectedSubCategory, selectedCondition, selectedPricingType, showRehomeOnly, allowFlexibleDate, rehomeSuggestDate, dateRange]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 mt-4 relative">
@@ -351,51 +271,47 @@ const MarketplaceFilter: React.FC<FilterProps> = ({ items, onFilterChange }) => 
           </select>
         </div>
         
-        {/* Location Autocomplete Filter */}
+        {/* Location Search with Google Places Autocomplete */}
         <div className="relative mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Location (city, address, postcode, etc.)
+          <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+            <FaMapMarkerAlt className="mr-2 text-orange-500" />
+            Search by Location
           </label>
-          <div className="relative flex items-center mb-4">
-            <input
-              ref={locationInputRef}
-              type="text"
-              value={locationKeyword}
-              onChange={handleLocationInputChange}
-              onKeyDown={handleLocationKeyDown}
-              onBlur={handleLocationInputBlur}
-              onFocus={handleLocationInputFocus}
-              placeholder="Type any location keyword..."
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              autoComplete="off"
-            />
-            {/* Removed FaMapMarkerAlt icon */}
-          </div>
-          {showLocationSuggestions && (
-            <div
-              ref={locationSuggestionsRef}
-              className="absolute top-20 left-0 right-0 bg-white border border-gray-300 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto"
-            >
-              {locationSuggestions.length > 0 ? (
-                locationSuggestions.map((suggestion, index) => (
-                  <div
-                    key={suggestion}
-                    className={`px-4 py-2 cursor-pointer hover:bg-orange-50 ${index === activeLocationSuggestion ? 'bg-orange-100' : ''}`}
-                    onMouseDown={() => handleLocationSuggestionClick(suggestion)}
-                    onMouseEnter={() => setActiveLocationSuggestion(index)}
-                  >
-                    <div className="flex items-center">
-                      {/* Removed FaMapMarkerAlt icon from suggestions */}
-                      <span className="text-gray-700">{suggestion}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="px-4 py-2 text-gray-400">No suggestions found</div>
-              )}
-            </div>
-          )}
+          <GooglePlacesAutocomplete
+            value={locationSearch}
+            onChange={setLocationSearch}
+            placeholder="Enter city or address..."
+            onPlaceSelect={handleLocationSelect}
+          />
         </div>
+
+        {/* Radius Filter */}
+        {selectedLocation && (
+          <div className="relative mb-4">
+            <label className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+              <FaRuler className="mr-2 text-orange-500" />
+              Search Radius
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[15, 25, 50].map((radius) => (
+                <button
+                  key={radius}
+                  onClick={() => handleRadiusChange(radius)}
+                  className={`px-3 py-1 text-sm rounded-full border transition-colors ${
+                    selectedRadius === radius
+                      ? 'bg-orange-500 text-white border-orange-500'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-orange-50'
+                  }`}
+                >
+                  {radius} km
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Showing items within {selectedRadius}km of {selectedLocation.formattedAddress || selectedLocation.text}
+            </p>
+          </div>
+        )}
         
         {/* Condition Filter */}
         <div className="relative">

@@ -23,6 +23,7 @@ import TransportationServicePopup from '../../components/ui/TransportationServic
 import useTransportationPopup from '../../hooks/useTransportationPopup';
 import ReHomeCheckoutModal from '../../components/marketplace/ReHomeCheckoutModal';
 import { getConditionLabel } from '../utils';
+import { GooglePlaceObject } from '../../utils/locationServices';
 
 // Helper function to get the first valid image URL
 const getFirstImageUrl = (item: any): string => {
@@ -382,6 +383,49 @@ const MarketplacePage = () => {
         setFilteredItems(searchResults);
     };
 
+    // Calculate distance between two coordinates using Haversine formula
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 6371; // Earth's radius in kilometers
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+    };
+
+    // Handle location search
+    const handleLocationSearch = (location: string, radius?: number, selectedPlace?: GooglePlaceObject) => {
+        if (!location.trim() || !radius || !selectedPlace?.coordinates) {
+            setFilteredItems(furnitureItems);
+            return;
+        }
+        
+        const searchLat = selectedPlace.coordinates.lat;
+        const searchLng = selectedPlace.coordinates.lng;
+        
+        // Use actual distance calculation with coordinates
+        const locationResults = furnitureItems.filter(item => {
+            // Check if item has coordinates
+            if (!item.latitude || !item.longitude) {
+                return false; // Skip items without coordinates
+            }
+            
+            const distance = calculateDistance(
+                searchLat, 
+                searchLng, 
+                item.latitude, 
+                item.longitude
+            );
+            
+            return distance <= radius;
+        });
+        
+        setFilteredItems(locationResults);
+    };
+
     // Handle page change
     const handlePageChange = (newPage: number) => {
         if (newPage >= 1 && newPage <= pagination.totalPages) {
@@ -530,7 +574,8 @@ const MarketplacePage = () => {
                                 <MarketplaceSearch onSearch={handleSearch} items={furnitureItems} />
                                 <MarketplaceFilter 
                                     items={furnitureItems} 
-                                    onFilterChange={handleFilterChange} 
+                                    onFilterChange={handleFilterChange}
+                                    onLocationSearch={handleLocationSearch}
                                 />
                             </div>
 

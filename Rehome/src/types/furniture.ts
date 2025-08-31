@@ -16,6 +16,8 @@ export type FurnitureItem = {
     condition_rating?: number; // Condition rating (1-5)
     category?: string; // Main category (Furniture, Electronics, etc.)
     subcategory?: string; // Subcategory (Sofa, Table, etc.)
+    latitude?: number; // Latitude coordinate
+    longitude?: number; // Longitude coordinate
     dimensions?: {
         height?: number;
         width?: number;

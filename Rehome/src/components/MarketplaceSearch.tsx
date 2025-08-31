@@ -4,7 +4,7 @@ import { FaSearch } from 'react-icons/fa';
 
 interface SearchProps {
   onSearch: (searchTerm: string) => void;
-  items?: Array<{ name: string; description: string; category?: string }>;
+  items?: Array<{ name: string; description: string; category?: string; city_name?: string }>;
 }
 
 const MarketplaceSearch: React.FC<SearchProps> = ({ onSearch, items = [] }) => {
@@ -115,6 +115,8 @@ const MarketplaceSearch: React.FC<SearchProps> = ({ onSearch, items = [] }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-4">
       <h3 className="text-lg font-semibold mb-4">{t('common.search')}</h3>
+      
+      {/* Item Search */}
       <form onSubmit={handleSearch}>
         <div className="relative">
           <div className="flex items-center mb-4">
