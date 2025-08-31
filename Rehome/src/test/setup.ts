@@ -1,9 +1,10 @@
 import '@testing-library/jest-dom/vitest';
+import { vi } from 'vitest';
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -36,7 +37,7 @@ global.scrollTo = vi.fn();
 const originalConsoleError = console.error;
 const originalConsoleWarn = console.warn;
 
-console.error = (...args: any[]) => {
+console.error = (...args: unknown[]) => {
   if (
     typeof args[0] === 'string' &&
     (args[0].includes('Warning: ReactDOM.render is no longer supported') ||
@@ -47,7 +48,7 @@ console.error = (...args: any[]) => {
   originalConsoleError.call(console, ...args);
 };
 
-console.warn = (...args: any[]) => {
+console.warn = (...args: unknown[]) => {
   if (
     typeof args[0] === 'string' &&
     (args[0].includes('Warning: ReactDOM.render is no longer supported') ||
