@@ -653,7 +653,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
                     onChange={setDeliveryAddress}
                     placeholder="💡 Type in the street name, city, and postal code."
                     onPlaceSelect={(place) => {
-                      setDeliveryAddress(place);
+                      setDeliveryAddress(place.text || place.formattedAddress || '');
                       // console.log('🎯 Delivery place selected with coordinates:', place);
                     }}
                   />
