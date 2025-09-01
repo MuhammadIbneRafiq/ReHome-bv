@@ -1,4 +1,4 @@
-import { pricingConfig, cityBaseCharges, getItemPoints, constantsLoaded } from '../lib/constants';
+import { pricingConfig, cityBaseCharges, getItemPoints, constantsLoaded, furnitureItems } from '../lib/constants';
 import { findClosestSupportedCity } from '../utils/locationServices';
 import API_ENDPOINTS from '../lib/api/config';
 import { getCityScheduleStatus, checkAllCitiesEmpty } from '../services/realtimeService';
@@ -77,6 +77,7 @@ export interface PricingInput {
   elevatorPickup: boolean;
   elevatorDropoff: boolean;
   assemblyItems: { [key: string]: boolean };
+  disassemblyItems?: { [key: string]: boolean };
   extraHelperItems: { [key: string]: boolean };
   carryingServiceItems?: { [key: string]: boolean }; // New field for carrying service items
   isStudent: boolean;
@@ -670,6 +671,8 @@ class PricingService {
   }
 
   private calculateCarryingCost(input: PricingInput, breakdown: PricingBreakdown) {
+    // Removed debug logging for production
+
     // Calculate floors based on new elevator logic:
     // - If elevator is available, count as 1 floor (same effort as 1 level)
     // - If no elevator, count actual floors above ground level
@@ -687,13 +690,17 @@ class PricingService {
       return;
     }
 
-    let totalCarryingPoints = 0;
+    let totalCarryingCost = 0;
     const itemBreakdown: Array<{
       itemId: string;
       points: number;
       multiplier: number;
       cost: number;
     }> = [];
+
+    // Standard multiplier for carrying cost
+    const carryingMultiplier = 1.35;
+    const baseFee = 25; // €25 base fee
 
     // Use carryingServiceItems if provided, otherwise use all items with quantities > 0
     const itemsToCarry = input.carryingServiceItems || {};
@@ -705,27 +712,21 @@ class PricingService {
         
         if (needsCarrying) {
           const points = getItemPoints(itemId);
-          const carryingLowThreshold = pricingConfig?.carryingMultipliers?.lowValue?.threshold ?? 10;
-          const carryingLowMultiplier = pricingConfig?.carryingMultipliers?.lowValue?.multiplier ?? 1.35;
-          const carryingHighMultiplier = pricingConfig?.carryingMultipliers?.highValue?.multiplier ?? 1.35;
-          const multiplier = points <= carryingLowThreshold ? carryingLowMultiplier : carryingHighMultiplier;
-          
-          const itemCarryingPoints = points * multiplier * totalFloors * quantity;
-          totalCarryingPoints += itemCarryingPoints;
+          const itemCost = points * carryingMultiplier * totalFloors * quantity;
+          totalCarryingCost += itemCost;
 
           itemBreakdown.push({
             itemId,
             points: points * quantity,
-            multiplier: multiplier * totalFloors,
-            cost: itemCarryingPoints * (pricingConfig?.baseMultipliers?.addonMultiplier || 3.0)
+            multiplier: carryingMultiplier * totalFloors,
+            cost: itemCost
           });
         }
       }
     }
-    // Apply +25 multiplier for add-ons as per pricing rules
-    // Ensure we have baseMultipliers and addonMultiplier
-    const addonMultiplier = 25.0;
-    const totalCost = totalCarryingPoints + addonMultiplier;
+    
+    // Add base fee
+    const totalCost = totalCarryingCost + baseFee;
 
     breakdown.breakdown.carrying.itemBreakdown = itemBreakdown;
     breakdown.breakdown.carrying.totalCost = totalCost;
@@ -733,7 +734,7 @@ class PricingService {
   }
 
   private calculateAssemblyCost(input: PricingInput, breakdown: PricingBreakdown) {
-    let totalAssemblyPoints = 0;
+    let totalAssemblyCost = 0;
     const itemBreakdown: Array<{
       itemId: string;
       points: number;
@@ -741,47 +742,69 @@ class PricingService {
       cost: number;
     }> = [];
 
-    for (const [itemId, needsAssembly] of Object.entries(input.assemblyItems)) {
-      if (needsAssembly && input.itemQuantities[itemId] > 0) {
-        const points = getItemPoints(itemId);
-        const quantity = input.itemQuantities[itemId];
-        const assemblyLowThreshold = pricingConfig?.assemblyMultipliers?.lowValue?.threshold ?? 10;
-        const assemblyLowMultiplier = pricingConfig?.assemblyMultipliers?.lowValue?.multiplier ?? 1;
-        const assemblyHighMultiplier = pricingConfig?.assemblyMultipliers?.highValue?.multiplier ?? 1.5;
-        const multiplier = points <= assemblyLowThreshold ? assemblyLowMultiplier : assemblyHighMultiplier;
-        
-        const itemAssemblyPoints = points * multiplier * quantity;
-        totalAssemblyPoints += itemAssemblyPoints;
+    // Removed debug logging for production
 
-        if (itemId ==="3-Doors Closet") {
-          totalAssemblyPoints == 35;        
-        }
-        else if (itemId ==="2-Doors Closet") {
-          console.log(itemAssemblyPoints, 'itemAssemblyPoints')
-          totalAssemblyPoints == 30;        
-        }
-        else if (itemId ==="1-Person Bed") {
-          console.log(itemAssemblyPoints, 'itemAssemblyPoints')
-          totalAssemblyPoints == 20;
-        }
-        else if (itemId ==="2-Person Bed") {
-          console.log(itemAssemblyPoints, 'itemAssemblyPoints')
-          totalAssemblyPoints == 30;
-        }
-        else {
-          totalAssemblyPoints == 0;
-          console.log(totalAssemblyPoints, 'itemAssemblyPoints')
+    // Fixed assembly costs for specific items
+    const getAssemblyCost = (itemId: string): number => {
+      // First, look up the item name from the furnitureItems array
+      const furnitureItem = furnitureItems.find(item => item.id === itemId);
+      const itemName = furnitureItem ? furnitureItem.name : itemId;
+      
+      console.log(`🔧 Looking up assembly cost for itemId: ${itemId}, itemName: ${itemName}`);
+      
+      switch (itemName) {
+        case "3-Doors Closet":
+        case "3-Door Wardrobe":
+          return 35;
+        case "2-Doors Closet":
+        case "2-Door Wardrobe":
+          return 30;
+        case "1-Person Bed":
+        case "Single Bed":
+          return 20;
+        case "2-Person Bed":
+        case "Double Bed":
+          return 30;
+        default:
+          return 0; // No assembly cost for other items
+      }
+    };
+
+    // Process assembly items
+    for (const [itemId, needsAssembly] of Object.entries(input.assemblyItems || {})) {
+      if (needsAssembly && input.itemQuantities[itemId] > 0) {
+        const quantity = input.itemQuantities[itemId];
+        const itemCost = getAssemblyCost(itemId);
+        const totalItemCost = itemCost * quantity;
+        totalAssemblyCost += totalItemCost;
 
         itemBreakdown.push({
           itemId,
-          points: points * quantity,
-          multiplier,
-          cost: totalAssemblyPoints
+          points: 0, // Not using points system
+          multiplier: 1,
+          cost: totalItemCost
         });
       }
     }
-  }
-    const totalCost = totalAssemblyPoints;
+    
+    // Process disassembly items
+    for (const [itemId, needsDisassembly] of Object.entries(input.disassemblyItems || {})) {
+      if (needsDisassembly && input.itemQuantities[itemId] > 0) {
+        const quantity = input.itemQuantities[itemId];
+        const itemCost = getAssemblyCost(itemId); // Same cost for disassembly
+        const totalItemCost = itemCost * quantity;
+        totalAssemblyCost += totalItemCost;
+
+        itemBreakdown.push({
+          itemId,
+          points: 0, // Not using points system
+          multiplier: 1,
+          cost: totalItemCost
+        });
+      }
+    }
+    
+    const totalCost = totalAssemblyCost;
 
     breakdown.breakdown.assembly.itemBreakdown = itemBreakdown;
     breakdown.breakdown.assembly.totalCost = totalCost;

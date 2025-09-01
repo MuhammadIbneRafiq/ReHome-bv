@@ -83,12 +83,14 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                     if (data.itemQuantities) setItemQuantities(data.itemQuantities);
                     if (data.customItem) setCustomItem(data.customItem);
                     if (data.disassembly !== undefined) setDisassembly(data.disassembly);
+                    if (data.assembly !== undefined) setAssembly(data.assembly);
                     if (data.extraHelper !== undefined) setExtraHelper(data.extraHelper);
                     if (data.carryingService !== undefined) setCarryingService(data.carryingService);
                     if (data.isStudent !== undefined) setIsStudent(data.isStudent);
                     if (data.studentId) setStudentId(data.studentId);
                     if (data.storeProofPhoto) setStoreProofPhoto(data.storeProofPhoto);
                     if (data.disassemblyItems) setDisassemblyItems(data.disassemblyItems);
+                    if (data.assemblyItems) setAssemblyItems(data.assemblyItems);
                     if (data.extraHelperItems) setExtraHelperItems(data.extraHelperItems);
                     if (data.carryingServiceItems) setCarryingServiceItems(data.carryingServiceItems);
                     if (data.pickupPlace) setPickupPlace(data.pickupPlace);
@@ -112,6 +114,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [disassembly, setDisassembly] = useState(false);
+    const [assembly, setAssembly] = useState(false);
     const [contactInfo, setContactInfo] = useState<ContactInfo>({
         firstName: '',
         lastName: '',
@@ -140,6 +143,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [itemPhotos, setItemPhotos] = useState<File[]>([]);
     const [isDateFlexible, setIsDateFlexible] = useState(false);
     const [disassemblyItems, setDisassemblyItems] = useState<{ [key: string]: boolean }>({});
+    const [assemblyItems, setAssemblyItems] = useState<{ [key: string]: boolean }>({});
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
@@ -156,6 +160,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({});
 
     // Add state for select all functionality
+    const [selectAllDisassembly, setSelectAllDisassembly] = useState(false);
     const [selectAllAssembly, setSelectAllAssembly] = useState(false);
     const [selectAllCarrying, setSelectAllCarrying] = useState(false);
     const [extraInstructions, setExtraInstructions] = useState('');
@@ -220,12 +225,14 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             itemQuantities,
             customItem,
             disassembly,
+            assembly,
             extraHelper,
             carryingService,
             isStudent,
             studentId,
             storeProofPhoto,
             disassemblyItems,
+            assemblyItems,
             extraHelperItems,
             carryingServiceItems,
             pickupPlace,
@@ -240,14 +247,24 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     };
 
     // Add handlers for select all functionality
-    const handleSelectAllAssembly = (checked: boolean) => {
-        setSelectAllAssembly(checked);
+    const handleSelectAllDisassembly = (checked: boolean) => {
+        setSelectAllDisassembly(checked);
         const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
         const newDisassemblyItems: { [key: string]: boolean } = {};
         selectedItems.forEach(itemId => {
             newDisassemblyItems[itemId] = checked;
         });
         setDisassemblyItems(newDisassemblyItems);
+    };
+    
+    const handleSelectAllAssembly = (checked: boolean) => {
+        setSelectAllAssembly(checked);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const newAssemblyItems: { [key: string]: boolean } = {};
+        selectedItems.forEach(itemId => {
+            newAssemblyItems[itemId] = checked;
+        });
+        setAssemblyItems(newAssemblyItems);
     };
 
     const handleSelectAllCarrying = (checked: boolean) => {
@@ -264,8 +281,15 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     useEffect(() => {
         const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
         const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => disassemblyItems[itemId]);
-        setSelectAllAssembly(allSelected);
+        setSelectAllDisassembly(allSelected);
     }, [disassemblyItems, itemQuantities]);
+    
+    // Update assembly items when individual items change
+    useEffect(() => {
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => assemblyItems[itemId]);
+        setSelectAllAssembly(allSelected);
+    }, [assemblyItems, itemQuantities]);
 
     // Update carrying items when individual items change
     useEffect(() => {
@@ -472,7 +496,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 floorDropoff: carryingService ? (parseInt(floorDropoff) || 0) : 0,
                 elevatorPickup,
                 elevatorDropoff,
-                assemblyItems: disassemblyItems,
+                assemblyItems: assemblyItems,
+                disassemblyItems: disassemblyItems,
                 extraHelperItems,
                 isStudent,
                 hasStudentId: !!studentId, // Only true if file is uploaded
@@ -538,12 +563,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     
     // Item/service changes (cheaper) - reuse already calculated distance
     useEffect(() => {
-        // Only recalculate if we already have locations and distance
-        if (isDataLoaded && firstLocation && secondLocation && distanceKm !== null) {
+        // Only recalculate if we already have locations
+        if (isDataLoaded && firstLocation && secondLocation) {
             calculatePrice();
         }
-    }, [isDataLoaded, itemQuantities, disassembly, extraHelper, carryingService, 
-        disassemblyItems, extraHelperItems, carryingServiceItems]);
+    }, [isDataLoaded, itemQuantities, disassembly, assembly, extraHelper, carryingService, 
+        disassemblyItems, assemblyItems, extraHelperItems, carryingServiceItems]);
         
     // Floor levels and elevators (less frequent changes)
     // Using debounce for these to prevent rapid recalculations while typing floor numbers
@@ -867,12 +892,14 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             elevatorPickup,
             elevatorDropoff,
             disassembly,
+            assembly,
             extraHelper,
             carryingService,
             isStudent,
             studentId,
             storeProofPhoto,
             disassemblyItems,
+            assemblyItems,
             extraHelperItems,
             carryingServiceItems,
             basePrice: pricingBreakdown?.basePrice || 0,
@@ -1780,24 +1807,115 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </p>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
-                                        <h3 className="text-md font-medium text-gray-800 mb-3">Disassembly & Reassembly</h3>
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Disassembly</h3>
                                         <div className="flex items-center mb-4">
                                             <input
                                                 id="disassembly-service"
                                                 type="checkbox"
                                                 checked={disassembly}
-                                                onChange={(e) => setDisassembly(e.target.checked)}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setDisassembly(checked);
+                                                    if (checked) {
+                                                        // Auto-select all items that have quantities > 0
+                                                        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                        const newDisassemblyItems: { [key: string]: boolean } = {};
+                                                        selectedItems.forEach(itemId => {
+                                                            newDisassemblyItems[itemId] = true;
+                                                        });
+                                                        setDisassemblyItems(newDisassemblyItems);
+                                                    } else {
+                                                        // Clear all selections
+                                                        setDisassemblyItems({});
+                                                    }
+                                                }}
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             />
                                             <label htmlFor="disassembly-service" className="ml-2 block text-sm text-gray-700">
-                                                Do you need our help with assembly/ disassembly of some Items?
+                                                Do you need our help with disassembly of items at pickup location?
                                             </label>
                                         </div>
                                         
                                         {disassembly && (
                                             <div className="ml-6 space-y-3">
                                                 <p className="text-sm text-gray-600">
-                                                    Select which items need disassembly/reassembly:
+                                                    Select which items need disassembly:
+                                                </p>
+                                                {/* Select All checkbox */}
+                                                <div className="flex items-center mb-2">
+                                                    <input
+                                                        id="select-all-disassembly"
+                                                        type="checkbox"
+                                                        checked={selectAllDisassembly}
+                                                        onChange={(e) => handleSelectAllDisassembly(e.target.checked)}
+                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                    />
+                                                    <label htmlFor="select-all-disassembly" className="ml-2 block text-sm font-medium text-gray-700">
+                                                        Select All
+                                                    </label>
+                                                </div>
+                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                    const quantity: number = itemQuantities[itemId];
+                                                    const itemData = furnitureItems.find(item => item.id === itemId);
+                                                    const itemName = itemData ? itemData.name : itemId;
+                                                    return (
+                                                        <div key={index} className="flex items-center justify-between">
+                                                            <div className="flex items-center">
+                                                                <input
+                                                                    id={`disassembly-${itemId}`}
+                                                                    type="checkbox"
+                                                                    checked={disassemblyItems[itemId] || false}
+                                                                    onChange={(e) => setDisassemblyItems({
+                                                                        ...disassemblyItems,
+                                                                        [itemId]: e.target.checked
+                                                                    })}
+                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                    {itemName} ({quantity}x)
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Assembly</h3>
+                                        <div className="flex items-center mb-4">
+                                            <input
+                                                id="assembly-service"
+                                                type="checkbox"
+                                                checked={assembly}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setAssembly(checked);
+                                                    if (checked) {
+                                                        // Auto-select all items that have quantities > 0
+                                                        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                        const newAssemblyItems: { [key: string]: boolean } = {};
+                                                        selectedItems.forEach(itemId => {
+                                                            newAssemblyItems[itemId] = true;
+                                                        });
+                                                        setAssemblyItems(newAssemblyItems);
+                                                    } else {
+                                                        // Clear all selections
+                                                        setAssemblyItems({});
+                                                    }
+                                                }}
+                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                            />
+                                            <label htmlFor="assembly-service" className="ml-2 block text-sm text-gray-700">
+                                                Do you need our help with assembly of items at delivery location?
+                                            </label>
+                                        </div>
+                                        
+                                        {assembly && (
+                                            <div className="ml-6 space-y-3">
+                                                <p className="text-sm text-gray-600">
+                                                    Select which items need assembly:
                                                 </p>
                                                 {/* Select All checkbox */}
                                                 <div className="flex items-center mb-2">
@@ -1820,16 +1938,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         <div key={index} className="flex items-center justify-between">
                                                             <div className="flex items-center">
                                                                 <input
-                                                                    id={`disassembly-${itemId}`}
+                                                                    id={`assembly-${itemId}`}
                                                                     type="checkbox"
-                                                                    checked={disassemblyItems[itemId] || false}
-                                                                    onChange={(e) => setDisassemblyItems({
-                                                                        ...disassemblyItems,
+                                                                    checked={assemblyItems[itemId] || false}
+                                                                    onChange={(e) => setAssemblyItems({
+                                                                        ...assemblyItems,
                                                                         [itemId]: e.target.checked
                                                                     })}
                                                                     className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                                                 />
-                                                                <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                <label htmlFor={`assembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
                                                                     {itemName} ({quantity}x)
                                                                 </label>
                                                             </div>
@@ -1868,7 +1986,22 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                 id="carrying-service"
                                                 type="checkbox"
                                                 checked={carryingService}
-                                                onChange={(e) => setCarryingService(e.target.checked)}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setCarryingService(checked);
+                                                    if (checked) {
+                                                        // Auto-select all items that have quantities > 0
+                                                        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                        const newCarryingItems: { [key: string]: boolean } = {};
+                                                        selectedItems.forEach(itemId => {
+                                                            newCarryingItems[itemId] = true;
+                                                        });
+                                                        setCarryingServiceItems(newCarryingItems);
+                                                    } else {
+                                                        // Clear all selections
+                                                        setCarryingServiceItems({});
+                                                    }
+                                                }}
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             />
                                             <label htmlFor="carrying-service" className="ml-2 block text-sm text-gray-700">
@@ -2152,10 +2285,22 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                         <h4 className="text-md font-medium text-gray-800 mb-3">Additional Services</h4>
                                         <ul className="space-y-2 text-sm">
                                             {pricingBreakdown?.assemblyCost && pricingBreakdown.assemblyCost > 0 && (
+                                                <>
                                                 <li className="flex justify-between">
                                                     <span>Assembly & Disassembly</span>
                                                     <span className="font-medium">€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
+                                                    </li>
+                                                    {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).length > 0 && (
+                                                        <li className="flex justify-between pl-4 text-sm text-gray-600">
+                                                            <span>- Disassembly Items: {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).length}</span>
                                                 </li>
+                                                    )}
+                                                    {Object.keys(assemblyItems).filter(id => assemblyItems[id]).length > 0 && (
+                                                        <li className="flex justify-between pl-4 text-sm text-gray-600">
+                                                            <span>- Assembly Items: {Object.keys(assemblyItems).filter(id => assemblyItems[id]).length}</span>
+                                                        </li>
+                                                    )}
+                                                </>
                                             )}
                                             {pricingBreakdown?.extraHelperCost && pricingBreakdown.extraHelperCost > 0 && (
                                                 <li className="flex justify-between">
