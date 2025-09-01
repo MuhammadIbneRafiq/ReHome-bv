@@ -62,8 +62,9 @@ class ApiService {
     } catch (error) {
       const axiosError = error as AxiosError;
       
-      // Handle authentication errors specifically
-      if (this.isAuthError(axiosError)) {
+      // For login/signup endpoints, don't use the auth error handler
+      // Let the specific error handling take over
+      if (requiresAuth && this.isAuthError(axiosError)) {
         this.handleAuthError(axiosError);
         throw new Error('Authentication required');
       }
@@ -74,13 +75,45 @@ class ApiService {
 
   // Error handler
   private handleError(error: AxiosError): Error {
+    console.log('🔍 API Error Details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      url: error.config?.url
+    });
+    
     if (error.response) {
       // Server responded with error status
-      const message = (error.response.data as any)?.error || error.response.statusText;
-      return new Error(`API Error: ${message}`);
+      const responseData = error.response.data as any;
+      
+      // Use userMessage for user-facing errors, fallback to error or statusText
+      const userMessage = responseData?.userMessage;
+      const technicalMessage = responseData?.error || error.response.statusText;
+      const errorType = responseData?.errorType;
+      
+      console.log('🔍 Response Data:', {
+        userMessage,
+        technicalMessage,
+        errorType,
+        status: error.response.status
+      });
+      
+      // For authentication-related errors, prefer user-friendly messages
+      if (userMessage && (error.response.status === 401 || error.response.status === 403 || error.response.status === 429)) {
+        console.log('✅ Using user-friendly error message:', userMessage);
+        const authError = new Error(userMessage);
+        // Attach additional metadata for specific handling if needed
+        (authError as any).errorType = errorType;
+        (authError as any).status = error.response.status;
+        return authError;
+      }
+      
+      // For other errors, use technical message with API Error prefix
+      console.log('⚠️ Using technical error message:', technicalMessage);
+      return new Error(`API Error: ${technicalMessage}`);
     } else if (error.request) {
       // Request was made but no response received
-      return new Error('Network Error: No response from server');
+      return new Error('Network Error: No response from server. Please check your internet connection.');
     } else {
       // Something else happened
       return new Error(`Request Error: ${error.message}`);
@@ -91,17 +124,24 @@ class ApiService {
   async login(email: string, password: string) {
     console.log('🔐 Attempting login with:', { email, password: '***' });
     console.log('🌐 Login URL:', API_ENDPOINTS.AUTH.LOGIN);
-    return this.request<{ accessToken: string }>('POST', API_ENDPOINTS.AUTH.LOGIN, {
-      email,
-      password,
-    });
+    try {
+      const result = await this.request<{ accessToken: string }>('POST', API_ENDPOINTS.AUTH.LOGIN, {
+        email,
+        password,
+      }, false); // Explicitly set requiresAuth to false
+      console.log('✅ Login successful');
+      return result;
+    } catch (error) {
+      console.log('❌ Login failed:', error);
+      throw error;
+    }
   }
 
   async signup(email: string, password: string) {
     return this.request<{ message: string; accessToken?: string }>('POST', API_ENDPOINTS.AUTH.SIGNUP, {
       email,
       password,
-    });
+    }, false); // Explicitly set requiresAuth to false
   }
 
   async logout() {

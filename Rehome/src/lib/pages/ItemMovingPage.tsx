@@ -161,7 +161,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [extraInstructions, setExtraInstructions] = useState('');
 
     // Point limit constant
-    const ITEM_TRANSPORT_ITEM_LIMIT = 3;// Maximum number of items allowed
+    const ITEM_TRANSPORT_ITEM_LIMIT = 3; // Maximum number of items allowed
 
 
     // Guard against stale async pricing responses
@@ -276,11 +276,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        console.log('[DEBUG] Student ID upload:', {
+        // Comment out debug logging to improve performance
+        /*console.log('[DEBUG] Student ID upload:', {
           file: file?.name,
           hasFile: !!file,
           isStudent
-        });
+        });*/
         setStudentId(file || null);
     };
 
@@ -481,12 +482,13 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 dropoffPlace: dropoffPlace,
             };
             
-            console.log('[DEBUG] Pricing input:', {
+            // Comment out debug logging to improve performance
+            /*console.log('[DEBUG] Pricing input:', {
                 isStudent: pricingInput.isStudent,
                 hasStudentId: pricingInput.hasStudentId,
                 studentIdFile: studentId?.name,
                 timestamp: new Date().toISOString()
-            });
+            });*/
             const breakdown = await pricingService.calculatePricing(pricingInput);
             if (requestId === latestRequestIdRef.current) {
                 setPricingBreakdown(breakdown);
@@ -540,9 +542,28 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         if (isDataLoaded && firstLocation && secondLocation && distanceKm !== null) {
             calculatePrice();
         }
-    }, [isDataLoaded, itemQuantities, floorPickup, floorDropoff, disassembly, extraHelper, carryingService, 
-        elevatorPickup, elevatorDropoff, disassemblyItems, extraHelperItems, carryingServiceItems, 
-        isStudent, studentId]);
+    }, [isDataLoaded, itemQuantities, disassembly, extraHelper, carryingService, 
+        disassemblyItems, extraHelperItems, carryingServiceItems]);
+        
+    // Floor levels and elevators (less frequent changes)
+    // Using debounce for these to prevent rapid recalculations while typing floor numbers
+    useEffect(() => {
+        if (!isDataLoaded || !firstLocation || !secondLocation || distanceKm === null) return;
+        
+        const debounceTimer = setTimeout(() => {
+            calculatePrice();
+        }, 500); // Longer debounce for less frequently changed inputs
+        
+        return () => clearTimeout(debounceTimer);
+    }, [isDataLoaded, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff]);
+    
+    // Student discount handling (very infrequent changes)
+    useEffect(() => {
+        if (!isDataLoaded || !firstLocation || !secondLocation || distanceKm === null) return;
+        if (pricingBreakdown?.studentDiscount) {
+            calculatePrice();
+        }
+    }, [isDataLoaded, isStudent, studentId]);
 
     const nextStep = () => {
         // Show booking tips after step 1 (locations)

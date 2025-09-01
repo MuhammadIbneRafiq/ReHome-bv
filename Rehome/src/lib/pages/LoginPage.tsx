@@ -41,6 +41,7 @@ export default function LoginPage() {
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorType, setErrorType] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,6 +55,7 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true);
     setErrorMessage(null);
+    setErrorType(null);
     
     try {
       const response = await apiService.login(values.email, values.password);
@@ -65,7 +67,7 @@ export default function LoginPage() {
 
       toast({
         title: t('auth.loginSuccess'),
-        description: t('auth.loginSuccess'),
+        description: "Welcome back! Redirecting to your dashboard...",
         className: "bg-green-50 border-green-200",
       });
       
@@ -78,14 +80,42 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Login error details:", error);
       
-      // Extract error message from the API service error
+      // Extract error message and type from the API service error
       const errorMsg = error.message || t('auth.loginError');
+      const errorTypeValue = (error as any).errorType || 'UNKNOWN';
+      
       setErrorMessage(errorMsg);
+      setErrorType(errorTypeValue);
+      
+      // Show different toast messages based on error type
+      let toastTitle = t('common.error');
+      let toastDescription = errorMsg;
+      
+      switch (errorTypeValue) {
+        case 'INVALID_CREDENTIALS':
+          toastTitle = "🔐 Login Failed";
+          break;
+        case 'USER_NOT_FOUND':
+          toastTitle = "👤 Account Not Found";
+          break;
+        case 'EMAIL_NOT_CONFIRMED':
+          toastTitle = "📧 Email Verification Required";
+          break;
+        case 'RATE_LIMITED':
+          toastTitle = "⏰ Too Many Attempts";
+          break;
+        case 'ACCOUNT_LOCKED':
+          toastTitle = "🔒 Account Locked";
+          break;
+        default:
+          toastTitle = "❌ Login Error";
+      }
       
       toast({
         variant: "destructive",
-        title: t('common.error'),
-        description: errorMsg,
+        title: toastTitle,
+        description: toastDescription,
+        duration: errorTypeValue === 'EMAIL_NOT_CONFIRMED' ? 10000 : 5000, // Longer duration for email confirmation
       });
     } finally {
       setLoading(false);
@@ -122,7 +152,48 @@ export default function LoginPage() {
             className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative"
             role="alert"
           >
-            <span className="block sm:inline">{errorMessage}</span>
+            <span className="block sm:inline font-medium">{errorMessage}</span>
+            
+            {/* Show helpful action buttons based on error type */}
+            {errorType === 'USER_NOT_FOUND' && (
+              <div className="mt-3">
+                <Link
+                  to="/register"
+                  className="inline-flex items-center px-3 py-1 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
+                >
+                  Create Account →
+                </Link>
+              </div>
+            )}
+            
+            {errorType === 'EMAIL_NOT_CONFIRMED' && (
+              <div className="mt-3">
+                <p className="text-sm text-red-600 mb-2">
+                  Didn't receive the email? Check your spam folder or:
+                </p>
+                <button
+                  onClick={() => {
+                    toast({
+                      title: "📧 Resending verification email...",
+                      description: "Please check your inbox in a few moments.",
+                      className: "bg-blue-50 border-blue-200",
+                    });
+                    // TODO: Implement resend verification email functionality
+                  }}
+                  className="inline-flex items-center px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                >
+                  Resend Verification Email
+                </button>
+              </div>
+            )}
+
+            {errorType === 'RATE_LIMITED' && (
+              <div className="mt-3">
+                <p className="text-sm text-red-600">
+                  Please wait a few minutes before trying again to prevent security issues.
+                </p>
+              </div>
+            )}
           </motion.div>
         )}
         
@@ -165,10 +236,16 @@ export default function LoginPage() {
                           type="password"
                           placeholder="********"
                           className="border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                          autoComplete="current-password"
                           {...field}
                         />
                       </FormControl>
                       <FormMessage />
+                      {errorType === 'INVALID_CREDENTIALS' && field.value && (
+                        <div className="text-xs text-orange-600 mt-1">
+                          💡 Remember: passwords are case-sensitive
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
