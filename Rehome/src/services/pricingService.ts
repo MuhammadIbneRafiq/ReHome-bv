@@ -677,17 +677,19 @@ class PricingService {
     // - If elevator is available, count as 1 floor (same effort as 1 level)
     // - If no elevator, count actual floors above ground level
     // Treat elevator as reducing effort to 1 floor ONLY when floors > 0
-    // Interpret: pickupFloors -> downstairs, dropoffFloors -> upstairs
-    const pickupFloors = input.floorPickup > 0 ? (input.elevatorPickup ? 1 : Math.max(0, input.floorPickup)) : 0;
-    const dropoffFloors = input.floorDropoff > 0 ? (input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff)) : 0;
+    // Correct interpretation: 
+    // - pickupFloors -> upstairs (items going up to pickup location)
+    // - dropoffFloors -> downstairs (items going down from dropoff location)
+    const downstairsFloors = input.floorPickup > 0 ? (input.elevatorPickup ? 1 : Math.max(0, input.floorPickup)) : 0;
+    const upstairsFloors = input.floorDropoff > 0 ? (input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff)) : 0;
 
     console.log('[Carrying] Floors before base fee:', {
-      downstairsFloorsFromPickup: pickupFloors,
-      upstairsFloorsFromDropoff: dropoffFloors,
+      upstairsFloorsFromPickup: upstairsFloors,
+      downstairsFloorsFromDropoff: downstairsFloors,
       elevatorPickup: input.elevatorPickup,
       elevatorDropoff: input.elevatorDropoff
     });
-    const totalFloors = pickupFloors + dropoffFloors;
+    const totalFloors = upstairsFloors + downstairsFloors;
 
     breakdown.breakdown.carrying.floors = totalFloors;
 
@@ -724,20 +726,20 @@ class PricingService {
       if (quantity <= 0) continue;
       const points = getItemPoints(itemId);
 
-      // Downstairs (pickup floors)
-      const needsDown = (Object.keys(downItems).length > 0 ? !!downItems[itemId] : !!combinedItems[itemId]) && pickupFloors > 0;
+      // Downstairs (dropoff floors)
+      const needsDown = (Object.keys(downItems).length > 0 ? !!downItems[itemId] : !!combinedItems[itemId]) && downstairsFloors > 0;
       if (needsDown) {
-        const cost = points * carryingMultiplier * pickupFloors * quantity;
+        const cost = points * carryingMultiplier * downstairsFloors * quantity;
         downstairsCost += cost;
-        downstairsBreakdown.push({ itemId, points: points * quantity, multiplier: carryingMultiplier * pickupFloors, cost });
+        downstairsBreakdown.push({ itemId, points: points * quantity, multiplier: carryingMultiplier * downstairsFloors, cost });
       }
 
-      // Upstairs (dropoff floors)
-      const needsUp = (Object.keys(upItems).length > 0 ? !!upItems[itemId] : !!combinedItems[itemId]) && dropoffFloors > 0;
+      // Upstairs (pickup floors)
+      const needsUp = (Object.keys(upItems).length > 0 ? !!upItems[itemId] : !!combinedItems[itemId]) && upstairsFloors > 0;
       if (needsUp) {
-        const cost = points * carryingMultiplier * dropoffFloors * quantity;
+        const cost = points * carryingMultiplier * upstairsFloors * quantity;
         upstairsCost += cost;
-        upstairsBreakdown.push({ itemId, points: points * quantity, multiplier: carryingMultiplier * dropoffFloors, cost });
+        upstairsBreakdown.push({ itemId, points: points * quantity, multiplier: carryingMultiplier * upstairsFloors, cost });
       }
     }
 
@@ -745,8 +747,8 @@ class PricingService {
     itemBreakdown.push(...downstairsBreakdown, ...upstairsBreakdown);
     console.log('[Carrying] Directional breakdown pre-base-fee:', {
       carryingMultiplier,
-      downstairsFloors: pickupFloors,
-      upstairsFloors: dropoffFloors,
+      downstairsFloors,
+      upstairsFloors,
       selectedDownItems: Object.keys(downItems).filter(k => downItems[k]),
       selectedUpItems: Object.keys(upItems).filter(k => upItems[k]),
       fallbackSelectedItems: Object.keys(combinedItems).filter(k => combinedItems[k]),
@@ -758,12 +760,12 @@ class PricingService {
     });
     
     // Add base fee per selected direction (upstairs/downstairs)
-    const directionCount = (pickupFloors > 0 ? 1 : 0) + (dropoffFloors > 0 ? 1 : 0);
+    const directionCount = (upstairsFloors > 0 ? 1 : 0) + (downstairsFloors > 0 ? 1 : 0);
     const totalCost = totalCarryingCost > 0 ? (totalCarryingCost + baseFee * directionCount) : 0;
 
     console.log('[Carrying] Totals:', {
-      downstairsApplied: pickupFloors > 0,
-      upstairsApplied: dropoffFloors > 0,
+      downstairsApplied: downstairsFloors > 0,
+      upstairsApplied: upstairsFloors > 0,
       baseFeePerDirection: baseFee,
       directionCount,
       totalCarryingCostExclBase: totalCarryingCost,
@@ -776,7 +778,7 @@ class PricingService {
   }
 
   private calculateAssemblyCost(input: PricingInput, breakdown: PricingBreakdown) {
-    // Fixed unit prices by item name
+    // Fixed unit prices by item name - Updated standardized values
     const assemblyUnitByName: Record<string, number> = {
       '2-Door Wardrobe': 50,
       '2-Doors Closet': 50,

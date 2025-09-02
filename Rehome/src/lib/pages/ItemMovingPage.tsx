@@ -545,9 +545,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
                 isDateFlexible: dateOption === 'rehome', // Only true for ReHome choose option
                 itemQuantities,
-                // Carrying directions: sum independently; use floor value or fallback to the other if empty
-                floorPickup: carryingDownstairs ? (parseInt(floorPickup) || parseInt(floorDropoff) || 0) : 0,
-                floorDropoff: carryingUpstairs ? (parseInt(floorDropoff) || parseInt(floorPickup) || 0) : 0,
+                // Carrying directions: 
+                // - Downstairs: items going down from dropoff location (use floorDropoff)
+                // - Upstairs: items going up to pickup location (use floorPickup)
+                floorPickup: carryingUpstairs ? (parseInt(floorPickup) || 0) : 0,
+                floorDropoff: carryingDownstairs ? (parseInt(floorDropoff) || 0) : 0,
                 elevatorPickup,
                 elevatorDropoff,
                 assemblyItems: assemblyItems,
@@ -557,6 +559,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 hasStudentId: !!studentId, // Only true if file is uploaded
                 isEarlyBooking: false,
                 carryingServiceItems: combinedCarryingItems,
+                carryingUpItems: carryingUpItems,
+                carryingDownItems: carryingDownItems,
                 pickupPlace: pickupPlace,
                 dropoffPlace: dropoffPlace,
             };
