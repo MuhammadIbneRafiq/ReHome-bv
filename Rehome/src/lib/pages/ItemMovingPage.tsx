@@ -637,12 +637,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         return () => clearTimeout(debounceTimer);
     }, [isDataLoaded, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff]);
     
-    // Student discount handling (very infrequent changes)
+    // Student discount handling: recalc whenever student toggle or file changes
     useEffect(() => {
-        if (!isDataLoaded || !firstLocation || !secondLocation || distanceKm === null) return;
-        if (pricingBreakdown?.studentDiscount) {
-            calculatePrice();
-        }
+        if (!isDataLoaded || !firstLocation || !secondLocation) return;
+        calculatePrice();
     }, [isDataLoaded, isStudent, studentId]);
 
     const nextStep = () => {
@@ -1860,7 +1858,155 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     <p className="text-sm text-gray-600 mb-4">
                                         Select any additional services you need for your move.
                                     </p>
-                                    
+
+                                    {/* Carrying Service (moved to top per sequence) */}
+                                    <div className="border border-gray-200 rounded-lg p-4">
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Carrying Service</h3>
+                                        <p className="text-sm text-gray-600 mb-3">Select if you need help carrying items up or down floors. Pricing is the same per floor for both directions.</p>
+
+                                        {/* Carrying Downstairs */}
+                                        <div className="mb-6">
+                                            <div className="flex items-center mb-4">
+                                                <input
+                                                    id="carrying-downstairs"
+                                                    type="checkbox"
+                                                    checked={carryingDownstairs}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        setCarryingDownstairs(checked);
+                                                        if (checked) {
+                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                            const newItems: { [key: string]: boolean } = {};
+                                                            selectedItems.forEach(itemId => { newItems[itemId] = true; });
+                                                            setCarryingDownItems(newItems);
+                                                        } else {
+                                                            setCarryingDownItems({});
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="carrying-downstairs" className="ml-2 block text-sm text-gray-700">
+                                                    Carrying Downstairs
+                                                </label>
+                                            </div>
+                                            {carryingDownstairs && (
+                                                <div className="ml-6 space-y-3">
+                                                    <div className="flex items-center mb-2">
+                                                        <input
+                                                            id="select-all-carrying-down"
+                                                            type="checkbox"
+                                                            checked={selectAllCarryingDown}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                setSelectAllCarryingDown(checked);
+                                                                const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                                const newItems: { [key: string]: boolean } = {};
+                                                                selectedItems.forEach(itemId => { newItems[itemId] = checked; });
+                                                                setCarryingDownItems(newItems);
+                                                            }}
+                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        />
+                                                        <label htmlFor="select-all-carrying-down" className="ml-2 block text-sm font-medium text-gray-700">
+                                                            Select All
+                                                        </label>
+                                                    </div>
+                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                        const quantity: number = itemQuantities[itemId];
+                                                        const itemData = furnitureItems.find(item => item.id === itemId);
+                                                        const itemName = itemData ? itemData.name : itemId;
+                                                        return (
+                                                            <div key={index} className="flex items-center justify-between">
+                                                                <div className="flex items-center">
+                                                                    <input
+                                                                        id={`carrying-down-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={carryingDownItems[itemId] || false}
+                                                                        onChange={e => setCarryingDownItems({ ...carryingDownItems, [itemId]: e.target.checked })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`carrying-down-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({quantity}x)
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Carrying Upstairs */}
+                                        <div>
+                                            <div className="flex items-center mb-4">
+                                                <input
+                                                    id="carrying-upstairs"
+                                                    type="checkbox"
+                                                    checked={carryingUpstairs}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        setCarryingUpstairs(checked);
+                                                        if (checked) {
+                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                            const newItems: { [key: string]: boolean } = {};
+                                                            selectedItems.forEach(itemId => { newItems[itemId] = true; });
+                                                            setCarryingUpItems(newItems);
+                                                        } else {
+                                                            setCarryingUpItems({});
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="carrying-upstairs" className="ml-2 block text-sm text-gray-700">
+                                                    Carrying Upstairs
+                                                </label>
+                                            </div>
+                                            {carryingUpstairs && (
+                                                <div className="ml-6 space-y-3">
+                                                    <div className="flex items-center mb-2">
+                                                        <input
+                                                            id="select-all-carrying-up"
+                                                            type="checkbox"
+                                                            checked={selectAllCarryingUp}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                setSelectAllCarryingUp(checked);
+                                                                const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                                const newItems: { [key: string]: boolean } = {};
+                                                                selectedItems.forEach(itemId => { newItems[itemId] = checked; });
+                                                                setCarryingUpItems(newItems);
+                                                            }}
+                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        />
+                                                        <label htmlFor="select-all-carrying-up" className="ml-2 block text-sm font-medium text-gray-700">
+                                                            Select All
+                                                        </label>
+                                                    </div>
+                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                        const quantity: number = itemQuantities[itemId];
+                                                        const itemData = furnitureItems.find(item => item.id === itemId);
+                                                        const itemName = itemData ? itemData.name : itemId;
+                                                        return (
+                                                            <div key={index} className="flex items-center justify-between">
+                                                                <div className="flex items-center">
+                                                                    <input
+                                                                        id={`carrying-up-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={carryingUpItems[itemId] || false}
+                                                                        onChange={e => setCarryingUpItems({ ...carryingUpItems, [itemId]: e.target.checked })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`carrying-up-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({quantity}x)
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="text-md font-medium text-gray-800 mb-3">Assembly</h3>
 
@@ -2038,154 +2184,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                         
                                     </div>
                                     
-                                    <div className="border border-gray-200 rounded-lg p-4">
-                                        <h3 className="text-md font-medium text-gray-800 mb-3">Carrying Service</h3>
-                                        <p className="text-sm text-gray-600 mb-3">Select if you need help carrying items up or down floors. Pricing is the same per floor for both directions.</p>
-
-                                        {/* Carrying Upstairs */}
-                                        <div className="mb-6">
-                                            <div className="flex items-center mb-4">
-                                                <input
-                                                    id="carrying-upstairs"
-                                                    type="checkbox"
-                                                    checked={carryingUpstairs}
-                                                    onChange={(e) => {
-                                                        const checked = e.target.checked;
-                                                        setCarryingUpstairs(checked);
-                                                        if (checked) {
-                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-                                                            const newItems: { [key: string]: boolean } = {};
-                                                            selectedItems.forEach(itemId => { newItems[itemId] = true; });
-                                                            setCarryingUpItems(newItems);
-                                                        } else {
-                                                            setCarryingUpItems({});
-                                                        }
-                                                    }}
-                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                />
-                                                <label htmlFor="carrying-upstairs" className="ml-2 block text-sm text-gray-700">
-                                                    Carrying Upstairs
-                                                </label>
-                                            </div>
-                                            {carryingUpstairs && (
-                                                <div className="ml-6 space-y-3">
-                                                    <div className="flex items-center mb-2">
-                                                        <input
-                                                            id="select-all-carrying-up"
-                                                            type="checkbox"
-                                                            checked={selectAllCarryingUp}
-                                                            onChange={(e) => {
-                                                                const checked = e.target.checked;
-                                                                setSelectAllCarryingUp(checked);
-                                                                const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-                                                                const newItems: { [key: string]: boolean } = {};
-                                                                selectedItems.forEach(itemId => { newItems[itemId] = checked; });
-                                                                setCarryingUpItems(newItems);
-                                                            }}
-                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                        />
-                                                        <label htmlFor="select-all-carrying-up" className="ml-2 block text-sm font-medium text-gray-700">
-                                                            Select All
-                                                        </label>
-                                                    </div>
-                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
-                                                        const quantity: number = itemQuantities[itemId];
-                                                        const itemData = furnitureItems.find(item => item.id === itemId);
-                                                        const itemName = itemData ? itemData.name : itemId;
-                                                        return (
-                                                            <div key={index} className="flex items-center justify-between">
-                                                                <div className="flex items-center">
-                                                                    <input
-                                                                        id={`carrying-up-${itemId}`}
-                                                                        type="checkbox"
-                                                                        checked={carryingUpItems[itemId] || false}
-                                                                        onChange={e => setCarryingUpItems({ ...carryingUpItems, [itemId]: e.target.checked })}
-                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                    />
-                                                                    <label htmlFor={`carrying-up-${itemId}`} className="ml-2 block text-sm text-gray-700">
-                                                                        {itemName} ({quantity}x)
-                                                                    </label>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* removed divider between carrying up and down */}
-
-                                        {/* Carrying Downstairs */}
-                                        <div>
-                                            <div className="flex items-center mb-4">
-                                                <input
-                                                    id="carrying-downstairs"
-                                                    type="checkbox"
-                                                    checked={carryingDownstairs}
-                                                    onChange={(e) => {
-                                                        const checked = e.target.checked;
-                                                        setCarryingDownstairs(checked);
-                                                        if (checked) {
-                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-                                                            const newItems: { [key: string]: boolean } = {};
-                                                            selectedItems.forEach(itemId => { newItems[itemId] = true; });
-                                                            setCarryingDownItems(newItems);
-                                                        } else {
-                                                            setCarryingDownItems({});
-                                                        }
-                                                    }}
-                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                />
-                                                <label htmlFor="carrying-downstairs" className="ml-2 block text-sm text-gray-700">
-                                                    Carrying Downstairs
-                                                </label>
-                                            </div>
-                                            {carryingDownstairs && (
-                                                <div className="ml-6 space-y-3">
-                                                    <div className="flex items-center mb-2">
-                                                        <input
-                                                            id="select-all-carrying-down"
-                                                            type="checkbox"
-                                                            checked={selectAllCarryingDown}
-                                                            onChange={(e) => {
-                                                                const checked = e.target.checked;
-                                                                setSelectAllCarryingDown(checked);
-                                                                const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-                                                                const newItems: { [key: string]: boolean } = {};
-                                                                selectedItems.forEach(itemId => { newItems[itemId] = checked; });
-                                                                setCarryingDownItems(newItems);
-                                                            }}
-                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                        />
-                                                        <label htmlFor="select-all-carrying-down" className="ml-2 block text-sm font-medium text-gray-700">
-                                                            Select All
-                                                        </label>
-                                                    </div>
-                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
-                                                        const quantity: number = itemQuantities[itemId];
-                                                        const itemData = furnitureItems.find(item => item.id === itemId);
-                                                        const itemName = itemData ? itemData.name : itemId;
-                                                        return (
-                                                            <div key={index} className="flex items-center justify-between">
-                                                                <div className="flex items-center">
-                                                                    <input
-                                                                        id={`carrying-down-${itemId}`}
-                                                                        type="checkbox"
-                                                                        checked={carryingDownItems[itemId] || false}
-                                                                        onChange={e => setCarryingDownItems({ ...carryingDownItems, [itemId]: e.target.checked })}
-                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                    />
-                                                                    <label htmlFor={`carrying-down-${itemId}`} className="ml-2 block text-sm text-gray-700">
-                                                                        {itemName} ({quantity}x)
-                                                                    </label>
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="text-md font-medium text-gray-800 mb-3">Student Discount</h3>
@@ -2198,7 +2196,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                 className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
                                             />
                                             <label htmlFor="student-discount" className="ml-2 block text-sm text-gray-700">
-                                                I am a student (10% discount with valid ID)
+                                                I am a student (8.85% discount with valid ID)
                                             </label>
                                         </div>
                                         

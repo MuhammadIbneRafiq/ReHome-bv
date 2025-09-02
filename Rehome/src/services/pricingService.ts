@@ -80,6 +80,8 @@ export interface PricingInput {
   disassemblyItems?: { [key: string]: boolean };
   extraHelperItems: { [key: string]: boolean };
   carryingServiceItems?: { [key: string]: boolean }; // New field for carrying service items
+  carryingUpItems?: { [key: string]: boolean }; // Directional: upstairs at dropoff
+  carryingDownItems?: { [key: string]: boolean }; // Directional: downstairs at pickup
   isStudent: boolean;
   hasStudentId: boolean;
   isEarlyBooking?: boolean; // For empty calendar days
@@ -671,16 +673,20 @@ class PricingService {
   }
 
   private calculateCarryingCost(input: PricingInput, breakdown: PricingBreakdown) {
-    // Removed debug logging for production
-
     // Calculate floors based on new elevator logic:
     // - If elevator is available, count as 1 floor (same effort as 1 level)
     // - If no elevator, count actual floors above ground level
     // Treat elevator as reducing effort to 1 floor ONLY when floors > 0
+    // Interpret: pickupFloors -> downstairs, dropoffFloors -> upstairs
     const pickupFloors = input.floorPickup > 0 ? (input.elevatorPickup ? 1 : Math.max(0, input.floorPickup)) : 0;
     const dropoffFloors = input.floorDropoff > 0 ? (input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff)) : 0;
-    console.log(pickupFloors, 'pickupFloors')
-    console.log(dropoffFloors, 'dropoffFloors')
+
+    console.log('[Carrying] Floors before base fee:', {
+      downstairsFloorsFromPickup: pickupFloors,
+      upstairsFloorsFromDropoff: dropoffFloors,
+      elevatorPickup: input.elevatorPickup,
+      elevatorDropoff: input.elevatorDropoff
+    });
     const totalFloors = pickupFloors + dropoffFloors;
 
     breakdown.breakdown.carrying.floors = totalFloors;
@@ -703,32 +709,66 @@ class PricingService {
     const carryingMultiplier = 1.35;
     const baseFee = 25; // €25 base fee
 
-    // Use carryingServiceItems if provided, otherwise use all items with quantities > 0
-    const itemsToCarry = input.carryingServiceItems || {};
+    // Directional selection: prefer explicit up/down sets, fallback to combined
+    const upItems = input.carryingUpItems || {};
+    const downItems = input.carryingDownItems || {};
+    const combinedItems = input.carryingServiceItems || {};
     
-    for (const [itemId, quantity] of Object.entries(input.itemQuantities)) {
-      if (quantity > 0) {
-        // Check if this item needs carrying service
-        const needsCarrying = itemsToCarry[itemId] || false;
-        
-        if (needsCarrying) {
-          const points = getItemPoints(itemId);
-          const itemCost = points * carryingMultiplier * totalFloors * quantity;
-          totalCarryingCost += itemCost;
+    // Compute per-direction floors and costs
+    let downstairsCost = 0;
+    let upstairsCost = 0;
+    const downstairsBreakdown: typeof itemBreakdown = [];
+    const upstairsBreakdown: typeof itemBreakdown = [];
 
-          itemBreakdown.push({
-            itemId,
-            points: points * quantity,
-            multiplier: carryingMultiplier * totalFloors,
-            cost: itemCost
-          });
-        }
+    for (const [itemId, quantity] of Object.entries(input.itemQuantities)) {
+      if (quantity <= 0) continue;
+      const points = getItemPoints(itemId);
+
+      // Downstairs (pickup floors)
+      const needsDown = (Object.keys(downItems).length > 0 ? !!downItems[itemId] : !!combinedItems[itemId]) && pickupFloors > 0;
+      if (needsDown) {
+        const cost = points * carryingMultiplier * pickupFloors * quantity;
+        downstairsCost += cost;
+        downstairsBreakdown.push({ itemId, points: points * quantity, multiplier: carryingMultiplier * pickupFloors, cost });
+      }
+
+      // Upstairs (dropoff floors)
+      const needsUp = (Object.keys(upItems).length > 0 ? !!upItems[itemId] : !!combinedItems[itemId]) && dropoffFloors > 0;
+      if (needsUp) {
+        const cost = points * carryingMultiplier * dropoffFloors * quantity;
+        upstairsCost += cost;
+        upstairsBreakdown.push({ itemId, points: points * quantity, multiplier: carryingMultiplier * dropoffFloors, cost });
       }
     }
+
+    totalCarryingCost = downstairsCost + upstairsCost;
+    itemBreakdown.push(...downstairsBreakdown, ...upstairsBreakdown);
+    console.log('[Carrying] Directional breakdown pre-base-fee:', {
+      carryingMultiplier,
+      downstairsFloors: pickupFloors,
+      upstairsFloors: dropoffFloors,
+      selectedDownItems: Object.keys(downItems).filter(k => downItems[k]),
+      selectedUpItems: Object.keys(upItems).filter(k => upItems[k]),
+      fallbackSelectedItems: Object.keys(combinedItems).filter(k => combinedItems[k]),
+      downstairsBreakdown,
+      upstairsBreakdown,
+      downstairsCost,
+      upstairsCost,
+      totalCarryingCost
+    });
     
     // Add base fee per selected direction (upstairs/downstairs)
     const directionCount = (pickupFloors > 0 ? 1 : 0) + (dropoffFloors > 0 ? 1 : 0);
     const totalCost = totalCarryingCost > 0 ? (totalCarryingCost + baseFee * directionCount) : 0;
+
+    console.log('[Carrying] Totals:', {
+      downstairsApplied: pickupFloors > 0,
+      upstairsApplied: dropoffFloors > 0,
+      baseFeePerDirection: baseFee,
+      directionCount,
+      totalCarryingCostExclBase: totalCarryingCost,
+      totalCarryingCostInclBase: totalCost
+    });
 
     breakdown.breakdown.carrying.itemBreakdown = itemBreakdown;
     breakdown.breakdown.carrying.totalCost = totalCost;
@@ -736,6 +776,34 @@ class PricingService {
   }
 
   private calculateAssemblyCost(input: PricingInput, breakdown: PricingBreakdown) {
+    // Fixed unit prices by item name
+    const assemblyUnitByName: Record<string, number> = {
+      '2-Door Wardrobe': 50,
+      '2-Doors Closet': 50,
+      '3-Door Wardrobe': 55,
+      '3-Doors Closet': 55,
+      'Single Bed': 30,
+      '1-Person Bed': 30,
+      'Double Bed': 40,
+      '2-Person Bed': 40,
+    };
+
+    const disassemblyUnitByName: Record<string, number> = {
+      '2-Door Wardrobe': 30,
+      '2-Doors Closet': 30,
+      '3-Door Wardrobe': 35,
+      '3-Doors Closet': 35,
+      'Single Bed': 20,
+      '1-Person Bed': 20,
+      'Double Bed': 30,
+      '2-Person Bed': 30,
+    };
+
+    const resolveItemName = (itemId: string): string => {
+      const furnitureItem = furnitureItems.find(item => item.id === itemId);
+      return furnitureItem ? furnitureItem.name : itemId;
+    };
+
     let totalAssemblyCost = 0;
     const itemBreakdown: Array<{
       itemId: string;
@@ -744,73 +812,46 @@ class PricingService {
       cost: number;
     }> = [];
 
-    // Removed debug logging for production
-
-    // Fixed assembly costs for specific items
-    const getAssemblyCost = (itemId: string): number => {
-      // First, look up the item name from the furnitureItems array
-      const furnitureItem = furnitureItems.find(item => item.id === itemId);
-      const itemName = furnitureItem ? furnitureItem.name : itemId;
-      
-      console.log(`🔧 Looking up assembly cost for itemId: ${itemId}, itemName: ${itemName}`);
-      
-      switch (itemName) {
-        case "3-Doors Closet":
-        case "3-Door Wardrobe":
-          return 35;
-        case "2-Doors Closet":
-        case "2-Door Wardrobe":
-          return 30;
-        case "1-Person Bed":
-        case "Single Bed":
-          return 20;
-        case "2-Person Bed":
-        case "Double Bed":
-          return 30;
-        default:
-          return 0; // No assembly cost for other items
-      }
-    };
-
-    // Process assembly items
-    for (const [itemId, needsAssembly] of Object.entries(input.assemblyItems || {})) {
-      if (needsAssembly && input.itemQuantities[itemId] > 0) {
-        const quantity = input.itemQuantities[itemId];
-        const itemCost = getAssemblyCost(itemId);
-        const totalItemCost = itemCost * quantity;
-        totalAssemblyCost += totalItemCost;
-
-        itemBreakdown.push({
-          itemId,
-          points: 0, // Not using points system
-          multiplier: 1,
-          cost: totalItemCost
-        });
+    // Assembly selections
+    for (const [itemId, selected] of Object.entries(input.assemblyItems || {})) {
+      if (!selected) continue;
+      const quantity = input.itemQuantities[itemId] || 0;
+      if (quantity <= 0) continue;
+      const name = resolveItemName(itemId);
+      const unit = assemblyUnitByName[name] || 0;
+      const cost = unit * quantity;
+      if (cost > 0) {
+        totalAssemblyCost += cost;
+        itemBreakdown.push({ itemId, points: 0, multiplier: 1, cost });
+        console.log('[Assembly] Item added:', { itemId, name, unit, quantity, cost });
       }
     }
-    
-    // Process disassembly items
-    for (const [itemId, needsDisassembly] of Object.entries(input.disassemblyItems || {})) {
-      if (needsDisassembly && input.itemQuantities[itemId] > 0) {
-        const quantity = input.itemQuantities[itemId];
-        const itemCost = getAssemblyCost(itemId); // Same cost for disassembly
-        const totalItemCost = itemCost * quantity;
-        totalAssemblyCost += totalItemCost;
 
-        itemBreakdown.push({
-          itemId,
-          points: 0, // Not using points system
-          multiplier: 1,
-          cost: totalItemCost
-        });
+    // Disassembly selections
+    for (const [itemId, selected] of Object.entries(input.disassemblyItems || {})) {
+      if (!selected) continue;
+      const quantity = input.itemQuantities[itemId] || 0;
+      if (quantity <= 0) continue;
+      const name = resolveItemName(itemId);
+      const unit = disassemblyUnitByName[name] || 0;
+      const cost = unit * quantity;
+      if (cost > 0) {
+        totalAssemblyCost += cost;
+        itemBreakdown.push({ itemId, points: 0, multiplier: 1, cost });
+        console.log('[Disassembly] Item added:', { itemId, name, unit, quantity, cost });
       }
     }
-    
-    const totalCost = totalAssemblyCost;
+
+    console.log('[Assembly/Disassembly] Summary:', {
+      assemblyUnits: assemblyUnitByName,
+      disassemblyUnits: disassemblyUnitByName,
+      totalAssemblyCost,
+      itemBreakdown
+    });
 
     breakdown.breakdown.assembly.itemBreakdown = itemBreakdown;
-    breakdown.breakdown.assembly.totalCost = totalCost;
-    breakdown.assemblyCost = totalCost;
+    breakdown.breakdown.assembly.totalCost = totalAssemblyCost;
+    breakdown.assemblyCost = totalAssemblyCost;
   }
 
   private calculateExtraHelperCost(input: PricingInput, breakdown: PricingBreakdown) {
@@ -859,25 +900,16 @@ class PricingService {
       constantsLoaded
     });
     
-    // Show student discount preview when checkbox is checked, but only apply it when file is uploaded
-    if (input.isStudent) {
+    // Apply student discount ONLY when checkbox is checked AND a valid ID is uploaded
+    if (input.isStudent && input.hasStudentId) {
       breakdown.studentDiscount = breakdown.subtotal * studentDiscountRate;
-      if (input.hasStudentId) {
-        // File uploaded - apply the discount
-        breakdown.total = breakdown.subtotal - breakdown.studentDiscount;
-        console.log('[DEBUG] Student discount applied:', {
-          discount: breakdown.studentDiscount,
-          newTotal: breakdown.total
-        });
-      } else {
-        // Checkbox checked but no file - show preview but don't apply
-        breakdown.total = breakdown.subtotal;
-        console.log('[DEBUG] Student discount preview shown (file not uploaded):', {
-          previewDiscount: breakdown.studentDiscount,
-          total: breakdown.total
-        });
-      }
+      breakdown.total = breakdown.subtotal - breakdown.studentDiscount;
+      console.log('[DEBUG] Student discount applied:', {
+        discount: breakdown.studentDiscount,
+        newTotal: breakdown.total
+      });
     } else {
+      // No discount (or preview) without an uploaded ID
       breakdown.studentDiscount = 0;
       breakdown.total = breakdown.subtotal;
       console.log('[DEBUG] Student discount NOT applied - reason:', {

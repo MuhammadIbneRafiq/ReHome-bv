@@ -274,6 +274,30 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   // Filter only ReHome items
   const rehomeItems = items.filter(item => item.isrehome);
 
+  // Determine if an item is eligible for assembly and its fixed cost
+  const getAssemblyUnitCost = (item: any): number => {
+    const name = (item?.name || '').toLowerCase();
+    const category = (item?.category || '').toLowerCase();
+    const subcategory = (item?.subcategory || '').toLowerCase();
+
+    // category(sub) must be present to consider eligibility
+    if (!category || !subcategory) return 0;
+
+    // Closets / Wardrobes → €50
+    if (name.includes('closet') || name.includes('wardrobe') || subcategory.includes('closet') || subcategory.includes('wardrobe')) {
+      return 50;
+    }
+    // Single bed → €30
+    if (name.includes('1-person bed') || name.includes('single bed') || subcategory.includes('1-person') || subcategory.includes('single')) {
+      return 30;
+    }
+    // Double bed → €20
+    if (name.includes('2-person bed') || name.includes('double bed') || subcategory.includes('2-person') || subcategory.includes('double')) {
+      return 20;
+    }
+    return 0; // Not eligible
+  };
+
   // Fetch pricing multipliers on component mount
   useEffect(() => {
     const fetchMultipliers = async () => {
@@ -302,7 +326,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       
       // Calculate carrying and assembly costs separately for display
       const calculatedCarryingCost = getCarryingCost(isHighPointsCategory);
-      const calculatedAssemblyCost = getAssemblyCost(isHighPointsCategory);
+      const calculatedAssemblyCost = getAssemblyCost();
       setCarryingCost(calculatedCarryingCost);
       setAssemblyCost(calculatedAssemblyCost);
     };
@@ -391,7 +415,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     setIsHighPointsCategory(isHighPointsCategory);
         
     const calculatedCarryingCost = getCarryingCost(isHighPointsCategory);
-    const calculatedAssemblyCost = getAssemblyCost(isHighPointsCategory);
+    const calculatedAssemblyCost = getAssemblyCost();
     
     return baseTotal + calculatedCarryingCost + calculatedAssemblyCost;
   };
@@ -433,22 +457,16 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     return 0;
   };
 
-  const getAssemblyCost = (isHighPointsCategory: boolean = false) => {
-    // Use dynamic pricing multipliers from backend
-    const assemblyMultipliers = pricingMultipliers?.assembly;
-    console.log('assemblyMultipliers', assemblyMultipliers);
-    console.log('isHighPointsCategory', isHighPointsCategory);
-    // Use dynamic multipliers
-    const baseAssemblyCost = isHighPointsCategory ? assemblyMultipliers.highPoints.cost : assemblyMultipliers.lowPoints.cost;
-    
-    const itemsNeedingAssembly = Object.values(itemAssistance).filter(state => state.needsAssembly).length;
-    
-    if (itemsNeedingAssembly > 0) {
-      console.log('itemsNeedingAssembly', itemsNeedingAssembly);
-      console.log('baseAssemblyCost', baseAssemblyCost);
-      return itemsNeedingAssembly * baseAssemblyCost;
-    }
-    return 0;
+  const getAssemblyCost = () => {
+    // Fixed pricing based on marketplace assembly rules
+    let total = 0;
+    rehomeItems.forEach((item) => {
+      const unit = getAssemblyUnitCost(item);
+      if (unit > 0 && itemAssistance[item.id]?.needsAssembly) {
+        total += unit * (item.quantity || 1);
+      }
+    });
+    return total;
   };
 
   const handleSubmit = async () => {
@@ -751,31 +769,33 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
 
                           
                           <div className="space-y-3">
-                            <div>
-                              <h5 className="font-medium text-gray-800 mb-2">1. Need help with assembly?</h5>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <input
-                                    type="checkbox"
-                                    id={`assembly-${item.id}`}
-                                    checked={assistanceState.needsAssembly}
-                                    onChange={() => toggleItemAssistance(item.id, 'assembly')}
-                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                  />
-                                  <label htmlFor={`assembly-${item.id}`} className="ml-2 text-sm text-gray-700">
-                                    Assembly assistance for {item.name}
-                                  </label>
+                            {getAssemblyUnitCost(item) > 0 && (
+                              <div>
+                                <h5 className="font-medium text-gray-800 mb-2">1. Need help with assembly?</h5>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <input
+                                      type="checkbox"
+                                      id={`assembly-${item.id}`}
+                                      checked={assistanceState.needsAssembly}
+                                      onChange={() => toggleItemAssistance(item.id, 'assembly')}
+                                      className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                    />
+                                    <label htmlFor={`assembly-${item.id}`} className="ml-2 text-sm text-gray-700">
+                                      Assembly assistance for {item.name}
+                                    </label>
+                                  </div>
+                                  {assistanceState.needsAssembly && (
+                                    <span className="text-sm font-medium text-orange-600">
+                                      €{getAssemblyUnitCost(item).toFixed(2)}
+                                    </span>
+                                  )}
                                 </div>
-                                {pricingBreakdown?.assemblyCost > 0 && assistanceState.needsAssembly && (
-                                  <span className="text-sm font-medium text-orange-600">
-                                    €{(pricingBreakdown.assemblyCost / Object.values(itemAssistance).filter(state => state.needsAssembly).length).toFixed(2)}
-                                  </span>
-                                )}
                               </div>
-                            </div>
+                            )}
 
                             <div>
-                              <h5 className="font-medium text-gray-800 mb-2">2. Need help with carrying upstairs?</h5>
+                              <h5 className="font-medium text-gray-800 mb-2">{getAssemblyUnitCost(item) > 0 ? '2.' : '1.'} Need help with carrying upstairs?</h5>
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center">
                                   <input
