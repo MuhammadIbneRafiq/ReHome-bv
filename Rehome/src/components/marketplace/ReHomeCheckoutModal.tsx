@@ -287,13 +287,13 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     if (name.includes('closet') || name.includes('wardrobe') || subcategory.includes('closet') || subcategory.includes('wardrobe')) {
       return 50;
     }
-    // Single bed → €30
+    // Single bed → €20
     if (name.includes('1-person bed') || name.includes('single bed') || subcategory.includes('1-person') || subcategory.includes('single')) {
-      return 30;
-    }
-    // Double bed → €20
-    if (name.includes('2-person bed') || name.includes('double bed') || subcategory.includes('2-person') || subcategory.includes('double')) {
       return 20;
+    }
+    // Double bed → €30
+    if (name.includes('2-person bed') || name.includes('double bed') || subcategory.includes('2-person') || subcategory.includes('double')) {
+      return 30;
     }
     return 0; // Not eligible
   };
