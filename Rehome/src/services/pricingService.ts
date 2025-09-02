@@ -676,8 +676,9 @@ class PricingService {
     // Calculate floors based on new elevator logic:
     // - If elevator is available, count as 1 floor (same effort as 1 level)
     // - If no elevator, count actual floors above ground level
-    const pickupFloors = input.elevatorPickup ? 1 : Math.max(0, input.floorPickup);
-    const dropoffFloors = input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff);
+    // Treat elevator as reducing effort to 1 floor ONLY when floors > 0
+    const pickupFloors = input.floorPickup > 0 ? (input.elevatorPickup ? 1 : Math.max(0, input.floorPickup)) : 0;
+    const dropoffFloors = input.floorDropoff > 0 ? (input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff)) : 0;
     console.log(pickupFloors, 'pickupFloors')
     console.log(dropoffFloors, 'dropoffFloors')
     const totalFloors = pickupFloors + dropoffFloors;
@@ -725,8 +726,8 @@ class PricingService {
       }
     }
     
-    // Add base fee
-    const totalCost = totalCarryingCost + baseFee;
+    // Add base fee ONLY if there is at least one carrying item cost
+    const totalCost = totalCarryingCost > 0 ? (totalCarryingCost + baseFee) : 0;
 
     breakdown.breakdown.carrying.itemBreakdown = itemBreakdown;
     breakdown.breakdown.carrying.totalCost = totalCost;

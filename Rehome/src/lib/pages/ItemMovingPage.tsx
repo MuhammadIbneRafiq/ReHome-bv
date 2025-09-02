@@ -545,8 +545,9 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
                 isDateFlexible: dateOption === 'rehome', // Only true for ReHome choose option
                 itemQuantities,
-                floorPickup: carryingEnabled ? (parseInt(floorPickup) || 0) : 0,
-                floorDropoff: carryingEnabled ? (parseInt(floorDropoff) || 0) : 0,
+                // Carrying directions: sum independently; use floor value or fallback to the other if empty
+                floorPickup: carryingDownstairs ? (parseInt(floorPickup) || parseInt(floorDropoff) || 0) : 0,
+                floorDropoff: carryingUpstairs ? (parseInt(floorDropoff) || parseInt(floorPickup) || 0) : 0,
                 elevatorPickup,
                 elevatorDropoff,
                 assemblyItems: assemblyItems,
@@ -621,7 +622,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             calculatePrice();
         }
     }, [isDataLoaded, itemQuantities, disassembly, assembly, extraHelper, carryingService, 
-        disassemblyItems, assemblyItems, extraHelperItems, carryingServiceItems]);
+        disassemblyItems, assemblyItems, extraHelperItems, carryingServiceItems,
+        carryingUpstairs, carryingDownstairs, carryingUpItems, carryingDownItems]);
         
     // Floor levels and elevators (less frequent changes)
     // Using debounce for these to prevent rapid recalculations while typing floor numbers
@@ -1937,7 +1939,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             )}
                                         </div>
 
-                                        <hr className="my-4" />
+                                        {/* removed divider between disassembly and assembly */}
 
                                         {/* Assembly */}
                                         <div>
@@ -2111,7 +2113,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             )}
                                         </div>
 
-                                        <hr className="my-4" />
+                                        {/* removed divider between carrying up and down */}
 
                                         {/* Carrying Downstairs */}
                                         <div>
@@ -2443,9 +2445,9 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             )}
                                             <li className="flex justify-between">
                                                 <span>Carrying Service</span>
-                                                <span className="font-medium">{carryingService ? "Yes" : "No"}</span>
+                                                <span className="font-medium">{carryingEnabled ? "Yes" : "No"}</span>
                                             </li>
-                                            {carryingService && pricingBreakdown?.carryingCost && pricingBreakdown.carryingCost > 0 && (
+                                            {carryingEnabled && pricingBreakdown?.carryingCost && pricingBreakdown.carryingCost > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>Floor Carrying Cost</span>
                                                     <span className="font-medium">€{pricingBreakdown.carryingCost.toFixed(2)}</span>
