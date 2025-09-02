@@ -67,7 +67,7 @@ export const defaultPricingConfig: PricingConfig = {
     baseRadius: 8,
     extraKmRate: 3
   },
-  studentDiscount: 0.1,
+  studentDiscount: 0.0885,
   weekendMultiplier: 1.2,
   cityDayMultiplier: 1.3,
   floorChargePerLevel: 25.0,

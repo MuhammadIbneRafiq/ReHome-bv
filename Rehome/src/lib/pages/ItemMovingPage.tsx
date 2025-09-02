@@ -133,7 +133,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [elevatorPickup, setElevatorPickup] = useState(false);
     const [elevatorDropoff, setElevatorDropoff] = useState(false);
     const [extraHelper, setExtraHelper] = useState(false);
-    const [carryingService, setCarryingService] = useState(false);
+    const [carryingService, setCarryingService] = useState(false); // legacy toggle (kept for compatibility, not used in UI)
     const [itemQuantities, setItemQuantities] = useState<{ [key: string]: number }>({});
     const [pickupType, setPickupType] = useState<'private' | 'store' | null>(null);
     const [customItem, setCustomItem] = useState('');
@@ -157,12 +157,48 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [dropoffPlace, setDropoffPlace] = useState<GooglePlaceObject | null>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
     const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome'>('fixed');
-    const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({});
+    const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({}); // legacy storage
+
+    // New: separate carrying directions
+    const [carryingUpstairs, setCarryingUpstairs] = useState(false);
+    const [carryingDownstairs, setCarryingDownstairs] = useState(false);
+    const [carryingUpItems, setCarryingUpItems] = useState<{ [key: string]: boolean }>({});
+    const [carryingDownItems, setCarryingDownItems] = useState<{ [key: string]: boolean }>({});
+    const [selectAllCarryingUp, setSelectAllCarryingUp] = useState(false);
+    const [selectAllCarryingDown, setSelectAllCarryingDown] = useState(false);
+
+    // Derived combined carrying state for pricing compatibility
+    const carryingEnabled = carryingUpstairs || carryingDownstairs || carryingService;
+    const combinedCarryingItems = React.useMemo(() => {
+        const combined: { [key: string]: boolean } = {};
+        Object.keys(carryingUpItems).forEach(id => { if (carryingUpItems[id]) combined[id] = true; });
+        Object.keys(carryingDownItems).forEach(id => { if (carryingDownItems[id]) combined[id] = true; });
+        // include any legacy selections
+        Object.keys(carryingServiceItems).forEach(id => { if (carryingServiceItems[id]) combined[id] = true; });
+        return combined;
+    }, [carryingUpItems, carryingDownItems, carryingServiceItems]);
+
+    // Only these items are eligible for assembly/disassembly add-ons
+    const assemblyEligibleNames = React.useMemo(() => new Set([
+        '3-doors closet',
+        '3-door wardrobe',
+        '2-doors closet',
+        '2-door wardrobe',
+        '1-person bed',
+        'single bed',
+        '2-person bed',
+        'double bed'
+    ]), []);
+
+    const isAssemblyEligible = React.useCallback((itemId: string): boolean => {
+        const itemData = furnitureItems.find(item => item.id === itemId);
+        const name = (itemData?.name || '').toLowerCase();
+        return assemblyEligibleNames.has(name);
+    }, [assemblyEligibleNames]);
 
     // Add state for select all functionality
     const [selectAllDisassembly, setSelectAllDisassembly] = useState(false);
     const [selectAllAssembly, setSelectAllAssembly] = useState(false);
-    const [selectAllCarrying, setSelectAllCarrying] = useState(false);
     const [extraInstructions, setExtraInstructions] = useState('');
 
     // Point limit constant
@@ -249,7 +285,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     // Add handlers for select all functionality
     const handleSelectAllDisassembly = (checked: boolean) => {
         setSelectAllDisassembly(checked);
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
         const newDisassemblyItems: { [key: string]: boolean } = {};
         selectedItems.forEach(itemId => {
             newDisassemblyItems[itemId] = checked;
@@ -259,7 +295,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     
     const handleSelectAllAssembly = (checked: boolean) => {
         setSelectAllAssembly(checked);
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
         const newAssemblyItems: { [key: string]: boolean } = {};
         selectedItems.forEach(itemId => {
             newAssemblyItems[itemId] = checked;
@@ -267,36 +303,53 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         setAssemblyItems(newAssemblyItems);
     };
 
-    const handleSelectAllCarrying = (checked: boolean) => {
-        setSelectAllCarrying(checked);
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-        const newCarryingItems: { [key: string]: boolean } = {};
-        selectedItems.forEach(itemId => {
-            newCarryingItems[itemId] = checked;
-        });
-        setCarryingServiceItems(newCarryingItems);
-    };
-
     // Update disassembly items when individual items change
     useEffect(() => {
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
         const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => disassemblyItems[itemId]);
         setSelectAllDisassembly(allSelected);
-    }, [disassemblyItems, itemQuantities]);
+    }, [disassemblyItems, itemQuantities, isAssemblyEligible]);
     
     // Update assembly items when individual items change
     useEffect(() => {
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
         const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => assemblyItems[itemId]);
         setSelectAllAssembly(allSelected);
-    }, [assemblyItems, itemQuantities]);
+    }, [assemblyItems, itemQuantities, isAssemblyEligible]);
+
+    // Prune any ineligible selections if present
+    useEffect(() => {
+        if (Object.keys(disassemblyItems).length > 0) {
+            const pruned: { [key: string]: boolean } = {};
+            Object.keys(disassemblyItems).forEach(id => {
+                if (isAssemblyEligible(id) && itemQuantities[id] > 0 && disassemblyItems[id]) {
+                    pruned[id] = true;
+                }
+            });
+            setDisassemblyItems(pruned);
+        }
+    }, [itemQuantities, isAssemblyEligible, disassemblyItems]);
+
+    useEffect(() => {
+        if (Object.keys(assemblyItems).length > 0) {
+            const pruned: { [key: string]: boolean } = {};
+            Object.keys(assemblyItems).forEach(id => {
+                if (isAssemblyEligible(id) && itemQuantities[id] > 0 && assemblyItems[id]) {
+                    pruned[id] = true;
+                }
+            });
+            setAssemblyItems(pruned);
+        }
+    }, [itemQuantities, isAssemblyEligible, assemblyItems]);
 
     // Update carrying items when individual items change
     useEffect(() => {
         const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-        const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => carryingServiceItems[itemId]);
-        setSelectAllCarrying(allSelected);
-    }, [carryingServiceItems, itemQuantities]);
+        const allUp = selectedItems.length > 0 && selectedItems.every(itemId => carryingUpItems[itemId]);
+        const allDown = selectedItems.length > 0 && selectedItems.every(itemId => carryingDownItems[itemId]);
+        setSelectAllCarryingUp(allUp);
+        setSelectAllCarryingDown(allDown);
+    }, [carryingUpItems, carryingDownItems, itemQuantities]);
 
     const handleStudentIdUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -492,8 +545,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
                 isDateFlexible: dateOption === 'rehome', // Only true for ReHome choose option
                 itemQuantities,
-                floorPickup: carryingService ? (parseInt(floorPickup) || 0) : 0,
-                floorDropoff: carryingService ? (parseInt(floorDropoff) || 0) : 0,
+                floorPickup: carryingEnabled ? (parseInt(floorPickup) || 0) : 0,
+                floorDropoff: carryingEnabled ? (parseInt(floorDropoff) || 0) : 0,
                 elevatorPickup,
                 elevatorDropoff,
                 assemblyItems: assemblyItems,
@@ -502,7 +555,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 isStudent,
                 hasStudentId: !!studentId, // Only true if file is uploaded
                 isEarlyBooking: false,
-                carryingServiceItems,
+                carryingServiceItems: combinedCarryingItems,
                 pickupPlace: pickupPlace,
                 dropoffPlace: dropoffPlace,
             };
@@ -1152,7 +1205,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         </div>
                         {pricingBreakdown.studentDiscount > 0 && (
                             <div className="flex justify-between text-green-600">
-                                <span>Student Discount (10%):</span>
+                                <span>Student Discount (8.85%):</span>
                                 <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
                             </div>
                         )}
@@ -1328,7 +1381,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         </div>
                         {pricingBreakdown.studentDiscount > 0 && (
                             <div className="flex justify-between text-green-600">
-                                <span>Student Discount (10%):</span>
+                                <span>Student Discount (8.85%):</span>
                                 <span>-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
                             </div>
                         )}
@@ -1807,155 +1860,159 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </p>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
-                                        <h3 className="text-md font-medium text-gray-800 mb-3">Disassembly</h3>
-                                        <div className="flex items-center mb-4">
-                                            <input
-                                                id="disassembly-service"
-                                                type="checkbox"
-                                                checked={disassembly}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setDisassembly(checked);
-                                                    if (checked) {
-                                                        // Auto-select all items that have quantities > 0
-                                                        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-                                                        const newDisassemblyItems: { [key: string]: boolean } = {};
-                                                        selectedItems.forEach(itemId => {
-                                                            newDisassemblyItems[itemId] = true;
-                                                        });
-                                                        setDisassemblyItems(newDisassemblyItems);
-                                                    } else {
-                                                        // Clear all selections
-                                                        setDisassemblyItems({});
-                                                    }
-                                                }}
-                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="disassembly-service" className="ml-2 block text-sm text-gray-700">
-                                                Do you need our help with disassembly of items at pickup location?
-                                            </label>
-                                        </div>
-                                        
-                                        {disassembly && (
-                                            <div className="ml-6 space-y-3">
-                                                <p className="text-sm text-gray-600">
-                                                    Select which items need disassembly:
-                                                </p>
-                                                {/* Select All checkbox */}
-                                                <div className="flex items-center mb-2">
-                                                    <input
-                                                        id="select-all-disassembly"
-                                                        type="checkbox"
-                                                        checked={selectAllDisassembly}
-                                                        onChange={(e) => handleSelectAllDisassembly(e.target.checked)}
-                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                    />
-                                                    <label htmlFor="select-all-disassembly" className="ml-2 block text-sm font-medium text-gray-700">
-                                                        Select All
-                                                    </label>
-                                                </div>
-                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
-                                                    const quantity: number = itemQuantities[itemId];
-                                                    const itemData = furnitureItems.find(item => item.id === itemId);
-                                                    const itemName = itemData ? itemData.name : itemId;
-                                                    return (
-                                                        <div key={index} className="flex items-center justify-between">
-                                                            <div className="flex items-center">
-                                                                <input
-                                                                    id={`disassembly-${itemId}`}
-                                                                    type="checkbox"
-                                                                    checked={disassemblyItems[itemId] || false}
-                                                                    onChange={(e) => setDisassemblyItems({
-                                                                        ...disassemblyItems,
-                                                                        [itemId]: e.target.checked
-                                                                    })}
-                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                />
-                                                                <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
-                                                                    {itemName} ({quantity}x)
-                                                                </label>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Disassembly & Assembly</h3>
+
+                                        {/* Disassembly */}
+                                        <div className="mb-6">
+                                            <div className="flex items-center mb-4">
+                                                <input
+                                                    id="disassembly-service"
+                                                    type="checkbox"
+                                                    checked={disassembly}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        setDisassembly(checked);
+                                                        if (checked) {
+                                                            // Auto-select eligible items that have quantities > 0
+                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
+                                                            const newDisassemblyItems: { [key: string]: boolean } = {};
+                                                            selectedItems.forEach(itemId => {
+                                                                newDisassemblyItems[itemId] = true;
+                                                            });
+                                                            setDisassemblyItems(newDisassemblyItems);
+                                                        } else {
+                                                            // Clear all selections
+                                                            setDisassemblyItems({});
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="disassembly-service" className="ml-2 block text-sm text-gray-700">
+                                                    Do you need our help with disassembly of items at pickup location?
+                                                </label>
                                             </div>
-                                        )}
-                                    </div>
-                                    
-                                    <div className="border border-gray-200 rounded-lg p-4">
-                                        <h3 className="text-md font-medium text-gray-800 mb-3">Assembly</h3>
-                                        <div className="flex items-center mb-4">
-                                            <input
-                                                id="assembly-service"
-                                                type="checkbox"
-                                                checked={assembly}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setAssembly(checked);
-                                                    if (checked) {
-                                                        // Auto-select all items that have quantities > 0
-                                                        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-                                                        const newAssemblyItems: { [key: string]: boolean } = {};
-                                                        selectedItems.forEach(itemId => {
-                                                            newAssemblyItems[itemId] = true;
-                                                        });
-                                                        setAssemblyItems(newAssemblyItems);
-                                                    } else {
-                                                        // Clear all selections
-                                                        setAssemblyItems({});
-                                                    }
-                                                }}
-                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="assembly-service" className="ml-2 block text-sm text-gray-700">
-                                                Do you need our help with assembly of items at delivery location?
-                                            </label>
-                                        </div>
-                                        
-                                        {assembly && (
-                                            <div className="ml-6 space-y-3">
-                                                <p className="text-sm text-gray-600">
-                                                    Select which items need assembly:
-                                                </p>
-                                                {/* Select All checkbox */}
-                                                <div className="flex items-center mb-2">
-                                                    <input
-                                                        id="select-all-assembly"
-                                                        type="checkbox"
-                                                        checked={selectAllAssembly}
-                                                        onChange={(e) => handleSelectAllAssembly(e.target.checked)}
-                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                    />
-                                                    <label htmlFor="select-all-assembly" className="ml-2 block text-sm font-medium text-gray-700">
-                                                        Select All
-                                                    </label>
-                                                </div>
-                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
-                                                    const quantity: number = itemQuantities[itemId];
-                                                    const itemData = furnitureItems.find(item => item.id === itemId);
-                                                    const itemName = itemData ? itemData.name : itemId;
-                                                    return (
-                                                        <div key={index} className="flex items-center justify-between">
-                                                            <div className="flex items-center">
-                                                                <input
-                                                                    id={`assembly-${itemId}`}
-                                                                    type="checkbox"
-                                                                    checked={assemblyItems[itemId] || false}
-                                                                    onChange={(e) => setAssemblyItems({
-                                                                        ...assemblyItems,
-                                                                        [itemId]: e.target.checked
-                                                                    })}
-                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                />
-                                                                <label htmlFor={`assembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
-                                                                    {itemName} ({quantity}x)
-                                                                </label>
+                                            {disassembly && (
+                                                <div className="ml-6 space-y-3">
+                                                    <p className="text-sm text-gray-600">
+                                                        Select which items need disassembly:
+                                                    </p>
+                                                    {/* Select All checkbox */}
+                                                    <div className="flex items-center mb-2">
+                                                        <input
+                                                            id="select-all-disassembly"
+                                                            type="checkbox"
+                                                            checked={selectAllDisassembly}
+                                                            onChange={(e) => handleSelectAllDisassembly(e.target.checked)}
+                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        />
+                                                        <label htmlFor="select-all-disassembly" className="ml-2 block text-sm font-medium text-gray-700">
+                                                            Select All
+                                                        </label>
+                                                    </div>
+                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).map((itemId: string, index: number) => {
+                                                        const quantity: number = itemQuantities[itemId];
+                                                        const itemData = furnitureItems.find(item => item.id === itemId);
+                                                        const itemName = itemData ? itemData.name : itemId;
+                                                        return (
+                                                            <div key={index} className="flex items-center justify-between">
+                                                                <div className="flex items-center">
+                                                                    <input
+                                                                        id={`disassembly-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={disassemblyItems[itemId] || false}
+                                                                        onChange={(e) => setDisassemblyItems({
+                                                                            ...disassemblyItems,
+                                                                            [itemId]: e.target.checked
+                                                                        })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({quantity}x)
+                                                                    </label>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <hr className="my-4" />
+
+                                        {/* Assembly */}
+                                        <div>
+                                            <div className="flex items-center mb-4">
+                                                <input
+                                                    id="assembly-service"
+                                                    type="checkbox"
+                                                    checked={assembly}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        setAssembly(checked);
+                                                        if (checked) {
+                                                            // Auto-select eligible items that have quantities > 0
+                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
+                                                            const newAssemblyItems: { [key: string]: boolean } = {};
+                                                            selectedItems.forEach(itemId => {
+                                                                newAssemblyItems[itemId] = true;
+                                                            });
+                                                            setAssemblyItems(newAssemblyItems);
+                                                        } else {
+                                                            // Clear all selections
+                                                            setAssemblyItems({});
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="assembly-service" className="ml-2 block text-sm text-gray-700">
+                                                    Do you need our help with assembly of items at delivery location?
+                                                </label>
                                             </div>
-                                        )}
+                                            {assembly && (
+                                                <div className="ml-6 space-y-3">
+                                                    <p className="text-sm text-gray-600">
+                                                        Select which items need assembly:
+                                                    </p>
+                                                    {/* Select All checkbox */}
+                                                    <div className="flex items-center mb-2">
+                                                        <input
+                                                            id="select-all-assembly"
+                                                            type="checkbox"
+                                                            checked={selectAllAssembly}
+                                                            onChange={(e) => handleSelectAllAssembly(e.target.checked)}
+                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        />
+                                                        <label htmlFor="select-all-assembly" className="ml-2 block text-sm font-medium text-gray-700">
+                                                            Select All
+                                                        </label>
+                                                    </div>
+                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).map((itemId: string, index: number) => {
+                                                        const quantity: number = itemQuantities[itemId];
+                                                        const itemData = furnitureItems.find(item => item.id === itemId);
+                                                        const itemName = itemData ? itemData.name : itemId;
+                                                        return (
+                                                            <div key={index} className="flex items-center justify-between">
+                                                                <div className="flex items-center">
+                                                                    <input
+                                                                        id={`assembly-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={assemblyItems[itemId] || false}
+                                                                        onChange={(e) => setAssemblyItems({
+                                                                            ...assemblyItems,
+                                                                            [itemId]: e.target.checked
+                                                                        })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`assembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({quantity}x)
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
@@ -1981,75 +2038,151 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
                                         <h3 className="text-md font-medium text-gray-800 mb-3">Carrying Service</h3>
-                                        <div className="flex items-center mb-4">
-                                            <input
-                                                id="carrying-service"
-                                                type="checkbox"
-                                                checked={carryingService}
-                                                onChange={(e) => {
-                                                    const checked = e.target.checked;
-                                                    setCarryingService(checked);
-                                                    if (checked) {
-                                                        // Auto-select all items that have quantities > 0
-                                                        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
-                                                        const newCarryingItems: { [key: string]: boolean } = {};
-                                                        selectedItems.forEach(itemId => {
-                                                            newCarryingItems[itemId] = true;
-                                                        });
-                                                        setCarryingServiceItems(newCarryingItems);
-                                                    } else {
-                                                        // Clear all selections
-                                                        setCarryingServiceItems({});
-                                                    }
-                                                }}
-                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                            />
-                                            <label htmlFor="carrying-service" className="ml-2 block text-sm text-gray-700">
-                                                Do you need our help with carrying items up or downstairs?
-                                            </label>
-                                        </div>
-                                        
-                                        {carryingService && (
-                                            <div className="ml-6 space-y-3">
-                                                <p className="text-sm text-gray-600">
-                                                    Select which items need help with carrying:
-                                                </p>
-                                                {/* Select All checkbox */}
-                                                <div className="flex items-center mb-2">
-                                                    <input
-                                                        id="select-all-carrying"
-                                                        type="checkbox"
-                                                        checked={selectAllCarrying}
-                                                        onChange={(e) => handleSelectAllCarrying(e.target.checked)}
-                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                    />
-                                                    <label htmlFor="select-all-carrying" className="ml-2 block text-sm font-medium text-gray-700">
-                                                        Select All
-                                                    </label>
-                                                </div>
-                                                {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
-                                                    const quantity: number = itemQuantities[itemId];
-                                                    const itemData = furnitureItems.find(item => item.id === itemId);
-                                                    const itemName = itemData ? itemData.name : itemId;
-                                                    return (
-                                                        <div key={index} className="flex items-center justify-between">
-                                                            <div className="flex items-center">
-                                                                <input
-                                                                    id={`carrying-service-${itemId}`}
-                                                                    type="checkbox"
-                                                                    checked={carryingServiceItems[itemId] || false}
-                                                                    onChange={e => setCarryingServiceItems({ ...carryingServiceItems, [itemId]: e.target.checked })}
-                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                />
-                                                                <label htmlFor={`carrying-service-${itemId}`} className="ml-2 block text-sm text-gray-700">
-                                                                    {itemName} ({quantity}x)
-                                                                </label>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                        <p className="text-sm text-gray-600 mb-3">Select if you need help carrying items up or down floors. Pricing is the same per floor for both directions.</p>
+
+                                        {/* Carrying Upstairs */}
+                                        <div className="mb-6">
+                                            <div className="flex items-center mb-4">
+                                                <input
+                                                    id="carrying-upstairs"
+                                                    type="checkbox"
+                                                    checked={carryingUpstairs}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        setCarryingUpstairs(checked);
+                                                        if (checked) {
+                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                            const newItems: { [key: string]: boolean } = {};
+                                                            selectedItems.forEach(itemId => { newItems[itemId] = true; });
+                                                            setCarryingUpItems(newItems);
+                                                        } else {
+                                                            setCarryingUpItems({});
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="carrying-upstairs" className="ml-2 block text-sm text-gray-700">
+                                                    Carrying Upstairs
+                                                </label>
                                             </div>
-                                        )}
+                                            {carryingUpstairs && (
+                                                <div className="ml-6 space-y-3">
+                                                    <div className="flex items-center mb-2">
+                                                        <input
+                                                            id="select-all-carrying-up"
+                                                            type="checkbox"
+                                                            checked={selectAllCarryingUp}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                setSelectAllCarryingUp(checked);
+                                                                const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                                const newItems: { [key: string]: boolean } = {};
+                                                                selectedItems.forEach(itemId => { newItems[itemId] = checked; });
+                                                                setCarryingUpItems(newItems);
+                                                            }}
+                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        />
+                                                        <label htmlFor="select-all-carrying-up" className="ml-2 block text-sm font-medium text-gray-700">
+                                                            Select All
+                                                        </label>
+                                                    </div>
+                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                        const quantity: number = itemQuantities[itemId];
+                                                        const itemData = furnitureItems.find(item => item.id === itemId);
+                                                        const itemName = itemData ? itemData.name : itemId;
+                                                        return (
+                                                            <div key={index} className="flex items-center justify-between">
+                                                                <div className="flex items-center">
+                                                                    <input
+                                                                        id={`carrying-up-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={carryingUpItems[itemId] || false}
+                                                                        onChange={e => setCarryingUpItems({ ...carryingUpItems, [itemId]: e.target.checked })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`carrying-up-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({quantity}x)
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <hr className="my-4" />
+
+                                        {/* Carrying Downstairs */}
+                                        <div>
+                                            <div className="flex items-center mb-4">
+                                                <input
+                                                    id="carrying-downstairs"
+                                                    type="checkbox"
+                                                    checked={carryingDownstairs}
+                                                    onChange={(e) => {
+                                                        const checked = e.target.checked;
+                                                        setCarryingDownstairs(checked);
+                                                        if (checked) {
+                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                            const newItems: { [key: string]: boolean } = {};
+                                                            selectedItems.forEach(itemId => { newItems[itemId] = true; });
+                                                            setCarryingDownItems(newItems);
+                                                        } else {
+                                                            setCarryingDownItems({});
+                                                        }
+                                                    }}
+                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                />
+                                                <label htmlFor="carrying-downstairs" className="ml-2 block text-sm text-gray-700">
+                                                    Carrying Downstairs
+                                                </label>
+                                            </div>
+                                            {carryingDownstairs && (
+                                                <div className="ml-6 space-y-3">
+                                                    <div className="flex items-center mb-2">
+                                                        <input
+                                                            id="select-all-carrying-down"
+                                                            type="checkbox"
+                                                            checked={selectAllCarryingDown}
+                                                            onChange={(e) => {
+                                                                const checked = e.target.checked;
+                                                                setSelectAllCarryingDown(checked);
+                                                                const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0);
+                                                                const newItems: { [key: string]: boolean } = {};
+                                                                selectedItems.forEach(itemId => { newItems[itemId] = checked; });
+                                                                setCarryingDownItems(newItems);
+                                                            }}
+                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                        />
+                                                        <label htmlFor="select-all-carrying-down" className="ml-2 block text-sm font-medium text-gray-700">
+                                                            Select All
+                                                        </label>
+                                                    </div>
+                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).map((itemId: string, index: number) => {
+                                                        const quantity: number = itemQuantities[itemId];
+                                                        const itemData = furnitureItems.find(item => item.id === itemId);
+                                                        const itemName = itemData ? itemData.name : itemId;
+                                                        return (
+                                                            <div key={index} className="flex items-center justify-between">
+                                                                <div className="flex items-center">
+                                                                    <input
+                                                                        id={`carrying-down-${itemId}`}
+                                                                        type="checkbox"
+                                                                        checked={carryingDownItems[itemId] || false}
+                                                                        onChange={e => setCarryingDownItems({ ...carryingDownItems, [itemId]: e.target.checked })}
+                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                    />
+                                                                    <label htmlFor={`carrying-down-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                        {itemName} ({quantity}x)
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
@@ -2320,7 +2453,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             )}
                                             {pricingBreakdown?.studentDiscount && pricingBreakdown.studentDiscount > 0 && (
                                                 <li className="flex justify-between text-green-600">
-                                                    <span>Student Discount (10%)</span>
+                                                    <span>Student Discount (8.85%)</span>
                                                     <span className="font-medium">-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
                                                 </li>
                                             )}
