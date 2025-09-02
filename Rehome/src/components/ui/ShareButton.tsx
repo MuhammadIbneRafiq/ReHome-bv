@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaShare, FaCopy, FaWhatsapp, FaFacebook, FaTwitter, FaEnvelope } from 'react-icons/fa';
+import { FaShare, FaCopy, FaWhatsapp, FaFacebook, FaTwitter, FaEnvelope, FaTelegramPlane, FaLinkedin, FaSms } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import {
   Dialog,
@@ -35,30 +35,9 @@ const ShareButton: React.FC<ShareButtonProps> = ({
     }
   };
 
-  // Function to handle native sharing
-  const handleNativeShare = async () => {
-    if (navigator.share) {
-      try {
-        const shareData: ShareData = {
-          title,
-          text: `${title}\n\n${description}\n\n${url}`,
-          url: url
-        };
-        
-        await navigator.share(shareData);
-        // Don't show "Link is copied!" for native share - it's not actually copied
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          console.error('Share failed:', error);
-          // If native share fails, copy to clipboard instead
-          await copyToClipboard();
-        }
-      }
-    } else {
-      // If native share is not available, copy to clipboard directly
-      await copyToClipboard();
-    }
-  };
+  // We intentionally avoid native share and default auto copy.
+  // Clicking the share button will open the dialog so users can copy
+  // the link or share via WhatsApp explicitly.
 
   // Function to copy link to clipboard
   const copyToClipboard = async () => {
@@ -87,6 +66,9 @@ const ShareButton: React.FC<ShareButtonProps> = ({
     whatsapp: `https://wa.me/?text=${safeEncode(`${title}\n\n${description}\n\n${url}`)}`,
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${safeEncode(url)}&quote=${safeEncode(title)}`,
     twitter: `https://twitter.com/intent/tweet?text=${safeEncode(title)}&url=${safeEncode(url)}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${safeEncode(url)}`,
+    telegram: `https://t.me/share/url?url=${safeEncode(url)}&text=${safeEncode(`${title} - ${description}`)}`,
+    sms: `sms:?body=${safeEncode(`${title}\n\n${description}\n\n${url}`)}`,
     email: `mailto:?subject=${safeEncode(title)}&body=${safeEncode(`${description}\n\n${url}`)}`
   };
 
@@ -100,7 +82,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
       <button
         onClick={(e) => {
           e.stopPropagation();
-          handleNativeShare();
+          setShowDialog(true);
         }}
         className={`${buttonStyles} ${className}`}
         title="Share this item"
@@ -151,6 +133,22 @@ const ShareButton: React.FC<ShareButtonProps> = ({
               <span className="text-sm font-medium text-gray-700">WhatsApp</span>
             </a>
             <a
+              href={shareUrls.telegram}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(shareUrls.telegram, '_blank', 'width=550,height=435');
+              }}
+              className="flex flex-col items-center gap-3 p-4 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-md group"
+            >
+              <div className="w-12 h-12 flex items-center justify-center bg-[#0088cc] bg-opacity-10 rounded-full group-hover:bg-opacity-20 transition-all duration-200">
+                <FaTelegramPlane className="w-6 h-6 text-[#0088cc]" />
+              </div>
+              <span className="text-sm font-medium text-gray-700">Telegram</span>
+            </a>
+            <a
               href={shareUrls.facebook}
               target="_blank"
               rel="noopener noreferrer"
@@ -183,6 +181,22 @@ const ShareButton: React.FC<ShareButtonProps> = ({
               <span className="text-sm font-medium text-gray-700">Twitter</span>
             </a>
             <a
+              href={shareUrls.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(shareUrls.linkedin, '_blank', 'width=550,height=435');
+              }}
+              className="flex flex-col items-center gap-3 p-4 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-md group"
+            >
+              <div className="w-12 h-12 flex items-center justify-center bg-[#0A66C2] bg-opacity-10 rounded-full group-hover:bg-opacity-20 transition-all duration-200">
+                <FaLinkedin className="w-6 h-6 text-[#0A66C2]" />
+              </div>
+              <span className="text-sm font-medium text-gray-700">LinkedIn</span>
+            </a>
+            <a
               href={shareUrls.email}
               onClick={(e) => {
                 e.preventDefault();
@@ -195,6 +209,20 @@ const ShareButton: React.FC<ShareButtonProps> = ({
                 <FaEnvelope className="w-6 h-6 text-gray-600" />
               </div>
               <span className="text-sm font-medium text-gray-700">Email</span>
+            </a>
+            <a
+              href={shareUrls.sms}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.href = shareUrls.sms;
+              }}
+              className="flex flex-col items-center gap-3 p-4 hover:bg-gray-50 rounded-xl transition-all duration-200 hover:shadow-md group"
+            >
+              <div className="w-12 h-12 flex items-center justify-center bg-[#10B981] bg-opacity-10 rounded-full group-hover:bg-opacity-20 transition-all duration-200">
+                <FaSms className="w-6 h-6 text-[#10B981]" />
+              </div>
+              <span className="text-sm font-medium text-gray-700">SMS</span>
             </a>
           </div>
         </DialogContent>
