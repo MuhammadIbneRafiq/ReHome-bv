@@ -726,8 +726,9 @@ class PricingService {
       }
     }
     
-    // Add base fee ONLY if there is at least one carrying item cost
-    const totalCost = totalCarryingCost > 0 ? (totalCarryingCost + baseFee) : 0;
+    // Add base fee per selected direction (upstairs/downstairs)
+    const directionCount = (pickupFloors > 0 ? 1 : 0) + (dropoffFloors > 0 ? 1 : 0);
+    const totalCost = totalCarryingCost > 0 ? (totalCarryingCost + baseFee * directionCount) : 0;
 
     breakdown.breakdown.carrying.itemBreakdown = itemBreakdown;
     breakdown.breakdown.carrying.totalCost = totalCost;

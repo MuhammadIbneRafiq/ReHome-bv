@@ -1862,7 +1862,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </p>
                                     
                                     <div className="border border-gray-200 rounded-lg p-4">
-                                        <h3 className="text-md font-medium text-gray-800 mb-3">Disassembly & Assembly</h3>
+                                        <h3 className="text-md font-medium text-gray-800 mb-3">Assembly</h3>
 
                                         {/* Disassembly */}
                                         <div className="mb-6">
@@ -2422,7 +2422,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             {pricingBreakdown?.assemblyCost && pricingBreakdown.assemblyCost > 0 && (
                                                 <>
                                                 <li className="flex justify-between">
-                                                    <span>Assembly & Disassembly</span>
+                                                    <span>Assembly</span>
                                                     <span className="font-medium">€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
                                                     </li>
                                                     {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).length > 0 && (
