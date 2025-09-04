@@ -333,18 +333,16 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     calculateTotal();
   }, [rehomeItems, itemAssistance, floor, elevatorAvailable, isHighPointsCategory]);
 
-  // Initialize item assistance state - preserve existing selections
+  // Initialize item assistance state - preserve existing selections for current items only
   useEffect(() => {
     setItemAssistance(prev => {
-      const assistanceState: ItemAssistanceState = { ...prev }; // Keep existing selections
+      const assistanceState: ItemAssistanceState = {};
       rehomeItems.forEach(item => {
-        // Only initialize if item doesn't exist in state
-        if (!assistanceState[item.id]) {
-          assistanceState[item.id] = {
-            needsCarrying: false,
-            needsAssembly: false,
-          };
-        }
+        // Preserve existing selection if item was already in cart, otherwise default to false
+        assistanceState[item.id] = prev[item.id] || {
+          needsCarrying: false,
+          needsAssembly: false,
+        };
       });
       return assistanceState;
     });
