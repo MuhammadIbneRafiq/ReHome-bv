@@ -326,7 +326,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       
       // Calculate carrying and assembly costs separately for display
       const calculatedCarryingCost = getCarryingCost(isHighPointsCategory);
-      const calculatedAssemblyCost = getAssemblyCost();
+      const calculatedAssemblyCost = await getAssemblyCost();
       setCarryingCost(calculatedCarryingCost);
       setAssemblyCost(calculatedAssemblyCost);
     };
@@ -415,7 +415,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     setIsHighPointsCategory(isHighPointsCategory);
         
     const calculatedCarryingCost = getCarryingCost(isHighPointsCategory);
-    const calculatedAssemblyCost = getAssemblyCost();
+    const calculatedAssemblyCost = await getAssemblyCost();
     
     return baseTotal + calculatedCarryingCost + calculatedAssemblyCost;
   };
@@ -457,15 +457,29 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     return 0;
   };
 
-  const getAssemblyCost = () => {
-    // Fixed pricing based on marketplace assembly rules
+  const getAssemblyCost = async () => {
+    // Calculate assembly cost based on category points × floor number × 1.35
     let total = 0;
-    rehomeItems.forEach((item) => {
-      const unit = getAssemblyUnitCost(item);
-      if (unit > 0 && itemAssistance[item.id]?.needsAssembly) {
-        total += unit * (item.quantity || 1);
+    const floorNumber = Math.max(1, parseInt(floor) || 0); // Minimum floor is 1
+    
+    for (const item of rehomeItems) {
+      if (itemAssistance[item.id]?.needsAssembly) {
+        // Get item's category points
+        try {
+          const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
+          // Calculate assembly cost: category point × floor number × 1.35
+          const assemblyCost = itemPoints * floorNumber * 1.35;
+          total += assemblyCost * (item.quantity || 1);
+        } catch (error) {
+          console.error('Error calculating assembly cost:', error);
+          // Fallback to fixed pricing if points calculation fails
+          const unit = getAssemblyUnitCost(item);
+          if (unit > 0) {
+            total += unit * (item.quantity || 1);
+          }
+        }
       }
-    });
+    }
     return total;
   };
 
@@ -527,13 +541,13 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
               pickupDate: null, // ReHome items don't have pickup date
               pickupTime: null, // ReHome items don't have pickup time
               deliveryFee: 0, // ReHome items have free delivery
-              assemblyFee: itemAssistance[item.id]?.needsAssembly ? getAssemblyCost() : 0,
+              assemblyFee: itemAssistance[item.id]?.needsAssembly ? await getAssemblyCost() : 0,
               carryingFee: itemAssistance[item.id]?.needsCarrying ? getCarryingCost() : 0,
               extraHelperFee: 0,
               studentDiscount: 0,
               subtotal: item.price * item.quantity,
               taxAmount: 0,
-              finalTotal: item.price * item.quantity + (itemAssistance[item.id]?.needsAssembly ? getAssemblyCost() : 0) + (itemAssistance[item.id]?.needsCarrying ? getCarryingCost() : 0),
+              finalTotal: item.price * item.quantity + (itemAssistance[item.id]?.needsAssembly ? await getAssemblyCost() : 0) + (itemAssistance[item.id]?.needsCarrying ? getCarryingCost() : 0),
               currency: 'EUR',
               notes: `ReHome Order: ${orderNumber}`
             };
