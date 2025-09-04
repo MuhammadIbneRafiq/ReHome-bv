@@ -546,10 +546,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 isDateFlexible: dateOption === 'rehome', // Only true for ReHome choose option
                 itemQuantities,
                 // Carrying directions: 
-                // - Downstairs: items going down from dropoff location (use floorDropoff)
-                // - Upstairs: items going up to pickup location (use floorPickup)
-                floorPickup: carryingUpstairs ? (parseInt(floorPickup) || 0) : 0,
-                floorDropoff: carryingDownstairs ? (parseInt(floorDropoff) || 0) : 0,
+                // - Downstairs: items going down at pickup location (use floorPickup)
+                // - Upstairs: items going up at dropoff location (use floorDropoff)
+                floorPickup: carryingDownstairs ? (parseInt(floorPickup) || 0) : 0,
+                floorDropoff: carryingUpstairs ? (parseInt(floorDropoff) || 0) : 0,
                 elevatorPickup,
                 elevatorDropoff,
                 assemblyItems: assemblyItems,
