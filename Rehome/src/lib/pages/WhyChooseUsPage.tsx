@@ -88,7 +88,7 @@ const WhyChooseUsPage = () => {
             <p className="text-lg mb-4">Contact us today for a free quote and let us help you with your moving or furniture needs!</p>
             <p className="text-xl font-semibold">Sustainable. Affordable. Convenient.</p>
             <Button
-                onClick={() => navigate('/contact')}
+                onClick={() => navigate('/contact-us')}
                 className="mt-6 bg-orange-600 text-white hover:bg-orange-700"
                 size="lg"
             >
