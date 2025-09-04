@@ -325,7 +325,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       setTotalCost(cost);
       
       // Calculate carrying and assembly costs separately for display
-      const calculatedCarryingCost = getCarryingCost(isHighPointsCategory);
+      const calculatedCarryingCost = await getCarryingCost();
       const calculatedAssemblyCost = await getAssemblyCost();
       setCarryingCost(calculatedCarryingCost);
       setAssemblyCost(calculatedAssemblyCost);
@@ -390,20 +390,29 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   };
 
   const getTotalCost = async () => {
-   
+    console.log('\n===== TOTAL COST CALCULATION STARTED =====');
+    
     // Calculate total points and determine pricing category
     let totalPoints = 0;
     const itemPointsMap = new Map<string, number>();
+    
+    console.log('Base Item Total:', baseTotal.toFixed(2), '€');
+    console.log('Calculating total item points...');
     
     // Get points from the constants API (marketplace item details)
     for (const item of rehomeItems) {
       try {
         // Get points for this marketplace item from the database
+        console.log(`\nItem: ${item.name} (${item.category}/${item.subcategory || 'none'}) x ${item.quantity}`);
         const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
-        console.log('itemPoints', itemPoints);
+        console.log(`  - Points for this item: ${itemPoints}`);
+        
         itemPointsMap.set(item.id, itemPoints);
-        totalPoints += itemPoints * item.quantity;
-        console.log('totalPoints', totalPoints);
+        const itemTotalPoints = itemPoints * item.quantity;
+        totalPoints += itemTotalPoints;
+        
+        console.log(`  - Item total points (${itemPoints} × ${item.quantity}): ${itemTotalPoints}`);
+        console.log(`  - Running total points: ${totalPoints}`);
       } catch (error) {
         console.error('Error getting points for item:', item, error);
       }
@@ -412,74 +421,144 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     // Determine pricing category based on dynamic threshold from multipliers
     const threshold = pricingMultipliers?.points?.threshold || 6; // Fallback to 6 if not loaded
     const isHighPointsCategory = totalPoints >= threshold;
-    setIsHighPointsCategory(isHighPointsCategory);
-        
-    const calculatedCarryingCost = getCarryingCost(isHighPointsCategory);
-    const calculatedAssemblyCost = await getAssemblyCost();
     
-    return baseTotal + calculatedCarryingCost + calculatedAssemblyCost;
+    console.log('\nPricing category determination:');
+    console.log(`  - Total points: ${totalPoints}`);
+    console.log(`  - Threshold for high points category: ${threshold}`);
+    console.log(`  - Is high points category? ${isHighPointsCategory}`);
+    
+    setIsHighPointsCategory(isHighPointsCategory);
+    
+    console.log('\nCalculating carrying cost...');
+    const calculatedCarryingCost = await getCarryingCost();
+    console.log(`  - Carrying cost: ${calculatedCarryingCost.toFixed(2)} €`);
+    
+    console.log('\nCalculating assembly cost...');
+    const calculatedAssemblyCost = await getAssemblyCost();
+    console.log(`  - Assembly cost: ${calculatedAssemblyCost.toFixed(2)} €`);
+    
+    const finalTotal = baseTotal + calculatedCarryingCost + calculatedAssemblyCost;
+    
+    console.log('\nFinal cost breakdown:');
+    console.log(`  - Items base total: ${baseTotal.toFixed(2)} €`);
+    console.log(`  - Carrying cost: ${calculatedCarryingCost.toFixed(2)} €`);
+    console.log(`  - Assembly cost: ${calculatedAssemblyCost.toFixed(2)} €`);
+    console.log(`  - FINAL TOTAL: ${finalTotal.toFixed(2)} €`);
+    console.log('===== TOTAL COST CALCULATION FINISHED =====\n');
+    
+    return finalTotal;
   };
 
-  const getCarryingCost = (isHighPointsCategory: boolean = false) => {   
-    // Use dynamic pricing multipliers from backend
-    const carryingMultipliers = pricingMultipliers?.carrying;
-    if (!carryingMultipliers) {
-      // Fallback to hardcoded values if multipliers not loaded
-      const baseCarryingCost = isHighPointsCategory ? 5 : 3;
-      const totalFloors = elevatorAvailable ? 1 : Math.max(0, parseInt(floor) || 0);
-      
-      if (totalFloors > 0) {
-        const itemsNeedingCarrying = Object.values(itemAssistance).filter(state => state.needsCarrying).length;
-        if (itemsNeedingCarrying > 0) {
-          console.log('totalFloors', totalFloors);
-          console.log('itemsNeedingCarrying', itemsNeedingCarrying);
-          console.log('baseCarryingCost', baseCarryingCost);
-          return totalFloors * itemsNeedingCarrying * baseCarryingCost;
-        }
-      }
+  const getCarryingCost = async () => {   
+    console.log('===== CARRYING COST CALCULATION STARTED =====');
+    
+    const totalFloors = elevatorAvailable ? 1 : Math.max(0, parseInt(floor) || 0);
+    console.log('Total floors for calculation:', totalFloors, elevatorAvailable ? '(elevator available - counted as 1)' : '');
+    
+    if (totalFloors === 0) {
+      console.log('No floors - carrying cost is 0 €');
       return 0;
     }
 
-    // Use dynamic multipliers
-    const baseCarryingCost = isHighPointsCategory 
-      ? carryingMultipliers.highPoints.cost 
-      : carryingMultipliers.lowPoints.cost;
+    let totalCarryingCost = 0;
     
-    const totalFloors = elevatorAvailable ? 1 : Math.max(0, parseInt(floor) || 0);
-    
-    const itemsNeedingCarrying = Object.values(itemAssistance).filter(state => state.needsCarrying).length;
-    if (itemsNeedingCarrying > 0) {
-      console.log('totalFloors', totalFloors);
-      console.log('itemsNeedingCarrying', itemsNeedingCarrying);
-      console.log('baseCarryingCost', baseCarryingCost);
-      return totalFloors * itemsNeedingCarrying * baseCarryingCost;
+    for (const item of rehomeItems) {
+      console.log('\n--- Processing item for carrying:', item.name, '(ID:', item.id, ') ---');
+      console.log('Category:', item.category, '| Subcategory:', item.subcategory);
+      console.log('Quantity:', item.quantity);
+      console.log('Needs Carrying:', itemAssistance[item.id]?.needsCarrying);
+      
+      if (itemAssistance[item.id]?.needsCarrying) {
+        try {
+          console.log('Fetching category points for:', item.category, item.subcategory);
+          const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
+          console.log('Category Points:', itemPoints);
+          
+          // Calculate carrying cost: category points × floors × 1.35
+          const multiplier = 1.35;
+          console.log('CALCULATION: Points', itemPoints, '× Floors', totalFloors, '× Multiplier', multiplier);
+          
+          const itemCarryingCost = itemPoints * totalFloors * multiplier;
+          const quantityAdjustedCost = itemCarryingCost * (item.quantity || 1);
+          
+          console.log('Item Carrying Cost:', itemCarryingCost.toFixed(2), '€');
+          console.log('Quantity Adjusted Cost:', quantityAdjustedCost.toFixed(2), '€', 
+            item.quantity > 1 ? '(' + itemCarryingCost.toFixed(2) + ' × ' + item.quantity + ')' : '');
+          
+          totalCarryingCost += quantityAdjustedCost;
+          console.log('Running Total:', totalCarryingCost.toFixed(2), '€');
+        } catch (error) {
+          console.error('Error calculating carrying cost for item:', item, error);
+        }
+      } else {
+        console.log('Skipping item - carrying not requested');
+      }
     }
-    return 0;
+    
+    console.log('\n===== CARRYING COST CALCULATION FINISHED =====');
+    console.log('FINAL CARRYING COST:', totalCarryingCost.toFixed(2), '€');
+    return totalCarryingCost;
   };
 
   const getAssemblyCost = async () => {
     // Calculate assembly cost based on category points × floor number × 1.35
+    console.log('===== ASSEMBLY COST CALCULATION STARTED =====');
     let total = 0;
     const floorNumber = Math.max(1, parseInt(floor) || 0); // Minimum floor is 1
+    console.log('Floor Number (used for calculation):', floorNumber);
+    console.log('Elevator Available:', elevatorAvailable);
+    
+    console.log('Items requiring assembly:', 
+      rehomeItems.filter(item => itemAssistance[item.id]?.needsAssembly).length, 
+      'out of', rehomeItems.length, 'total items');
     
     for (const item of rehomeItems) {
+      console.log('\n--- Processing item:', item.name, '(ID:', item.id, ') ---');
+      console.log('Category:', item.category, '| Subcategory:', item.subcategory);
+      console.log('Quantity:', item.quantity);
+      console.log('Needs Assembly:', itemAssistance[item.id]?.needsAssembly);
+      
       if (itemAssistance[item.id]?.needsAssembly) {
         // Get item's category points
         try {
+          console.log('Fetching category points for:', item.category, item.subcategory);
           const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
-          // Calculate assembly cost: category point × floor number × 1.35
-          const assemblyCost = itemPoints * floorNumber * 1.35;
-          total += assemblyCost * (item.quantity || 1);
+          console.log('Category Points:', itemPoints);
+          
+          // Calculate assembly cost: category point × 1.35
+          const multiplier = 1.35;
+          console.log('CALCULATION: Points', itemPoints, '× Multiplier', multiplier);
+          
+          const assemblyCost = itemPoints * multiplier;
+          const quantityAdjustedCost = assemblyCost * (item.quantity || 1);
+          
+          console.log('Item Assembly Cost:', assemblyCost.toFixed(2), '€');
+          console.log('Quantity Adjusted Cost:', quantityAdjustedCost.toFixed(2), '€', 
+            item.quantity > 1 ? '(' + assemblyCost.toFixed(2) + ' × ' + item.quantity + ')' : '');
+          
+          total += quantityAdjustedCost;
+          console.log('Running Total:', total.toFixed(2), '€');
         } catch (error) {
           console.error('Error calculating assembly cost:', error);
           // Fallback to fixed pricing if points calculation fails
+          console.log('FALLBACK: Using fixed pricing due to error');
           const unit = getAssemblyUnitCost(item);
+          console.log('Fixed Unit Cost:', unit, '€');
+          
           if (unit > 0) {
-            total += unit * (item.quantity || 1);
+            const fixedCost = unit * (item.quantity || 1);
+            total += fixedCost;
+            console.log('Fixed Cost Added:', fixedCost, '€');
+            console.log('Running Total:', total.toFixed(2), '€');
           }
         }
+      } else {
+        console.log('Skipping item - assembly not requested');
       }
     }
+    
+    console.log('\n===== ASSEMBLY COST CALCULATION FINISHED =====');
+    console.log('FINAL ASSEMBLY COST:', total.toFixed(2),   '€');
     return total;
   };
 
@@ -542,12 +621,12 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
               pickupTime: null, // ReHome items don't have pickup time
               deliveryFee: 0, // ReHome items have free delivery
               assemblyFee: itemAssistance[item.id]?.needsAssembly ? await getAssemblyCost() : 0,
-              carryingFee: itemAssistance[item.id]?.needsCarrying ? getCarryingCost() : 0,
+              carryingFee: itemAssistance[item.id]?.needsCarrying ? await getCarryingCost() : 0,
               extraHelperFee: 0,
               studentDiscount: 0,
               subtotal: item.price * item.quantity,
               taxAmount: 0,
-              finalTotal: item.price * item.quantity + (itemAssistance[item.id]?.needsAssembly ? await getAssemblyCost() : 0) + (itemAssistance[item.id]?.needsCarrying ? getCarryingCost() : 0),
+              finalTotal: item.price * item.quantity + (itemAssistance[item.id]?.needsAssembly ? await getAssemblyCost() : 0) + (itemAssistance[item.id]?.needsCarrying ? await getCarryingCost() : 0),
               currency: 'EUR',
               notes: `ReHome Order: ${orderNumber}`
             };
