@@ -137,7 +137,7 @@ const BookingTipsModal: React.FC<BookingTipsModalProps> = ({
                                     </h3>
                                     <p className="text-sm sm:text-base text-purple-700">
                                         Are you a student? Don't forget to check the student discount option and upload 
-                                        your student ID for an additional 10% off your total price.
+                                        your student ID for an additional 8.85% off your total price.
                                     </p>
                                 </div>
                             </div>

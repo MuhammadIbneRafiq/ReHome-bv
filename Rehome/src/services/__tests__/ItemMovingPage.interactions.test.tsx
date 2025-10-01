@@ -202,7 +202,7 @@ describe('ItemMovingPage – interactions and edge cases', () => {
     });
 
     // Find and click the student checkbox using the correct label text
-    const studentCheckbox = await screen.findByLabelText(/I am a student \(10% discount with valid ID\)/i);
+    const studentCheckbox = await screen.findByLabelText(/I am a student \(8.85% discount with valid ID\)/i);
     await userEvent.click(studentCheckbox);
     
     await waitFor(() => expect(spy).toHaveBeenCalled());

@@ -215,7 +215,7 @@ class PricingService {
       let chargeType = '';
       let isCheapRate = false;
  
-      // Calculate early booking discount (10%) - only for fixed dates and flexible ranges
+      // Calculate early booking discount (8.85%) - only for fixed dates and flexible ranges
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
