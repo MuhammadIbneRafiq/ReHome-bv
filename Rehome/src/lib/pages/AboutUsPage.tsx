@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FaCheck } from 'react-icons/fa';
 
 export default function AboutUsPage() {
-  const navigate = useNavigate();
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
@@ -106,13 +107,26 @@ export default function AboutUsPage() {
           <p className="text-lg mb-4">Contact us today for a free quote and let us help you with your moving or furniture needs!</p>
           <p className="text-xl font-semibold">Sustainable. Affordable. Convenient.</p>
           <Button
-            onClick={() => navigate('/contact-us')}
+            onClick={() => setShowBookingModal(true)}
             className="mt-6 bg-orange-600 text-white hover:bg-orange-700"
             size="lg"
           >
             Get a Free Quote
           </Button>
         </div>
+        {/* Booking Modal */}
+        {showBookingModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+              <h3 className="text-xl font-bold mb-4 text-gray-900">Choose Service</h3>
+              <div className="flex flex-col gap-4">
+                <Link to="/item-transport" className="rehome-button text-center">Item Transport</Link>
+                <Link to="/house-moving" className="rehome-button text-center">House Moving</Link>
+              </div>
+              <button className="mt-6 text-gray-500 hover:text-orange-600" onClick={() => setShowBookingModal(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
