@@ -12,7 +12,9 @@ import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import BookingTipsModal from '../../components/ui/BookingTipsModal';
 import { GooglePlaceObject } from '../../utils/locationServices';
+import EcoDatePicker from '@/components/ui/EcoDatePicker';
 import { GooglePlacesAutocomplete } from '../../components/ui/GooglePlacesAutocomplete';
+// Calendar component not used here; using native date inputs
 
 declare global {
     interface Window {
@@ -156,7 +158,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [pickupPlace, setPickupPlace] = useState<GooglePlaceObject | null>(null);
     const [dropoffPlace, setDropoffPlace] = useState<GooglePlaceObject | null>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
-    const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome'>('fixed');
+    const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome' | 'sustainable'>('fixed');
     const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({}); // legacy storage
 
     // New: separate carrying directions
@@ -212,7 +214,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     // This ensures pricing calculations only happen when the actual date configuration changes,
     // not when individual state variables are being updated during user interactions
     const dateConfigId = React.useMemo(() => {
-        if (dateOption === 'rehome') {
+        if (dateOption === 'rehome' || dateOption === 'sustainable') {
             return `rehome-${serviceType}`;
         } else if (dateOption === 'flexible') {
             return `flexible-${serviceType}-${selectedDateRange.start}-${selectedDateRange.end}`;
@@ -543,7 +545,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 // For house moving, always use selectedDateRange
                 pickupDate: dateOption === 'fixed' && isItemTransport ? pickupDate : undefined,
                 dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
-                isDateFlexible: dateOption === 'rehome', // Only true for ReHome choose option
+                isDateFlexible: dateOption === 'rehome' || dateOption === 'sustainable', // True for ReHome choose and Sustainable option
                 itemQuantities,
                 // Carrying directions: 
                 // - Downstairs: items going down at pickup location (use floorPickup)
@@ -983,7 +985,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                     elevator: elevatorDropoff
                 },
                 schedule: {
-                    date: dateOption === 'rehome' ? 'Let ReHome Choose' :
+                    date: (dateOption === 'rehome' || dateOption === 'sustainable') ? 'Let ReHome Choose' :
                           isDateFlexible || dateOption === 'flexible' ? 
                           (selectedDateRange.start && selectedDateRange.end ? 
                            `${new Date(selectedDateRange.start).toLocaleDateString()} - ${new Date(selectedDateRange.end).toLocaleDateString()}` : 
@@ -1221,7 +1223,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         {/* Early Booking Discount */}
                     {pricingBreakdown.earlyBookingDiscount > 0 && (
                         <div className="flex justify-between text-green-600">
-                            <span>Early Booking Discount (10%):</span>
+                            <span>Early Booking Discount (8.85%):</span>
                             <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
                         </div>
                     )}
@@ -1397,7 +1399,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         {/* Early Booking Discount */}
                     {pricingBreakdown.earlyBookingDiscount > 0 && (
                         <div className="flex justify-between text-green-600">
-                            <span>Early Booking Discount (10%):</span>
+                            <span>Early Booking Discount (8.85%):</span>
                             <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
                         </div>
                     )}
@@ -1612,7 +1614,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             id="date-option"
                                             value={dateOption}
                                             onChange={e => {
-                                                const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome';
+                                                const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome' | 'sustainable';
                                                 setDateOption(newDateOption);
                                                 
                                                 // Clear all date-related states first
@@ -1622,7 +1624,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                 setIsDateFlexible(false);
                                                 
                                                 // Set appropriate states based on option
-                                                if (newDateOption === 'rehome') {
+                                                if (newDateOption === 'rehome' || newDateOption === 'sustainable') {
                                                     // ReHome choose: isDateFlexible=true, no dates set
                                                     setIsDateFlexible(true);
                                                 } else if (newDateOption === 'flexible') {
@@ -1640,6 +1642,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             <option value="flexible">Flexible date range</option>
                                             <option value="fixed">Fixed date</option>
                                             <option value="rehome">Let ReHome choose</option>
+                                            <option value="sustainable">Sustainable and Budget Option</option>
                                         </select>
                                     </div>
                                     {/* Show date pickers based on option */}
@@ -1647,26 +1650,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                         <>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                                                <input
-                                                    type="date"
+                                                <EcoDatePicker
                                                     value={selectedDateRange.start}
-                                                    onChange={e => {
-                                                        setSelectedDateRange(r => ({ ...r, start: e.target.value }));
-                                                    }}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                    required
+                                                    onChange={(iso) => setSelectedDateRange(r => ({ ...r, start: iso }))}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                                <input
-                                                    type="date"
+                                                <EcoDatePicker
                                                     value={selectedDateRange.end}
-                                                    onChange={e => {
-                                                        setSelectedDateRange(r => ({ ...r, end: e.target.value }));
-                                                    }}
-                                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                                    required
+                                                    onChange={(iso) => setSelectedDateRange(r => ({ ...r, end: iso }))}
                                                 />
                                             </div>
                                         </>
@@ -1678,26 +1671,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 <>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
-                                        <input
-                                            type="date"
+                                        <EcoDatePicker
                                             value={pickupDate}
-                                            onChange={e => {
-                                                setPickupDate(e.target.value);
-                                            }}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                            required
+                                            onChange={(iso) => setPickupDate(iso)}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Date</label>
-                                        <input
-                                            type="date"
+                                        <EcoDatePicker
                                             value={dropoffDate}
-                                            onChange={e => {
-                                                setDropoffDate(e.target.value);
-                                            }}
-                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                            required
+                                            onChange={(iso) => setDropoffDate(iso)}
                                         />
                                     </div>
                                 </>
@@ -1705,20 +1688,15 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 // House moving: Show only one date
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Moving Date</label>
-                                    <input
-                                        type="date"
+                                    <EcoDatePicker
                                         value={selectedDateRange.start}
-                                        onChange={e => {
-                                            setSelectedDateRange({ start: e.target.value, end: '' });
-                                        }}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                        required
+                                        onChange={(iso) => setSelectedDateRange({ start: iso, end: '' })}
                                     />
                                 </div>
                             )}
                         </>
                     )}
-                                    {dateOption === 'rehome' && (
+                                    {(dateOption === 'rehome' || dateOption === 'sustainable') && (
                                         <div className="p-3 bg-blue-50 rounded text-blue-700 text-sm">
                                             ReHome will suggest the most efficient and cost-effective moving date for you.
                                         </div>
