@@ -2399,11 +2399,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
                                         <h4 className="text-md font-medium text-gray-800 mb-3">Additional Services</h4>
                                         <ul className="space-y-2 text-sm">
-                                            {pricingBreakdown?.assemblyCost && pricingBreakdown.assemblyCost > 0 && (
+                                            {(pricingBreakdown?.assemblyCost ?? 0) > 0 && (
                                                 <>
                                                 <li className="flex justify-between">
                                                     <span>Assembly</span>
-                                                    <span className="font-medium">€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
+                                                    <span className="font-medium">€{pricingBreakdown?.assemblyCost?.toFixed(2)}</span>
                                                     </li>
                                                     {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).length > 0 && (
                                                         <li className="flex justify-between pl-4 text-sm text-gray-600">
@@ -2433,10 +2433,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                     <span className="font-medium">€{pricingBreakdown.carryingCost.toFixed(2)}</span>
                                                 </li>
                                             )}
-                                            {pricingBreakdown?.studentDiscount && pricingBreakdown.studentDiscount > 0 && (
+                                            {typeof pricingBreakdown?.studentDiscount === "number" && pricingBreakdown.studentDiscount > 0 && (
                                                 <li className="flex justify-between text-green-600">
                                                     <span>Student Discount (8.85%)</span>
-                                                    <span className="font-medium">-€{pricingBreakdown.studentDiscount.toFixed(2)}</span>
+                                                    <span className="font-medium">
+                                                        -€{pricingBreakdown.studentDiscount.toFixed(2)}
+                                                    </span>
                                                 </li>
                                             )}
                                         </ul>
