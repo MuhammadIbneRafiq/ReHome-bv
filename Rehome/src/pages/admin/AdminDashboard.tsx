@@ -331,17 +331,18 @@ const AdminDashboard = () => {
       // Fetch from Supabase tables
       const { data: itemMovingData } = await supabase
         .from('item_moving')
-        .select('*')
+        .select('*, order_number')
         .order('created_at', { ascending: false });
 
       const { data: houseMovingData } = await supabase
         .from('house_moving')
-        .select('*')
+        .select('*, order_number')
         .order('created_at', { ascending: false });
 
       // Normalize and combine data
       const itemMoving = (itemMovingData || []).map((req: any) => ({
         id: req.id?.toString() || '',
+        order_number: req.order_number || '',
         created_at: req.created_at || '',
         customer_email: req.email || '',
         customer_name: (req.firstname || '') + (req.lastname ? ' ' + req.lastname : ''),
@@ -392,6 +393,7 @@ const AdminDashboard = () => {
 
       const houseMoving = (houseMovingData || []).map((req: any) => ({
         id: req.id?.toString() || '',
+        order_number: req.order_number || '',
         created_at: req.created_at || '',
         customer_email: req.email || req.customer_email || '',
         customer_name: (req.firstname || '') + (req.lastname ? ' ' + req.lastname : ''),
@@ -1751,6 +1753,7 @@ const AdminDashboard = () => {
                   <table className="w-full border-collapse border border-gray-300">
                     <thead>
                       <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ORDER #</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">TYPE</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">CUSTOMER</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PHONE</th>
@@ -1767,6 +1770,9 @@ const AdminDashboard = () => {
                     <tbody>
                       {filteredTransportRequests.map((request, index) => (
                         <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-3 py-2 text-xs font-medium">
+                            #{request.order_number}
+                          </td>
                           <td className="border border-gray-300 px-3 py-2">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
                               request.type === 'item-moving' 

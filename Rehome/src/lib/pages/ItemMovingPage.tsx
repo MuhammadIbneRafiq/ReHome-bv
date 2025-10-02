@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus } from "react-icons/fa";
+import { supabase } from '../../hooks/supaBase';
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -150,6 +151,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
+    const [orderNumber, setOrderNumber] = useState<string>('');
     const [isGoogleReady, setIsGoogleReady] = useState(false);
     const [agreedToTerms, setAgreedToTerms] = useState(false);
     const [showConfirmationModal, setShowConfirmationModal] = useState(false);
@@ -929,6 +931,18 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             return;
         }
 
+        // Generate order number using Supabase RPC
+        const { data: generatedOrderNumber, error: orderNumberError } = await supabase
+            .rpc('generate_moving_order_number');
+
+        if (orderNumberError) {
+            console.error('Error generating order number:', orderNumberError);
+            toast.error("Error generating order number. Please try again.");
+            return;
+        }
+
+        setOrderNumber(generatedOrderNumber);
+
         // Prepare furniture items array for backend
         const itemValueMultiplier = isItemTransport ? 1 : 2; // €1 per point for items, €2 for house
         const furnitureItemsArray = Object.entries(itemQuantities)
@@ -957,6 +971,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
         // Prepare payload in the format expected by backend
         const payload = {
+            order_number: orderNumber,
             pickupType: pickupType || 'house',
             furnitureItems: furnitureItemsArray,
             customItem,
@@ -997,6 +1012,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             secondlocation_coords: dropoffPlace?.coordinates,
             // Complete order summary for email
             orderSummary: {
+                order_number: orderNumber,
                 pickupDetails: {
                     address: firstLocation,
                     floor: floorPickup || '0',
@@ -2618,7 +2634,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             <OrderConfirmationModal
                 isOpen={showConfirmationModal}
                 onClose={() => setShowConfirmationModal(false)}
-                orderNumber=""
+                orderNumber={orderNumber}
                 isReHomeOrder={false}
                 isMovingRequest={true}
             />
@@ -2626,7 +2642,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             <OrderConfirmationModal
                 isOpen={showOrderConfirmation}
                 onClose={() => setShowOrderConfirmation(false)}
-                orderNumber=""
+                orderNumber={orderNumber}
                 isReHomeOrder={false}
                 isMovingRequest={true}
             />

@@ -1,6 +1,7 @@
 // Transportation request interface
 export interface TransportRequest {
     id: string;
+    order_number: string;
     created_at: string;
     customer_email: string;
     customer_name: string;
