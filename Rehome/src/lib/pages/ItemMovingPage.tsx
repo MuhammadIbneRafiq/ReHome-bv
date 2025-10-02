@@ -244,6 +244,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         return false;
     };
 
+    // Function to check if any items are selected
+    const checkItemsSelected = () => {
+        const totalItems = calculateTotalItems();
+        if (totalItems === 0) {
+            toast.error("Please select at least one item to continue.");
+            return false;
+        }
+        return true;
+    };
+
     // Function to redirect to house moving with current data
     const redirectToHouseMoving = () => {
         const transferData = {
@@ -656,6 +666,13 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             return;
         }
 
+        // Check if items are selected when moving to step 4 (add-ons) or later
+        if (step >= 3) {
+            if (!checkItemsSelected()) {
+                return;
+            }
+        }
+
         // Check point limit when moving to step 3 (items) or later - only for item transport
         if (isItemTransport && step >= 2) {
             if (checkItemLimitAndRedirect()) {
@@ -841,6 +858,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     }, [itemQuantities, carryingService]);
 
     const isFormValid = () => {        
+        // Items validation - check if any items are selected
+        if (!checkItemsSelected()) {
+            console.log('❌ Items validation failed - no items selected');
+            return false;
+        }
+
         // Date validation
         if (isItemTransport) {
             if (dateOption === 'fixed' && (!pickupDate || !dropoffDate)) {
@@ -1163,7 +1186,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                             </div>
                         )}
                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
-                            <div className="text-xs text-gray-500 ml-4">No items selected</div>
+                            <div className="text-xs text-gray-500 ml-4">No items selected - please select at least one item to continue</div>
                         )}
                     </div>
                     {pricingBreakdown.distanceCost > 0 && (
@@ -1339,7 +1362,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                             </div>
                         )}
                         {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
-                            <div className="text-xs text-gray-500 ml-4">No items selected</div>
+                            <div className="text-xs text-gray-500 ml-4">No items selected - please select at least one item to continue</div>
                         )}
                     </div>
                     {pricingBreakdown.distanceCost > 0 && (
@@ -1448,7 +1471,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 {[1, 2, 3, 4, 5, 6].map((s) => (
                                     <div 
                                         key={s}
-                                        className={`relative flex flex-col items-center ${s < step ? 'text-green-600' : s === step ? 'text-orange-600' : 'text-gray-400'}`}
+                                        onClick={() => setStep(s)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setStep(s); }}
+                                        role="button"
+                                        tabIndex={0}
+                                        className={`relative flex flex-col items-center cursor-pointer ${s < step ? 'text-green-600' : s === step ? 'text-orange-600' : 'text-gray-400'}`}
+                                        title={`Go to step ${s}`}
                                     >
                                         <div className={`rounded-full transition duration-500 ease-in-out h-10 w-10 flex items-center justify-center mb-1 ${s < step ? 'bg-green-600' : s === step ? 'bg-orange-600' : 'bg-gray-200'} ${s <= step ? 'text-white' : 'text-gray-600'}`}>
                                             {s < step ? <FaCheckCircle className="h-6 w-6" /> : s}
@@ -2023,51 +2051,57 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             </div>
                                             {disassembly && (
                                                 <div className="ml-6 space-y-3">
-                                                    <p className="text-sm text-gray-600">
-                                                        Select which items need disassembly:
-                                                    </p>
-                                                    {/* Select All checkbox */}
-                                                    <div className="flex items-center mb-2">
-                                                        <input
-                                                            id="select-all-disassembly"
-                                                            type="checkbox"
-                                                            checked={selectAllDisassembly}
-                                                            onChange={(e) => handleSelectAllDisassembly(e.target.checked)}
-                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                        />
-                                                        <label htmlFor="select-all-disassembly" className="ml-2 block text-sm font-medium text-gray-700">
-                                                            Select All
-                                                        </label>
-                                                    </div>
-                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).map((itemId: string, index: number) => {
-                                                        const quantity: number = itemQuantities[itemId];
-                                                        const itemData = furnitureItems.find(item => item.id === itemId);
-                                                        const itemName = itemData ? itemData.name : itemId;
-                                                        return (
-                                                            <div key={index} className="flex items-center justify-between">
-                                                                <div className="flex items-center">
-                                                                    <input
-                                                                        id={`disassembly-${itemId}`}
-                                                                        type="checkbox"
-                                                                        checked={disassemblyItems[itemId] || false}
-                                                                        onChange={(e) => setDisassemblyItems({
-                                                                            ...disassemblyItems,
-                                                                            [itemId]: e.target.checked
-                                                                        })}
-                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                    />
-                                                                    <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
-                                                                        {itemName} ({quantity}x)
-                                                                    </label>
-                                                                </div>
+                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).length === 0 ? (
+                                                        <div className="p-2 bg-gray-50 text-gray-600 text-sm rounded">
+                                                            None of the selected items are eligible for disassembly service.
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-sm text-gray-600">
+                                                                Select which items need disassembly:
+                                                            </p>
+                                                            {/* Select All checkbox */}
+                                                            <div className="flex items-center mb-2">
+                                                                <input
+                                                                    id="select-all-disassembly"
+                                                                    type="checkbox"
+                                                                    checked={selectAllDisassembly}
+                                                                    onChange={(e) => handleSelectAllDisassembly(e.target.checked)}
+                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor="select-all-disassembly" className="ml-2 block text-sm font-medium text-gray-700">
+                                                                    Select All
+                                                                </label>
                                                             </div>
-                                                        );
-                                                    })}
+                                                            {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).map((itemId: string, index: number) => {
+                                                                const quantity: number = itemQuantities[itemId];
+                                                                const itemData = furnitureItems.find(item => item.id === itemId);
+                                                                const itemName = itemData ? itemData.name : itemId;
+                                                                return (
+                                                                    <div key={index} className="flex items-center justify-between">
+                                                                        <div className="flex items-center">
+                                                                            <input
+                                                                                id={`disassembly-${itemId}`}
+                                                                                type="checkbox"
+                                                                                checked={disassemblyItems[itemId] || false}
+                                                                                onChange={(e) => setDisassemblyItems({
+                                                                                    ...disassemblyItems,
+                                                                                    [itemId]: e.target.checked
+                                                                                })}
+                                                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                            />
+                                                                            <label htmlFor={`disassembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                                {itemName} ({quantity}x)
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
-
-                                        {/* removed divider between disassembly and assembly */}
 
                                         {/* Assembly */}
                                         <div>
@@ -2100,46 +2134,54 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             </div>
                                             {assembly && (
                                                 <div className="ml-6 space-y-3">
-                                                    <p className="text-sm text-gray-600">
-                                                        Select which items need assembly:
-                                                    </p>
-                                                    {/* Select All checkbox */}
-                                                    <div className="flex items-center mb-2">
-                                                        <input
-                                                            id="select-all-assembly"
-                                                            type="checkbox"
-                                                            checked={selectAllAssembly}
-                                                            onChange={(e) => handleSelectAllAssembly(e.target.checked)}
-                                                            className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                        />
-                                                        <label htmlFor="select-all-assembly" className="ml-2 block text-sm font-medium text-gray-700">
-                                                            Select All
-                                                        </label>
-                                                    </div>
-                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).map((itemId: string, index: number) => {
-                                                        const quantity: number = itemQuantities[itemId];
-                                                        const itemData = furnitureItems.find(item => item.id === itemId);
-                                                        const itemName = itemData ? itemData.name : itemId;
-                                                        return (
-                                                            <div key={index} className="flex items-center justify-between">
-                                                                <div className="flex items-center">
-                                                                    <input
-                                                                        id={`assembly-${itemId}`}
-                                                                        type="checkbox"
-                                                                        checked={assemblyItems[itemId] || false}
-                                                                        onChange={(e) => setAssemblyItems({
-                                                                            ...assemblyItems,
-                                                                            [itemId]: e.target.checked
-                                                                        })}
-                                                                        className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                                                                    />
-                                                                    <label htmlFor={`assembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
-                                                                        {itemName} ({quantity}x)
-                                                                    </label>
-                                                                </div>
+                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).length === 0 ? (
+                                                        <div className="p-2 bg-gray-50 text-gray-600 text-sm rounded">
+                                                            None of the selected items are eligible for assembly service.
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <p className="text-sm text-gray-600">
+                                                                Select which items need assembly:
+                                                            </p>
+                                                            {/* Select All checkbox */}
+                                                            <div className="flex items-center mb-2">
+                                                                <input
+                                                                    id="select-all-assembly"
+                                                                    type="checkbox"
+                                                                    checked={selectAllAssembly}
+                                                                    onChange={(e) => handleSelectAllAssembly(e.target.checked)}
+                                                                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                />
+                                                                <label htmlFor="select-all-assembly" className="ml-2 block text-sm font-medium text-gray-700">
+                                                                    Select All
+                                                                </label>
                                                             </div>
-                                                        );
-                                                    })}
+                                                            {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).map((itemId: string, index: number) => {
+                                                                const quantity: number = itemQuantities[itemId];
+                                                                const itemData = furnitureItems.find(item => item.id === itemId);
+                                                                const itemName = itemData ? itemData.name : itemId;
+                                                                return (
+                                                                    <div key={index} className="flex items-center justify-between">
+                                                                        <div className="flex items-center">
+                                                                            <input
+                                                                                id={`assembly-${itemId}`}
+                                                                                type="checkbox"
+                                                                                checked={assemblyItems[itemId] || false}
+                                                                                onChange={(e) => setAssemblyItems({
+                                                                                    ...assemblyItems,
+                                                                                    [itemId]: e.target.checked
+                                                                                })}
+                                                                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                                                                            />
+                                                                            <label htmlFor={`assembly-${itemId}`} className="ml-2 block text-sm text-gray-700">
+                                                                                {itemName} ({quantity}x)
+                                                                            </label>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -2332,7 +2374,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     <h3 className="text-lg font-medium text-gray-900">Order Summary</h3>
                                     
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
-                                        <h4 className="text-md font-medium text-gray-800 mb-3">Pickup & Delivery Details</h4>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="text-md font-medium text-gray-800">Pickup & Delivery Details</h4>
+                                            <button type="button" onClick={() => setStep(1)} className="text-orange-600 text-sm hover:underline">Edit</button>
+                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                             <div>
                                                 <p className="text-gray-500">Pickup Address:</p>
@@ -2348,7 +2393,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </div>
                                     
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
-                                        <h4 className="text-md font-medium text-gray-800 mb-3">Schedule</h4>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="text-md font-medium text-gray-800">Schedule</h4>
+                                            <button type="button" onClick={() => setStep(2)} className="text-orange-600 text-sm hover:underline">Edit</button>
+                                        </div>
                                         <div className="text-sm">
                                                                         {dateOption === 'rehome' || isDateFlexible ? (
                                 <p><span className="text-gray-500">Date:</span> <span className="font-medium">
@@ -2376,7 +2424,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </div>
                                     
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
-                                        <h4 className="text-md font-medium text-gray-800 mb-3">Items</h4>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="text-md font-medium text-gray-800">Items</h4>
+                                            <button type="button" onClick={() => setStep(3)} className="text-orange-600 text-sm hover:underline">Edit</button>
+                                        </div>
                                         <ul className="space-y-2 text-sm">
                                             {Object.keys(itemQuantities).map((itemId, index) => {
                                                 const quantity = itemQuantities[itemId];
@@ -2397,7 +2448,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </div>
                                     
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
-                                        <h4 className="text-md font-medium text-gray-800 mb-3">Additional Services</h4>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="text-md font-medium text-gray-800">Additional Services</h4>
+                                            <button type="button" onClick={() => setStep(4)} className="text-orange-600 text-sm hover:underline">Edit</button>
+                                        </div>
                                         <ul className="space-y-2 text-sm">
                                             {(pricingBreakdown?.assemblyCost ?? 0) > 0 && (
                                                 <>
@@ -2445,7 +2499,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </div>
                                     
                                     <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
-                                        <h4 className="text-md font-medium text-gray-800 mb-3">Contact Information</h4>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="text-md font-medium text-gray-800">Contact Information</h4>
+                                            <button type="button" onClick={() => setStep(5)} className="text-orange-600 text-sm hover:underline">Edit</button>
+                                        </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                             <div>
                                                 <p className="text-gray-500">Name:</p>
