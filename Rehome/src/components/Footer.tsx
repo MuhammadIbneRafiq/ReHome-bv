@@ -17,7 +17,7 @@ const socialMedia = [
 
 const Footer = () => {
   const { t } = useTranslation();
-  const phoneNumber = "31645839273"; // Without + for WhatsApp link
+  const phoneNumber = "31612265704"; // Without + for WhatsApp link
 
   return (
     <footer className="w-full pt-20 pb-10 bg-gray-100">

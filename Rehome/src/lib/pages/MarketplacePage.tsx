@@ -646,7 +646,7 @@ const MarketplacePage = () => {
                                                             translatedItem.isrehome ? (
                                                                 <>
                                                                 <a
-                                                                    href={`https://wa.me/31645839273`}
+                                                                    href={`https://wa.me/31612265704`}
                                                                     target="_blank"
                                                                     rel="noopener noreferrer"
                                                                     className="flex items-center justify-center p-1.5 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full transition-colors"

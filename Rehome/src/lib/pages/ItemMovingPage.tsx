@@ -13,7 +13,7 @@ import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import BookingTipsModal from '../../components/ui/BookingTipsModal';
 import { GooglePlaceObject } from '../../utils/locationServices';
-import EcoDatePicker from '@/components/ui/EcoDatePicker';
+import EnhancedDatePicker from '@/components/ui/EnhancedDatePicker';
 import { GooglePlacesAutocomplete } from '../../components/ui/GooglePlacesAutocomplete';
 // Calendar component not used here; using native date inputs
 
@@ -1694,16 +1694,22 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                         <>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                                                <EcoDatePicker
+                                                <EnhancedDatePicker
                                                     value={selectedDateRange.start}
                                                     onChange={(iso) => setSelectedDateRange(r => ({ ...r, start: iso }))}
+                                                    pickupPlace={pickupPlace}
+                                                    dropoffPlace={dropoffPlace}
+                                                    serviceType={serviceType}
                                                 />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                                <EcoDatePicker
+                                                <EnhancedDatePicker
                                                     value={selectedDateRange.end}
                                                     onChange={(iso) => setSelectedDateRange(r => ({ ...r, end: iso }))}
+                                                    pickupPlace={pickupPlace}
+                                                    dropoffPlace={dropoffPlace}
+                                                    serviceType={serviceType}
                                                 />
                                             </div>
                                         </>
@@ -1715,16 +1721,22 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 <>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
-                                        <EcoDatePicker
+                                        <EnhancedDatePicker
                                             value={pickupDate}
                                             onChange={(iso) => setPickupDate(iso)}
+                                            pickupPlace={pickupPlace}
+                                            dropoffPlace={dropoffPlace}
+                                            serviceType={serviceType}
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Date</label>
-                                        <EcoDatePicker
+                                        <EnhancedDatePicker
                                             value={dropoffDate}
                                             onChange={(iso) => setDropoffDate(iso)}
+                                            pickupPlace={pickupPlace}
+                                            dropoffPlace={dropoffPlace}
+                                            serviceType={serviceType}
                                         />
                                     </div>
                                 </>
@@ -1732,9 +1744,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 // House moving: Show only one date
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Moving Date</label>
-                                    <EcoDatePicker
+                                    <EnhancedDatePicker
                                         value={selectedDateRange.start}
                                         onChange={(iso) => setSelectedDateRange({ start: iso, end: '' })}
+                                        pickupPlace={pickupPlace}
+                                        dropoffPlace={dropoffPlace}
+                                        serviceType={serviceType}
                                     />
                                 </div>
                             )}

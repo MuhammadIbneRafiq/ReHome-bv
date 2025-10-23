@@ -1,3 +1,6 @@
 [submodule "backend"]
 	path = backend
 	url = https://github.com/MuhammadIbneRafiq/rehome-backend.git
+[submodule "rehome-backend"]
+	path = rehome-backend
+	url = https://github.com/MuhammadIbneRafiq/rehome-backend
