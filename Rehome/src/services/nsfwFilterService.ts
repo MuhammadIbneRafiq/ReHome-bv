@@ -225,7 +225,9 @@ class NSFWFilterService {
       // Cache result (with size limit)
       if (this.imageCache.size >= this.CACHE_SIZE) {
         const firstKey = this.imageCache.keys().next().value;
-        this.imageCache.delete(firstKey);
+        if (firstKey !== undefined) {
+          this.imageCache.delete(firstKey);
+        }
       }
       this.imageCache.set(hash, result);
       
