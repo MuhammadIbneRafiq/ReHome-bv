@@ -1,4 +1,4 @@
-import { isDateBlocked, isTimeSlotBlocked } from '../services/blockedDatesService';
+import { isDateBlocked } from '../services/blockedDatesService';
 import { format } from 'date-fns';
 
 /**
@@ -55,51 +55,6 @@ export async function validateBookingDate(
     return { isValid: true };
   } catch (error) {
     console.error('Error validating booking date:', error);
-    // If validation fails, allow booking but log error
-    return { isValid: true };
-  }
-}
-
-/**
- * Check if a time slot is available for booking
- * @param date - Date to check
- * @param startTime - Start time (HH:MM format)
- * @param endTime - End time (HH:MM format)
- * @param cityName - Optional city name to check against
- * @returns Object with isValid flag and error message if invalid
- */
-export async function validateBookingTimeSlot(
-  date: Date | string,
-  startTime: string,
-  endTime: string,
-  cityName?: string
-): Promise<{ isValid: boolean; message?: string }> {
-  try {
-    const dateStr = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd');
-
-    // First check if the entire date is blocked
-    const dateBlocked = await isDateBlocked(dateStr, cityName);
-    if (dateBlocked) {
-      const cityMsg = cityName ? ` for ${cityName}` : '';
-      return {
-        isValid: false,
-        message: `The selected date (${format(new Date(dateStr), 'MMMM d, yyyy')}) is not available for booking${cityMsg}.`,
-      };
-    }
-
-    // Check if the specific time slot is blocked
-    const timeSlotBlocked = await isTimeSlotBlocked(dateStr, startTime, endTime, cityName);
-    if (timeSlotBlocked) {
-      const cityMsg = cityName ? ` for ${cityName}` : '';
-      return {
-        isValid: false,
-        message: `The selected time slot (${startTime} - ${endTime}) is not available${cityMsg}. Please select a different time.`,
-      };
-    }
-
-    return { isValid: true };
-  } catch (error) {
-    console.error('Error validating booking time slot:', error);
     // If validation fails, allow booking but log error
     return { isValid: true };
   }

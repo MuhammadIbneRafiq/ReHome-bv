@@ -11,18 +11,6 @@ export interface BlockedDate {
   created_by?: string;
 }
 
-export interface BlockedTimeSlot {
-  id: string;
-  date: string;
-  start_time: string;
-  end_time: string;
-  cities: string[];
-  reason?: string;
-  created_at?: string;
-  updated_at?: string;
-  created_by?: string;
-}
-
 /**
  * Fetch all blocked dates
  */
@@ -37,25 +25,6 @@ export async function fetchBlockedDates(): Promise<BlockedDate[]> {
     return data || [];
   } catch (error) {
     console.error('Error fetching blocked dates:', error);
-    throw error;
-  }
-}
-
-/**
- * Fetch all blocked time slots
- */
-export async function fetchBlockedTimeSlots(): Promise<BlockedTimeSlot[]> {
-  try {
-    const { data, error } = await supabase
-      .from('blocked_time_slots')
-      .select('*')
-      .order('date', { ascending: true })
-      .order('start_time', { ascending: true });
-
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching blocked time slots:', error);
     throw error;
   }
 }
@@ -84,27 +53,6 @@ export async function fetchBlockedDatesForRange(
 }
 
 /**
- * Fetch blocked time slots for a specific date
- */
-export async function fetchBlockedTimeSlotsForDate(
-  date: string
-): Promise<BlockedTimeSlot[]> {
-  try {
-    const { data, error } = await supabase
-      .from('blocked_time_slots')
-      .select('*')
-      .eq('date', date)
-      .order('start_time', { ascending: true });
-
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error('Error fetching blocked time slots for date:', error);
-    throw error;
-  }
-}
-
-/**
  * Create a new blocked date
  */
 export async function createBlockedDate(
@@ -121,27 +69,6 @@ export async function createBlockedDate(
     return data;
   } catch (error) {
     console.error('Error creating blocked date:', error);
-    throw error;
-  }
-}
-
-/**
- * Create a new blocked time slot
- */
-export async function createBlockedTimeSlot(
-  blockedTimeSlot: Omit<BlockedTimeSlot, 'id' | 'created_at' | 'updated_at'>
-): Promise<BlockedTimeSlot> {
-  try {
-    const { data, error } = await supabase
-      .from('blocked_time_slots')
-      .insert([blockedTimeSlot])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error creating blocked time slot:', error);
     throw error;
   }
 }
@@ -170,29 +97,6 @@ export async function updateBlockedDate(
 }
 
 /**
- * Update a blocked time slot
- */
-export async function updateBlockedTimeSlot(
-  id: string,
-  updates: Partial<Omit<BlockedTimeSlot, 'id' | 'created_at' | 'updated_at'>>
-): Promise<BlockedTimeSlot> {
-  try {
-    const { data, error } = await supabase
-      .from('blocked_time_slots')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating blocked time slot:', error);
-    throw error;
-  }
-}
-
-/**
  * Delete a blocked date
  */
 export async function deleteBlockedDate(id: string): Promise<void> {
@@ -205,23 +109,6 @@ export async function deleteBlockedDate(id: string): Promise<void> {
     if (error) throw error;
   } catch (error) {
     console.error('Error deleting blocked date:', error);
-    throw error;
-  }
-}
-
-/**
- * Delete a blocked time slot
- */
-export async function deleteBlockedTimeSlot(id: string): Promise<void> {
-  try {
-    const { error } = await supabase
-      .from('blocked_time_slots')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-  } catch (error) {
-    console.error('Error deleting blocked time slot:', error);
     throw error;
   }
 }
@@ -284,110 +171,16 @@ async function isDateBlockedFallback(
 }
 
 /**
- * Check if a time slot is blocked for a specific city
+ * Get all blocked dates for a date range (for calendar display)
  */
-export async function isTimeSlotBlocked(
-  date: string,
-  startTime: string,
-  endTime: string,
-  cityName?: string
-): Promise<boolean> {
-  try {
-    const { data, error } = await supabase.rpc('is_time_slot_blocked', {
-      check_date: date,
-      check_start_time: startTime,
-      check_end_time: endTime,
-      city_name: cityName || null,
-    });
-
-    if (error) throw error;
-    return data || false;
-  } catch (error) {
-    console.error('Error checking if time slot is blocked:', error);
-    // Fallback to manual check if RPC fails
-    return await isTimeSlotBlockedFallback(date, startTime, endTime, cityName);
-  }
-}
-
-/**
- * Fallback method to check if a time slot is blocked
- */
-async function isTimeSlotBlockedFallback(
-  date: string,
-  startTime: string,
-  endTime: string,
-  cityName?: string
-): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('blocked_time_slots')
-      .select('*')
-      .eq('date', date);
-
-    if (error) throw error;
-
-    if (!data || data.length === 0) return false;
-
-    // Convert time strings to comparable format (HH:MM)
-    const checkStart = startTime.substring(0, 5);
-    const checkEnd = endTime.substring(0, 5);
-
-    // Check if any time slot overlaps
-    for (const blockedSlot of data) {
-      // Check if cities apply
-      const citiesMatch =
-        blockedSlot.cities.length === 0 ||
-        !cityName ||
-        blockedSlot.cities.includes(cityName);
-
-      if (!citiesMatch) continue;
-
-      const slotStart = blockedSlot.start_time.substring(0, 5);
-      const slotEnd = blockedSlot.end_time.substring(0, 5);
-
-      // Check for overlap
-      const overlaps =
-        (slotStart <= checkStart && slotEnd > checkStart) ||
-        (slotStart < checkEnd && slotEnd >= checkEnd) ||
-        (slotStart >= checkStart && slotEnd <= checkEnd);
-
-      if (overlaps) return true;
-    }
-
-    return false;
-  } catch (error) {
-    console.error('Error in fallback time slot blocked check:', error);
-    return false;
-  }
-}
-
-/**
- * Get all blocked dates and time slots for a date range (for calendar display)
- */
-export async function getBlockedDatesAndTimesForRange(
+export async function getBlockedDatesForCalendar(
   startDate: string,
   endDate: string
-): Promise<{ dates: BlockedDate[]; timeSlots: BlockedTimeSlot[] }> {
+): Promise<BlockedDate[]> {
   try {
-    const [dates, timeSlots] = await Promise.all([
-      fetchBlockedDatesForRange(startDate, endDate),
-      (async () => {
-        const { data, error } = await supabase
-          .from('blocked_time_slots')
-          .select('*')
-          .gte('date', startDate)
-          .lte('date', endDate)
-          .order('date', { ascending: true })
-          .order('start_time', { ascending: true });
-
-        if (error) throw error;
-        return data || [];
-      })(),
-    ]);
-
-    return { dates, timeSlots };
+    return await fetchBlockedDatesForRange(startDate, endDate);
   } catch (error) {
-    console.error('Error fetching blocked dates and times for range:', error);
+    console.error('Error fetching blocked dates for calendar:', error);
     throw error;
   }
 }

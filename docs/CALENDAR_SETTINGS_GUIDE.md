@@ -5,7 +5,6 @@
 This feature allows administrators to manage calendar settings, including:
 - **City Days Configuration**: Set specific days of the week that have higher pricing for each city
 - **Blocked Dates**: Block entire days from booking
-- **Blocked Time Slots**: Block specific time periods on specific days
 
 All booking pages (House Moving, Item Moving, Item Donation, and Special Requests) automatically validate against these settings to prevent bookings during blocked periods.
 
@@ -21,8 +20,7 @@ rehome-backend/db/blocked_dates_schema.sql
 
 This will create:
 - `blocked_dates` table - for full day blocks
-- `blocked_time_slots` table - for specific time blocks
-- Helper functions for checking blocked dates and times
+- Helper functions for checking blocked dates
 - Proper indexes and RLS policies
 
 ### 2. Tables Created
@@ -35,14 +33,6 @@ This will create:
 - `is_full_day` (BOOLEAN) - Whether the entire day is blocked
 - `created_at`, `updated_at`, `created_by`
 
-#### `blocked_time_slots`
-- `id` (UUID, primary key)
-- `date` (DATE) - The date of the time slot
-- `start_time` (TIME) - Start time of the block
-- `end_time` (TIME) - End time of the block
-- `cities` (TEXT[]) - Array of cities affected (empty = all cities)
-- `reason` (TEXT) - Optional reason for blocking
-- `created_at`, `updated_at`, `created_by`
 
 ## Admin Dashboard Usage
 
@@ -86,23 +76,6 @@ Block specific dates when no bookings should be accepted.
 - Block December 25th for all cities (Holiday)
 - Block a specific date for Rotterdam only (Local event)
 
-### Blocking Time Slots
-
-Block specific hours on specific days (e.g., morning only, afternoon only).
-
-1. Go to **Schedule Management > Calendar Settings**
-2. In the **Blocked Time Slots** section:
-   - Click **"Block Time"**
-   - Select the date
-   - Set start and end times (e.g., 09:00 - 12:00)
-   - Optionally add a reason (e.g., "Maintenance", "Crew unavailable")
-   - Choose which cities are affected (leave empty to block all cities)
-   - Click **"Save"**
-3. To edit or delete: Use the edit/trash icons next to each blocked time slot
-
-**Examples**:
-- Block 09:00-12:00 on a specific date for maintenance
-- Block afternoons (13:00-18:00) for Amsterdam only
 
 ## How Validation Works
 
@@ -147,32 +120,20 @@ If a user selects a blocked date:
 // Fetch all blocked dates
 fetchBlockedDates(): Promise<BlockedDate[]>
 
-// Fetch all blocked time slots
-fetchBlockedTimeSlots(): Promise<BlockedTimeSlot[]>
-
 // Create a new blocked date
 createBlockedDate(blockedDate: Omit<BlockedDate, 'id' | 'created_at' | 'updated_at'>): Promise<BlockedDate>
-
-// Create a new blocked time slot
-createBlockedTimeSlot(blockedTimeSlot: Omit<BlockedTimeSlot, 'id' | 'created_at' | 'updated_at'>): Promise<BlockedTimeSlot>
 
 // Update a blocked date
 updateBlockedDate(id: string, updates: Partial<BlockedDate>): Promise<BlockedDate>
 
-// Update a blocked time slot
-updateBlockedTimeSlot(id: string, updates: Partial<BlockedTimeSlot>): Promise<BlockedTimeSlot>
-
 // Delete a blocked date
 deleteBlockedDate(id: string): Promise<void>
-
-// Delete a blocked time slot
-deleteBlockedTimeSlot(id: string): Promise<void>
 
 // Check if a date is blocked (uses Supabase RPC function)
 isDateBlocked(date: string, cityName?: string): Promise<boolean>
 
-// Check if a time slot is blocked (uses Supabase RPC function)
-isTimeSlotBlocked(date: string, startTime: string, endTime: string, cityName?: string): Promise<boolean>
+// Get blocked dates for calendar display
+getBlockedDatesForCalendar(startDate: string, endDate: string): Promise<BlockedDate[]>
 ```
 
 ### Validation Utilities (`dateValidation.ts`)
@@ -199,14 +160,8 @@ The schema includes SQL functions that can be called from anywhere:
 -- Check if a date is blocked
 SELECT is_date_blocked('2025-01-15', 'Amsterdam');
 
--- Check if a time slot is blocked
-SELECT is_time_slot_blocked('2025-01-15', '09:00', '12:00', 'Amsterdam');
-
 -- Get all blocked dates in a range
 SELECT * FROM get_blocked_dates('2025-01-01', '2025-01-31', 'Amsterdam');
-
--- Get all blocked time slots for a specific date
-SELECT * FROM get_blocked_time_slots_for_date('2025-01-15', 'Amsterdam');
 ```
 
 ## Edge Cases Handled
@@ -225,23 +180,23 @@ SELECT * FROM get_blocked_time_slots_for_date('2025-01-15', 'Amsterdam');
 
 ## Future Enhancements
 
-1. **Calendar UI Integration**: Show blocked dates visually in date pickers (red overlay, disabled)
-2. **Recurring Blocks**: Add support for recurring blocks (e.g., every Wednesday)
-3. **Capacity Management**: Instead of full blocks, set max bookings per day
-4. **Time Slot Validation in UI**: Add time picker validation before form submission
-5. **Bulk Operations**: Add bulk blocking for date ranges
-6. **Reason Templates**: Provide common reason templates (Holiday, Maintenance, Staff unavailable)
-7. **Import/Export**: Allow importing blocked dates from calendar files (iCal)
-8. **Notifications**: Notify admins when users attempt to book blocked dates
+1. **Recurring Blocks**: Add support for recurring blocks (e.g., every Wednesday)
+2. **Capacity Management**: Instead of full blocks, set max bookings per day
+3. **Bulk Operations**: Add bulk blocking for date ranges
+4. **Reason Templates**: Provide common reason templates (Holiday, Maintenance, Staff unavailable)
+5. **Import/Export**: Allow importing blocked dates from calendar files (iCal)
+6. **Notifications**: Notify admins when users attempt to book blocked dates
+
+**Note**: Blocked dates now display in the EnhancedDatePickerInline with gray strikethrough styling.
 
 ## Troubleshooting
 
 ### Validation Not Working
 
 1. Check that the database schema has been run successfully
-2. Verify RLS policies are in place: `blocked_dates` and `blocked_time_slots` tables should allow public read access
+2. Verify RLS policies are in place: `blocked_dates` table should allow public read access
 3. Check browser console for errors
-4. Verify the Supabase RPC functions exist: `is_date_blocked` and `is_time_slot_blocked`
+4. Verify the Supabase RPC function exists: `is_date_blocked`
 
 ### Blocked Dates Not Appearing in Admin UI
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { findClosestSupportedCity } from '../../utils/locationServices';
 import { getMonthSchedule, DaySchedule } from '../../services/scheduleService';
+import { getBlockedDatesForCalendar, BlockedDate } from '../../services/blockedDatesService';
 import { cityBaseCharges } from '../../lib/constants';
 import { GooglePlaceObject } from '../../utils/locationServices';
 
@@ -26,6 +27,7 @@ interface DayInfo {
     priceType: string;
     isGreen: boolean;
     assignedCities: string[];
+    isBlocked: boolean;
 }
 
 function formatISO(date: Date): string {
@@ -57,6 +59,7 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
     const [isLoading, setIsLoading] = useState(false);
     const [dayInfos, setDayInfos] = useState<Map<string, DayInfo>>(new Map());
     const [scheduleData, setScheduleData] = useState<Map<string, DaySchedule>>(new Map());
+    const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
 
     const daysInMonth = getDaysInMonth(currentYear, currentMonth);
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
@@ -67,21 +70,37 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Load schedule data for the month using optimized RPC
+    // Load schedule data and blocked dates for the month
     useEffect(() => {
-        const loadScheduleData = async () => {
+        const loadData = async () => {
             setIsLoading(true);
             try {
-                const monthSchedule = await getMonthSchedule(currentYear, currentMonth);
+                const startDate = new Date(currentYear, currentMonth, 1);
+                const endDate = new Date(currentYear, currentMonth + 1, 0);
+                const startDateStr = formatISO(startDate);
+                const endDateStr = formatISO(endDate);
+
+                const [monthSchedule, blockedDatesData] = await Promise.all([
+                    getMonthSchedule(currentYear, currentMonth),
+                    getBlockedDatesForCalendar(startDateStr, endDateStr)
+                ]);
+
                 setScheduleData(monthSchedule);
+                
+                // Create a set of blocked date strings for quick lookup
+                const blockedSet = new Set<string>();
+                blockedDatesData.forEach((bd: BlockedDate) => {
+                    blockedSet.add(bd.date);
+                });
+                setBlockedDates(blockedSet);
             } catch (error) {
-                console.error('[EnhancedDatePicker] Error loading schedule:', error);
+                console.error('[EnhancedDatePicker] Error loading data:', error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        loadScheduleData();
+        loadData();
     }, [currentYear, currentMonth]);
 
     // Calculate day infos when places or schedule data changes
@@ -144,7 +163,8 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                         }
                     }
 
-                    const isGreen = isCityDay || isEmpty;
+                    const isBlocked = blockedDates.has(dateStr);
+                    const isGreen = (isCityDay || isEmpty) && !isBlocked;
 
                     newDayInfos.set(dateStr, {
                         day,
@@ -154,7 +174,8 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                         basePrice,
                         priceType,
                         isGreen,
-                        assignedCities
+                        assignedCities,
+                        isBlocked
                     });
                 }
             } catch (error) {
@@ -166,7 +187,7 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
 
         calculateDayInfos();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentYear, currentMonth, pickupPlace, dropoffPlace, scheduleData]);
+    }, [currentYear, currentMonth, pickupPlace, dropoffPlace, scheduleData, blockedDates]);
 
     const handleSelect = (day: number) => {
         const date = new Date(currentYear, currentMonth, day);
@@ -277,10 +298,12 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                                     selectedDate.getMonth() === currentMonth &&
                                     selectedDate.getDate() === c.day;
 
-                                const tooltipText = dayInfo 
-                                    ? dayInfo.isGreen
-                                        ? `${dayInfo.priceType}: €${dayInfo.basePrice}${dayInfo.assignedCities.length > 0 ? `\nCities: ${dayInfo.assignedCities.join(', ')}` : ''}`
-                                        : `Expensive day for pickup/dropoff cities${dayInfo.assignedCities.length > 0 ? `\nServing: ${dayInfo.assignedCities.join(', ')}` : ''}`
+                                const tooltipText = dayInfo
+                                    ? dayInfo.isBlocked
+                                        ? 'Date blocked - Unavailable for booking'
+                                        : dayInfo.isGreen
+                                            ? `${dayInfo.priceType}: €${dayInfo.basePrice}${dayInfo.assignedCities.length > 0 ? `\nCities: ${dayInfo.assignedCities.join(', ')}` : ''}`
+                                            : `Expensive day for pickup/dropoff cities${dayInfo.assignedCities.length > 0 ? `\nServing: ${dayInfo.assignedCities.join(', ')}` : ''}`
                                     : 'Loading...';
 
                                 return (
@@ -288,23 +311,27 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                                         key={idx}
                                         type="button"
                                         onClick={() => handleSelect(c.day!)}
-                                        disabled={isLoading}
+                                        disabled={isLoading || dayInfo?.isBlocked}
                                         className={`p-2 text-sm rounded-full text-center relative transition-colors border
                                             ${isSelected ? 'bg-blue-500 text-white border-blue-500' : 
+                                              dayInfo?.isBlocked ? 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed line-through' :
                                               dayInfo?.isGreen ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200' : 
                                               'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'}
                                             ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         title={tooltipText}
                                     >
                                         {c.day}
-                                        {dayInfo?.isCityDay && (
+                                        {!dayInfo?.isBlocked && dayInfo?.isCityDay && (
                                             <div className="absolute top-0 right-0 w-2 h-2 bg-green-600 rounded-full"></div>
                                         )}
-                                        {dayInfo?.isEmpty && !dayInfo?.isCityDay && (
+                                        {!dayInfo?.isBlocked && dayInfo?.isEmpty && !dayInfo?.isCityDay && (
                                             <div className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full"></div>
                                         )}
-                                        {dayInfo && !dayInfo.isGreen && (
+                                        {!dayInfo?.isBlocked && dayInfo && !dayInfo.isGreen && (
                                             <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
+                                        )}
+                                        {dayInfo?.isBlocked && (
+                                            <div className="absolute top-0 right-0 w-2 h-2 bg-gray-500 rounded-full"></div>
                                         )}
                                     </button>
                                 );
@@ -327,6 +354,10 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 bg-red-50 border border-red-300 rounded"></div>
                                 <span>Expensive Day (No City Match)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-gray-200 border border-gray-400 rounded line-through"></div>
+                                <span>Blocked Date (Unavailable)</span>
                             </div>
                         </div>
 

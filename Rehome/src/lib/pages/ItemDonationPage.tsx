@@ -113,6 +113,16 @@ const ItemDonationPage = () => {
     
     if (!validateForm()) return;
     
+    // Validate blocked dates if a specific date is selected
+    if (preferredDate && !isDateFlexible) {
+      const { validateBookingDate } = await import('../../utils/dateValidation');
+      const validation = await validateBookingDate(preferredDate, undefined, undefined);
+      if (!validation.isValid) {
+        toast.error(validation.message || 'Selected date is not available for pickup');
+        return;
+      }
+    }
+    
     setIsLoading(true);
 
     try {

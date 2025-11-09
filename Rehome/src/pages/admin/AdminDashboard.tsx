@@ -7,7 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import useUserSessionStore from "../../services/state/useUserSessionStore";
 import { cityBaseCharges } from "../../lib/constants";
 import pricingConfigData from "../../lib/pricingConfig.json";
-import { CityPrice, MarketplaceItem, CalendarDay, TimeBlock, TransportRequest, ItemDonation, SpecialRequest } from '../../types/admin';
+import { CityPrice, MarketplaceItem, CalendarDay, TransportRequest, ItemDonation, SpecialRequest } from '../../types/admin';
 import { API_ENDPOINTS } from '../../lib/api/config';
 import { 
   adminFetchMarketplaceItemDetails, 
@@ -117,7 +117,6 @@ const AdminDashboard = () => {
   const [bulkAssignEndDate, setBulkAssignEndDate] = useState('');
   const [bulkAssignCities, setBulkAssignCities] = useState<string[]>([]);
 
-  const [timeBlocks] = useState<{ [key: string]: TimeBlock[] }>({});
   // Pricing editing state  
   const [editingCityPrice, setEditingCityPrice] = useState<string | null>(null);
   const [editCityPriceData, setEditCityPriceData] = useState<any>({});
@@ -151,28 +150,25 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
-  // Update calendar when time blocks or schedule data change
+  // Update calendar when schedule data change
   useEffect(() => {
-    setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
-  }, [currentMonth, timeBlocks, scheduleData]);
+    setCalendarDays(generateCalendarDays(currentMonth));
+  }, [currentMonth, scheduleData]);
 
-  // Generate calendar days with time block support
-  const generateCalendarDaysWithTimeBlocks = (month: Date) => {
+  // Generate calendar days
+  const generateCalendarDays = (month: Date) => {
     const start = startOfMonth(month);
     const end = endOfMonth(month);
     const days = eachDayOfInterval({ start, end });
     
     return days.map(day => {
       const dateKey = format(day, 'yyyy-MM-dd');
-      const dayTimeBlocks = timeBlocks[dateKey] || [];
-      const allCitiesForDay = dayTimeBlocks.flatMap(block => block.cities);
-      
       // Get assigned cities from city_schedules table
       const assignedCitiesFromSchedule = (scheduleData[dateKey] || []).map(entry => entry.city);
       
       return {
         date: day,
-        assignedCities: [...new Set([...allCitiesForDay, ...assignedCitiesFromSchedule])], // Combine both sources
+        assignedCities: [...new Set(assignedCitiesFromSchedule)],
         isToday: isToday(day),
         isCurrentMonth: isSameMonth(day, month),
         isPast: day < new Date(new Date().setHours(0, 0, 0, 0)),
@@ -286,7 +282,7 @@ const AdminDashboard = () => {
     }
 
     await loadScheduleData();
-    setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
+    setCalendarDays(generateCalendarDays(currentMonth));
     setShowCitySelector(false);
   };
 
@@ -1404,7 +1400,7 @@ const AdminDashboard = () => {
       setBulkAssignEndDate('');
       setBulkAssignCities([]);
       await loadScheduleData();
-      setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
+      setCalendarDays(generateCalendarDays(currentMonth));
     } catch (error) {
       toast.error('Failed to assign cities to date range');
       console.error(error);
@@ -1429,7 +1425,7 @@ const AdminDashboard = () => {
 
       toast.success('Schedule entry deleted successfully');
       await loadScheduleData();
-      setCalendarDays(generateCalendarDaysWithTimeBlocks(currentMonth));
+      setCalendarDays(generateCalendarDays(currentMonth));
     } catch (error) {
       toast.error('Failed to delete schedule entry');
       console.error('Delete error:', error);

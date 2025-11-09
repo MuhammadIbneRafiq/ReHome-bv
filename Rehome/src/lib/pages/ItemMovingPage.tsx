@@ -13,8 +13,9 @@ import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import BookingTipsModal from '../../components/ui/BookingTipsModal';
 import { GooglePlaceObject } from '../../utils/locationServices';
-import EnhancedDatePicker from '@/components/ui/EnhancedDatePicker';
+import EnhancedDatePickerInline from '@/components/ui/EnhancedDatePickerInline';
 import { GooglePlacesAutocomplete } from '../../components/ui/GooglePlacesAutocomplete';
+import { isDateBlocked } from '../../services/blockedDatesService';
 // Calendar component not used here; using native date inputs
 
 declare global {
@@ -162,6 +163,49 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
     const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome' | 'sustainable'>('fixed');
     const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({}); // legacy storage
+    
+    // Calendar open/close states for inline calendars
+    const [isStartDateOpen, setIsStartDateOpen] = useState(false);
+    const [isEndDateOpen, setIsEndDateOpen] = useState(false);
+    const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
+    const [isDropoffDateOpen, setIsDropoffDateOpen] = useState(false);
+    const [isMovingDateOpen, setIsMovingDateOpen] = useState(false);
+
+    // Helper function to close all calendars
+    const closeAllCalendars = () => {
+        setIsStartDateOpen(false);
+        setIsEndDateOpen(false);
+        setIsPickupDateOpen(false);
+        setIsDropoffDateOpen(false);
+        setIsMovingDateOpen(false);
+    };
+
+    // Handler to manage calendar opening/closing
+    const handleCalendarToggle = (calendarName: string, newState: boolean) => {
+        if (newState) {
+            // Close all other calendars when opening one
+            closeAllCalendars();
+        }
+        
+        // Then set the specific calendar state
+        switch (calendarName) {
+            case 'start':
+                setIsStartDateOpen(newState);
+                break;
+            case 'end':
+                setIsEndDateOpen(newState);
+                break;
+            case 'pickup':
+                setIsPickupDateOpen(newState);
+                break;
+            case 'dropoff':
+                setIsDropoffDateOpen(newState);
+                break;
+            case 'moving':
+                setIsMovingDateOpen(newState);
+                break;
+        }
+    };
 
     // New: separate carrying directions
     const [carryingUpstairs, setCarryingUpstairs] = useState(false);
@@ -931,6 +975,38 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             return;
         }
 
+        // Validate blocked dates
+        try {
+            if (dateOption === 'fixed') {
+                if (isItemTransport) {
+                    // Check both pickup and dropoff dates for item transport
+                    const [pickupBlocked, dropoffBlocked] = await Promise.all([
+                        isDateBlocked(pickupDate),
+                        isDateBlocked(dropoffDate)
+                    ]);
+                    if (pickupBlocked) {
+                        toast.error("Pickup date is blocked and unavailable for booking.");
+                        return;
+                    }
+                    if (dropoffBlocked) {
+                        toast.error("Dropoff date is blocked and unavailable for booking.");
+                        return;
+                    }
+                } else {
+                    // Check single date for house moving
+                    const blocked = await isDateBlocked(selectedDateRange.start);
+                    if (blocked) {
+                        toast.error("Selected date is blocked and unavailable for booking.");
+                        return;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error checking blocked dates:', error);
+            toast.error("Error validating date availability. Please try again.");
+            return;
+        }
+
         // Generate order number using Supabase RPC
         const { data: generatedOrderNumber, error: orderNumberError } = await supabase
             .rpc('generate_moving_order_number');
@@ -1692,26 +1768,28 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     {/* Show date pickers based on option */}
                                     {dateOption === 'flexible' && (
                                         <>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                                                <EnhancedDatePicker
-                                                    value={selectedDateRange.start}
-                                                    onChange={(iso) => setSelectedDateRange(r => ({ ...r, start: iso }))}
-                                                    pickupPlace={pickupPlace}
-                                                    dropoffPlace={dropoffPlace}
-                                                    serviceType={serviceType}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                                <EnhancedDatePicker
-                                                    value={selectedDateRange.end}
-                                                    onChange={(iso: string) => setSelectedDateRange(r => ({ ...r, end: iso }))}
-                                                    pickupPlace={pickupPlace}
-                                                    dropoffPlace={dropoffPlace}
-                                                    serviceType={serviceType}
-                                                />
-                                            </div>
+                                            <EnhancedDatePickerInline
+                                                value={selectedDateRange.start}
+                                                onChange={(iso) => setSelectedDateRange(r => ({ ...r, start: iso }))}
+                                                pickupPlace={pickupPlace}
+                                                dropoffPlace={dropoffPlace}
+                                                serviceType={serviceType}
+                                                isOpen={isStartDateOpen}
+                                                onOpenChange={(open) => handleCalendarToggle('start', open)}
+                                                label="Start Date"
+                                                placeholder="Select start date"
+                                            />
+                                            <EnhancedDatePickerInline
+                                                value={selectedDateRange.end}
+                                                onChange={(iso: string) => setSelectedDateRange(r => ({ ...r, end: iso }))}
+                                                pickupPlace={pickupPlace}
+                                                dropoffPlace={dropoffPlace}
+                                                serviceType={serviceType}
+                                                isOpen={isEndDateOpen}
+                                                onOpenChange={(open) => handleCalendarToggle('end', open)}
+                                                label="End Date"
+                                                placeholder="Select end date"
+                                            />
                                         </>
                                     )}
                                                         {dateOption === 'fixed' && (
@@ -1719,39 +1797,42 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                             {isItemTransport ? (
                                 // Item transport: Show both pickup and dropoff dates
                                 <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date</label>
-                                        <EnhancedDatePicker
-                                            value={pickupDate}
-                                            onChange={(iso: string) => setPickupDate(iso)}
-                                            pickupPlace={pickupPlace}
-                                            dropoffPlace={dropoffPlace}
-                                            serviceType={serviceType}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff Date</label>
-                                        <EnhancedDatePicker
-                                            value={dropoffDate}
-                                            onChange={(iso: string) => setDropoffDate(iso)}
-                                            pickupPlace={pickupPlace}
-                                            dropoffPlace={dropoffPlace}
-                                            serviceType={serviceType}
-                                        />
-                                    </div>
-                                </>
-                            ) : (
-                                // House moving: Show only one date
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Moving Date</label>
-                                    <EnhancedDatePicker
-                                        value={selectedDateRange.start}
-                                        onChange={(iso: string) => setSelectedDateRange({ start: iso, end: '' })}
+                                    <EnhancedDatePickerInline
+                                        value={pickupDate}
+                                        onChange={(iso: string) => setPickupDate(iso)}
                                         pickupPlace={pickupPlace}
                                         dropoffPlace={dropoffPlace}
                                         serviceType={serviceType}
+                                        isOpen={isPickupDateOpen}
+                                        onOpenChange={(open) => handleCalendarToggle('pickup', open)}
+                                        label="Pickup Date"
+                                        placeholder="Select pickup date"
                                     />
-                                </div>
+                                    <EnhancedDatePickerInline
+                                        value={dropoffDate}
+                                        onChange={(iso: string) => setDropoffDate(iso)}
+                                        pickupPlace={pickupPlace}
+                                        dropoffPlace={dropoffPlace}
+                                        serviceType={serviceType}
+                                        isOpen={isDropoffDateOpen}
+                                        onOpenChange={(open) => handleCalendarToggle('dropoff', open)}
+                                        label="Dropoff Date"
+                                        placeholder="Select dropoff date"
+                                    />
+                                </>
+                            ) : (
+                                // House moving: Show only one date
+                                <EnhancedDatePickerInline
+                                    value={selectedDateRange.start}
+                                    onChange={(iso: string) => setSelectedDateRange({ start: iso, end: '' })}
+                                    pickupPlace={pickupPlace}
+                                    dropoffPlace={dropoffPlace}
+                                    serviceType={serviceType}
+                                    isOpen={isMovingDateOpen}
+                                    onOpenChange={(open) => handleCalendarToggle('moving', open)}
+                                    label="Moving Date"
+                                    placeholder="Select moving date"
+                                />
                             )}
                         </>
                     )}

@@ -197,6 +197,49 @@ const SpecialRequestPage = () => {
       return;
     }
     
+    // Validate blocked dates
+    const { validateBookingDate } = await import('../../utils/dateValidation');
+    
+    // Check full/international move dates
+    if (selectedService === 'fullInternationalMove' && fields.moveDate) {
+      if (fields.moveDate === 'specific' && fields.specificDate) {
+        const validation = await validateBookingDate(fields.specificDate);
+        if (!validation.isValid) {
+          toast.error(validation.message || 'Selected date is not available');
+          return;
+        }
+      } else if (fields.moveDate === 'flexible' && fields.flexibleStartDate && fields.flexibleEndDate) {
+        const validation = await validateBookingDate(fields.flexibleStartDate, fields.flexibleEndDate);
+        if (!validation.isValid) {
+          toast.error(validation.message || 'One or more dates in your range are not available');
+          return;
+        }
+      }
+    }
+    
+    // Check junk removal dates
+    if (selectedService === 'junkRemoval') {
+      if (fields.earliestRemovalDate && fields.removalDate) {
+        const validation = await validateBookingDate(fields.earliestRemovalDate, fields.removalDate);
+        if (!validation.isValid) {
+          toast.error(validation.message || 'One or more dates in your range are not available');
+          return;
+        }
+      } else if (fields.earliestRemovalDate) {
+        const validation = await validateBookingDate(fields.earliestRemovalDate);
+        if (!validation.isValid) {
+          toast.error(validation.message || 'Selected date is not available');
+          return;
+        }
+      } else if (fields.removalDate) {
+        const validation = await validateBookingDate(fields.removalDate);
+        if (!validation.isValid) {
+          toast.error(validation.message || 'Selected date is not available');
+          return;
+        }
+      }
+    }
+    
     console.log('✅ Form validation passed, proceeding with submission');
     setIsLoading(true);
     
