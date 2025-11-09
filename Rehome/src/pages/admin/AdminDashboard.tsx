@@ -16,11 +16,13 @@ import {
   adminDeleteMarketplaceItemDetail,
   MarketplaceItemDetail 
 } from '../../services/marketplaceItemDetailsService';
+import CalendarSettingsSection from '../../components/admin/CalendarSettingsSection';
 
 const AdminDashboard = () => {
   const { user } = useUserSessionStore();
   const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'requests' | 'sales'>('transport');
   const [requestsTab, setRequestsTab] = useState<'donations' | 'special-requests'>('donations');
+  const [scheduleTab, setScheduleTab] = useState<'calendar' | 'settings'>('calendar');
   
   // State for all tabs
   const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([]);
@@ -2503,7 +2505,35 @@ const AdminDashboard = () => {
             {activeTab === 'schedule' && (
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">Schedule Management</h2>
-                <p className="text-gray-600 mb-4">Manage city schedules and time slots</p>
+                
+                {/* Schedule Sub-tabs */}
+                <div className="flex space-x-2 mb-6 border-b border-gray-200">
+                  <button
+                    onClick={() => setScheduleTab('calendar')}
+                    className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                      scheduleTab === 'calendar'
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    Calendar & City Schedules
+                  </button>
+                  <button
+                    onClick={() => setScheduleTab('settings')}
+                    className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                      scheduleTab === 'settings'
+                        ? 'border-orange-500 text-orange-600'
+                        : 'border-transparent text-gray-600 hover:text-gray-800'
+                    }`}
+                  >
+                    Calendar Settings
+                  </button>
+                </div>
+
+                {/* Calendar Tab */}
+                {scheduleTab === 'calendar' && (
+                  <div>
+                    <p className="text-gray-600 mb-4">Manage city schedules and time slots</p>
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-800">
                     {format(currentMonth, 'MMMM yyyy')}
@@ -2679,6 +2709,13 @@ const AdminDashboard = () => {
                       Cancel
                     </button>
                   </div>
+                )}
+              </div>
+                  )}
+
+                {/* Calendar Settings Tab */}
+                {scheduleTab === 'settings' && (
+                  <CalendarSettingsSection allCities={allCities} />
                 )}
               </div>
             )}
