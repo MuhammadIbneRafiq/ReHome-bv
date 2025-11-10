@@ -161,7 +161,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [pickupPlace, setPickupPlace] = useState<GooglePlaceObject | null>(null);
     const [dropoffPlace, setDropoffPlace] = useState<GooglePlaceObject | null>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
-    const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome' | 'sustainable'>('fixed');
+    const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome' >('fixed');
     const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({}); // legacy storage
     
     // Calendar open/close states for inline calendars
@@ -260,7 +260,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     // This ensures pricing calculations only happen when the actual date configuration changes,
     // not when individual state variables are being updated during user interactions
     const dateConfigId = React.useMemo(() => {
-        if (dateOption === 'rehome' || dateOption === 'sustainable') {
+        if (dateOption === 'rehome') {
             return `rehome-${serviceType}`;
         } else if (dateOption === 'flexible') {
             return `flexible-${serviceType}-${selectedDateRange.start}-${selectedDateRange.end}`;
@@ -601,7 +601,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 // For house moving, always use selectedDateRange
                 pickupDate: dateOption === 'fixed' && isItemTransport ? pickupDate : undefined,
                 dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
-                isDateFlexible: dateOption === 'rehome' || dateOption === 'sustainable', // True for ReHome choose and Sustainable option
+                isDateFlexible: dateOption === 'rehome', // True for ReHome choose option
                 itemQuantities,
                 // Carrying directions: 
                 // - Downstairs: items going down at pickup location (use floorPickup)
@@ -1100,7 +1100,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                     elevator: elevatorDropoff
                 },
                 schedule: {
-                    date: (dateOption === 'rehome' || dateOption === 'sustainable') ? 'Let ReHome Choose' :
+                    date: (dateOption === 'rehome') ? 'Let ReHome Choose' :
                           isDateFlexible || dateOption === 'flexible' ? 
                           (selectedDateRange.start && selectedDateRange.end ? 
                            `${new Date(selectedDateRange.start).toLocaleDateString()} - ${new Date(selectedDateRange.end).toLocaleDateString()}` : 
@@ -1734,7 +1734,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             id="date-option"
                                             value={dateOption}
                                             onChange={e => {
-                                                const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome' | 'sustainable';
+                                                const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome';
                                                 setDateOption(newDateOption);
                                                 
                                                 // Clear all date-related states first
@@ -1744,7 +1744,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                 setIsDateFlexible(false);
                                                 
                                                 // Set appropriate states based on option
-                                                if (newDateOption === 'rehome' || newDateOption === 'sustainable') {
+                                                if (newDateOption === 'rehome') {
                                                     // ReHome choose: isDateFlexible=true, no dates set
                                                     setIsDateFlexible(true);
                                                 } else if (newDateOption === 'flexible') {
@@ -1762,7 +1762,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             <option value="flexible">Flexible date range</option>
                                             <option value="fixed">Fixed date</option>
                                             <option value="rehome">Let ReHome choose</option>
-                                            <option value="sustainable">Sustainable and Budget Option</option>
                                         </select>
                                     </div>
                                     {/* Show date pickers based on option */}
@@ -1836,7 +1835,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                             )}
                         </>
                     )}
-                                    {(dateOption === 'rehome' || dateOption === 'sustainable') && (
+                                    {(dateOption === 'rehome') && (
                                         <div className="p-3 bg-blue-50 rounded text-blue-700 text-sm">
                                             ReHome will suggest the most efficient and cost-effective moving date for you.
                                         </div>
