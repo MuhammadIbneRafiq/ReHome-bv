@@ -263,7 +263,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   const [itemAssistance, setItemAssistance] = useState<ItemAssistanceState>({});
   
   // Pricing breakdown
-  const [pricingBreakdown] = useState<any>(null);
+  const [pricingBreakdown, setPricingBreakdown] = useState<any>(null);
   const [baseTotal, setBaseTotal] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
   const [carryingCost, setCarryingCost] = useState(0);
@@ -329,6 +329,16 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       const calculatedAssemblyCost = await getAssemblyCost();
       setCarryingCost(calculatedCarryingCost);
       setAssemblyCost(calculatedAssemblyCost);
+      
+      // Update pricing breakdown for email
+      setPricingBreakdown({
+        carryingCost: calculatedCarryingCost,
+        assemblyCost: calculatedAssemblyCost,
+        breakdown: {
+          carrying: { totalCost: calculatedCarryingCost },
+          assembly: { totalCost: calculatedAssemblyCost }
+        }
+      });
     };
     calculateTotal();
   }, [rehomeItems, itemAssistance, floor, elevatorAvailable, isHighPointsCategory]);
@@ -597,7 +607,38 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       if (response.ok) {
         // Store sales history for each item in the cart
         try {
-          for (const item of items) {
+          // Calculate per-item costs
+          const getItemCarryingCost = async (item: any) => {
+            if (!itemAssistance[item.id]?.needsCarrying) return 0;
+            const totalFloors = elevatorAvailable ? 1 : Math.max(0, parseInt(floor) || 0);
+            if (totalFloors === 0) return 0;
+            try {
+              const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
+              const itemCarryingCost = itemPoints * totalFloors * 1.35;
+              return itemCarryingCost * (item.quantity || 1);
+            } catch (error) {
+              console.error('Error calculating item carrying cost:', error);
+              return 0;
+            }
+          };
+          
+          const getItemAssemblyCost = async (item: any) => {
+            if (!itemAssistance[item.id]?.needsAssembly) return 0;
+            try {
+              const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
+              const assemblyCost = itemPoints * 1.35;
+              return assemblyCost * (item.quantity || 1);
+            } catch (error) {
+              console.error('Error calculating item assembly cost:', error);
+              const unit = getAssemblyUnitCost(item);
+              return unit > 0 ? unit * (item.quantity || 1) : 0;
+            }
+          };
+          
+          for (const item of rehomeItems) {
+            const itemCarryingCost = await getItemCarryingCost(item);
+            const itemAssemblyCost = await getItemAssemblyCost(item);
+            
             const salesHistoryData = {
               orderId: orderNumber,
               customerEmail: contactInfo.email,
@@ -611,20 +652,20 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
               quantity: item.quantity,
               totalAmount: item.price * item.quantity,
               paymentMethod: 'card',
-              paymentStatus: 'completed',
-              orderStatus: 'completed',
+              paymentStatus: 'pending',
+              orderStatus: 'pending',
               pickupAddress: '', // ReHome items don't have pickup address
               dropoffAddress: deliveryAddress, // Use delivery address
               pickupDate: null, // ReHome items don't have pickup date
               pickupTime: null, // ReHome items don't have pickup time
               deliveryFee: 0, // ReHome items have free delivery
-              assemblyFee: itemAssistance[item.id]?.needsAssembly ? await getAssemblyCost() : 0,
-              carryingFee: itemAssistance[item.id]?.needsCarrying ? await getCarryingCost() : 0,
+              assemblyFee: itemAssemblyCost,
+              carryingFee: itemCarryingCost,
               extraHelperFee: 0,
               studentDiscount: 0,
               subtotal: item.price * item.quantity,
               taxAmount: 0,
-              finalTotal: item.price * item.quantity + (itemAssistance[item.id]?.needsAssembly ? await getAssemblyCost() : 0) + (itemAssistance[item.id]?.needsCarrying ? await getCarryingCost() : 0),
+              finalTotal: item.price * item.quantity + itemAssemblyCost + itemCarryingCost,
               currency: 'EUR',
               notes: `ReHome Order: ${orderNumber}`
             };
