@@ -8,6 +8,7 @@ import useUserSessionStore from "../../services/state/useUserSessionStore";
 import { cityBaseCharges } from "../../lib/constants";
 import pricingConfigData from "../../lib/pricingConfig.json";
 import { CityPrice, MarketplaceItem, CalendarDay, TransportRequest, ItemDonation, SpecialRequest } from '../../types/admin';
+import { fetchBlockedDates } from '../../services/blockedDatesService';
 import { API_ENDPOINTS } from '../../lib/api/config';
 import { 
   adminFetchMarketplaceItemDetails, 
@@ -110,6 +111,7 @@ const AdminDashboard = () => {
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [scheduleData, setScheduleData] = useState<{ [key: string]: { city: string, id: string }[] }>({});
+  const [blockedDatesMap, setBlockedDatesMap] = useState<{ [key: string]: { id?: string; cities: string[]; reason?: string | null } }>({});
   const [showCitySelector, setShowCitySelector] = useState(false);
   // Bulk assign modal state
   const [showBulkAssignModal, setShowBulkAssignModal] = useState(false);
@@ -153,7 +155,7 @@ const AdminDashboard = () => {
   // Update calendar when schedule data change
   useEffect(() => {
     setCalendarDays(generateCalendarDays(currentMonth));
-  }, [currentMonth, scheduleData]);
+  }, [currentMonth, scheduleData, blockedDatesMap]);
 
   // Generate calendar days
   const generateCalendarDays = (month: Date) => {
@@ -165,14 +167,18 @@ const AdminDashboard = () => {
       const dateKey = format(day, 'yyyy-MM-dd');
       // Get assigned cities from city_schedules table
       const assignedCitiesFromSchedule = (scheduleData[dateKey] || []).map(entry => entry.city);
-      
+      const blockedInfo = blockedDatesMap[dateKey];
+
       return {
         date: day,
         assignedCities: [...new Set(assignedCitiesFromSchedule)],
         isToday: isToday(day),
         isCurrentMonth: isSameMonth(day, month),
         isPast: day < new Date(new Date().setHours(0, 0, 0, 0)),
-        isFuture: day > new Date(new Date().setHours(23, 59, 59, 999))
+        isFuture: day > new Date(new Date().setHours(23, 59, 59, 999)),
+        isBlocked: !!blockedInfo && (blockedInfo.cities.length === 0 || blockedInfo.cities.length === allCities.length),
+        blockedCities: blockedInfo ? blockedInfo.cities : [],
+        blockedReason: blockedInfo?.reason || null
       };
     });
   };
@@ -207,6 +213,23 @@ const AdminDashboard = () => {
       setScheduleData(scheduleMap);
     } catch (error) {
       console.error('Error loading schedule data:', error);
+    }
+  };
+
+  const loadBlockedDates = async () => {
+    try {
+      const blockedDates = await fetchBlockedDates();
+      const map: { [key: string]: { id?: string; cities: string[]; reason?: string | null } } = {};
+      blockedDates.forEach(bd => {
+        map[bd.date] = {
+          id: bd.id,
+          cities: bd.cities || [],
+          reason: bd.reason ?? null
+        };
+      });
+      setBlockedDatesMap(map);
+    } catch (error) {
+      console.error('Error loading blocked dates:', error);
     }
   };
 
@@ -312,6 +335,7 @@ const AdminDashboard = () => {
         fetchSpecialRequests(),
         fetchSalesHistory(),
         fetchSalesStatistics(),
+        loadBlockedDates()
       ]);
     } catch (err) {
       setError('Failed to load data. Please try again.');
@@ -1579,7 +1603,7 @@ const AdminDashboard = () => {
                   dateRangeFilter.startDate || priceRangeFilter.minPrice) && (
                   <button
                     onClick={clearAllFilters}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                   >
                     Clear All
                   </button>
@@ -2633,6 +2657,10 @@ const AdminDashboard = () => {
                       <div className="w-4 h-4 bg-orange-100 rounded"></div>
                       <span>Assigned Cities</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-gray-200 line-through rounded"></div>
+                      <span>Blocked Dates</span>
+                    </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-7 gap-1 mb-4">
@@ -2643,8 +2671,16 @@ const AdminDashboard = () => {
                   ))}
                 </div>
                 <div className="grid grid-cols-7 gap-1">
-                  {calendarDays.map((day, index) => (
-                                          <div
+                  {calendarDays.map((day, index) => {
+                    const isHybridBlocked = !day.isBlocked && day.blockedCities.length > 0;
+                    const displayLabel = day.isBlocked
+                      ? 'Blocked: All cities'
+                      : isHybridBlocked
+                        ? `Blocked: ${day.blockedCities.join(', ')}`
+                        : '';
+
+                    return (
+                      <div
                         key={index}
                         onClick={() => handleDateClick(day)}
                         className={`p-2 rounded-md cursor-pointer text-center border min-h-[80px] ${
@@ -2652,11 +2688,17 @@ const AdminDashboard = () => {
                           day.isPast ? 'bg-gray-100 border-gray-300' :
                           day.isFuture ? 'bg-blue-50 border-blue-200' :
                           day.isCurrentMonth ? 'hover:bg-gray-100 border-gray-200' : 'text-gray-400 border-gray-100'
-                        }`}
+                        } ${day.isBlocked ? 'line-through' : ''}`}
+                        title={displayLabel || (day.assignedCities.length > 0 ? `Cities: ${day.assignedCities.join(', ')}` : undefined)}
                       >
                         <div className={`text-sm ${day.isPast ? 'text-gray-500' : ''}`}>
                           {day.date.getDate()}
                         </div>
+                        {displayLabel && (
+                          <div className="mt-1 text-[10px] text-gray-600 font-medium">
+                            {displayLabel}
+                          </div>
+                        )}
                         {day.assignedCities.length > 0 && (
                           <div className="mt-1 flex flex-wrap justify-center gap-1">
                             {day.assignedCities.slice(0, 2).map((city, cityIndex) => (
@@ -2672,11 +2714,32 @@ const AdminDashboard = () => {
                           </div>
                         )}
                       </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 {showCitySelector && selectedDate && (
                   <div className="mt-4 p-4 bg-white rounded-lg shadow-md">
                     <h4 className="text-lg font-semibold text-gray-800 mb-3">Assign Cities for {format(selectedDate, 'yyyy-MM-dd')}</h4>
+                    {(() => {
+                      const dateKey = format(selectedDate, 'yyyy-MM-dd');
+                      const blockedInfo = blockedDatesMap[dateKey];
+                      const isFullyBlocked = blockedInfo && (blockedInfo.cities.length === 0 || blockedInfo.cities.length === allCities.length);
+                      const isPartiallyBlocked = blockedInfo && !isFullyBlocked && blockedInfo.cities.length > 0;
+                      return (
+                        <div className="mb-3 space-y-1">
+                          {isFullyBlocked && (
+                            <div className="px-3 py-2 bg-red-50 text-red-700 rounded">
+                              This date is currently blocked for all cities{blockedInfo?.reason ? ` (${blockedInfo.reason})` : ''}. Go to Calendar Settings to unblock.
+                            </div>
+                          )}
+                          {isPartiallyBlocked && (
+                            <div className="px-3 py-2 bg-yellow-50 text-yellow-700 rounded">
+                              This date is partially blocked for: {blockedInfo.cities.join(', ')}.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                     <div className="flex flex-wrap gap-2 mb-3">
                       {allCities.map(city => (
                         <span
@@ -2711,7 +2774,10 @@ const AdminDashboard = () => {
 
                 {/* Calendar Settings Tab */}
                 {scheduleTab === 'settings' && (
-                  <CalendarSettingsSection allCities={allCities} />
+                  <CalendarSettingsSection 
+                    allCities={allCities} 
+                    onBlockedDatesChange={loadBlockedDates}
+                  />
                 )}
               </div>
             )}

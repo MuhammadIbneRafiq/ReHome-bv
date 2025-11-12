@@ -13,9 +13,10 @@ import {
 
 interface CalendarSettingsSectionProps {
   allCities: string[];
+  onBlockedDatesChange?: () => void;
 }
 
-const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCities }) => {
+const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCities, onBlockedDatesChange }) => {
   // Blocked Dates Management State
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [editingBlockedDate, setEditingBlockedDate] = useState<string | null>(null);
@@ -27,6 +28,9 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
     is_full_day: true,
   });
   const [showAddBlockedDateForm, setShowAddBlockedDateForm] = useState(false);
+
+  const normalizeCitiesForSave = (cities: string[]) =>
+    cities.length === allCities.length ? [] : cities;
 
   // Load all data
   useEffect(() => {
@@ -52,11 +56,17 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
     }
 
     try {
-      const created = await createBlockedDate(newBlockedDate);
+      const payload = {
+        ...newBlockedDate,
+        cities: normalizeCitiesForSave(newBlockedDate.cities),
+      };
+      const created = await createBlockedDate(payload);
       setBlockedDates([...blockedDates, created]);
       setNewBlockedDate({ date: '', cities: [], reason: '', is_full_day: true });
       setShowAddBlockedDateForm(false);
       toast.success('Blocked date added successfully');
+      // Notify parent to refresh blocked dates
+      if (onBlockedDatesChange) onBlockedDatesChange();
     } catch (error: any) {
       console.error('Error adding blocked date:', error);
       toast.error(error.message || 'Failed to add blocked date');
@@ -65,11 +75,17 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
 
   const handleUpdateBlockedDate = async (id: string) => {
     try {
-      const updated = await updateBlockedDate(id, editBlockedDateData);
+      const updates: Partial<BlockedDate> = { ...editBlockedDateData };
+      if (updates.cities) {
+        updates.cities = normalizeCitiesForSave(updates.cities);
+      }
+      const updated = await updateBlockedDate(id, updates);
       setBlockedDates(blockedDates.map(bd => (bd.id === id ? updated : bd)));
       setEditingBlockedDate(null);
       setEditBlockedDateData({});
       toast.success('Blocked date updated successfully');
+      // Notify parent to refresh blocked dates
+      if (onBlockedDatesChange) onBlockedDatesChange();
     } catch (error: any) {
       console.error('Error updating blocked date:', error);
       toast.error(error.message || 'Failed to update blocked date');
@@ -83,6 +99,8 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
       await deleteBlockedDate(id);
       setBlockedDates(blockedDates.filter(bd => bd.id !== id));
       toast.success('Blocked date deleted successfully');
+      // Notify parent to refresh blocked dates
+      if (onBlockedDatesChange) onBlockedDatesChange();
     } catch (error: any) {
       console.error('Error deleting blocked date:', error);
       toast.error(error.message || 'Failed to delete blocked date');
@@ -103,6 +121,22 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
       } else {
         setNewBlockedDate({ ...newBlockedDate, cities: [...newBlockedDate.cities, city] });
       }
+    }
+  };
+
+  const handleSelectAllCities = (isEdit: boolean) => {
+    if (isEdit) {
+      setEditBlockedDateData(prev => ({ ...prev, cities: [...allCities] }));
+    } else {
+      setNewBlockedDate(prev => ({ ...prev, cities: [...allCities] }));
+    }
+  };
+
+  const handleClearAllCities = (isEdit: boolean) => {
+    if (isEdit) {
+      setEditBlockedDateData(prev => ({ ...prev, cities: [] }));
+    } else {
+      setNewBlockedDate(prev => ({ ...prev, cities: [] }));
     }
   };
 
@@ -150,9 +184,29 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">
-                  Affected Cities (Leave empty to block all cities)
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium">
+                    Affected Cities (Leave empty to block all cities)
+                  </label>
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectAllCities(false)}
+                      className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
+                      disabled={allCities.length === 0 || newBlockedDate.cities.length === allCities.length}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleClearAllCities(false)}
+                      className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
+                      disabled={newBlockedDate.cities.length === 0}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto">
                   {allCities.map(city => (
                     <label key={city} className="flex items-center">
@@ -166,7 +220,7 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
                     </label>
                   ))}
                 </div>
-                {newBlockedDate.cities.length === 0 && (
+                {(newBlockedDate.cities.length === 0 || newBlockedDate.cities.length === allCities.length) && (
                   <p className="text-sm text-orange-600 mt-1">⚠️ All cities will be blocked</p>
                 )}
               </div>
@@ -219,20 +273,53 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-2">Affected Cities</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-32 overflow-y-auto">
-                          {allCities.map(city => (
-                            <label key={city} className="flex items-center">
-                              <input
-                                type="checkbox"
-                                checked={(editBlockedDateData.cities || blockedDate.cities).includes(city)}
-                                onChange={() => toggleBlockedDateCity(city, true)}
-                                className="mr-2"
-                              />
-                              {city}
-                            </label>
-                          ))}
-                        </div>
+                        {(() => {
+                          const currentEditCities = (editBlockedDateData.cities ?? (blockedDate.cities.length === 0 ? allCities : blockedDate.cities));
+                          return (
+                            <>
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-medium">Affected Cities</label>
+                                <div className="flex space-x-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSelectAllCities(true)}
+                                    className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
+                                    disabled={allCities.length === 0 || currentEditCities.length === allCities.length}
+                                  >
+                                    Select All
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleClearAllCities(true)}
+                                    className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
+                                    disabled={currentEditCities.length === 0}
+                                  >
+                                    Clear
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-32 overflow-y-auto">
+                                {allCities.map(city => {
+                                  const isChecked = currentEditCities.includes(city);
+                                  return (
+                                    <label key={city} className="flex items-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => toggleBlockedDateCity(city, true)}
+                                        className="mr-2"
+                                      />
+                                      {city}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                              {(currentEditCities.length === 0 || currentEditCities.length === allCities.length) && (
+                                <p className="text-sm text-orange-600 mt-1">⚠️ All cities will be blocked</p>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="flex space-x-2">
@@ -261,7 +348,7 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
                       </h4>
                       {blockedDate.reason && <p className="text-sm text-gray-600">Reason: {blockedDate.reason}</p>}
                       <p className="text-sm text-gray-600">
-                        {blockedDate.cities.length === 0
+                        {blockedDate.cities.length === 0 || blockedDate.cities.length === allCities.length
                           ? 'All cities blocked'
                           : `Cities: ${blockedDate.cities.join(', ')}`}
                       </p>
@@ -272,7 +359,10 @@ const CalendarSettingsSection: React.FC<CalendarSettingsSectionProps> = ({ allCi
                           setEditingBlockedDate(blockedDate.id);
                           setEditBlockedDateData({
                             date: blockedDate.date,
-                            cities: blockedDate.cities,
+                            cities:
+                              blockedDate.cities.length === 0
+                                ? [...allCities]
+                                : [...blockedDate.cities],
                             reason: blockedDate.reason,
                           });
                         }}

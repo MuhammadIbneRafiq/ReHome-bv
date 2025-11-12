@@ -338,7 +338,7 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                             })}
                         </div>
 
-                        <div className="text-xs text-gray-600 space-y-1">
+                        {/* <div className="text-xs text-gray-600 space-y-1">
                             <div className="flex items-center gap-2">
                                 <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
                                 <span>City Day / Empty Day (Lower Price)</span>
@@ -359,7 +359,7 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                                 <div className="w-3 h-3 bg-gray-200 border border-gray-400 rounded line-through"></div>
                                 <span>Blocked Date (Unavailable)</span>
                             </div>
-                        </div>
+                        </div> */}
 
                         {selectedDayInfo && (
                             <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">

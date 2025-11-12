@@ -83,6 +83,9 @@ export interface TransportRequest {
     isCurrentMonth: boolean;
     isPast: boolean;
     isFuture: boolean;
+    isBlocked: boolean;
+    blockedCities: string[];
+    blockedReason?: string | null;
   }
   
   // Time block interface
