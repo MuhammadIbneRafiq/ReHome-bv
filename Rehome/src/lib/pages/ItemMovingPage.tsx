@@ -244,6 +244,14 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         return assemblyEligibleNames.has(name);
     }, [assemblyEligibleNames]);
 
+    const assemblyEligibleSelectedItemIds = React.useMemo(
+        () =>
+            Object.keys(itemQuantities).filter(
+                itemId => itemQuantities[itemId] > 0 && isAssemblyEligible(itemId)
+            ),
+        [itemQuantities, isAssemblyEligible]
+    );
+
     // Add state for select all functionality
     const [selectAllDisassembly, setSelectAllDisassembly] = useState(false);
     const [selectAllAssembly, setSelectAllAssembly] = useState(false);
@@ -343,9 +351,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     // Add handlers for select all functionality
     const handleSelectAllDisassembly = (checked: boolean) => {
         setSelectAllDisassembly(checked);
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
         const newDisassemblyItems: { [key: string]: boolean } = {};
-        selectedItems.forEach(itemId => {
+        assemblyEligibleSelectedItemIds.forEach(itemId => {
             newDisassemblyItems[itemId] = checked;
         });
         setDisassemblyItems(newDisassemblyItems);
@@ -353,9 +360,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     
     const handleSelectAllAssembly = (checked: boolean) => {
         setSelectAllAssembly(checked);
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
         const newAssemblyItems: { [key: string]: boolean } = {};
-        selectedItems.forEach(itemId => {
+        assemblyEligibleSelectedItemIds.forEach(itemId => {
             newAssemblyItems[itemId] = checked;
         });
         setAssemblyItems(newAssemblyItems);
@@ -363,17 +369,19 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
     // Update disassembly items when individual items change
     useEffect(() => {
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
-        const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => disassemblyItems[itemId]);
+        const allSelected =
+            assemblyEligibleSelectedItemIds.length > 0 &&
+            assemblyEligibleSelectedItemIds.every(itemId => disassemblyItems[itemId]);
         setSelectAllDisassembly(allSelected);
-    }, [disassemblyItems, itemQuantities, isAssemblyEligible]);
-    
+    }, [disassemblyItems, assemblyEligibleSelectedItemIds]);
+
     // Update assembly items when individual items change
     useEffect(() => {
-        const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
-        const allSelected = selectedItems.length > 0 && selectedItems.every(itemId => assemblyItems[itemId]);
+        const allSelected =
+            assemblyEligibleSelectedItemIds.length > 0 &&
+            assemblyEligibleSelectedItemIds.every(itemId => assemblyItems[itemId]);
         setSelectAllAssembly(allSelected);
-    }, [assemblyItems, itemQuantities, isAssemblyEligible]);
+    }, [assemblyItems, assemblyEligibleSelectedItemIds]);
 
     // Prune any ineligible selections if present
     useEffect(() => {
@@ -2142,10 +2150,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         const checked = e.target.checked;
                                                         setDisassembly(checked);
                                                         if (checked) {
-                                                            // Auto-select eligible items that have quantities > 0
-                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
                                                             const newDisassemblyItems: { [key: string]: boolean } = {};
-                                                            selectedItems.forEach(itemId => {
+                                                            assemblyEligibleSelectedItemIds.forEach(itemId => {
                                                                 newDisassemblyItems[itemId] = true;
                                                             });
                                                             setDisassemblyItems(newDisassemblyItems);
@@ -2162,7 +2168,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             </div>
                                             {disassembly && (
                                                 <div className="ml-6 space-y-3">
-                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).length === 0 ? (
+                                                    {assemblyEligibleSelectedItemIds.length === 0 ? (
                                                         <div className="p-2 bg-gray-50 text-gray-600 text-sm rounded">
                                                             None of the selected items are eligible for disassembly service.
                                                         </div>
@@ -2184,8 +2190,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                                     Select All
                                                                 </label>
                                                             </div>
-                                                            {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).map((itemId: string, index: number) => {
-                                                                const quantity: number = itemQuantities[itemId];
+                                                            {assemblyEligibleSelectedItemIds.map((itemId: string, index: number) => {
+                                                                const quantity = itemQuantities[itemId];
                                                                 const itemData = furnitureItems.find(item => item.id === itemId);
                                                                 const itemName = itemData ? itemData.name : itemId;
                                                                 return (
@@ -2225,10 +2231,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         const checked = e.target.checked;
                                                         setAssembly(checked);
                                                         if (checked) {
-                                                            // Auto-select eligible items that have quantities > 0
-                                                            const selectedItems = Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item));
                                                             const newAssemblyItems: { [key: string]: boolean } = {};
-                                                            selectedItems.forEach(itemId => {
+                                                            assemblyEligibleSelectedItemIds.forEach(itemId => {
                                                                 newAssemblyItems[itemId] = true;
                                                             });
                                                             setAssemblyItems(newAssemblyItems);
@@ -2245,9 +2249,9 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             </div>
                                             {assembly && (
                                                 <div className="ml-6 space-y-3">
-                                                    {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).length === 0 ? (
+                                                    {assemblyEligibleSelectedItemIds.length === 0 ? (
                                                         <div className="p-2 bg-gray-50 text-gray-600 text-sm rounded">
-                                                            None of the selected items are eligible for assembly service.
+                                                            None of the selected items are available for assembly service.
                                                         </div>
                                                     ) : (
                                                         <>
@@ -2267,8 +2271,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                                     Select All
                                                                 </label>
                                                             </div>
-                                                            {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0 && isAssemblyEligible(item)).map((itemId: string, index: number) => {
-                                                                const quantity: number = itemQuantities[itemId];
+                                                            {assemblyEligibleSelectedItemIds.map((itemId: string, index: number) => {
+                                                                const quantity = itemQuantities[itemId];
                                                                 const itemData = furnitureItems.find(item => item.id === itemId);
                                                                 const itemName = itemData ? itemData.name : itemId;
                                                                 return (
