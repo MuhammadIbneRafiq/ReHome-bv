@@ -2586,20 +2586,20 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                     )}
                                                 </>
                                             )}
-                                            {pricingBreakdown?.extraHelperCost && pricingBreakdown.extraHelperCost > 0 && (
+                                            {(pricingBreakdown?.extraHelperCost ?? 0) > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>Extra Helper</span>
-                                                    <span className="font-medium">€{pricingBreakdown.extraHelperCost.toFixed(2)}</span>
+                                                    <span className="font-medium">€{pricingBreakdown?.extraHelperCost.toFixed(2)}</span>
                                                 </li>
                                             )}
                                             <li className="flex justify-between">
                                                 <span>Carrying Service</span>
                                                 <span className="font-medium">{carryingEnabled ? "Yes" : "No"}</span>
                                             </li>
-                                            {carryingEnabled && pricingBreakdown?.carryingCost && pricingBreakdown.carryingCost > 0 && (
+                                            {carryingEnabled && (pricingBreakdown?.carryingCost ?? 0) > 0 && (
                                                 <li className="flex justify-between">
                                                     <span>Floor Carrying Cost</span>
-                                                    <span className="font-medium">€{pricingBreakdown.carryingCost.toFixed(2)}</span>
+                                                    <span className="font-medium">€{pricingBreakdown?.carryingCost.toFixed(2)}</span>
                                                 </li>
                                             )}
                                             {typeof pricingBreakdown?.studentDiscount === "number" && pricingBreakdown.studentDiscount > 0 && (

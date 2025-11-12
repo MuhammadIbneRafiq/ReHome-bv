@@ -2125,7 +2125,7 @@ const AdminDashboard = () => {
                     { id: 'inventory', label: 'My Inventory', icon: FaBox },
                     { id: 'supervision', label: 'User Listings', icon: FaSearch },
                     { id: 'sales', label: 'Sales History', icon: FaCog },
-                    { id: 'item-details', label: 'Item Details', icon: FaTags }
+                    { id: 'item-details', label: 'Marketplace Categories', icon: FaTags }
                   ].map(tab => (
                     <button
                       key={tab.id}
