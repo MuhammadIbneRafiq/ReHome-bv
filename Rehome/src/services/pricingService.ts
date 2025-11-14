@@ -793,10 +793,10 @@ class PricingService {
   private calculateAssemblyCost(input: PricingInput, breakdown: PricingBreakdown) {
     // Fixed unit prices by item name - Updated standardized values
     const assemblyUnitByName: Record<string, number> = {
-      '2-Door Wardrobe': 50,
-      '2-Doors Closet': 50,
-      '3-Door Wardrobe': 55,
-      '3-Doors Closet': 55,
+      '2-Door Wardrobe': 30,
+      '2-Doors Closet': 30,
+      '3-Door Wardrobe': 35,
+      '3-Doors Closet': 35,
       'Single Bed': 30,
       '1-Person Bed': 30,
       'Double Bed': 40,
@@ -808,10 +808,10 @@ class PricingService {
       '2-Doors Closet': 30,
       '3-Door Wardrobe': 35,
       '3-Doors Closet': 35,
-      'Single Bed': 20,
-      '1-Person Bed': 20,
-      'Double Bed': 30,
-      '2-Person Bed': 30,
+      'Single Bed': 30,
+      '1-Person Bed': 30,
+      'Double Bed': 40,
+      '2-Person Bed': 40,
     };
 
     const resolveItemName = (itemId: string): string => {
