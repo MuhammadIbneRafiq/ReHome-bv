@@ -693,7 +693,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         }
     }, [isDataLoaded, itemQuantities, disassembly, assembly, extraHelper, carryingService, 
         disassemblyItems, assemblyItems, extraHelperItems, carryingServiceItems,
-        carryingUpstairs, carryingDownstairs, carryingUpItems, carryingDownItems]);
+        carryingUpstairs, carryingDownstairs, carryingUpItems, carryingDownItems,
+        isStudent, studentId]);
         
     // Floor levels and elevators (less frequent changes)
     // Using debounce for these to prevent rapid recalculations while typing floor numbers
@@ -1085,10 +1086,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             carryingServiceItems,
             basePrice: pricingBreakdown?.basePrice || 0,
             itemPoints: totalItemPoints,
+            itemValue: pricingBreakdown?.itemValue || 0,
             carryingCost: pricingBreakdown?.carryingCost || 0,
             disassemblyCost: pricingBreakdown?.assemblyCost || 0,
             distanceCost: pricingBreakdown?.distanceCost || 0,
             extraHelperCost: pricingBreakdown?.extraHelperCost || 0,
+            studentDiscount: pricingBreakdown?.studentDiscount || 0,
             distanceKm: finalDistance, // Pre-calculated distance
             firstlocation: firstLocation,
             secondlocation: secondLocation,
@@ -1125,6 +1128,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                     ) : 'Not specified'
                 },
                 items: furnitureItemsArray,
+                basePrice: pricingBreakdown?.basePrice || 0,
+                itemsCost: pricingBreakdown?.itemValue || 0,
+                distanceCost: pricingBreakdown?.distanceCost || 0,
+                distanceKm: finalDistance,
                 additionalServices: {
                     assembly: (pricingBreakdown?.assemblyCost ?? 0) > 0 ? (pricingBreakdown?.assemblyCost ?? 0) : 0,
                     extraHelper: (pricingBreakdown?.extraHelperCost ?? 0) > 0 ? (pricingBreakdown?.extraHelperCost ?? 0) : 0,

@@ -7,7 +7,7 @@ export interface TransportRequest {
     customer_name: string;
     city: string;
     date: string;
-    status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+    status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'Open' | 'Contacted/ Pending' | 'Confirmed' | 'Completed';
     notes?: string;
     type: 'item-moving' | 'house-moving';
     // Additional fields from Supabase
@@ -126,7 +126,7 @@ export interface TransportRequest {
     calculated_duration_seconds?: number;
     calculated_duration_text?: string;
     distance_provider?: string;
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'approved';
     created_at: string;
     updated_at: string;
   }

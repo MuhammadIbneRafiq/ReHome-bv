@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
-import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe, FaExternalLinkAlt, FaTags, FaChartLine } from 'react-icons/fa';
+import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe, FaExternalLinkAlt, FaTags, FaChartLine, FaUsers } from 'react-icons/fa';
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameMonth } from 'date-fns';
 import { toast } from 'react-toastify';
 import { supabase } from "../../lib/supabaseClient";
@@ -21,7 +21,7 @@ import CalendarSettingsSection from '../../components/admin/CalendarSettingsSect
 
 const AdminDashboard = () => {
   const { user } = useUserSessionStore();
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'requests' | 'sales'>('transport');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'requests' | 'sales' | 'users'>('transport');
   const [requestsTab, setRequestsTab] = useState<'donations' | 'special-requests'>('donations');
   const [scheduleTab, setScheduleTab] = useState<'calendar' | 'settings'>('calendar');
   
@@ -33,7 +33,9 @@ const AdminDashboard = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   // Filter states
-  const [cityFilter, setCityFilter] = useState<string>('all');
+  const [cityFilter, setCityFilter] = useState<string[]>([]);
+  const [pickupCityFilter, setPickupCityFilter] = useState<string[]>([]);
+  const [dropoffCityFilter, setDropoffCityFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [dateRangeFilter, setDateRangeFilter] = useState({
@@ -59,23 +61,16 @@ const AdminDashboard = () => {
   // const [editingMarketplaceItem, setEditingMarketplaceItem] = useState<string | null>(null);
 
   // Enhanced marketplace management state
-  const [adminListings, setAdminListings] = useState<MarketplaceItem[]>([]);
   const [userListings, setUserListings] = useState<MarketplaceItem[]>([]);
+  const [userListingsSearchQuery, setUserListingsSearchQuery] = useState('');
   // const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [salesHistory, setSalesHistory] = useState<any[]>([]);
   const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
   const [salesStatistics, setSalesStatistics] = useState<any>(null);
   const [salesStatisticsLoading, setSalesStatisticsLoading] = useState(false);
-  const [newAdminListing, setNewAdminListing] = useState({
-    name: '',
-    description: '',
-    price: 0,
-    category: 'Living Room',
-    status: 'available' as 'available' | 'reserved' | 'sold',
-    images: [] as string[]
-  });
-  const [showAddListingForm, setShowAddListingForm] = useState(false);
-  const [marketplaceTab, setMarketplaceTab] = useState<'inventory' | 'supervision' | 'sales' | 'item-details'>('inventory');
+  const [rehomeOrders, setRehomeOrders] = useState<any[]>([]);
+  const [rehomeOrdersLoading, setRehomeOrdersLoading] = useState(false);
+  const [marketplaceTab, setMarketplaceTab] = useState<'inventory' | 'supervision' | 'sales' | 'rehome-orders' | 'item-details'>('inventory');
 
   // Items management state
   const [furnitureItemsData, setFurnitureItemsData] = useState<any[]>([]);
@@ -181,6 +176,49 @@ const AdminDashboard = () => {
         blockedReason: blockedInfo?.reason || null
       };
     });
+  };
+
+  const normalizeTransportStatus = (status: any): 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'Open' | 'Contacted/ Pending' | 'Confirmed' | 'Completed' => {
+    if (!status) return 'Open';
+
+    const trimmed = String(status).toLowerCase().trim();
+
+    if (trimmed === 'open') return 'Open';
+    if (
+      trimmed === 'contacted' ||
+      trimmed === 'pending' ||
+      trimmed === 'contacted/pending' ||
+      trimmed === 'contacted pending' ||
+      trimmed === 'contacted_pending'
+    ) {
+      return 'Contacted/ Pending';
+    }
+
+    if (trimmed === 'confirmed') return 'Confirmed';
+    if (trimmed === 'completed') return 'Completed';
+    if (trimmed === 'cancelled') return 'cancelled';
+
+    return 'Open';
+  };
+
+  const formatCurrency = (value: number | string | null | undefined) => {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    if (num === null || num === undefined || Number.isNaN(num)) return '0.00';
+    return num.toFixed(2);
+  };
+
+  const safeParseJSON = <T,>(value: any, fallback: T): T => {
+    if (!value) return fallback;
+    if (Array.isArray(value) || typeof value === 'object') return value as T;
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return (parsed ?? fallback) as T;
+      } catch {
+        return fallback;
+      }
+    }
+    return fallback;
   };
 
 
@@ -329,12 +367,12 @@ const AdminDashboard = () => {
         fetchFurnitureItemsData(),
         fetchMarketplaceItemDetails(),
         fetchSchedule(),
-        fetchAdminListings(),
         fetchUserListings(),
         fetchItemDonations(),
         fetchSpecialRequests(),
         fetchSalesHistory(),
         fetchSalesStatistics(),
+        fetchRehomeOrders(),
         loadBlockedDates()
       ]);
     } catch (err) {
@@ -370,12 +408,12 @@ const AdminDashboard = () => {
         customer_name: (req.firstname || '') + (req.lastname ? ' ' + req.lastname : ''),
         city: req.firstlocation || '',
         date: req.selecteddate || req.selecteddate_start || req.created_at || '',
-        status: req.status || 'pending',
+        status: normalizeTransportStatus(req.status),
         notes: req.notes || '',
         type: 'item-moving' as const,
         // Additional fields from Supabase
         pickuptype: req.pickuptype,
-        furnitureitems: req.furnitureitems,
+        furnitureitems: safeParseJSON(req.furnitureitems, [] as any[]),
         customitem: req.customitem,
         floorpickup: req.floorpickup,
         floordropoff: req.floordropoff,
@@ -387,10 +425,15 @@ const AdminDashboard = () => {
         isdateflexible: req.isdateflexible,
         baseprice: req.baseprice,
         itempoints: req.itempoints,
+        itemvalue: req.itemvalue,
         carryingcost: req.carryingcost,
         disassemblycost: req.disassemblycost,
         distancecost: req.distancecost,
         extrahelpercost: req.extrahelpercost,
+        studentdiscount: req.studentdiscount,
+        disassembly_items: safeParseJSON(req.disassembly_items, {} as Record<string, any>),
+        extra_helper_items: safeParseJSON(req.extra_helper_items, {} as Record<string, any>),
+        carrying_service_items: safeParseJSON(req.carrying_service_items, {} as Record<string, any>),
         selecteddate_start: req.selecteddate_start,
         selecteddate_end: req.selecteddate_end,
         firstlocation: req.firstlocation,
@@ -421,7 +464,7 @@ const AdminDashboard = () => {
         customer_name: (req.firstname || '') + (req.lastname ? ' ' + req.lastname : ''),
         city: req.firstlocation || req.city || '',
         date: req.selecteddate || req.selecteddate_start || req.created_at || '',
-        status: req.status || 'pending',
+        status: normalizeTransportStatus(req.status),
         notes: req.notes || '',
         type: 'house-moving' as const,
         // Additional fields from Supabase
@@ -438,10 +481,12 @@ const AdminDashboard = () => {
         isdateflexible: req.isdateflexible,
         baseprice: req.baseprice,
         itempoints: req.itempoints,
+        itemvalue: req.itemvalue,
         carryingcost: req.carryingcost,
         disassemblycost: req.disassemblycost,
         distancecost: req.distancecost,
         extrahelpercost: req.extrahelpercost,
+        studentdiscount: req.studentdiscount,
         selecteddate_start: req.selecteddate_start,
         selecteddate_end: req.selecteddate_end,
         firstlocation: req.firstlocation,
@@ -559,7 +604,7 @@ const AdminDashboard = () => {
     try {
       setSalesHistoryLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/admin/sales-history', {
+      const response = await fetch('/api/admin/sales-history?limit=100', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -570,9 +615,11 @@ const AdminDashboard = () => {
         setSalesHistory(result.data || []);
       } else {
         console.error('Failed to fetch sales history:', response.status);
+        toast.error('Failed to fetch sales history');
       }
     } catch (error) {
       console.error('Error fetching sales history:', error);
+      toast.error('Error fetching sales history');
     } finally {
       setSalesHistoryLoading(false);
     }
@@ -600,6 +647,31 @@ const AdminDashboard = () => {
       setSalesStatisticsLoading(false);
     }
   };
+
+  const fetchRehomeOrders = async () => {
+    try {
+      setRehomeOrdersLoading(true);
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/rehome-orders?limit=50', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setRehomeOrders(result.data || []);
+      } else {
+        console.error('Failed to fetch ReHome orders:', response.status);
+        toast.error('Failed to fetch ReHome orders');
+      }
+    } catch (error) {
+      console.error('Error fetching ReHome orders:', error);
+      toast.error('Error fetching ReHome orders');
+    } finally {
+      setRehomeOrdersLoading(false);
+    }
+  };
   
   // Fetch schedule (placeholder function)
   const fetchSchedule = async () => {
@@ -612,7 +684,9 @@ const AdminDashboard = () => {
                          request.customer_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          request.city?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCity = cityFilter === 'all' || request.city === cityFilter;
+    const matchesCity = cityFilter.length === 0 || (request.city ? cityFilter.includes(request.city) : false);
+    const matchesPickupCity = pickupCityFilter.length === 0 || (request.firstlocation ? pickupCityFilter.includes(request.firstlocation) : false);
+    const matchesDropoffCity = dropoffCityFilter.length === 0 || (request.secondlocation ? dropoffCityFilter.includes(request.secondlocation) : false);
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     const matchesType = typeFilter === 'all' || request.type === typeFilter;
     
@@ -620,7 +694,7 @@ const AdminDashboard = () => {
                             (new Date(request.date) >= new Date(dateRangeFilter.startDate) && 
                              new Date(request.date) <= new Date(dateRangeFilter.endDate));
     
-    return matchesSearch && matchesCity && matchesStatus && matchesType && matchesDateRange;
+    return matchesSearch && matchesCity && matchesStatus && matchesType && matchesDateRange && matchesPickupCity && matchesDropoffCity;
   });
 
   // Filter furniture items based on search and filters
@@ -639,6 +713,14 @@ const AdminDashboard = () => {
     ...Object.keys(cityBaseCharges)
   ])];
 
+  const uniquePickupCities = [...new Set(
+    transportRequests.map(r => r.firstlocation as string).filter(Boolean)
+  )];
+
+  const uniqueDropoffCities = [...new Set(
+    transportRequests.map(r => r.secondlocation as string).filter(Boolean)
+  )];
+
   // Get unique categories for filter dropdown
   const uniqueCategories = [...new Set([
     ...marketplaceItems.map(i => i.category).filter(Boolean),
@@ -647,12 +729,22 @@ const AdminDashboard = () => {
 
   // Clear all filters function
   const clearAllFilters = () => {
-    setCityFilter('all');
+    setCityFilter([]);
+    setPickupCityFilter([]);
+    setDropoffCityFilter([]);
     setStatusFilter('all');
     setTypeFilter('all');
     setDateRangeFilter({ startDate: '', endDate: '' });
     setPriceRangeFilter({ minPrice: '', maxPrice: '' });
     setSearchQuery('');
+  };
+
+  const handleMultiSelectChange = (
+    event: ChangeEvent<HTMLSelectElement>,
+    setter: (values: string[]) => void
+  ) => {
+    const selectedValues = Array.from(event.target.selectedOptions).map(option => option.value);
+    setter(selectedValues);
   };
 
   // Handle edit transportation request
@@ -709,7 +801,7 @@ const AdminDashboard = () => {
 
     setIsUpdating(true);
     try {
-      const tableName = request.type === 'item-moving' ? 'item_moving_requests' : 'house_moving_requests';
+      const tableName = request.type === 'item-moving' ? 'item_moving' : 'house_moving';
       
       const { error } = await supabase
         .from(tableName)
@@ -718,7 +810,12 @@ const AdminDashboard = () => {
 
       if (error) {
         toast.error('Failed to delete request');
-        console.error('Delete error:', error);
+        console.error('Delete error:', {
+          error,
+          tableName,
+          requestId: request.id,
+          requestType: request.type
+        });
       } else {
         toast.success('Request deleted successfully');
         fetchTransportRequests(); // Refresh data
@@ -1052,25 +1149,6 @@ const AdminDashboard = () => {
   //   }
   // };
 
-  const fetchAdminListings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('marketplace_furniture')
-        .select('*')
-        .eq('seller_email', user?.email || 'admin@rehome.com')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching admin listings:', error);
-        return;
-      }
-
-      setAdminListings(data || []);
-    } catch (error) {
-      console.error('Error fetching admin listings:', error);
-    }
-  };
-
   const fetchUserListings = async () => {
     try {
       const { data, error } = await supabase
@@ -1328,56 +1406,6 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle donation status update
-  const handleUpdateDonationStatus = async (donationId: string, status: string) => {
-    try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(API_ENDPOINTS.DONATION.UPDATE_STATUS(donationId), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      if (response.ok) {
-        toast.success('Donation status updated successfully');
-        fetchItemDonations();
-      } else {
-        toast.error('Failed to update donation status');
-      }
-    } catch (error) {
-      console.error('Error updating donation status:', error);
-      toast.error('Failed to update donation status');
-    }
-  };
-
-  // Handle special request status update
-  const handleUpdateSpecialRequestStatus = async (requestId: string, status: string) => {
-    try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`${API_ENDPOINTS.MOVING.SPECIAL_REQUEST}/${requestId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      if (response.ok) {
-        toast.success('Special request status updated successfully');
-        fetchSpecialRequests();
-      } else {
-        toast.error('Failed to update special request status');
-      }
-    } catch (error) {
-      console.error('Error updating special request status:', error);
-      toast.error('Failed to update special request status');
-    }
-  };
-
   // Handle view donation details
   const handleViewDonationDetails = (donation: ItemDonation) => {
     setSelectedDonation(donation);
@@ -1566,6 +1594,17 @@ const AdminDashboard = () => {
               <FaChartLine className="mr-2" />
               Sales History
             </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`flex items-center px-4 py-2 rounded-md font-medium transition-colors ${
+                activeTab === 'users'
+                  ? 'bg-orange-500 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <FaUsers className="mr-2" />
+              User Management
+            </button>
           </div>
         </div>
 
@@ -1599,7 +1638,7 @@ const AdminDashboard = () => {
                   <FaCog className="mr-2" />
                   Filters
                 </button>
-                {(cityFilter !== 'all' || statusFilter !== 'all' || typeFilter !== 'all' || 
+                {(cityFilter.length > 0 || pickupCityFilter.length > 0 || dropoffCityFilter.length > 0 || statusFilter !== 'all' || typeFilter !== 'all' || 
                   dateRangeFilter.startDate || priceRangeFilter.minPrice) && (
                   <button
                     onClick={clearAllFilters}
@@ -1617,12 +1656,42 @@ const AdminDashboard = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
                     <select
+                      multiple
                       value={cityFilter}
-                      onChange={(e) => setCityFilter(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      onChange={(e) => handleMultiSelectChange(e, setCityFilter)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
                     >
-                      <option value="all">All Cities</option>
                       {uniqueCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Pickup City Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Pickup City</label>
+                    <select
+                      multiple
+                      value={pickupCityFilter}
+                      onChange={(e) => handleMultiSelectChange(e, setPickupCityFilter)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
+                    >
+                      {uniquePickupCities.map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Dropoff City Filter */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff City</label>
+                    <select
+                      multiple
+                      value={dropoffCityFilter}
+                      onChange={(e) => handleMultiSelectChange(e, setDropoffCityFilter)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
+                    >
+                      {uniqueDropoffCities.map(city => (
                         <option key={city} value={city}>{city}</option>
                       ))}
                     </select>
@@ -1639,10 +1708,10 @@ const AdminDashboard = () => {
                       <option value="all">All Status</option>
                       {activeTab === 'transport' && (
                         <>
-                          <option value="pending">Pending</option>
-                          <option value="confirmed">Confirmed</option>
-                          <option value="completed">Completed</option>
-                          <option value="cancelled">Cancelled</option>
+                          <option value="Open">Open</option>
+                          <option value="Contacted/ Pending">Contacted/ Pending</option>
+                          <option value="Confirmed">Confirmed</option>
+                          <option value="Completed">Completed</option>
                         </>
                       )}
                       {activeTab === 'marketplace' && (
@@ -1733,12 +1802,22 @@ const AdminDashboard = () => {
               )}
 
               {/* Filter Summary */}
-              {(cityFilter !== 'all' || statusFilter !== 'all' || typeFilter !== 'all' || 
+              {(cityFilter.length > 0 || pickupCityFilter.length > 0 || dropoffCityFilter.length > 0 || statusFilter !== 'all' || typeFilter !== 'all' || 
                 dateRangeFilter.startDate || priceRangeFilter.minPrice) && (
                 <div className="flex flex-wrap gap-2">
-                  {cityFilter !== 'all' && (
+                  {cityFilter.length > 0 && (
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                      City: {cityFilter}
+                      City: {cityFilter.join(', ')}
+                    </span>
+                  )}
+                  {pickupCityFilter.length > 0 && (
+                    <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-sm">
+                      Pickup: {pickupCityFilter.join(', ')}
+                    </span>
+                  )}
+                  {dropoffCityFilter.length > 0 && (
+                    <span className="px-2 py-1 bg-cyan-100 text-cyan-800 rounded text-sm">
+                      Dropoff: {dropoffCityFilter.join(', ')}
                     </span>
                   )}
                   {statusFilter !== 'all' && (
@@ -1793,7 +1872,7 @@ const AdminDashboard = () => {
                       {filteredTransportRequests.map((request, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="border border-gray-300 px-3 py-2 text-xs font-medium">
-                            #{request.order_number}
+                            {request.order_number ? `#${request.order_number}` : request.id ? `#${request.id}` : '—'}
                           </td>
                           <td className="border border-gray-300 px-3 py-2">
                             <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -1843,19 +1922,17 @@ const AdminDashboard = () => {
                              format(new Date(request.date), 'MM/dd/yyyy')}
                           </td>
                           <td className="border border-gray-300 px-3 py-2 text-xs">
-                            <div>
-                              <div className="font-medium">€{request.estimatedprice || '-'}</div>
-                              <div className="text-gray-500">Base: €{request.baseprice || '-'}</div>
-                            </div>
+                            <div className="font-semibold text-orange-600">€{formatCurrency(request.estimatedprice)}</div>
+                            <div className="text-[11px] text-gray-500">Base €{formatCurrency(request.baseprice)}</div>
                           </td>
                           <td className="border border-gray-300 px-3 py-2 text-xs">
-                            {request.furnitureitems ? (
+                            {request.furnitureitems && request.furnitureitems.length > 0 ? (
                               <div>
-                                <div>{request.furnitureitems.length} items</div>
-                                <div className="text-gray-500">{request.itempoints || 0} points</div>
+                                <span className="font-medium">{request.furnitureitems.length} item(s)</span>
+                                <span className="text-gray-500 text-[11px] ml-1">{request.itempoints || 0} pts</span>
                               </div>
                             ) : (
-                              request.customitem || '-'
+                              <span className="text-gray-500">{request.customitem || '—'}</span>
                             )}
                           </td>
                           <td className="border border-gray-300 px-3 py-2">
@@ -1865,16 +1942,17 @@ const AdminDashboard = () => {
                                 onChange={(e) => setEditTransportData({...editTransportData, status: e.target.value})}
                                 className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 text-xs"
                               >
-                                <option value="pending">Pending</option>
-                                <option value="confirmed">Confirmed</option>
-                                <option value="completed">Completed</option>
-                                <option value="cancelled">Cancelled</option>
+                                <option value="Open">Open</option>
+                                <option value="Contacted/ Pending">Contacted/ Pending</option>
+                                <option value="Confirmed">Confirmed</option>
+                                <option value="Completed">Completed</option>
                               </select>
                             ) : (
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                request.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                                request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                request.status === 'Open' ? 'bg-gray-100 text-gray-800' :
+                                request.status === 'Contacted/ Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                request.status === 'Confirmed' ? 'bg-blue-100 text-blue-800' :
+                                request.status === 'Completed' ? 'bg-green-100 text-green-800' :
                                 'bg-red-100 text-red-800'
                               }`}>
                                 {request.status}
@@ -1933,123 +2011,373 @@ const AdminDashboard = () => {
                   </table>
                 </div>
 
-                {/* Transportation Request Details Modal */}
+                {/* Transportation Request Details Modal - Enhanced */}
                 {showRequestDetails && selectedTransportRequest && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
                       <div className="p-6">
-                        <div className="flex justify-between items-center mb-6">
-                          <h3 className="text-2xl font-bold text-gray-800">
-                            {selectedTransportRequest.type === 'item-moving' ? 'Item Moving' : 'House Moving'} Request Details
-                          </h3>
+                        <div className="flex justify-between items-start mb-6 pb-4 border-b">
+                          <div>
+                            <h3 className="text-2xl font-bold text-gray-800">
+                              {selectedTransportRequest.type === 'item-moving' ? 'Item Moving' : 'House Moving'} Request
+                            </h3>
+                            <p className="text-sm text-gray-500 mt-1">
+                              Request #{selectedTransportRequest.order_number || selectedTransportRequest.id}
+                            </p>
+                          </div>
                           <button
                             onClick={() => setShowRequestDetails(false)}
-                            className="text-gray-500 hover:text-gray-700"
+                            className="text-gray-500 hover:text-gray-700 p-2"
                           >
                             <FaTimes size={24} />
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-6">
                           {/* Customer Information */}
                           <div className="bg-gray-50 p-4 rounded-lg">
-                            <h4 className="text-lg font-semibold text-gray-800 mb-3">Customer Information</h4>
-                            <div className="space-y-2">
-                              <p><span className="font-medium">Name:</span> {selectedTransportRequest.customer_name}</p>
-                              <p><span className="font-medium">Email:</span> {selectedTransportRequest.customer_email}</p>
-                              <p><span className="font-medium">Phone:</span> {(selectedTransportRequest as any).phone || 'N/A'}</p>
-                            </div>
-                          </div>
-
-                          {/* Request Information */}
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h4 className="text-lg font-semibold text-gray-800 mb-3">Request Information</h4>
-                            <div className="space-y-2">
-                              <p><span className="font-medium">Type:</span> 
-                                <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                                  selectedTransportRequest.type === 'item-moving' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-blue-100 text-blue-800'
+                            <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                              <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">1</span>
+                              Customer Information
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-sm text-gray-600">Name</p>
+                                <p className="font-medium">{(selectedTransportRequest as any).firstname} {(selectedTransportRequest as any).lastname}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Email</p>
+                                <p className="font-medium">{selectedTransportRequest.customer_email}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Phone</p>
+                                <p className="font-medium">{(selectedTransportRequest as any).phone || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Status</p>
+                                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                                  selectedTransportRequest.status === 'Open' ? 'bg-gray-100 text-gray-800' :
+                                  selectedTransportRequest.status === 'Contacted/ Pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  selectedTransportRequest.status === 'Confirmed' ? 'bg-blue-100 text-blue-800' :
+                                  selectedTransportRequest.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                                  'bg-red-100 text-red-800'
                                 }`}>
-                                  {selectedTransportRequest.type === 'item-moving' ? 'Item Moving' : 'House Moving'}
-                                </span>
-                              </p>
-                              <p><span className="font-medium">Status:</span> 
-                                <span className="ml-2 px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                                   {selectedTransportRequest.status}
                                 </span>
-                              </p>
-                              <p><span className="font-medium">Date:</span> {format(new Date(selectedTransportRequest.date), 'PPP')}</p>
-                              <p><span className="font-medium">City:</span> {selectedTransportRequest.city}</p>
+                              </div>
                             </div>
                           </div>
 
-                          {/* Location Information */}
+                          {/* Location & Service Details */}
                           <div className="bg-gray-50 p-4 rounded-lg">
-                            <h4 className="text-lg font-semibold text-gray-800 mb-3">Location Details</h4>
-                            <div className="space-y-2">
-                              <p><span className="font-medium">From:</span> {(selectedTransportRequest as any).firstlocation || 'N/A'}</p>
-                              <p><span className="font-medium">To:</span> {(selectedTransportRequest as any).secondlocation || 'N/A'}</p>
-                              <p><span className="font-medium">Distance:</span> {(selectedTransportRequest as any).distance || 'N/A'} km</p>
-                              <p><span className="font-medium">Floor (From):</span> {(selectedTransportRequest as any).firstfloor || 'N/A'}</p>
-                              <p><span className="font-medium">Floor (To):</span> {(selectedTransportRequest as any).secondfloor || 'N/A'}</p>
+                            <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                              <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">2</span>
+                              Location & Service Details
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-sm text-gray-600">Pickup Type</p>
+                                <p className="font-medium capitalize">{(selectedTransportRequest as any).pickuptype || 'N/A'}</p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-600">Date</p>
+                                <p className="font-medium">
+                                  {(selectedTransportRequest as any).selecteddate ? 
+                                    format(new Date((selectedTransportRequest as any).selecteddate), 'MMM dd, yyyy') : 
+                                    (selectedTransportRequest as any).selecteddate_start ? 
+                                    format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy') : 'Flexible'}
+                                  {(selectedTransportRequest as any).isdateflexible && ' (Flexible)'}
+                                </p>
+                              </div>
+                              <div className="md:col-span-2">
+                                <p className="text-sm text-gray-600">From (Pickup)</p>
+                                <p className="font-medium">{(selectedTransportRequest as any).firstlocation || 'N/A'}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Floor: {(selectedTransportRequest as any).floorpickup || 0} | 
+                                  Elevator: {(selectedTransportRequest as any).elevatorpickup || (selectedTransportRequest as any).elevator_pickup ? 'Yes' : 'No'}
+                                </p>
+                              </div>
+                              <div className="md:col-span-2">
+                                <p className="text-sm text-gray-600">To (Dropoff)</p>
+                                <p className="font-medium">{(selectedTransportRequest as any).secondlocation || 'N/A'}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Floor: {(selectedTransportRequest as any).floordropoff || 0} | 
+                                  Elevator: {(selectedTransportRequest as any).elevatordropoff || (selectedTransportRequest as any).elevator_dropoff ? 'Yes' : 'No'}
+                                </p>
+                              </div>
+                              {(selectedTransportRequest as any).calculated_distance_km && (
+                                <div>
+                                  <p className="text-sm text-gray-600">Distance</p>
+                                  <p className="font-medium">{parseFloat((selectedTransportRequest as any).calculated_distance_km).toFixed(2)} km</p>
+                                </div>
+                              )}
+                              {((selectedTransportRequest as any).preferredtimespan || (selectedTransportRequest as any).preferred_time_span) && (
+                                <div>
+                                  <p className="text-sm text-gray-600">Preferred Time</p>
+                                  <p className="font-medium">{(selectedTransportRequest as any).preferredtimespan || (selectedTransportRequest as any).preferred_time_span}</p>
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          {/* Service Details */}
-                          <div className="bg-gray-50 p-4 rounded-lg">
-                            <h4 className="text-lg font-semibold text-gray-800 mb-3">Service Details</h4>
-                            <div className="space-y-2">
-                              <p><span className="font-medium">Helper Required:</span> {(selectedTransportRequest as any).helper ? 'Yes' : 'No'}</p>
-                              <p><span className="font-medium">Assembly/Disassembly:</span> {(selectedTransportRequest as any).dismantling ? 'Yes' : 'No'}</p>
-                              <p><span className="font-medium">Carrying Service:</span> {(selectedTransportRequest as any).carrying_service ? 'Yes' : 'No'}</p>
-                              <p><span className="font-medium">Total Items:</span> {(selectedTransportRequest as any).totalitems || 'N/A'}</p>
-                              <p><span className="font-medium">Total Points:</span> {(selectedTransportRequest as any).totalpoints || 'N/A'}</p>
-                              <p><span className="font-medium">Estimated Price:</span> €{(selectedTransportRequest as any).price || 'N/A'}</p>
-                            </div>
-                          </div>
-
-                          {/* Special Requirements */}
-                          {selectedTransportRequest.notes && (
-                            <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-3">Special Requirements / Notes</h4>
-                              <p className="text-gray-700">{selectedTransportRequest.notes}</p>
-                            </div>
-                          )}
-
-                          {/* Items List (for item moving) */}
-                          {selectedTransportRequest.type === 'item-moving' && (selectedTransportRequest as any).items && (
-                            <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-3">Items to Move</h4>
+                          {/* Full Item List with Add-ons */}
+                          {(selectedTransportRequest as any).furnitureitems && (
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">3</span>
+                                Item List
+                              </h4>
                               <div className="overflow-x-auto">
-                                <table className="w-full border-collapse border border-gray-300">
+                                <table className="w-full border-collapse">
                                   <thead>
-                                    <tr className="bg-gray-100">
-                                      <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Item</th>
-                                      <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Category</th>
-                                      <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Quantity</th>
-                                      <th className="border border-gray-300 px-3 py-2 text-left text-sm font-medium">Points</th>
+                                    <tr className="bg-gray-200">
+                                      <th className="border border-gray-300 px-3 py-2 text-left text-sm">Item</th>
+                                      <th className="border border-gray-300 px-3 py-2 text-center text-sm">Qty</th>
+                                      <th className="border border-gray-300 px-3 py-2 text-center text-sm">Points</th>
+                                      <th className="border border-gray-300 px-3 py-2 text-left text-sm">Add-ons</th>
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {(selectedTransportRequest as any).items.map((item: any, index: number) => (
-                                      <tr key={index} className="hover:bg-gray-50">
-                                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.name}</td>
-                                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.category}</td>
-                                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.quantity}</td>
-                                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.points}</td>
-                                      </tr>
-                                    ))}
+                                    {(typeof (selectedTransportRequest as any).furnitureitems === 'string' ? 
+                                      JSON.parse((selectedTransportRequest as any).furnitureitems) : 
+                                      (selectedTransportRequest as any).furnitureitems).map((item: any, index: number) => {
+                                        const disassemblyItems = (selectedTransportRequest as any).disassembly_items;
+                                        const carryingItems = (selectedTransportRequest as any).carrying_service_items;
+                                        const helperItems = (selectedTransportRequest as any).extra_helper_items;
+                                        
+                                        let parsedDisassembly: any = {};
+                                        let parsedCarrying: any = {};
+                                        let parsedHelper: any = {};
+                                        
+                                        try {
+                                          parsedDisassembly = typeof disassemblyItems === 'string' ? JSON.parse(disassemblyItems) : disassemblyItems || {};
+                                        } catch {}
+                                        try {
+                                          parsedCarrying = typeof carryingItems === 'string' ? JSON.parse(carryingItems) : carryingItems || {};
+                                        } catch {}
+                                        try {
+                                          parsedHelper = typeof helperItems === 'string' ? JSON.parse(helperItems) : helperItems || {};
+                                        } catch {}
+                                        
+                                        return (
+                                          <tr key={index} className="hover:bg-gray-100">
+                                            <td className="border border-gray-300 px-3 py-2 text-sm">{item.name || 'N/A'}</td>
+                                            <td className="border border-gray-300 px-3 py-2 text-center text-sm">{item.quantity || 1}</td>
+                                            <td className="border border-gray-300 px-3 py-2 text-center text-sm">{item.points || item.value || 0}</td>
+                                            <td className="border border-gray-300 px-3 py-2 text-sm">
+                                              <div className="flex flex-wrap gap-1">
+                                                {parsedDisassembly[item.name] && (
+                                                  <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded text-xs">Disassembly</span>
+                                                )}
+                                                {parsedCarrying[item.name] && (
+                                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">Carrying</span>
+                                                )}
+                                                {parsedHelper[item.name] && (
+                                                  <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">Helper</span>
+                                                )}
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
                                   </tbody>
                                 </table>
+                              </div>
+                              <div className="mt-3 pt-3 border-t">
+                                <p className="text-sm text-gray-600">Total Points: <span className="font-semibold">{(selectedTransportRequest as any).itempoints || 0}</span></p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Price Breakdown */}
+                          <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-4 rounded-lg border border-orange-200">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                              <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">4</span>
+                              Your Price Estimate
+                            </h4>
+                            <div className="space-y-3">
+                              {/* Base Price Section */}
+                              {(selectedTransportRequest as any).baseprice !== undefined && (selectedTransportRequest as any).baseprice !== null && (
+                                <div>
+                                  <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-700 font-medium">Base Price:</span>
+                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).baseprice).toFixed(2)}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">Standard rate for your route and date</div>
+                                </div>
+                              )}
+
+                              {/* Items Section */}
+                              {(selectedTransportRequest as any).furnitureitems && (selectedTransportRequest as any).furnitureitems.length > 0 && (
+                                <div>
+                                  <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-700 font-medium">Items:</span>
+                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).itemvalue || 0).toFixed(2)}</span>
+                                  </div>
+                                  <div className="mt-2 space-y-1">
+                                    {(selectedTransportRequest as any).furnitureitems.map((item: any, idx: number) => (
+                                      <div key={idx} className="flex justify-between text-xs text-gray-600">
+                                        <span>• {item.name || item.title || 'Item'} ({item.quantity || 1}x)</span>
+                                        <span>{item.points || 0} pts</span>
+                                      </div>
+                                    ))}
+                                    <div className="text-xs text-gray-500 mt-1">Total Points: {(selectedTransportRequest as any).itempoints || 0}</div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Distance Section */}
+                              {(selectedTransportRequest as any).distancecost !== undefined && (selectedTransportRequest as any).distancecost !== null && (
+                                <div>
+                                  <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-700 font-medium">Distance ({(selectedTransportRequest as any).calculated_distance_km ? parseFloat((selectedTransportRequest as any).calculated_distance_km).toFixed(2) : '0'} km):</span>
+                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).distancecost).toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Extra Helper Section */}
+                              {(selectedTransportRequest as any).extrahelpercost !== undefined && (selectedTransportRequest as any).extrahelpercost !== null && parseFloat((selectedTransportRequest as any).extrahelpercost) > 0 && (
+                                <div>
+                                  <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-700 font-medium">Extra Helper:</span>
+                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).extrahelpercost).toFixed(2)}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Carrying Service Section */}
+                              {(selectedTransportRequest as any).carryingcost !== undefined && (selectedTransportRequest as any).carryingcost !== null && parseFloat((selectedTransportRequest as any).carryingcost) > 0 && (
+                                <div>
+                                  <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-700 font-medium">Carrying Service:</span>
+                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).carryingcost).toFixed(2)}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">Floor carrying assistance</div>
+                                </div>
+                              )}
+
+                              {/* Assembly/Disassembly Section */}
+                              {(selectedTransportRequest as any).disassemblycost !== undefined && (selectedTransportRequest as any).disassemblycost !== null && parseFloat((selectedTransportRequest as any).disassemblycost) > 0 && (
+                                <div>
+                                  <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-700 font-medium">Assembly & Disassembly:</span>
+                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).disassemblycost).toFixed(2)}</span>
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">Professional assembly/disassembly service</div>
+                                </div>
+                              )}
+
+                              {/* Subtotal */}
+                              {(() => {
+                                const parts = [
+                                  parseFloat((selectedTransportRequest as any).baseprice || 0),
+                                  parseFloat((selectedTransportRequest as any).itemvalue || 0),
+                                  parseFloat((selectedTransportRequest as any).distancecost || 0),
+                                  parseFloat((selectedTransportRequest as any).carryingcost || 0),
+                                  parseFloat((selectedTransportRequest as any).disassemblycost || 0),
+                                  parseFloat((selectedTransportRequest as any).extrahelpercost || 0)
+                                ];
+                                const subtotal = parts.reduce((acc, val) => acc + (Number.isFinite(val) ? val : 0), 0);
+                                if (subtotal > 0) {
+                                  return (
+                                    <div className="flex justify-between text-gray-700">
+                                      <span className="font-medium">Subtotal:</span>
+                                      <span className="font-semibold">€{subtotal.toFixed(2)}</span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                              {/* Student Discount */}
+                              {(((selectedTransportRequest as any).isstudent || (selectedTransportRequest as any).is_student) && (selectedTransportRequest as any).studentdiscount) && (
+                                <div className="flex justify-between text-green-700">
+                                  <span className="font-medium">Student Discount (8.85%):</span>
+                                  <span className="font-semibold">-€{parseFloat((selectedTransportRequest as any).studentdiscount).toFixed(2)}</span>
+                                </div>
+                              )}
+
+                              {/* Other Charges if any */}
+                              {(() => {
+                                const parts = [
+                                  parseFloat((selectedTransportRequest as any).baseprice || 0),
+                                  parseFloat((selectedTransportRequest as any).itemvalue || 0),
+                                  parseFloat((selectedTransportRequest as any).distancecost || 0),
+                                  parseFloat((selectedTransportRequest as any).carryingcost || 0),
+                                  parseFloat((selectedTransportRequest as any).disassemblycost || 0),
+                                  parseFloat((selectedTransportRequest as any).extrahelpercost || 0),
+                                  -parseFloat((selectedTransportRequest as any).studentdiscount || 0)
+                                ];
+                                const total = parseFloat((selectedTransportRequest as any).estimatedprice || 0);
+                                const partsSum = parts.reduce((acc, val) => acc + (Number.isFinite(val) ? val : 0), 0);
+                                const difference = +(total - partsSum).toFixed(2);
+                                if (Math.abs(difference) >= 0.01) {
+                                  return (
+                                    <div className="flex justify-between text-xs text-gray-600">
+                                      <span>Other Charges:</span>
+                                      <span>€{difference.toFixed(2)}</span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                              {/* Total */}
+                              <div className="border-t-2 border-orange-400 pt-3 mt-3">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xl font-bold text-gray-800">Total:</span>
+                                  <span className="text-2xl font-bold text-orange-600">€{parseFloat((selectedTransportRequest as any).estimatedprice || 0).toFixed(2)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Extra Information */}
+                          {((selectedTransportRequest as any).extra_instructions || selectedTransportRequest.notes || (selectedTransportRequest as any).customitem) && (
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">5</span>
+                                Extra Information
+                              </h4>
+                              <div className="space-y-3">
+                                {(selectedTransportRequest as any).customitem && (
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700">Custom Item:</p>
+                                    <p className="text-gray-600 mt-1">{(selectedTransportRequest as any).customitem}</p>
+                                  </div>
+                                )}
+                                {(selectedTransportRequest as any).extra_instructions && (
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700">Extra Instructions:</p>
+                                    <p className="text-gray-600 mt-1">{(selectedTransportRequest as any).extra_instructions}</p>
+                                  </div>
+                                )}
+                                {selectedTransportRequest.notes && (
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700">Notes:</p>
+                                    <p className="text-gray-600 mt-1">{selectedTransportRequest.notes}</p>
+                                  </div>
+                                )}
+                                {(selectedTransportRequest as any).studentid && (
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-700">Student ID:</p>
+                                    <p className="text-gray-600 mt-1 flex items-center">
+                                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Uploaded ✓</span>
+                                    </p>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           )}
 
                           {/* Photos Section */}
                           {(selectedTransportRequest as any).photo_urls && (selectedTransportRequest as any).photo_urls.length > 0 && (
-                            <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                              <h4 className="text-lg font-semibold text-gray-800 mb-3">Uploaded Photos</h4>
+                            <div className="bg-gray-50 p-4 rounded-lg">
+                              <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">6</span>
+                                Attached Photos ({(selectedTransportRequest as any).photo_urls.length})
+                              </h4>
                               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                 {(selectedTransportRequest as any).photo_urls.map((photoUrl: string, index: number) => (
                                   <div key={index} className="relative group">
@@ -2079,15 +2407,6 @@ const AdminDashboard = () => {
                             </div>
                           )}
 
-                          {/* Timeline */}
-                          <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                            <h4 className="text-lg font-semibold text-gray-800 mb-3">Timeline</h4>
-                            <div className="space-y-2">
-                              <p><span className="font-medium">Created:</span> {format(new Date(selectedTransportRequest.created_at), 'PPpp')}</p>
-                              <p><span className="font-medium">Preferred Date:</span> {(selectedTransportRequest as any).preferreddate || 'N/A'}</p>
-                              <p><span className="font-medium">Time Slot:</span> {(selectedTransportRequest as any).timeslot || 'N/A'}</p>
-                            </div>
-                          </div>
                         </div>
 
                         {/* Action Buttons */}
@@ -2122,9 +2441,9 @@ const AdminDashboard = () => {
                 {/* Marketplace Sub-tabs */}
                 <div className="flex space-x-4 mb-6">
                   {[
-                    { id: 'inventory', label: 'My Inventory', icon: FaBox },
                     { id: 'supervision', label: 'User Listings', icon: FaSearch },
-                    { id: 'sales', label: 'Sales History', icon: FaCog },
+                    { id: 'sales', label: 'Sales History', icon: FaChartLine },
+                    { id: 'rehome-orders', label: 'ReHome Orders', icon: FaBox },
                     { id: 'item-details', label: 'Marketplace Categories', icon: FaTags }
                   ].map(tab => (
                     <button
@@ -2142,139 +2461,22 @@ const AdminDashboard = () => {
                   ))}
                 </div>
 
-                {/* My Inventory Tab */}
-                {marketplaceTab === 'inventory' && (
-                  <div>
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">My Marketplace Inventory</h3>
-                      <button
-                        onClick={() => setShowAddListingForm(!showAddListingForm)}
-                        className="flex items-center px-3 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
-                      >
-                        <FaPlus className="mr-1" />
-                        Add Listing
-                      </button>
-                    </div>
-
-                    {/* Add Listing Form */}
-                    {showAddListingForm && (
-                      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium mb-3">Add New Marketplace Listing</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <input
-                            type="text"
-                            placeholder="Item Name"
-                            value={newAdminListing.name}
-                            onChange={(e) => setNewAdminListing({...newAdminListing, name: e.target.value})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                          <input
-                            type="number"
-                            placeholder="Price (€)"
-                            value={newAdminListing.price}
-                            onChange={(e) => setNewAdminListing({...newAdminListing, price: parseFloat(e.target.value)})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          />
-                          <select
-                            value={newAdminListing.category}
-                            onChange={(e) => setNewAdminListing({...newAdminListing, category: e.target.value})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          >
-                            <option value="Living Room">Living Room</option>
-                            <option value="Bedroom">Bedroom</option>
-                            <option value="Kitchen">Kitchen</option>
-                            <option value="Bathroom">Bathroom</option>
-                            <option value="Office">Office</option>
-                            <option value="Garden">Garden</option>
-                            <option value="Others">Others</option>
-                          </select>
-                          <select
-                            value={newAdminListing.status}
-                            onChange={(e) => setNewAdminListing({...newAdminListing, status: e.target.value as any})}
-                            className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          >
-                            <option value="available">Available</option>
-                            <option value="reserved">Reserved</option>
-                          </select>
-                        </div>
-                        <textarea
-                          placeholder="Description"
-                          value={newAdminListing.description}
-                          onChange={(e) => setNewAdminListing({...newAdminListing, description: e.target.value})}
-                          className="mt-4 w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
-                          rows={3}
-                        />
-                        {/* <div className="mt-3 flex space-x-2">
-                          <button
-                            onClick={handleAddAdminListing}
-                            disabled={isUpdating}
-                            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                          >
-                            {isUpdating ? 'Adding...' : 'Add Listing'}
-                          </button>
-                          <button
-                            onClick={() => setShowAddListingForm(false)}
-                            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                          >
-                            Cancel
-                          </button>
-                        </div> */}
-                      </div>
-                    )}
-
-                    {/* Admin Listings Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">ITEM</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">CATEGORY</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">PRICE</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">STATUS</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">DATE</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {adminListings.map((item, index) => (
-                            <tr key={index} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-4 py-2">
-                                <div>
-                                  <div className="font-medium">{item.name}</div>
-                                  <div className="text-sm text-gray-500">{item.description}</div>
-                                </div>
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">{item.category}</td>
-                              <td className="border border-gray-300 px-4 py-2">€{item.price}</td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  item.status === 'available' ? 'bg-green-100 text-green-800' :
-                                  item.status === 'reserved' ? 'bg-yellow-100 text-yellow-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}>
-                                  {item.status}
-                                </span>
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                {format(new Date(item.created_at), 'yyyy-MM-dd')}
-                              </td>
-                              <td className="border border-gray-300 px-4 py-2">
-                                <p className="text-xs text-gray-500">
-                                  Delete, Edit in web dashboard, not here
-                                </p>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
                 {/* User Listings Supervision Tab */}
                 {marketplaceTab === 'supervision' && (
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">User Listings Supervision</h3>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-gray-800">User Listings Supervision</h3>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Search listings..."
+                          value={userListingsSearchQuery}
+                          onChange={(e) => setUserListingsSearchQuery(e.target.value)}
+                          className="px-4 py-2 border border-gray-300 rounded-md focus:ring-orange-500 focus:border-orange-500 pl-10"
+                        />
+                        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      </div>
+                    </div>
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse border border-gray-300">
                         <thead>
@@ -2289,7 +2491,18 @@ const AdminDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {userListings.map((item, index) => (
+                          {userListings
+                            .filter(item => {
+                              if (!userListingsSearchQuery) return true;
+                              const searchLower = userListingsSearchQuery.toLowerCase();
+                              return (
+                                item.name?.toLowerCase().includes(searchLower) ||
+                                item.description?.toLowerCase().includes(searchLower) ||
+                                item.seller_email?.toLowerCase().includes(searchLower) ||
+                                item.category?.toLowerCase().includes(searchLower)
+                              );
+                            })
+                            .map((item, index) => (
                             <tr key={index} className="hover:bg-gray-50">
                               <td className="border border-gray-300 px-4 py-2">
                                 <div>
@@ -2333,15 +2546,217 @@ const AdminDashboard = () => {
                 {marketplaceTab === 'sales' && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Sales History</h3>
-                    <p className="text-gray-600 mb-4">
-                      Sales data is stored in Supabase. You can access detailed sales reports through the database.
-                    </p>
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                      <p className="text-blue-800">
-                        💡 <strong>Tip:</strong> All sales are automatically recorded in the 'sales_history' table in Supabase 
-                        when items are marked as sold or purchase requests are accepted.
-                      </p>
-                    </div>
+                    
+                    {salesHistoryLoading ? (
+                      <div className="p-6 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
+                        <p className="mt-2 text-gray-600">Loading sales history...</p>
+                      </div>
+                    ) : salesHistory.length === 0 ? (
+                      <div className="p-6 text-center">
+                        <p className="text-gray-600">No sales history available</p>
+                        <p className="text-sm text-gray-500 mt-2">Orders will appear here once customers complete purchases</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-100">
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Order #</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Customer</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Item</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Category</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Qty</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Item Price</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Add-ons</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Total</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Date</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-medium">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {salesHistory.map((sale) => {
+                              const carryingFee = parseFloat(sale.carrying_fee || 0);
+                              const assemblyFee = parseFloat(sale.assembly_fee || 0);
+                              const deliveryFee = parseFloat(sale.delivery_fee || 0);
+                              const extraHelperFee = parseFloat(sale.extra_helper_fee || 0);
+                              const totalAddons = carryingFee + assemblyFee + deliveryFee + extraHelperFee;
+                              
+                              return (
+                                <tr key={sale.id} className="hover:bg-gray-50">
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <span className="font-mono text-sm font-medium text-blue-600">{sale.order_id}</span>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <div>
+                                      <p className="font-medium">{sale.customer_name || 'N/A'}</p>
+                                      <p className="text-xs text-gray-500">{sale.customer_email}</p>
+                                      {sale.customer_phone && (
+                                        <p className="text-xs text-gray-500">{sale.customer_phone}</p>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">{sale.item_name}</td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                      {sale.item_category || 'N/A'}
+                                    </span>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-center">{sale.quantity}</td>
+                                  <td className="border border-gray-300 px-4 py-2">€{parseFloat(sale.item_price).toFixed(2)}</td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    {totalAddons > 0 ? (
+                                      <div className="text-xs">
+                                        {carryingFee > 0 && <div>Carrying: €{carryingFee.toFixed(2)}</div>}
+                                        {assemblyFee > 0 && <div>Assembly: €{assemblyFee.toFixed(2)}</div>}
+                                        {deliveryFee > 0 && <div>Delivery: €{deliveryFee.toFixed(2)}</div>}
+                                        {extraHelperFee > 0 && <div>Helper: €{extraHelperFee.toFixed(2)}</div>}
+                                        <div className="font-medium mt-1">Total: €{totalAddons.toFixed(2)}</div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-400">-</span>
+                                    )}
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 font-medium">€{parseFloat(sale.final_total).toFixed(2)}</td>
+                                  <td className="border border-gray-300 px-4 py-2 text-sm">
+                                    {sale.created_at && !isNaN(new Date(sale.created_at).getTime()) 
+                                      ? format(new Date(sale.created_at), 'MMM dd, yyyy')
+                                      : 'N/A'
+                                    }
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                      sale.payment_status === 'completed' 
+                                        ? 'bg-green-100 text-green-800'
+                                        : sale.payment_status === 'pending'
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {sale.payment_status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ReHome Orders Tab */}
+                {marketplaceTab === 'rehome-orders' && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">ReHome Orders</h3>
+                    
+                    {rehomeOrdersLoading ? (
+                      <div className="p-6 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
+                        <p className="mt-2 text-gray-600">Loading orders...</p>
+                      </div>
+                    ) : rehomeOrders.length === 0 ? (
+                      <div className="p-6 text-center">
+                        <p className="text-gray-600">No orders yet</p>
+                        <p className="text-sm text-gray-500 mt-2">Orders will appear here when customers place orders</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full border border-gray-300">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Order #</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Customer</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Items</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left">Delivery Address</th>
+                              <th className="border border-gray-300 px-4 py-2 text-right">Base Total</th>
+                              <th className="border border-gray-300 px-4 py-2 text-right">Carrying</th>
+                              <th className="border border-gray-300 px-4 py-2 text-right">Assembly</th>
+                              <th className="border border-gray-300 px-4 py-2 text-right">Total</th>
+                              <th className="border border-gray-300 px-4 py-2 text-center">Status</th>
+                              <th className="border border-gray-300 px-4 py-2 text-center">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rehomeOrders.map((order) => {
+                              const items = Array.isArray(order.items) ? order.items : [];
+                              return (
+                                <tr key={order.id} className="hover:bg-gray-50">
+                                  <td className="border border-gray-300 px-4 py-2 font-medium text-sm">
+                                    {order.order_number}
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-sm">
+                                    <div>{order.customer_first_name} {order.customer_last_name}</div>
+                                    <div className="text-xs text-gray-500">{order.customer_email}</div>
+                                    <div className="text-xs text-gray-500">{order.customer_phone}</div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-sm">
+                                    <div className="max-w-xs">
+                                      {items.length > 0 ? (
+                                        items.map((item: any, idx: number) => (
+                                          <div key={idx} className="text-xs">
+                                            • {item.name} ({item.quantity}x) - €{parseFloat(item.price).toFixed(2)}
+                                            {(item.needs_carrying || item.needs_assembly) && (
+                                              <div className="ml-2 text-orange-600">
+                                                {item.needs_carrying && 'Carrying'}
+                                                {item.needs_carrying && item.needs_assembly && ' + '}
+                                                {item.needs_assembly && 'Assembly'}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <span className="text-gray-400">No items</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-sm">
+                                    <div className="max-w-xs truncate">{order.delivery_address}</div>
+                                    <div className="text-xs text-gray-500">
+                                      Floor: {order.delivery_floor || 0}
+                                      {order.elevator_available && ' (Elevator)'}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-right font-medium">
+                                    €{parseFloat(order.base_total || 0).toFixed(2)}
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-right">
+                                    €{parseFloat(order.carrying_cost || 0).toFixed(2)}
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-right">
+                                    €{parseFloat(order.assembly_cost || 0).toFixed(2)}
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-right font-bold text-lg">
+                                    €{parseFloat(order.total_amount || 0).toFixed(2)}
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-center">
+                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                      order.status === 'delivered' 
+                                        ? 'bg-green-100 text-green-800'
+                                        : order.status === 'confirmed'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : order.status === 'in_delivery'
+                                        ? 'bg-purple-100 text-purple-800'
+                                        : order.status === 'cancelled'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {order.status}
+                                    </span>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2 text-sm text-center">
+                                    {order.created_at && !isNaN(new Date(order.created_at).getTime()) 
+                                      ? format(new Date(order.created_at), 'MMM dd, yyyy')
+                                      : 'N/A'
+                                    }
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -3900,9 +4315,14 @@ const AdminDashboard = () => {
                       <table className="w-full border-collapse border border-gray-300">
                         <thead>
                           <tr className="bg-gray-100">
-                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">DONOR</th>
-                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ITEMS</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">USER</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PHONE</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">SELL/FREE</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PRICE</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ITEM/DESCRIPTION</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">LOCATION</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">FLOORS</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PREFERRED DATE</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">STATUS</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ACTIONS</th>
                           </tr>
@@ -3911,37 +4331,63 @@ const AdminDashboard = () => {
                           {itemDonations.map((donation) => (
                             <tr key={donation.id} className="hover:bg-gray-50">
                               <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {donation.contact_info.firstName} {donation.contact_info.lastName}<br/>{donation.contact_info.email}
+                                <div className="font-medium">{donation.contact_info?.firstName || ''} {donation.contact_info?.lastName || ''}</div>
+                                <div className="text-gray-500">{donation.contact_info?.email || 'N/A'}</div>
                               </td>
                               <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {donation.donation_items?.length || 0} items
+                                {donation.contact_info?.phone || 'N/A'}
                               </td>
                               <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {donation.floor || 'Ground'}
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  donation.donation_type === 'charity' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {donation.donation_type === 'charity' || donation.donation_type === 'recycling' ? 'Free' : 'Sell'}
+                                </span>
                               </td>
                               <td className="border border-gray-300 px-3 py-2 text-xs">
-                                <select
-                                  value={donation.status}
-                                  onChange={e => handleUpdateDonationStatus(donation.id, e.target.value as typeof donation.status)}
-                                  className="px-2 py-1 border rounded"
-                                >
-                                  <option value="pending">Pending</option>
-                                  <option value="approved">Approved</option>
-                                  <option value="rejected">Rejected</option>
-                                  <option value="completed">Completed</option>
-                                  <option value="cancelled">Cancelled</option>
-                                </select>
+                                €{donation.total_estimated_value || '0.00'}
                               </td>
                               <td className="border border-gray-300 px-3 py-2 text-xs">
-                                <button
-                                  onClick={() => handleUpdateDonationStatus(donation.id, donation.status)}
-                                  className="px-2 py-1 bg-blue-500 text-white rounded"
-                                >
-                                  Update
-                                </button>
+                                {donation.donation_items?.length > 0 ? (
+                                  <div>
+                                    <div className="font-medium">{donation.donation_items.length} item(s)</div>
+                                    <div className="text-gray-500 text-xs truncate max-w-xs">
+                                      {donation.donation_items.slice(0, 2).map((item: any) => item.name || item).join(', ')}
+                                      {donation.donation_items.length > 2 && '...'}
+                                    </div>
+                                  </div>
+                                ) : donation.custom_item || 'N/A'}
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {donation.pickup_location || 'N/A'}
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {donation.floor ? `Floor ${donation.floor}${donation.elevator_available ? ' (Elevator)' : ''}` : 'Ground'}
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                {donation.preferred_pickup_date ? (
+                                  <div>
+                                    <div>{format(new Date(donation.preferred_pickup_date), 'MMM dd, yyyy')}</div>
+                                    {donation.preferred_time_span && (
+                                      <div className="text-gray-500 text-xs">{donation.preferred_time_span}</div>
+                                    )}
+                                  </div>
+                                ) : donation.is_date_flexible ? 'Flexible' : 'N/A'}
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  donation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  donation.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  donation.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {donation.status}
+                                </span>
+                              </td>
+                              <td className="border border-gray-300 px-3 py-2 text-xs">
                                 <button
                                   onClick={() => handleViewDonationDetails(donation)}
-                                  className="ml-2 px-2 py-1 bg-gray-300 text-gray-800 rounded"
+                                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
                                 >
                                   View
                                 </button>
@@ -3961,74 +4407,104 @@ const AdminDashboard = () => {
                         <thead>
                           <tr className="bg-gray-100">
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">CUSTOMER</th>
-                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">SERVICE</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">REQUEST</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">LOCATION</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">FLOORS</th>
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">DATE</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">STATUS</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ACTIONS</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {specialRequests.map((request) => (
-                            <tr key={request.id} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {(() => {
-                                  let info = request.contact_info;
-                                  if (!info) return <span className="text-gray-400">No contact info</span>;
-                                  if (typeof info === 'string') {
-                                    try {
-                                      info = JSON.parse(info);
-                                    } catch {
-                                      return <span className="text-gray-400">Invalid contact info</span>;
-                                    }
-                                  }
-                                  return (
-                                    <>
-                                      {(info.firstName || '') + ' ' + (info.lastName || '')}<br />
-                                      {info.email || info.phone || ''}
-                                    </>
-                                  );
-                                })()}
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {Array.isArray(request.selected_services) ? request.selected_services.join(', ') :
-                                  typeof request.selected_services === 'string' ? request.selected_services :
-                                  '-'}
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {request.floor_pickup || request.floor_dropoff ? 
-                                  `P: ${request.floor_pickup || 'Ground'} | D: ${request.floor_dropoff || 'Ground'}` : 
-                                  'Ground'
-                                }
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                <select
-                                  value={request.status}
-                                  onChange={e => handleUpdateSpecialRequestStatus(request.id, e.target.value as typeof request.status)}
-                                  className="px-2 py-1 border rounded"
-                                >
-                                  <option value="pending">Pending</option>
-                                  <option value="confirmed">Confirmed</option>
-                                  <option value="in_progress">In Progress</option>
-                                  <option value="completed">Completed</option>
-                                  <option value="cancelled">Cancelled</option>
-                                </select>
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                <button
-                                  onClick={() => handleUpdateSpecialRequestStatus(request.id, request.status)}
-                                  className="px-2 py-1 bg-blue-500 text-white rounded"
-                                >
-                                  Update
-                                </button>
-                                <button
-                                  onClick={() => handleViewSpecialRequestDetails(request)}
-                                  className="ml-2 px-2 py-1 bg-gray-300 text-gray-800 rounded"
-                                >
-                                  View
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {specialRequests.map((request) => {
+                            let contactInfo = request.contact_info;
+                            if (typeof contactInfo === 'string') {
+                              try {
+                                contactInfo = JSON.parse(contactInfo);
+                              } catch {
+                                contactInfo = { firstName: '', lastName: '', email: '', phone: '' };
+                              }
+                            }
+                            
+                            let services = request.selected_services;
+                            let servicesArray: string[] = [];
+                            if (typeof services === 'string') {
+                              try {
+                                servicesArray = JSON.parse(services);
+                              } catch {
+                                servicesArray = [services];
+                              }
+                            } else if (Array.isArray(services)) {
+                              servicesArray = services;
+                            }
+                            
+                            const requestType = request.request_type || (servicesArray.length > 0 && servicesArray[0]) || 'N/A';
+                            const requestLabel = requestType === 'junkRemoval' ? 'Junk Removal' :
+                                                requestType === 'storage' ? 'Item Storage' :
+                                                requestType === 'fullInternationalMove' ? 'Full Moving' :
+                                                requestType;
+                            
+                            return (
+                              <tr key={request.id} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  <div className="font-medium">{contactInfo.email || 'N/A'}</div>
+                                  <div className="text-gray-500">{contactInfo.phone || ''}</div>
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    requestType === 'junkRemoval' ? 'bg-red-100 text-red-800' :
+                                    requestType === 'storage' ? 'bg-purple-100 text-purple-800' :
+                                    requestType === 'fullInternationalMove' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {requestLabel}
+                                  </span>
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {request.pickup_location && request.dropoff_location ? (
+                                    <div>
+                                      <div className="font-medium">From: {request.pickup_location}</div>
+                                      <div className="text-gray-500">To: {request.dropoff_location}</div>
+                                    </div>
+                                  ) : request.pickup_location || request.dropoff_location || 'N/A'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {request.floor_pickup || request.floor_dropoff ? (
+                                    <div>
+                                      {request.floor_pickup && <div>P: {request.floor_pickup}{request.elevator_pickup ? ' 🛗' : ''}</div>}
+                                      {request.floor_dropoff && <div>D: {request.floor_dropoff}{request.elevator_dropoff ? ' 🛗' : ''}</div>}
+                                    </div>
+                                  ) : 'Ground'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {request.preferred_date ? (
+                                    Array.isArray(request.preferred_date) ? 
+                                      format(new Date(request.preferred_date[0]), 'MMM dd, yyyy') :
+                                      format(new Date(request.preferred_date), 'MMM dd, yyyy')
+                                  ) : request.is_date_flexible ? 'Flexible' : 'N/A'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    request.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                                    request.status === 'in_progress' ? 'bg-purple-100 text-purple-800' :
+                                    request.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {request.status}
+                                  </span>
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  <button
+                                    onClick={() => handleViewSpecialRequestDetails(request)}
+                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                  >
+                                    View
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -4057,9 +4533,23 @@ const AdminDashboard = () => {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-lg font-semibold text-gray-800 mb-3">Customer Information</h4>
                         <div className="space-y-2">
-                          <p><span className="font-medium">Name:</span> {selectedDonation.contact_info.firstName} {selectedDonation.contact_info.lastName}</p>
-                          <p><span className="font-medium">Email:</span> {selectedDonation.contact_info.email}</p>
-                          <p><span className="font-medium">Phone:</span> {selectedDonation.contact_info.phone}</p>
+                          {(() => {
+                            let contactInfo = selectedDonation.contact_info;
+                            if (typeof contactInfo === 'string') {
+                              try {
+                                contactInfo = JSON.parse(contactInfo);
+                              } catch {
+                                contactInfo = { email: '', phone: '', firstName: '', lastName: '' };
+                              }
+                            }
+                            return (
+                              <>
+                                <p><span className="font-medium">Name:</span> {contactInfo.firstName || ''} {contactInfo.lastName || ''}</p>
+                                <p><span className="font-medium">Email:</span> {contactInfo.email || 'N/A'}</p>
+                                <p><span className="font-medium">Phone:</span> {contactInfo.phone || 'N/A'}</p>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -4224,9 +4714,23 @@ const AdminDashboard = () => {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-lg font-semibold text-gray-800 mb-3">Customer Information</h4>
                         <div className="space-y-2">
-                          <p><span className="font-medium">Name:</span> {selectedSpecialRequest.contact_info.firstName} {selectedSpecialRequest.contact_info.lastName}</p>
-                          <p><span className="font-medium">Email:</span> {selectedSpecialRequest.contact_info.email}</p>
-                          <p><span className="font-medium">Phone:</span> {selectedSpecialRequest.contact_info.phone}</p>
+                          {(() => {
+                            let contactInfo = selectedSpecialRequest.contact_info;
+                            if (typeof contactInfo === 'string') {
+                              try {
+                                contactInfo = JSON.parse(contactInfo);
+                              } catch {
+                                contactInfo = { email: '', phone: '', firstName: '', lastName: '' };
+                              }
+                            }
+                            return (
+                              <>
+                                <p><span className="font-medium">Name:</span> {contactInfo.firstName || ''} {contactInfo.lastName || ''}</p>
+                                <p><span className="font-medium">Email:</span> {contactInfo.email || 'N/A'}</p>
+                                <p><span className="font-medium">Phone:</span> {contactInfo.phone || 'N/A'}</p>
+                              </>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -4300,13 +4804,26 @@ const AdminDashboard = () => {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-lg font-semibold text-gray-800 mb-3">Requested Services</h4>
                         <div className="space-y-2">
-                          {selectedSpecialRequest.selected_services?.map((service: string, index: number) => (
-                            <div key={index}>
-                              <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
-                                {service}
-                              </span>
-                            </div>
-                          ))}
+                          {(() => {
+                            let services: any = selectedSpecialRequest.selected_services;
+                            let servicesArray: string[] = [];
+                            if (typeof services === 'string') {
+                              try {
+                                servicesArray = JSON.parse(services);
+                              } catch {
+                                servicesArray = [services];
+                              }
+                            } else if (Array.isArray(services)) {
+                              servicesArray = services;
+                            }
+                            return servicesArray.map((service: string, index: number) => (
+                              <div key={index}>
+                                <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+                                  {service}
+                                </span>
+                              </div>
+                            ));
+                          })()}
                         </div>
                       </div>
 
@@ -4558,6 +5075,26 @@ const AdminDashboard = () => {
                     </table>
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* User Management Section */}
+          {activeTab === 'users' && (
+            <div className="p-6">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-gray-800 mb-4">User Management</h3>
+                <p className="text-gray-600">Manage user accounts, roles, and permissions</p>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="text-center py-8">
+                  <FaUsers className="text-6xl text-gray-300 mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-gray-700 mb-2">User Management Coming Soon</h4>
+                  <p className="text-gray-500">
+                    This section will allow you to manage user accounts, assign roles, and set permissions.
+                  </p>
+                </div>
               </div>
             </div>
           )}
