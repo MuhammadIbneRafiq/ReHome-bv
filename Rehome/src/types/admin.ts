@@ -114,7 +114,7 @@ export interface TransportRequest {
     donation_location_coords?: any;
     preferred_pickup_date?: string;
     is_date_flexible: boolean;
-    donation_type: 'charity' | 'recycling' | 'other';
+    donation_type: 'charity' | 'recycling' | 'sell' | 'other';
     special_instructions?: string;
     total_estimated_value?: number;
     item_condition?: string;
@@ -153,6 +153,10 @@ export interface TransportRequest {
     floor_dropoff?: string;
     elevator_pickup?: boolean;
     elevator_dropoff?: boolean;
+    pickup_floor?: string;
+    dropoff_floor?: string;
+    pickup_elevator?: boolean;
+    dropoff_elevator?: boolean;
     calculated_distance_km?: number;
     calculated_duration_seconds?: number;
     calculated_duration_text?: string;

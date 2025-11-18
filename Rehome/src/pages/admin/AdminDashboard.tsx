@@ -66,7 +66,7 @@ const AdminDashboard = () => {
   // const [incomingRequests, setIncomingRequests] = useState<any[]>([]);
   const [salesHistory, setSalesHistory] = useState<any[]>([]);
   const [salesHistoryLoading, setSalesHistoryLoading] = useState(false);
-  const [salesStatistics, setSalesStatistics] = useState<any>(null);
+  const [salesStatistics, setSalesStatistics] = useState<any>({});
   const [salesStatisticsLoading, setSalesStatisticsLoading] = useState(false);
   const [rehomeOrders, setRehomeOrders] = useState<any[]>([]);
   const [rehomeOrdersLoading, setRehomeOrdersLoading] = useState(false);
@@ -604,7 +604,7 @@ const AdminDashboard = () => {
     try {
       setSalesHistoryLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/admin/sales-history?limit=100', {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.SALES_HISTORY}?limit=100`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -629,7 +629,7 @@ const AdminDashboard = () => {
     try {
       setSalesStatisticsLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/admin/sales-statistics', {
+      const response = await fetch(API_ENDPOINTS.ADMIN.SALES_STATISTICS, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -652,7 +652,7 @@ const AdminDashboard = () => {
     try {
       setRehomeOrdersLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/rehome-orders?limit=50', {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.REHOME_ORDERS}?limit=50`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -4315,6 +4315,7 @@ const AdminDashboard = () => {
                       <table className="w-full border-collapse border border-gray-300">
                         <thead>
                           <tr className="bg-gray-100">
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ID</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">USER</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PHONE</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">SELL/FREE</th>
@@ -4328,72 +4329,112 @@ const AdminDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {itemDonations.map((donation) => (
-                            <tr key={donation.id} className="hover:bg-gray-50">
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                <div className="font-medium">{donation.contact_info?.firstName || ''} {donation.contact_info?.lastName || ''}</div>
-                                <div className="text-gray-500">{donation.contact_info?.email || 'N/A'}</div>
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {donation.contact_info?.phone || 'N/A'}
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  donation.donation_type === 'charity' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                                }`}>
-                                  {donation.donation_type === 'charity' || donation.donation_type === 'recycling' ? 'Free' : 'Sell'}
-                                </span>
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                €{donation.total_estimated_value || '0.00'}
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {donation.donation_items?.length > 0 ? (
-                                  <div>
-                                    <div className="font-medium">{donation.donation_items.length} item(s)</div>
-                                    <div className="text-gray-500 text-xs truncate max-w-xs">
-                                      {donation.donation_items.slice(0, 2).map((item: any) => item.name || item).join(', ')}
-                                      {donation.donation_items.length > 2 && '...'}
+                          {itemDonations.map((donation) => {
+                            let contactInfo: any = donation.contact_info;
+                            if (typeof contactInfo === 'string') {
+                              try {
+                                contactInfo = JSON.parse(contactInfo);
+                              } catch {
+                                contactInfo = { firstName: '', lastName: '', email: '', phone: '' };
+                              }
+                            }
+
+                            let donationItems: any = donation.donation_items;
+                            let itemsArray: any[] = [];
+                            if (typeof donationItems === 'string') {
+                              try {
+                                itemsArray = JSON.parse(donationItems);
+                              } catch {
+                                itemsArray = [];
+                              }
+                            } else if (Array.isArray(donationItems)) {
+                              itemsArray = donationItems;
+                            }
+
+                            const hasPrice = itemsArray.some((item) => typeof item.price === 'number');
+                            const totalPrice = itemsArray.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                            const displayPrice = donation.donation_type === 'sell' && hasPrice
+                              ? totalPrice.toFixed(2)
+                              : null;
+
+                            const description = itemsArray.length > 0
+                              ? itemsArray
+                                  .map((item) => item.description || '')
+                                  .filter(Boolean)
+                                  .join(' | ')
+                              : donation.custom_item || 'N/A';
+
+                            return (
+                              <tr key={donation.id} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {donation.id}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  <div className="font-medium">{contactInfo.firstName || ''} {contactInfo.lastName || ''}</div>
+                                  <div className="text-gray-500">{contactInfo.email || 'N/A'}</div>
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {contactInfo.phone || 'N/A'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    donation.donation_type === 'charity' || donation.donation_type === 'recycling'
+                                      ? 'bg-green-100 text-green-800'
+                                      : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {donation.donation_type === 'charity' || donation.donation_type === 'recycling' ? 'Free' : 'Sell'}
+                                  </span>
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {displayPrice ? `€${displayPrice}` : 'N/A'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {itemsArray.length > 0 ? (
+                                    <div>
+                                      <div className="font-medium">{itemsArray.length} item(s)</div>
+                                      <div className="text-gray-500 text-xs truncate max-w-xs">
+                                        {description}
+                                      </div>
                                     </div>
-                                  </div>
-                                ) : donation.custom_item || 'N/A'}
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {donation.pickup_location || 'N/A'}
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {donation.floor ? `Floor ${donation.floor}${donation.elevator_available ? ' (Elevator)' : ''}` : 'Ground'}
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                {donation.preferred_pickup_date ? (
-                                  <div>
-                                    <div>{format(new Date(donation.preferred_pickup_date), 'MMM dd, yyyy')}</div>
-                                    {donation.preferred_time_span && (
-                                      <div className="text-gray-500 text-xs">{donation.preferred_time_span}</div>
-                                    )}
-                                  </div>
-                                ) : donation.is_date_flexible ? 'Flexible' : 'N/A'}
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  donation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                  donation.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                  donation.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-red-100 text-red-800'
-                                }`}>
-                                  {donation.status}
-                                </span>
-                              </td>
-                              <td className="border border-gray-300 px-3 py-2 text-xs">
-                                <button
-                                  onClick={() => handleViewDonationDetails(donation)}
-                                  className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                >
-                                  View
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                                  ) : description}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {donation.pickup_location || 'N/A'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {donation.floor ? `Floor ${donation.floor}${donation.elevator_available ? ' (Elevator)' : ''}` : 'Ground'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {donation.preferred_pickup_date ? (
+                                    <div>
+                                      <div>{format(new Date(donation.preferred_pickup_date), 'MMM dd, yyyy')}</div>
+                                      {donation.preferred_time_span && (
+                                        <div className="text-gray-500 text-xs">{donation.preferred_time_span}</div>
+                                      )}
+                                    </div>
+                                  ) : donation.is_date_flexible ? 'Flexible' : 'N/A'}
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                    donation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    donation.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                    donation.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-red-100 text-red-800'
+                                  }`}>
+                                    {donation.status}
+                                  </span>
+                                </td>
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  <button
+                                    onClick={() => handleViewDonationDetails(donation)}
+                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                  >
+                                    View
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -4406,6 +4447,7 @@ const AdminDashboard = () => {
                       <table className="w-full border-collapse border border-gray-300">
                         <thead>
                           <tr className="bg-gray-100">
+                            <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ID</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">CUSTOMER</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">REQUEST</th>
                             <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">LOCATION</th>
@@ -4417,7 +4459,7 @@ const AdminDashboard = () => {
                         </thead>
                         <tbody>
                           {specialRequests.map((request) => {
-                            let contactInfo = request.contact_info;
+                            let contactInfo: any = request.contact_info;
                             if (typeof contactInfo === 'string') {
                               try {
                                 contactInfo = JSON.parse(contactInfo);
@@ -4426,7 +4468,7 @@ const AdminDashboard = () => {
                               }
                             }
                             
-                            let services = request.selected_services;
+                            let services: any = request.selected_services;
                             let servicesArray: string[] = [];
                             if (typeof services === 'string') {
                               try {
@@ -4437,15 +4479,50 @@ const AdminDashboard = () => {
                             } else if (Array.isArray(services)) {
                               servicesArray = services;
                             }
-                            
+
                             const requestType = request.request_type || (servicesArray.length > 0 && servicesArray[0]) || 'N/A';
                             const requestLabel = requestType === 'junkRemoval' ? 'Junk Removal' :
                                                 requestType === 'storage' ? 'Item Storage' :
                                                 requestType === 'fullInternationalMove' ? 'Full Moving' :
                                                 requestType;
+
+                            const anyRequest: any = request;
+                            const pickupFloor = anyRequest.floor_pickup ?? anyRequest.pickup_floor;
+                            const dropoffFloor = anyRequest.floor_dropoff ?? anyRequest.dropoff_floor;
+                            const elevatorPickup = anyRequest.elevator_pickup ?? anyRequest.pickup_elevator;
+                            const elevatorDropoff = anyRequest.elevator_dropoff ?? anyRequest.dropoff_elevator;
+
+                            let preferredDateRaw: any = request.preferred_date;
+                            let preferredDateValue: string | null = null;
+                            if (Array.isArray(preferredDateRaw) && preferredDateRaw.length > 0) {
+                              preferredDateValue = preferredDateRaw[0];
+                            } else if (typeof preferredDateRaw === 'string') {
+                              try {
+                                const parsed = JSON.parse(preferredDateRaw);
+                                if (Array.isArray(parsed) && parsed.length > 0) {
+                                  preferredDateValue = parsed[0];
+                                } else {
+                                  preferredDateValue = preferredDateRaw;
+                                }
+                              } catch {
+                                preferredDateValue = preferredDateRaw;
+                              }
+                            }
+
+                            let preferredDateDisplay = '';
+                            if (preferredDateValue) {
+                              preferredDateDisplay = format(new Date(preferredDateValue), 'MMM dd, yyyy');
+                            } else if (request.is_date_flexible) {
+                              preferredDateDisplay = 'Flexible';
+                            } else {
+                              preferredDateDisplay = 'N/A';
+                            }
                             
                             return (
                               <tr key={request.id} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-3 py-2 text-xs">
+                                  {request.id}
+                                </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
                                   <div className="font-medium">{contactInfo.email || 'N/A'}</div>
                                   <div className="text-gray-500">{contactInfo.phone || ''}</div>
@@ -4469,19 +4546,15 @@ const AdminDashboard = () => {
                                   ) : request.pickup_location || request.dropoff_location || 'N/A'}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
-                                  {request.floor_pickup || request.floor_dropoff ? (
+                                  {pickupFloor || dropoffFloor ? (
                                     <div>
-                                      {request.floor_pickup && <div>P: {request.floor_pickup}{request.elevator_pickup ? ' 🛗' : ''}</div>}
-                                      {request.floor_dropoff && <div>D: {request.floor_dropoff}{request.elevator_dropoff ? ' 🛗' : ''}</div>}
+                                      {pickupFloor && <div>P: {pickupFloor}{elevatorPickup ? ' 🛗' : ''}</div>}
+                                      {dropoffFloor && <div>D: {dropoffFloor}{elevatorDropoff ? ' 🛗' : ''}</div>}
                                     </div>
                                   ) : 'Ground'}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
-                                  {request.preferred_date ? (
-                                    Array.isArray(request.preferred_date) ? 
-                                      format(new Date(request.preferred_date[0]), 'MMM dd, yyyy') :
-                                      format(new Date(request.preferred_date), 'MMM dd, yyyy')
-                                  ) : request.is_date_flexible ? 'Flexible' : 'N/A'}
+                                  {preferredDateDisplay}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
                                   <span className={`px-2 py-1 rounded text-xs font-medium ${

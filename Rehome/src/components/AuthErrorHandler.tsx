@@ -21,9 +21,9 @@ export const AuthErrorHandler: React.FC<AuthErrorHandlerProps> = ({ children }) 
         if (response.status === 401 || response.status === 403) {
           const url = args[0] as string;
           
-          // Don't redirect to login for admin API endpoints - they just mean "not admin"
-          if (url.includes('/api/admin/')) {
-            console.log('Admin API 401/403 - user not admin, but still authenticated');
+          // Don't redirect to login for admin or ReHome admin API endpoints - they just mean "not admin"
+          if (url.includes('/api/admin/') || url.includes('/api/rehome-orders')) {
+            console.log('Admin/ReHome API 401/403 - user may not have permissions, but session is still valid');
             return response;
           }
           

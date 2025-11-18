@@ -98,6 +98,9 @@ export const API_ENDPOINTS = {
     AUDIT_LOGS: `${API_BASE_URL}/api/audit-logs`,
     MARKETPLACE_ITEM_DETAILS: `${API_BASE_URL}/api/admin/marketplace-item-details`,
     MARKETPLACE_ITEM_DETAIL: (id: string) => `${API_BASE_URL}/api/admin/marketplace-item-details/${id}`,
+    SALES_HISTORY: `${API_BASE_URL}/api/admin/sales-history`,
+    SALES_STATISTICS: `${API_BASE_URL}/api/admin/sales-statistics`,
+    REHOME_ORDERS: `${API_BASE_URL}/api/rehome-orders`,
   },
 } as const;
 
