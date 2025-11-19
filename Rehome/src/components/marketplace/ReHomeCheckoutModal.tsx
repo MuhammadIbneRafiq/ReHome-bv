@@ -309,17 +309,43 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
         console.error('Error fetching pricing multipliers:', error);
       }
     };
+    // Only fetch multipliers when the checkout modal is actually open
+    if (!isOpen) return;
     fetchMultipliers();
-  }, []);
+  }, [isOpen]);
 
   // Calculate base total (item prices only)
   useEffect(() => {
+    // Avoid work when modal is closed
+    if (!isOpen) {
+      setBaseTotal(0);
+      return;
+    }
+
     const total = rehomeItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     setBaseTotal(total);
-  }, [rehomeItems]);
+  }, [isOpen, rehomeItems]);
 
   // Calculate total cost when items or assistance changes
   useEffect(() => {
+    // Skip heavy calculations when modal is not visible
+    if (!isOpen) {
+      setTotalCost(0);
+      setCarryingCost(0);
+      setAssemblyCost(0);
+      setPricingBreakdown(null);
+      return;
+    }
+
+    // If there are no ReHome items, there's nothing to calculate
+    if (rehomeItems.length === 0) {
+      setTotalCost(baseTotal);
+      setCarryingCost(0);
+      setAssemblyCost(0);
+      setPricingBreakdown(null);
+      return;
+    }
+
     const calculateTotal = async () => {
       const cost = await getTotalCost();
       setTotalCost(cost);
@@ -341,7 +367,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       });
     };
     calculateTotal();
-  }, [rehomeItems, itemAssistance, floor, elevatorAvailable, isHighPointsCategory]);
+  }, [isOpen, rehomeItems, itemAssistance, floor, elevatorAvailable, isHighPointsCategory, baseTotal]);
 
   // Initialize item assistance state - preserve existing selections for current items only
   useEffect(() => {
