@@ -1345,7 +1345,7 @@ const AdminDashboard = () => {
     
     // Fetch additional details from Supabase if needed
     try {
-      const tableName = request.type === 'item-moving' ? 'item_moving_requests' : 'house_moving_requests';
+      const tableName = request.type === 'item-moving' ? 'item_moving' : 'house_moving';
       const { data, error } = await supabase
         .from(tableName)
         .select('*')
@@ -1870,7 +1870,15 @@ const AdminDashboard = () => {
                     </thead>
                     <tbody>
                       {filteredTransportRequests.map((request, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
+                        <tr
+                          key={index}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => {
+                            if (editingTransportRequest !== request.id) {
+                              handleViewRequestDetails(request);
+                            }
+                          }}
+                        >
                           <td className="border border-gray-300 px-3 py-2 text-xs font-medium">
                             {request.order_number ? `#${request.order_number}` : request.id ? `#${request.id}` : '—'}
                           </td>
@@ -1963,7 +1971,10 @@ const AdminDashboard = () => {
                             {editingTransportRequest === request.id ? (
                               <div className="flex space-x-1">
                                 <button
-                                  onClick={() => handleSaveTransportRequest(request)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSaveTransportRequest(request);
+                                  }}
                                   disabled={isUpdating}
                                   className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs"
                                 >
@@ -1971,7 +1982,10 @@ const AdminDashboard = () => {
                                   {isUpdating ? 'Saving...' : 'Save'}
                                 </button>
                                 <button
-                                  onClick={() => setEditingTransportRequest(null)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingTransportRequest(null);
+                                  }}
                                   disabled={isUpdating}
                                   className="flex items-center px-2 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-xs"
                                 >
@@ -1982,21 +1996,30 @@ const AdminDashboard = () => {
                             ) : (
                               <div className="flex space-x-1">
                                 <button
-                                  onClick={() => handleViewRequestDetails(request)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewRequestDetails(request);
+                                  }}
                                   className="flex items-center px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
                                 >
                                   <FaSearch className="mr-1" />
                                   View
                                 </button>
                                 <button
-                                  onClick={() => handleEditTransportRequest(request)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditTransportRequest(request);
+                                  }}
                                   className="flex items-center px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
                                 >
                                   <FaEdit className="mr-1" />
                                   Edit
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteTransportRequest(request)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteTransportRequest(request);
+                                  }}
                                   className="flex items-center px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
                                 >
                                   <FaTrash className="mr-1" />
