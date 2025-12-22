@@ -38,6 +38,8 @@ export interface GooglePlaceObject {
   formattedAddress?: string;
   displayName?: string;
   text?: string;
+  countryCode?: string;
+  countryName?: string;
 }
 
 /**

@@ -28,11 +28,14 @@ export function GooglePlacesAutocomplete({
         headers: {
           'Content-Type': 'application/json',
           'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'location,displayName,formattedAddress'
+          'X-Goog-FieldMask': 'location,displayName,formattedAddress,addressComponents'
         }
       }
     );
     const data = await response.json();
+    const countryComponent = data.addressComponents?.find(
+      (comp: any) => comp.types?.includes('country')
+    );
     return {
       placeId,
       coordinates: data.location ? {
@@ -40,7 +43,9 @@ export function GooglePlacesAutocomplete({
         lng: data.location.longitude
       } : null,
       formattedAddress: data.formattedAddress,
-      displayName: data.displayName?.text
+      displayName: data.displayName?.text,
+      countryCode: countryComponent?.shortText || countryComponent?.short_name,
+      countryName: countryComponent?.longText || countryComponent?.long_name
     };
   };
 
@@ -65,19 +70,8 @@ export function GooglePlacesAutocomplete({
           },
           body: JSON.stringify({
             input: query,
-            locationBias: {
-              circle: {
-                center: {
-                  latitude: 52.3676,
-                  longitude: 4.9041
-                },
-                radius: 50000.0
-              }
-            },
             languageCode: 'en',
-            regionCode: 'NL',
-            includedPrimaryTypes: ['geocode', 'establishment', 'street_address'],
-            includedRegionCodes: ['nl']
+            includedPrimaryTypes: ['geocode', 'establishment', 'street_address']
           })
         }
       );
@@ -121,7 +115,9 @@ export function GooglePlacesAutocomplete({
         coordinates: placeDetails?.coordinates || undefined,
         formattedAddress: placeDetails?.formattedAddress || undefined,
         displayName: placeDetails?.displayName || undefined,
-        text: suggestion.text
+        text: suggestion.text,
+        countryCode: placeDetails?.countryCode,
+        countryName: placeDetails?.countryName
       };
       onPlaceSelect(placeWithDetails);
     }

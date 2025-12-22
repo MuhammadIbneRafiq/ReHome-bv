@@ -282,6 +282,59 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         return `unknown-${serviceType}`;
     }, [dateOption, serviceType, selectedDateRange.start, selectedDateRange.end, pickupDate, dropoffDate, isItemTransport]);
 
+    const isPlaceInNetherlands = React.useCallback((place?: GooglePlaceObject | null) => {
+        if (!place) return false;
+        const code = place.countryCode?.toUpperCase();
+        if (code) {
+            return code === 'NL';
+        }
+        const countryName = place.countryName?.toLowerCase();
+        if (countryName) {
+            return countryName.includes('netherlands') || countryName.includes('nederland');
+        }
+        const text = (place.formattedAddress || place.displayName || place.text || '').toLowerCase();
+        if (!text) return false;
+        return text.includes('netherlands') || text.includes('nederland');
+    }, []);
+
+    const handleInternationalRedirect = React.useCallback((context: 'pickup' | 'dropoff') => {
+        if (context === 'pickup') {
+            setFirstLocation('');
+            setPickupPlace(null);
+        } else {
+            setSecondLocation('');
+            setDropoffPlace(null);
+        }
+        setDistanceKm(null);
+        setPricingBreakdown(null);
+
+        const contextText = context === 'pickup' ? 'pickup' : 'delivery';
+        toast.info(`International moves are handled through Special Requests. Redirecting you to submit your ${contextText} outside the Netherlands.`);
+        navigate('/special-request', {
+            state: {
+                fromInternationalRedirect: true,
+                redirectMessage: `We noticed your ${contextText} location is outside the Netherlands. Please submit a Special Request under Full & International Moves so our team can assist you.`,
+                preselectService: 'fullInternationalMove'
+            }
+        });
+    }, [navigate]);
+
+    const handlePickupPlaceSelect = React.useCallback((place: GooglePlaceObject) => {
+        if (!isPlaceInNetherlands(place)) {
+            handleInternationalRedirect('pickup');
+            return;
+        }
+        setPickupPlace(place);
+    }, [handleInternationalRedirect, isPlaceInNetherlands]);
+
+    const handleDropoffPlaceSelect = React.useCallback((place: GooglePlaceObject) => {
+        if (!isPlaceInNetherlands(place)) {
+            handleInternationalRedirect('dropoff');
+            return;
+        }
+        setDropoffPlace(place);
+    }, [handleInternationalRedirect, isPlaceInNetherlands]);
+
     // Function to calculate total number of items
     const calculateTotalItems = () => {
         return Object.values(itemQuantities)
@@ -1706,9 +1759,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         value={firstLocation}
                                                         onChange={setFirstLocation}
                                                         placeholder="Enter pickup address"
-                                                        onPlaceSelect={(place) => {
-                                                            setPickupPlace(place);
-                                                        }}
+                                                        onPlaceSelect={handlePickupPlaceSelect}
                                                     />
                                                 </div>
                                                 
@@ -1742,9 +1793,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         value={secondLocation}
                                                         onChange={setSecondLocation}
                                                         placeholder="Enter dropoff address"
-                                                        onPlaceSelect={(place) => {
-                                                            setDropoffPlace(place);
-                                                        }}
+                                                        onPlaceSelect={handleDropoffPlaceSelect}
                                                     />
                                                 </div>
                                                 
