@@ -288,6 +288,34 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             .reduce((total, quantity) => total + quantity, 0);
     };
 
+    // Ensure pickup & dropoff addresses are filled and backed by Google Places selections
+    const validateLocationInputs = () => {
+        const hasPickupText = firstLocation.trim().length > 0;
+        const hasDropoffText = secondLocation.trim().length > 0;
+        const pickupHasPlace = !!(pickupPlace?.placeId && pickupPlace?.coordinates && 
+            typeof pickupPlace.coordinates.lat === 'number' && typeof pickupPlace.coordinates.lng === 'number');
+        const dropoffHasPlace = !!(dropoffPlace?.placeId && dropoffPlace?.coordinates &&
+            typeof dropoffPlace.coordinates.lat === 'number' && typeof dropoffPlace.coordinates.lng === 'number');
+
+        if (!hasPickupText) {
+            toast.error("Please enter a pickup address.");
+            return false;
+        }
+        if (!pickupHasPlace) {
+            toast.error("Please select the pickup address from the suggestions so we can capture it correctly.");
+            return false;
+        }
+        if (!hasDropoffText) {
+            toast.error("Please enter a delivery address.");
+            return false;
+        }
+        if (!dropoffHasPlace) {
+            toast.error("Please select the delivery address from the suggestions so we can capture it correctly.");
+            return false;
+        }
+        return true;
+    };
+
     // Function to check item limit and redirect if exceeded
     const checkItemLimitAndRedirect = () => {
         const totalItems = calculateTotalItems();
@@ -717,8 +745,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     }, [isDataLoaded, isStudent, studentId]);
 
     const nextStep = () => {
-        // Show booking tips after step 1 (locations)
+        // For step 1, ensure both addresses are valid Google selections before showing tips
         if (step === 1) {
+            if (!validateLocationInputs()) {
+                return;
+            }
+            // Show booking tips after step 1 (locations)
             setShowBookingTips(true);
             return;
         }
@@ -915,6 +947,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     }, [itemQuantities, carryingService]);
 
     const isFormValid = () => {        
+        // Location validation - ensure addresses are selected from Google Places
+        if (!validateLocationInputs()) {
+            console.log('❌ Location validation failed');
+            return false;
+        }
+
         // Items validation - check if any items are selected
         if (!checkItemsSelected()) {
             console.log('❌ Items validation failed - no items selected');
