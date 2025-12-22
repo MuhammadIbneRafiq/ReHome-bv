@@ -500,43 +500,45 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             return distanceCache.current[cacheKey];
         }
         
-        // For performance, prefer straight-line distance which is fast and reliable
-        const distance = calculateStraightLineDistance(place1, place2);
-        distanceCache.current[cacheKey] = distance;
-        return distance;
-        
-        /* Disabled Google API calls for better performance
         // Guard: ensure Google Maps is ready before attempting API calls
         if (!isGoogleReady) {
             console.warn('⚠️ Google Maps not ready, using straight-line calculation');
-            return calculateStraightLineDistance(place1, place2);
+            const fallbackDistance = calculateStraightLineDistance(place1, place2);
+            distanceCache.current[cacheKey] = fallbackDistance;
+            return fallbackDistance;
         }
         
         // Use Distance Matrix API for accurate driving distance
         return new Promise((resolve) => {
-            const service = new google.maps.DistanceMatrixService();
-            const origins = [new google.maps.LatLng(place1.coordinates.lat, place1.coordinates.lng)];
-            const destinations = [new google.maps.LatLng(place2.coordinates.lat, place2.coordinates.lng)];
+            try {
+                const service = new google.maps.DistanceMatrixService();
+                const origins = [new google.maps.LatLng(place1.coordinates.lat, place1.coordinates.lng)];
+                const destinations = [new google.maps.LatLng(place2.coordinates.lat, place2.coordinates.lng)];
 
-            service.getDistanceMatrix({
-                origins,
-                destinations,
-                travelMode: google.maps.TravelMode.DRIVING,
-                unitSystem: google.maps.UnitSystem.METRIC,
-            }, (response, status) => {
-                if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK' && response?.rows?.[0]?.elements?.[0]?.distance?.value) {
-                    const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
-                    distanceCache.current[cacheKey] = distanceKm;
-                    resolve(distanceKm);
-                } else {
-                    console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
-                    const fallbackDistance = calculateStraightLineDistance(place1, place2);
-                    distanceCache.current[cacheKey] = fallbackDistance;
-                    resolve(fallbackDistance);
-                }
-            });
+                service.getDistanceMatrix({
+                    origins,
+                    destinations,
+                    travelMode: google.maps.TravelMode.DRIVING,
+                    unitSystem: google.maps.UnitSystem.METRIC,
+                }, (response, status) => {
+                    if (status === 'OK' && response?.rows?.[0]?.elements?.[0]?.status === 'OK' && response?.rows?.[0]?.elements?.[0]?.distance?.value) {
+                        const distanceKm = response.rows[0].elements[0].distance.value / 1000; // Convert meters to km
+                        distanceCache.current[cacheKey] = distanceKm;
+                        resolve(distanceKm);
+                    } else {
+                        console.warn('⚠️ Distance Matrix API failed, falling back to straight-line calculation');
+                        const fallbackDistance = calculateStraightLineDistance(place1, place2);
+                        distanceCache.current[cacheKey] = fallbackDistance;
+                        resolve(fallbackDistance);
+                    }
+                });
+            } catch (error) {
+                console.error('❌ Distance Matrix call threw, using straight-line fallback:', error);
+                const fallbackDistance = calculateStraightLineDistance(place1, place2);
+                distanceCache.current[cacheKey] = fallbackDistance;
+                resolve(fallbackDistance);
+            }
         });
-        */
     };
 
     // Fallback function for straight-line distance calculation
