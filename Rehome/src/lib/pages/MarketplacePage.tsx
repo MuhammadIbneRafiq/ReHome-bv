@@ -10,7 +10,7 @@ import { translateFurnitureItem } from "../utils/dynamicTranslation";
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-toastify';
-import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus, FaComments, FaWhatsapp } from 'react-icons/fa';
+import { FaShoppingCart, FaTimes, FaTrash, FaMinus, FaPlus, FaComments, FaWhatsapp, FaMapMarkerAlt } from 'react-icons/fa';
 import { API_ENDPOINTS } from '../api/config';
 import useUserStore from '../../services/state/useUserSessionStore';
 import { sendMessage } from '../../services/marketplaceMessageService';
@@ -528,38 +528,30 @@ const MarketplacePage = () => {
             />
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-6">{t('marketplace.title')}</h1>
-                <p className="text-lg text-gray-600 mb-8">{t('marketplace.subtitle')}</p>
+                <div className="space-y-3 mb-6">
+                    <h1 className="text-3xl font-extrabold text-gray-900">{t('marketplace.title')}</h1>
+                    <p className="text-lg text-gray-600">{t('marketplace.subtitle')}</p>
+                    <div className="flex items-center gap-2 text-orange-600 font-semibold italic text-base">
+                        <FaMapMarkerAlt className="text-lg" />
+                        <span>We deliver everywhere in the Netherlands</span>
+                    </div>
+                </div>
                 
-                {/* Create Listing Button - Moved to top */}
-                <div className="mb-8 bg-white rounded-lg shadow p-4">
-                    <div className="flex justify-between items-center">
+                {/* Create Listing Banner */}
+                <div className="mb-8 rounded-2xl border border-orange-100 bg-white shadow-md shadow-orange-100/60">
+                    <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h3 className="font-medium text-lg">Sell Your Items</h3>
-                            <p className="text-sm text-gray-600">Create a new listing to sell your pre-loved items</p>
+                            <p className="text-sm uppercase tracking-wide text-orange-500 font-semibold">Sell Your Items</p>
+                            <h3 className="text-2xl font-bold text-gray-900 mt-1">Create a new listing to sell your pre-loved items</h3>
+                            <p className="text-sm text-gray-500 mt-2">Reach ReHome buyers across the Netherlands in minutes.</p>
                         </div>
                         <Link 
                             to={isAuthenticated ? '/sell-dash' : '/login?redirect=/sell-dash'}
-                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded"
+                            className="rehome-button whitespace-nowrap px-6 py-3 text-base font-semibold shadow-lg shadow-orange-200"
                         >
                             Create Listing
                         </Link>
                     </div>
-                </div>
-                
-                {/* Sort Dropdown */}
-                <div className="flex justify-end mb-4">
-                  <label htmlFor="sort" className="mr-2 font-medium">Sort by:</label>
-                  <select
-                    id="sort"
-                    value={sortOption}
-                    onChange={e => setSortOption(e.target.value as any)}
-                    className="border rounded px-2 py-1"
-                  >
-                    <option value="latest">Latest Listings</option>
-                    <option value="priceLowHigh">Price: Low to High</option>
-                    <option value="priceHighLow">Price: High to Low</option>
-                  </select>
                 </div>
 
                 <StableLoader isLoading={loading} minLoadingTime={300}>
@@ -568,9 +560,9 @@ const MarketplacePage = () => {
                     ) : (
                     <div>
                         {/* Search and Filter */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
                             {/* Filter and Search on Left */}
-                            <div className="md:col-span-1">
+                            <div className="md:col-span-1 space-y-6">
                                 <MarketplaceSearch onSearch={handleSearch} items={furnitureItems} />
                                 <MarketplaceFilter 
                                     items={furnitureItems} 
@@ -580,9 +572,28 @@ const MarketplacePage = () => {
                             </div>
 
                             {/* Featured Listings on Right */}
-                            <div className="md:col-span-2 bg-gradient-to-r from-orange-400 to-red-500 rounded-lg p-4">
-                                <h2 className="text-xl font-semibold text-white mb-2">{t('marketplace.featuredItems')}</h2>
-                                
+                            <div className="md:col-span-2 rounded-3xl bg-gradient-to-r from-[#ffb77a] via-[#ff8345] to-[#f24b37] p-6 shadow-xl shadow-orange-500/20 border border-white/30">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-6">
+                                    <div>
+                                        <p className="uppercase text-xs font-semibold tracking-[0.25em] text-white/70">Featured</p>
+                                        <h2 className="text-2xl font-semibold text-white">{t('marketplace.featuredItems')}</h2>
+                                        <p className="text-white/80 text-sm">Handpicked listings that are ready for fast delivery.</p>
+                                    </div>
+                                    <div className="flex items-center gap-3 bg-white/15 rounded-full px-4 py-2 backdrop-blur">
+                                        <label htmlFor="sort" className="text-sm font-medium text-white">Sort by:</label>
+                                        <select
+                                            id="sort"
+                                            value={sortOption}
+                                            onChange={e => setSortOption(e.target.value as any)}
+                                            className="bg-white text-gray-800 text-sm font-medium px-3 py-1 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-200 shadow-sm"
+                                        >
+                                            <option value="latest">Latest Listings</option>
+                                            <option value="priceLowHigh">Price: Low to High</option>
+                                            <option value="priceHighLow">Price: High to Low</option>
+                                        </select>
+                                    </div>
+                                </div>
+
                                 {getSortedItems().length === 0 ? (
                                     <p className="text-white py-4 text-center">{t('marketplace.noResults')}</p>
                                 ) : (
@@ -594,7 +605,7 @@ const MarketplacePage = () => {
                                             return (
                                             <motion.div
                                                 key={item.id}
-                                                className="bg-[#f3e4d6] shadow-lg rounded-lg p-2 hover:scale-105 transition-transform cursor-pointer relative"
+                                                className="bg-[#fff5ed] shadow-lg rounded-2xl p-3 hover:-translate-y-1 hover:shadow-2xl transition-all cursor-pointer relative border border-white/60"
                                                 whileHover={{ scale: 1.05 }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -612,7 +623,7 @@ const MarketplacePage = () => {
                                                     />
                                                 )}
                                                 
-                                                <div className="w-full h-32 relative">
+                                                <div className="w-full h-32 relative rounded-xl overflow-hidden ring-1 ring-orange-100">
                                                     <LazyImage 
                                                         src={imageUrl}
                                                         alt={translatedItem.name}
@@ -622,8 +633,9 @@ const MarketplacePage = () => {
                                                     />
                                                 </div>
                                                 
-                                                <h3 className="text-sm font-semibold text-gray-800 mt-1">{translatedItem.name}</h3>
+                                                <h3 className="text-sm font-semibold text-gray-900 mt-3">{translatedItem.name}</h3>
                                                 <p className="text-gray-600 text-xs line-clamp-2 h-8">{translatedItem.description}</p>
+
                                                 {translatedItem.condition_rating && (
                                                     <p className="text-xs text-gray-500 mt-1">
                                                         Condition: {getConditionLabel(translatedItem.condition_rating.toString())}

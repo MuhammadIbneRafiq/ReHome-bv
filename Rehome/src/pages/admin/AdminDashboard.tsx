@@ -1,4 +1,4 @@
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { FaBox, FaCalendarAlt, FaPlus, FaSearch, FaTruck, FaTrash, FaEdit, FaCog, FaSave, FaTimes, FaHandshake, FaGlobe, FaExternalLinkAlt, FaTags, FaChartLine, FaUsers } from 'react-icons/fa';
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameMonth } from 'date-fns';
@@ -18,6 +18,7 @@ import {
   MarketplaceItemDetail 
 } from '../../services/marketplaceItemDetailsService';
 import CalendarSettingsSection from '../../components/admin/CalendarSettingsSection';
+import MultiSelectDropdown from '../../components/admin/MultiSelectDropdown';
 
 const AdminDashboard = () => {
   const { user } = useUserSessionStore();
@@ -141,6 +142,15 @@ const AdminDashboard = () => {
 
   // Get all cities from constants
   const allCities = Object.keys(cityBaseCharges);
+  const topCityOptions = useMemo(() => {
+    return Object.entries(cityBaseCharges)
+      .sort((a, b) => {
+        const normalDiff = (b[1]?.normal || 0) - (a[1]?.normal || 0);
+        return normalDiff !== 0 ? normalDiff : a[0].localeCompare(b[0]);
+      })
+      .slice(0, 25)
+      .map(([cityName]) => cityName);
+  }, [cityBaseCharges]);
 
   // Load data on initial render
   useEffect(() => {
@@ -684,9 +694,13 @@ const AdminDashboard = () => {
                          request.customer_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          request.city?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCity = cityFilter.length === 0 || (request.city ? cityFilter.includes(request.city) : false);
-    const matchesPickupCity = pickupCityFilter.length === 0 || (request.firstlocation ? pickupCityFilter.includes(request.firstlocation) : false);
-    const matchesDropoffCity = dropoffCityFilter.length === 0 || (request.secondlocation ? dropoffCityFilter.includes(request.secondlocation) : false);
+    const requestCityValue = (request.city || '').toLowerCase();
+    const requestPickupValue = (request.firstlocation || '').toLowerCase();
+    const requestDropoffValue = (request.secondlocation || '').toLowerCase();
+
+    const matchesCity = cityFilter.length === 0 || cityFilter.some(city => requestCityValue.includes(city.toLowerCase()));
+    const matchesPickupCity = pickupCityFilter.length === 0 || pickupCityFilter.some(city => requestPickupValue.includes(city.toLowerCase()));
+    const matchesDropoffCity = dropoffCityFilter.length === 0 || dropoffCityFilter.some(city => requestDropoffValue.includes(city.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
     const matchesType = typeFilter === 'all' || request.type === typeFilter;
     
@@ -707,19 +721,8 @@ const AdminDashboard = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Get unique cities for filter dropdown
-  const uniqueCities = [...new Set([
-    ...transportRequests.map(r => r.city).filter(Boolean),
-    ...Object.keys(cityBaseCharges)
-  ])];
-
-  const uniquePickupCities = [...new Set(
-    transportRequests.map(r => r.firstlocation as string).filter(Boolean)
-  )];
-
-  const uniqueDropoffCities = [...new Set(
-    transportRequests.map(r => r.secondlocation as string).filter(Boolean)
-  )];
+  // City options sourced from city base charges to keep filters consistent
+  const cityOptions = topCityOptions.length > 0 ? topCityOptions : allCities;
 
   // Get unique categories for filter dropdown
   const uniqueCategories = [...new Set([
@@ -737,14 +740,6 @@ const AdminDashboard = () => {
     setDateRangeFilter({ startDate: '', endDate: '' });
     setPriceRangeFilter({ minPrice: '', maxPrice: '' });
     setSearchQuery('');
-  };
-
-  const handleMultiSelectChange = (
-    event: ChangeEvent<HTMLSelectElement>,
-    setter: (values: string[]) => void
-  ) => {
-    const selectedValues = Array.from(event.target.selectedOptions).map(option => option.value);
-    setter(selectedValues);
   };
 
   // Handle edit transportation request
@@ -1652,50 +1647,32 @@ const AdminDashboard = () => {
               {/* Advanced Filters */}
               {showFilters && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg">
-                  {/* City Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                    <select
-                      multiple
-                      value={cityFilter}
-                      onChange={(e) => handleMultiSelectChange(e, setCityFilter)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
-                    >
-                      {uniqueCities.map(city => (
-                        <option key={city} value={city}>{city}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <MultiSelectDropdown
+                    label="City"
+                    options={cityOptions}
+                    selected={cityFilter}
+                    onChange={setCityFilter}
+                    placeholder="Select cities"
+                    searchPlaceholder="Search cities..."
+                  />
 
-                  {/* Pickup City Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Pickup City</label>
-                    <select
-                      multiple
-                      value={pickupCityFilter}
-                      onChange={(e) => handleMultiSelectChange(e, setPickupCityFilter)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
-                    >
-                      {uniquePickupCities.map(city => (
-                        <option key={city} value={city}>{city}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <MultiSelectDropdown
+                    label="Pickup City"
+                    options={cityOptions}
+                    selected={pickupCityFilter}
+                    onChange={setPickupCityFilter}
+                    placeholder="Select pickup cities"
+                    searchPlaceholder="Search cities..."
+                  />
 
-                  {/* Dropoff City Filter */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Dropoff City</label>
-                    <select
-                      multiple
-                      value={dropoffCityFilter}
-                      onChange={(e) => handleMultiSelectChange(e, setDropoffCityFilter)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-orange-500 min-h-[120px]"
-                    >
-                      {uniqueDropoffCities.map(city => (
-                        <option key={city} value={city}>{city}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <MultiSelectDropdown
+                    label="Dropoff City"
+                    options={cityOptions}
+                    selected={dropoffCityFilter}
+                    onChange={setDropoffCityFilter}
+                    placeholder="Select dropoff cities"
+                    searchPlaceholder="Search cities..."
+                  />
 
                   {/* Status Filter */}
                   <div>

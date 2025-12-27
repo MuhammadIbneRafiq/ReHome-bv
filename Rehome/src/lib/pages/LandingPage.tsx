@@ -39,16 +39,43 @@ const LandingPage = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.7, delay: 0.4 }}
-                className="mt-8"
+                className="mt-8 w-full max-w-md"
               >
-                <button
-                  className="inline-block rehome-button"
-                  onClick={() => setShowBookingModal(true)}
-                >
-                  Start Booking Process
-                </button>
+                <div className="flex flex-col gap-4">
+                  <button
+                    className="inline-flex items-center justify-center rehome-button text-base sm:text-lg font-semibold shadow-lg shadow-orange-200"
+                    onClick={() => setShowBookingModal(true)}
+                  >
+                    Start Booking Process
+                  </button>
+                  <div className="inline-flex items-center gap-2 rounded-2xl bg-orange-100 text-orange-700 px-4 py-3 font-semibold shadow-sm">
+                    <MdCheckCircle className="text-orange-500 text-xl" />
+                    Available everywhere in the Netherlands
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-gray-600">
+                    <div className="flex items-center gap-1 text-[#00B67A] text-xl">
+                      {[...Array(4)].map((_, idx) => (
+                        <FaStar key={idx} />
+                      ))}
+                      <FaStar className="text-gray-300" />
+                    </div>
+                    <p className="text-sm sm:text-base font-semibold text-gray-900">
+                      4.8 out of 5{" "}
+                      <span className="font-normal text-gray-500">Based on 49 reviews</span>
+                    </p>
+                    <a
+                      href="https://www.trustpilot.com/review/rehome.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 rounded-full border border-[#00B67A] bg-white/80 px-4 py-2 text-sm font-semibold text-[#00B67A] shadow-sm hover:bg-[#00B67A]/10 transition-colors"
+                    >
+                      Beoordeeld op <span className="font-bold">Trustpilot</span>
+                    </a>
+                  </div>
+                </div>
               </motion.div>
             </div>
+
             {/* Right: Truck Image */}
             <div>
               <div className="relative h-[280px] overflow-hidden flex items-center justify-center">
