@@ -20,6 +20,9 @@ import {
 import CalendarSettingsSection from '../../components/admin/CalendarSettingsSection';
 import MultiSelectDropdown from '../../components/admin/MultiSelectDropdown';
 
+const requestStatusOptions = ['Open', 'Contacted/ Pending', 'Confirmed', 'Completed', 'Declined'] as const;
+type RequestStatus = typeof requestStatusOptions[number];
+
 const AdminDashboard = () => {
   const { user } = useUserSessionStore();
   const [activeTab, setActiveTab] = useState<'marketplace' | 'transport' | 'schedule' | 'pricing' | 'items' | 'requests' | 'sales' | 'users'>('transport');
@@ -29,6 +32,8 @@ const AdminDashboard = () => {
   // State for all tabs
   const [transportRequests, setTransportRequests] = useState<TransportRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [requestsSearchQuery, setRequestsSearchQuery] = useState('');
+  const [requestsStatusFilter, setRequestsStatusFilter] = useState<RequestStatus | 'All'>('All');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -73,7 +78,11 @@ const AdminDashboard = () => {
   const [rehomeOrdersLoading, setRehomeOrdersLoading] = useState(false);
   const [marketplaceTab, setMarketplaceTab] = useState<'inventory' | 'supervision' | 'sales' | 'rehome-orders' | 'item-details'>('inventory');
 
-  // Items management state
+  const filteredRehomeOrders = rehomeOrders.filter(order => {
+    return order.status === 'Open' || order.status === 'Pending';
+  });
+
+// Items management state
   const [furnitureItemsData, setFurnitureItemsData] = useState<any[]>([]);
   const [editingFurnitureItem, setEditingFurnitureItem] = useState<string | null>(null);
   const [editFurnitureItemData, setEditFurnitureItemData] = useState<any>({});
@@ -139,6 +148,14 @@ const AdminDashboard = () => {
   const [specialRequests, setSpecialRequests] = useState<SpecialRequest[]>([]);
   const [selectedSpecialRequest, setSelectedSpecialRequest] = useState<SpecialRequest | null>(null);
   const [showSpecialRequestDetails, setShowSpecialRequestDetails] = useState(false);
+  const [editingDonationId, setEditingDonationId] = useState<number | null>(null);
+  const [editingDonationStatus, setEditingDonationStatus] = useState<RequestStatus>('Open');
+  const [savingDonationStatusId, setSavingDonationStatusId] = useState<number | null>(null);
+  const [modalDonationStatus, setModalDonationStatus] = useState<RequestStatus>('Open');
+  const [editingSpecialRequestId, setEditingSpecialRequestId] = useState<number | null>(null);
+  const [editingSpecialRequestStatus, setEditingSpecialRequestStatus] = useState<RequestStatus>('Open');
+  const [savingSpecialRequestStatusId, setSavingSpecialRequestStatusId] = useState<number | null>(null);
+  const [modalSpecialRequestStatus, setModalSpecialRequestStatus] = useState<RequestStatus>('Open');
 
   // Get all cities from constants
   const allCities = Object.keys(cityBaseCharges);
@@ -216,6 +233,40 @@ const AdminDashboard = () => {
     const num = typeof value === 'string' ? parseFloat(value) : value;
     if (num === null || num === undefined || Number.isNaN(num)) return '0.00';
     return num.toFixed(2);
+  };
+
+  const normalizeRequestStatus = (status: any): RequestStatus => {
+    if (!status) return 'Open';
+    const trimmed = String(status).toLowerCase().trim();
+    if (trimmed === 'open') return 'Open';
+    if (
+      trimmed === 'contacted' ||
+      trimmed === 'pending' ||
+      trimmed === 'contacted/ pending'.toLowerCase() ||
+      trimmed === 'contacted_pending' ||
+      trimmed === 'contacted pending'
+    ) {
+      return 'Contacted/ Pending';
+    }
+    if (trimmed === 'confirmed' || trimmed === 'approved') return 'Confirmed';
+    if (trimmed === 'completed') return 'Completed';
+    if (trimmed === 'declined' || trimmed === 'rejected' || trimmed === 'cancelled' || trimmed === 'canceled') return 'Declined';
+    return 'Open';
+  };
+
+  const getRequestStatusClasses = (status: RequestStatus) => {
+    switch (status) {
+      case 'Open':
+        return 'bg-gray-100 text-gray-800';
+      case 'Contacted/ Pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'Confirmed':
+        return 'bg-blue-100 text-blue-800';
+      case 'Completed':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-red-100 text-red-800';
+    }
   };
 
   const safeParseJSON = <T,>(value: any, fallback: T): T => {
@@ -684,6 +735,57 @@ const AdminDashboard = () => {
     }
   };
   
+  // Filter functions for Requests tab
+  const filteredItemDonations = itemDonations.filter((donation) => {
+    const normalizedSearch = requestsSearchQuery.toLowerCase();
+    const contactInfo = typeof donation.contact_info === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(donation.contact_info);
+          } catch {
+            return { firstName: '', lastName: '', email: '', phone: '' };
+          }
+        })()
+      : donation.contact_info || { firstName: '', lastName: '', email: '', phone: '' };
+
+    const matchesSearch =
+      contactInfo.firstName?.toLowerCase().includes(normalizedSearch) ||
+      contactInfo.lastName?.toLowerCase().includes(normalizedSearch) ||
+      contactInfo.email?.toLowerCase().includes(normalizedSearch) ||
+      contactInfo.phone?.toLowerCase().includes(normalizedSearch) ||
+      (donation.pickup_location || '').toLowerCase().includes(normalizedSearch);
+
+    const normalizedStatus = normalizeRequestStatus(donation.status);
+    const matchesStatus = requestsStatusFilter === 'All' || normalizedStatus === requestsStatusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredSpecialRequests = specialRequests.filter((request) => {
+    const normalizedSearch = requestsSearchQuery.toLowerCase();
+    const contactInfo = typeof request.contact_info === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(request.contact_info);
+          } catch {
+            return { email: '', phone: '' };
+          }
+        })()
+      : request.contact_info || { email: '', phone: '' };
+
+    const matchesSearch =
+      contactInfo.email?.toLowerCase().includes(normalizedSearch) ||
+      contactInfo.phone?.toLowerCase().includes(normalizedSearch) ||
+      (request.pickup_location || '').toLowerCase().includes(normalizedSearch) ||
+      (request.dropoff_location || '').toLowerCase().includes(normalizedSearch) ||
+      (request.request_type || '').toLowerCase().includes(normalizedSearch);
+
+    const normalizedStatus = normalizeRequestStatus(request.status);
+    const matchesStatus = requestsStatusFilter === 'All' || normalizedStatus === requestsStatusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
   // Fetch schedule (placeholder function)
   const fetchSchedule = async () => {
     await loadScheduleData();
@@ -1408,13 +1510,99 @@ const AdminDashboard = () => {
   // Handle view donation details
   const handleViewDonationDetails = (donation: ItemDonation) => {
     setSelectedDonation(donation);
+    setModalDonationStatus(normalizeRequestStatus(donation.status));
     setShowDonationDetails(true);
   };
 
   // Handle view special request details
   const handleViewSpecialRequestDetails = (request: SpecialRequest) => {
     setSelectedSpecialRequest(request);
+    setModalSpecialRequestStatus(normalizeRequestStatus(request.status));
     setShowSpecialRequestDetails(true);
+  };
+
+  const updateDonationStatus = async (donationId: number, status: RequestStatus, onSuccess?: () => void) => {
+    setSavingDonationStatusId(donationId);
+    try {
+      const { error } = await supabase
+        .from('item_donations')
+        .update({ status })
+        .eq('id', donationId);
+
+      if (error) throw error;
+
+      setItemDonations(prev =>
+        prev.map(donation => donation.id === donationId ? { ...donation, status } : donation)
+      );
+      if (selectedDonation?.id === donationId) {
+        setSelectedDonation(prev => prev ? { ...prev, status } : prev);
+      }
+      toast.success('Donation status updated');
+      onSuccess?.();
+    } catch (error) {
+      toast.error('Failed to update donation status');
+      console.error('Donation status update error:', error);
+    } finally {
+      setSavingDonationStatusId(null);
+    }
+  };
+
+  const handleStartDonationStatusEdit = (donation: ItemDonation) => {
+    setEditingDonationId(donation.id);
+    setEditingDonationStatus(normalizeRequestStatus(donation.status));
+  };
+
+  const handleSaveDonationStatus = async (donationId: number, status?: RequestStatus) => {
+    await updateDonationStatus(donationId, status ?? editingDonationStatus, () => setEditingDonationId(null));
+  };
+
+  const handleCancelDonationStatusEdit = () => {
+    setEditingDonationId(null);
+  };
+
+  const handleSaveDonationStatusFromModal = async () => {
+    if (!selectedDonation) return;
+    await updateDonationStatus(selectedDonation.id, modalDonationStatus);
+  };
+
+  const updateSpecialRequestStatus = async (requestId: number, status: RequestStatus, onSuccess?: () => void) => {
+    setSavingSpecialRequestStatusId(requestId);
+    try {
+      const { error } = await supabase
+        .from('services')
+        .update({ status })
+        .eq('id', requestId);
+
+      if (error) throw error;
+
+      setSpecialRequests(prev =>
+        prev.map(request => request.id === requestId ? { ...request, status } : request)
+      );
+      if (selectedSpecialRequest?.id === requestId) {
+        setSelectedSpecialRequest(prev => prev ? { ...prev, status } : prev);
+      }
+      toast.success('Special request status updated');
+      onSuccess?.();
+    } catch (error) {
+      toast.error('Failed to update special request status');
+      console.error('Special request status update error:', error);
+    } finally {
+      setSavingSpecialRequestStatusId(null);
+    }
+  };
+
+  const handleStartSpecialRequestStatusEdit = (request: SpecialRequest) => {
+    setEditingSpecialRequestId(request.id);
+    setEditingSpecialRequestStatus(normalizeRequestStatus(request.status));
+  };
+
+  const handleCancelSpecialRequestStatusEdit = () => {
+    setEditingSpecialRequestId(null);
+  };
+
+  const handleSaveSpecialRequestStatusFromModal = async () => {
+    if (!selectedSpecialRequest) return;
+    await updateSpecialRequestStatus(selectedSpecialRequest.id, modalSpecialRequestStatus);
   };
 
   // Handle bulk city assignment
@@ -2831,7 +3019,7 @@ const AdminDashboard = () => {
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
                         <p className="mt-2 text-gray-600">Loading orders...</p>
                       </div>
-                    ) : rehomeOrders.length === 0 ? (
+                    ) : filteredRehomeOrders.length === 0 ? (
                       <div className="p-6 text-center">
                         <p className="text-gray-600">No orders yet</p>
                         <p className="text-sm text-gray-500 mt-2">Orders will appear here when customers place orders</p>
@@ -2854,7 +3042,7 @@ const AdminDashboard = () => {
                             </tr>
                           </thead>
                           <tbody>
-                            {rehomeOrders.map((order) => {
+                            {filteredRehomeOrders.map((order) => {
                               const items = Array.isArray(order.items) ? order.items : [];
                               return (
                                 <tr key={order.id} className="hover:bg-gray-50">
@@ -4483,6 +4671,33 @@ const AdminDashboard = () => {
                     Special Requests
                   </button>
                 </div>
+                {/* Requests Filters */}
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={requestsSearchQuery}
+                      onChange={(e) => setRequestsSearchQuery(e.target.value)}
+                      placeholder="Search by customer name, email, phone, or location"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    />
+                  </div>
+                  <div className="w-full lg:w-64 flex items-center gap-2">
+                    <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Status</label>
+                    <select
+                      value={requestsStatusFilter}
+                      onChange={(e) => setRequestsStatusFilter(e.target.value as RequestStatus | 'All')}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm"
+                    >
+                      <option value="All">All statuses</option>
+                      {requestStatusOptions.map((statusOption) => (
+                        <option key={statusOption} value={statusOption}>
+                          {statusOption}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 {/* Requests Sub-tab Content */}
                 {requestsTab === 'donations' && (
                   <div>
@@ -4505,7 +4720,7 @@ const AdminDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {itemDonations.map((donation) => {
+                          {filteredItemDonations.map((donation) => {
                             let contactInfo: any = donation.contact_info;
                             if (typeof contactInfo === 'string') {
                               try {
@@ -4591,22 +4806,56 @@ const AdminDashboard = () => {
                                   ) : donation.is_date_flexible ? 'Flexible' : 'N/A'}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    donation.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                    donation.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                    donation.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-red-100 text-red-800'
-                                  }`}>
-                                    {donation.status}
-                                  </span>
+                                  {editingDonationId === donation.id ? (
+                                    <div className="flex items-center gap-2">
+                                      <select
+                                        value={editingDonationStatus}
+                                        onChange={(e) => setEditingDonationStatus(e.target.value as RequestStatus)}
+                                        className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                      >
+                                        {requestStatusOptions.map((statusOption) => (
+                                          <option key={statusOption} value={statusOption}>
+                                            {statusOption}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        onClick={() => handleSaveDonationStatus(donation.id)}
+                                        disabled={savingDonationStatusId === donation.id}
+                                        className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                                      >
+                                        {savingDonationStatusId === donation.id ? 'Saving...' : 'Save'}
+                                      </button>
+                                      <button
+                                        onClick={handleCancelDonationStatusEdit}
+                                        className="px-2 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getRequestStatusClasses(normalizeRequestStatus(donation.status))}`}>
+                                      {normalizeRequestStatus(donation.status)}
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
-                                  <button
-                                    onClick={() => handleViewDonationDetails(donation)}
-                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                  >
-                                    View
-                                  </button>
+                                  <div className="flex gap-2">
+                                    {editingDonationId !== donation.id && (
+                                      <button
+                                        onClick={() => handleStartDonationStatusEdit(donation)}
+                                        className="px-2 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                                      >
+                                        Edit
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleViewDonationDetails(donation)}
+                                      className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    >
+                                      View
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -4634,7 +4883,7 @@ const AdminDashboard = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {specialRequests.map((request) => {
+                          {filteredSpecialRequests.map((request) => {
                             let contactInfo: any = request.contact_info;
                             if (typeof contactInfo === 'string') {
                               try {
@@ -4733,23 +4982,62 @@ const AdminDashboard = () => {
                                   {preferredDateDisplay}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                    request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                    request.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                                    request.status === 'in_progress' ? 'bg-purple-100 text-purple-800' :
-                                    request.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                    'bg-red-100 text-red-800'
-                                  }`}>
-                                    {request.status}
-                                  </span>
+                                  {editingSpecialRequestId === request.id ? (
+                                    <div className="flex items-center gap-2">
+                                      <select
+                                        value={editingSpecialRequestStatus}
+                                        onChange={(e) => setEditingSpecialRequestStatus(e.target.value as RequestStatus)}
+                                        className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                      >
+                                        {requestStatusOptions.map((statusOption) => (
+                                          <option key={statusOption} value={statusOption}>
+                                            {statusOption}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        onClick={() =>
+                                          updateSpecialRequestStatus(
+                                            request.id,
+                                            editingSpecialRequestStatus,
+                                            () => setEditingSpecialRequestId(null)
+                                          )
+                                        }
+                                        disabled={savingSpecialRequestStatusId === request.id}
+                                        className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                                      >
+                                        {savingSpecialRequestStatusId === request.id ? 'Saving...' : 'Save'}
+                                      </button>
+                                      <button
+                                        onClick={handleCancelSpecialRequestStatusEdit}
+                                        className="px-2 py-1 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getRequestStatusClasses(normalizeRequestStatus(request.status))}`}>
+                                      {normalizeRequestStatus(request.status)}
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
-                                  <button
-                                    onClick={() => handleViewSpecialRequestDetails(request)}
-                                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                  >
-                                    View
-                                  </button>
+                                  <div className="flex gap-2">
+                                    {editingSpecialRequestId !== request.id && (
+                                      <button
+                                        onClick={() => handleStartSpecialRequestStatusEdit(request)}
+                                        className="px-2 py-1 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                                      >
+                                        Edit
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleViewSpecialRequestDetails(request)}
+                                      className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    >
+                                      View
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -4816,9 +5104,27 @@ const AdminDashboard = () => {
                             </span>
                           </p>
                           <p><span className="font-medium">Status:</span> 
-                            <span className="ml-2 px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                              {selectedDonation.status}
-                            </span>
+                            <div className="flex items-center">
+                              <select
+                                value={modalDonationStatus}
+                                onChange={(e) => setModalDonationStatus(e.target.value as RequestStatus)}
+                                className="ml-2 px-2 py-1 rounded text-xs font-medium border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              >
+                                <option value="Open">Open</option>
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                              </select>
+                              {modalDonationStatus !== normalizeRequestStatus(selectedDonation.status) && (
+                                <button 
+                                  onClick={handleSaveDonationStatusFromModal}
+                                  className="ml-2 px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+                                >
+                                  Save
+                                </button>
+                              )}
+                            </div>
                           </p>
                           <p><span className="font-medium">Condition:</span> {selectedDonation.item_condition || 'N/A'}</p>
                         </div>
@@ -4986,9 +5292,27 @@ const AdminDashboard = () => {
                         <div className="space-y-2">
                           <p><span className="font-medium">Type:</span> {selectedSpecialRequest.request_type || 'N/A'}</p>
                           <p><span className="font-medium">Status:</span> 
-                            <span className="ml-2 px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                              {selectedSpecialRequest.status}
-                            </span>
+                            <div className="flex items-center">
+                              <select
+                                value={modalSpecialRequestStatus}
+                                onChange={(e) => setModalSpecialRequestStatus(e.target.value as RequestStatus)}
+                                className="ml-2 px-2 py-1 rounded text-xs font-medium border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                              >
+                                <option value="Open">Open</option>
+                                <option value="Pending">Pending</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                              </select>
+                              {modalSpecialRequestStatus !== normalizeRequestStatus(selectedSpecialRequest.status) && (
+                                <button 
+                                  onClick={handleSaveSpecialRequestStatusFromModal}
+                                  className="ml-2 px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
+                                >
+                                  Save
+                                </button>
+                              )}
+                            </div>
                           </p>
                           <p><span className="font-medium">Date Flexible:</span> {selectedSpecialRequest.is_date_flexible ? 'Yes' : 'No'}</p>
                         </div>

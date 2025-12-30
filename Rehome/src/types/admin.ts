@@ -97,9 +97,12 @@ export interface TransportRequest {
     discountPercentage: number;
   }
 
+  // Common status variants used across admin experiences
+export type LegacyRequestStatus = 'Open' | 'Contacted/ Pending' | 'Confirmed' | 'Completed' | 'Declined';
+
   // Item donation interface
   export interface ItemDonation {
-    id: string;
+    id: number;
     donation_items: any[];
     custom_item?: string;
     contact_info: {
@@ -126,14 +129,14 @@ export interface TransportRequest {
     calculated_duration_seconds?: number;
     calculated_duration_text?: string;
     distance_provider?: string;
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'approved';
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'approved' | LegacyRequestStatus;
     created_at: string;
     updated_at: string;
   }
 
   // Special request interface
   export interface SpecialRequest {
-    id: string;
+    id: number;
     selected_services: string[];
     message?: string;
     contact_info: {
@@ -161,7 +164,7 @@ export interface TransportRequest {
     calculated_duration_seconds?: number;
     calculated_duration_text?: string;
     distance_provider?: string;
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | LegacyRequestStatus;
     created_at: string;
     updated_at: string;
     photo_urls?: string[];

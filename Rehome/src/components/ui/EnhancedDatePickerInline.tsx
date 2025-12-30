@@ -311,10 +311,10 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                                         key={idx}
                                         type="button"
                                         onClick={() => handleSelect(c.day!)}
-                                        disabled={isLoading || dayInfo?.isBlocked}
+                                        disabled={isLoading || dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day) < today)}
                                         className={`p-2 text-sm rounded-full text-center relative transition-colors border
                                             ${isSelected ? 'bg-blue-500 text-white border-blue-500' : 
-                                              dayInfo?.isBlocked ? 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed line-through' :
+                                              dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day) < today) ? 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed line-through' :
                                               dayInfo?.isGreen ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200' : 
                                               'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'}
                                             ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -330,7 +330,7 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                                         {!dayInfo?.isBlocked && dayInfo && !dayInfo.isGreen && (
                                             <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
                                         )}
-                                        {dayInfo?.isBlocked && (
+                                        {(dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day) < today)) && (
                                             <div className="absolute top-0 right-0 w-2 h-2 bg-gray-500 rounded-full"></div>
                                         )}
                                     </button>
