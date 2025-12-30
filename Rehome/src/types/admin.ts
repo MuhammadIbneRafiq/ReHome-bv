@@ -7,7 +7,7 @@ export interface TransportRequest {
     customer_name: string;
     city: string;
     date: string;
-    status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'Open' | 'Contacted/ Pending' | 'Confirmed' | 'Completed';
+    status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'Open' | 'Contacted/ Pending' | 'Confirmed' | 'Completed' | 'Declined';
     notes?: string;
     type: 'item-moving' | 'house-moving';
     // Additional fields from Supabase

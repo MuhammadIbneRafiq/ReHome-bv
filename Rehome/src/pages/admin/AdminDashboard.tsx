@@ -188,7 +188,7 @@ const AdminDashboard = () => {
     });
   };
 
-  const normalizeTransportStatus = (status: any): 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'Open' | 'Contacted/ Pending' | 'Confirmed' | 'Completed' => {
+  const normalizeTransportStatus = (status: any): 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'Open' | 'Contacted/ Pending' | 'Confirmed' | 'Completed' | 'Declined' => {
     if (!status) return 'Open';
 
     const trimmed = String(status).toLowerCase().trim();
@@ -206,6 +206,7 @@ const AdminDashboard = () => {
 
     if (trimmed === 'confirmed') return 'Confirmed';
     if (trimmed === 'completed') return 'Completed';
+    if (trimmed === 'declined') return 'Declined';
     if (trimmed === 'cancelled') return 'cancelled';
 
     return 'Open';
@@ -690,9 +691,12 @@ const AdminDashboard = () => {
 
   // Filter transport requests based on search and filters
   const filteredTransportRequests = transportRequests.filter(request => {
-    const matchesSearch = request.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         request.customer_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         request.city?.toLowerCase().includes(searchQuery.toLowerCase());
+    const normalizedSearch = searchQuery.toLowerCase();
+    const matchesSearch = request.customer_name?.toLowerCase().includes(normalizedSearch) ||
+                         request.customer_email?.toLowerCase().includes(normalizedSearch) ||
+                         request.city?.toLowerCase().includes(normalizedSearch) ||
+                         request.order_number?.toLowerCase().includes(normalizedSearch) ||
+                         request.order_number?.toLowerCase().includes(normalizedSearch.replace('#', ''));
     
     const requestCityValue = (request.city || '').toLowerCase();
     const requestPickupValue = (request.firstlocation || '').toLowerCase();
@@ -1618,7 +1622,7 @@ const AdminDashboard = () => {
                   <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Search..."
+                    placeholder="Search by name, email, city, or order #"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -1689,6 +1693,7 @@ const AdminDashboard = () => {
                           <option value="Contacted/ Pending">Contacted/ Pending</option>
                           <option value="Confirmed">Confirmed</option>
                           <option value="Completed">Completed</option>
+                          <option value="Declined">Declined</option>
                         </>
                       )}
                       {activeTab === 'marketplace' && (
@@ -1931,6 +1936,7 @@ const AdminDashboard = () => {
                                 <option value="Contacted/ Pending">Contacted/ Pending</option>
                                 <option value="Confirmed">Confirmed</option>
                                 <option value="Completed">Completed</option>
+                                <option value="Declined">Declined</option>
                               </select>
                             ) : (
                               <span className={`px-2 py-1 rounded text-xs font-medium ${
