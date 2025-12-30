@@ -2090,9 +2090,11 @@ const AdminDashboard = () => {
                                 <p className="font-medium">
                                   {(selectedTransportRequest as any).selecteddate ? 
                                     format(new Date((selectedTransportRequest as any).selecteddate), 'MMM dd, yyyy') : 
+                                    (selectedTransportRequest as any).selecteddate_start && (selectedTransportRequest as any).selecteddate_end ? 
+                                    `${format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy')} - ${format(new Date((selectedTransportRequest as any).selecteddate_end), 'MMM dd, yyyy')}` :
                                     (selectedTransportRequest as any).selecteddate_start ? 
                                     format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy') : 'Flexible'}
-                                  {(selectedTransportRequest as any).isdateflexible && ' (Flexible)'}
+                                  {(selectedTransportRequest as any).isdateflexible && !((selectedTransportRequest as any).selecteddate_start && (selectedTransportRequest as any).selecteddate_end) && ' (Flexible)'}
                                 </p>
                               </div>
                               <div className="md:col-span-2">
@@ -2144,26 +2146,60 @@ const AdminDashboard = () => {
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {(typeof (selectedTransportRequest as any).furnitureitems === 'string' ? 
-                                      JSON.parse((selectedTransportRequest as any).furnitureitems) : 
-                                      (selectedTransportRequest as any).furnitureitems).map((item: any, index: number) => {
-                                        const disassemblyItems = (selectedTransportRequest as any).disassembly_items;
-                                        const carryingItems = (selectedTransportRequest as any).carrying_service_items;
-                                        const helperItems = (selectedTransportRequest as any).extra_helper_items;
+                                    {(() => {
+                                      const furnitureItemsArray = typeof (selectedTransportRequest as any).furnitureitems === 'string' ? 
+                                        JSON.parse((selectedTransportRequest as any).furnitureitems) : 
+                                        (selectedTransportRequest as any).furnitureitems;
+                                      
+                                      const disassemblyItems = (selectedTransportRequest as any).disassembly_items;
+                                      const carryingItems = (selectedTransportRequest as any).carrying_service_items;
+                                      const helperItems = (selectedTransportRequest as any).extra_helper_items;
+                                      
+                                      let parsedDisassembly: any = {};
+                                      let parsedCarrying: any = {};
+                                      let parsedHelper: any = {};
+                                      
+                                      try {
+                                        parsedDisassembly = typeof disassemblyItems === 'string' ? JSON.parse(disassemblyItems) : disassemblyItems || {};
+                                      } catch {}
+                                      try {
+                                        parsedCarrying = typeof carryingItems === 'string' ? JSON.parse(carryingItems) : carryingItems || {};
+                                      } catch {}
+                                      try {
+                                        parsedHelper = typeof helperItems === 'string' ? JSON.parse(helperItems) : helperItems || {};
+                                      } catch {}
+                                      
+                                      // Collect all UUIDs from all add-on objects to reconstruct the original item order
+                                      const allUUIDs = new Set<string>();
+                                      Object.keys(parsedDisassembly).forEach(k => allUUIDs.add(k));
+                                      Object.keys(parsedCarrying).forEach(k => allUUIDs.add(k));
+                                      Object.keys(parsedHelper).forEach(k => allUUIDs.add(k));
+                                      
+                                      // Convert to array to maintain order (Object.keys maintains insertion order in modern JS)
+                                      const orderedUUIDs = Array.from(allUUIDs);
+                                      
+                                      return furnitureItemsArray.map((item: any, index: number) => {
+                                        // The furniture items array is created from Object.entries(itemQuantities).filter(...).map(...)
+                                        // The add-on objects use the same UUIDs from itemQuantities
+                                        // We match by assuming the nth item corresponds to the nth UUID in the ordered list
                                         
-                                        let parsedDisassembly: any = {};
-                                        let parsedCarrying: any = {};
-                                        let parsedHelper: any = {};
+                                        let hasDisassembly = false;
+                                        let hasCarrying = false;
+                                        let hasHelper = false;
                                         
-                                        try {
-                                          parsedDisassembly = typeof disassemblyItems === 'string' ? JSON.parse(disassemblyItems) : disassemblyItems || {};
-                                        } catch {}
-                                        try {
-                                          parsedCarrying = typeof carryingItems === 'string' ? JSON.parse(carryingItems) : carryingItems || {};
-                                        } catch {}
-                                        try {
-                                          parsedHelper = typeof helperItems === 'string' ? JSON.parse(helperItems) : helperItems || {};
-                                        } catch {}
+                                        // Get the UUID that should correspond to this item based on position
+                                        const correspondingUUID = orderedUUIDs[index];
+                                        
+                                        if (correspondingUUID) {
+                                          hasDisassembly = parsedDisassembly[correspondingUUID] === true;
+                                          hasCarrying = parsedCarrying[correspondingUUID] === true;
+                                          hasHelper = parsedHelper[correspondingUUID] === true;
+                                        }
+                                        
+                                        // Also check by item name (fallback for old data or if UUIDs don't match)
+                                        if (parsedDisassembly[item.name]) hasDisassembly = true;
+                                        if (parsedCarrying[item.name]) hasCarrying = true;
+                                        if (parsedHelper[item.name]) hasHelper = true;
                                         
                                         return (
                                           <tr key={index} className="hover:bg-gray-100">
@@ -2172,20 +2208,21 @@ const AdminDashboard = () => {
                                             <td className="border border-gray-300 px-3 py-2 text-center text-sm">{item.points || item.value || 0}</td>
                                             <td className="border border-gray-300 px-3 py-2 text-sm">
                                               <div className="flex flex-wrap gap-1">
-                                                {parsedDisassembly[item.name] && (
+                                                {hasDisassembly && (
                                                   <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded text-xs">Disassembly</span>
                                                 )}
-                                                {parsedCarrying[item.name] && (
+                                                {hasCarrying && (
                                                   <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">Carrying</span>
                                                 )}
-                                                {parsedHelper[item.name] && (
+                                                {hasHelper && (
                                                   <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">Helper</span>
                                                 )}
                                               </div>
                                             </td>
                                           </tr>
                                         );
-                                      })}
+                                      });
+                                    })()}
                                   </tbody>
                                 </table>
                               </div>
@@ -2249,6 +2286,47 @@ const AdminDashboard = () => {
                                     <span className="text-gray-700 font-medium">Extra Helper:</span>
                                     <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).extrahelpercost).toFixed(2)}</span>
                                   </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {(() => {
+                                      const helperItems = (selectedTransportRequest as any).extra_helper_items;
+                                      let parsedHelper: any = {};
+                                      try {
+                                        parsedHelper = typeof helperItems === 'string' ? JSON.parse(helperItems) : helperItems || {};
+                                      } catch {}
+                                      
+                                      const helperUUIDs = Object.keys(parsedHelper).filter(k => parsedHelper[k] === true);
+                                      
+                                      if (helperUUIDs.length > 0 && (selectedTransportRequest as any).furnitureitems) {
+                                        const furnitureItemsArray = typeof (selectedTransportRequest as any).furnitureitems === 'string' ? 
+                                          JSON.parse((selectedTransportRequest as any).furnitureitems) : 
+                                          (selectedTransportRequest as any).furnitureitems;
+                                        
+                                        const allUUIDs = new Set<string>();
+                                        Object.keys(parsedHelper).forEach(k => allUUIDs.add(k));
+                                        const orderedUUIDs = Array.from(allUUIDs);
+                                        
+                                        const itemsWithHelper = furnitureItemsArray
+                                          .map((item: any, index: number) => {
+                                            const correspondingUUID = orderedUUIDs[index];
+                                            const hasHelper = correspondingUUID && parsedHelper[correspondingUUID] === true;
+                                            return hasHelper ? item.name : null;
+                                          })
+                                          .filter((name: string | null) => name !== null);
+                                        
+                                        if (itemsWithHelper.length > 0) {
+                                          return (
+                                            <div>
+                                              <div className="font-medium">Items requiring extra helper:</div>
+                                              {itemsWithHelper.map((name: string, idx: number) => (
+                                                <div key={idx}>• {name}</div>
+                                              ))}
+                                            </div>
+                                          );
+                                        }
+                                      }
+                                      return <div>Additional moving assistance</div>;
+                                    })()}
+                                  </div>
                                 </div>
                               )}
 
@@ -2259,7 +2337,58 @@ const AdminDashboard = () => {
                                     <span className="text-gray-700 font-medium">Carrying Service:</span>
                                     <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).carryingcost).toFixed(2)}</span>
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">Floor carrying assistance</div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    <div>Floor carrying assistance</div>
+                                    {((selectedTransportRequest as any).floorpickup > 0 || (selectedTransportRequest as any).floordropoff > 0) && (
+                                      <div className="mt-1">
+                                        {(selectedTransportRequest as any).floorpickup > 0 && (
+                                          <div>• Pickup: Floor {(selectedTransportRequest as any).floorpickup} {(selectedTransportRequest as any).elevatorpickup ? '(with elevator)' : '(stairs)'}</div>
+                                        )}
+                                        {(selectedTransportRequest as any).floordropoff > 0 && (
+                                          <div>• Dropoff: Floor {(selectedTransportRequest as any).floordropoff} {(selectedTransportRequest as any).elevatordropoff ? '(with elevator)' : '(stairs)'}</div>
+                                        )}
+                                      </div>
+                                    )}
+                                    {(() => {
+                                      const carryingItems = (selectedTransportRequest as any).carrying_service_items;
+                                      let parsedCarrying: any = {};
+                                      try {
+                                        parsedCarrying = typeof carryingItems === 'string' ? JSON.parse(carryingItems) : carryingItems || {};
+                                      } catch {}
+                                      
+                                      const carryingUUIDs = Object.keys(parsedCarrying).filter(k => parsedCarrying[k] === true);
+                                      
+                                      if (carryingUUIDs.length > 0 && (selectedTransportRequest as any).furnitureitems) {
+                                        const furnitureItemsArray = typeof (selectedTransportRequest as any).furnitureitems === 'string' ? 
+                                          JSON.parse((selectedTransportRequest as any).furnitureitems) : 
+                                          (selectedTransportRequest as any).furnitureitems;
+                                        
+                                        const allUUIDs = new Set<string>();
+                                        Object.keys(parsedCarrying).forEach(k => allUUIDs.add(k));
+                                        const orderedUUIDs = Array.from(allUUIDs);
+                                        
+                                        const itemsWithCarrying = furnitureItemsArray
+                                          .map((item: any, index: number) => {
+                                            const correspondingUUID = orderedUUIDs[index];
+                                            const hasCarrying = correspondingUUID && parsedCarrying[correspondingUUID] === true;
+                                            return hasCarrying ? item.name : null;
+                                          })
+                                          .filter((name: string | null) => name !== null);
+                                        
+                                        if (itemsWithCarrying.length > 0) {
+                                          return (
+                                            <div className="mt-1">
+                                              <div className="font-medium">Items with carrying service:</div>
+                                              {itemsWithCarrying.map((name: string, idx: number) => (
+                                                <div key={idx}>• {name}</div>
+                                              ))}
+                                            </div>
+                                          );
+                                        }
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
                                 </div>
                               )}
 
@@ -2270,7 +2399,48 @@ const AdminDashboard = () => {
                                     <span className="text-gray-700 font-medium">Assembly & Disassembly:</span>
                                     <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).disassemblycost).toFixed(2)}</span>
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">Professional assembly/disassembly service</div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    <div>Professional assembly/disassembly service</div>
+                                    {(() => {
+                                      const disassemblyItems = (selectedTransportRequest as any).disassembly_items;
+                                      let parsedDisassembly: any = {};
+                                      try {
+                                        parsedDisassembly = typeof disassemblyItems === 'string' ? JSON.parse(disassemblyItems) : disassemblyItems || {};
+                                      } catch {}
+                                      
+                                      const disassemblyUUIDs = Object.keys(parsedDisassembly).filter(k => parsedDisassembly[k] === true);
+                                      
+                                      if (disassemblyUUIDs.length > 0 && (selectedTransportRequest as any).furnitureitems) {
+                                        const furnitureItemsArray = typeof (selectedTransportRequest as any).furnitureitems === 'string' ? 
+                                          JSON.parse((selectedTransportRequest as any).furnitureitems) : 
+                                          (selectedTransportRequest as any).furnitureitems;
+                                        
+                                        const allUUIDs = new Set<string>();
+                                        Object.keys(parsedDisassembly).forEach(k => allUUIDs.add(k));
+                                        const orderedUUIDs = Array.from(allUUIDs);
+                                        
+                                        const itemsWithDisassembly = furnitureItemsArray
+                                          .map((item: any, index: number) => {
+                                            const correspondingUUID = orderedUUIDs[index];
+                                            const hasDisassembly = correspondingUUID && parsedDisassembly[correspondingUUID] === true;
+                                            return hasDisassembly ? item.name : null;
+                                          })
+                                          .filter((name: string | null) => name !== null);
+                                        
+                                        if (itemsWithDisassembly.length > 0) {
+                                          return (
+                                            <div className="mt-1">
+                                              <div className="font-medium">Items requiring assembly/disassembly:</div>
+                                              {itemsWithDisassembly.map((name: string, idx: number) => (
+                                                <div key={idx}>• {name}</div>
+                                              ))}
+                                            </div>
+                                          );
+                                        }
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
                                 </div>
                               )}
 
@@ -4651,7 +4821,6 @@ const AdminDashboard = () => {
                             </span>
                           </p>
                           <p><span className="font-medium">Condition:</span> {selectedDonation.item_condition || 'N/A'}</p>
-                          <p><span className="font-medium">Estimated Value:</span> €{selectedDonation.total_estimated_value || 'N/A'}</p>
                         </div>
                         {/* Uploaded Photos */}
                         {selectedDonation.photo_urls && selectedDonation.photo_urls.length > 0 ? (
@@ -4697,11 +4866,9 @@ const AdminDashboard = () => {
                         <h4 className="text-lg font-semibold text-gray-800 mb-3">Location Details</h4>
                         <div className="space-y-2">
                           <p><span className="font-medium">Pickup Location:</span> {selectedDonation.pickup_location || 'N/A'}</p>
-                          <p><span className="font-medium">Donation Location:</span> {selectedDonation.donation_location || 'N/A'}</p>
                           <p><span className="font-medium">Floor:</span> {selectedDonation.floor || 'Ground'}</p>
                           <p><span className="font-medium">Elevator Available:</span> {selectedDonation.elevator_available ? 'Yes' : 'No'}</p>
                           <p><span className="font-medium">Distance:</span> {selectedDonation.calculated_distance_km || 'N/A'} km</p>
-                          <p><span className="font-medium">Duration:</span> {selectedDonation.calculated_duration_text || 'N/A'}</p>
                         </div>
                       </div>
 
