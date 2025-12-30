@@ -10,7 +10,7 @@
  *
  * Usage (PowerShell):
  *   $env:SUPABASE_PROJECT_REF="yhlenudckwewmejigxvl"
- *   $env:SUPABASE_ANON_KEY="<your anon key>"
+ *   $env:SUPABASE_KEY="<your anon key>"
  *   $env:BACKEND_BASE_URL="https://rehome-backend.vercel.app"  # or your origin
  *   # optional:
  *   $env:YEAR="2025"; $env:MONTH="8"  # 1-12
@@ -18,13 +18,13 @@
  */
 
 const PROJECT_REF = process.env.SUPABASE_PROJECT_REF;
-const ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const ANON_KEY = process.env.SUPABASE_KEY;
 const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL; // for /api/constants
 const YEAR = Number(process.env.YEAR || new Date().getFullYear());
 const MONTH = Number(process.env.MONTH || 8); // August by default (1-12)
 
 if (!PROJECT_REF || !ANON_KEY || !BACKEND_BASE_URL) {
-  console.error("Missing envs. Required: SUPABASE_PROJECT_REF, SUPABASE_ANON_KEY, BACKEND_BASE_URL");
+  console.error("Missing envs. Required: SUPABASE_PROJECT_REF, SUPABASE_KEY, BACKEND_BASE_URL");
   process.exit(1);
 }
 

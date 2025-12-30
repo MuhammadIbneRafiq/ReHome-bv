@@ -134,7 +134,7 @@ Add to your `.env` file:
 ```env
 # Existing variables
 SUPABASE_URL=your-supabase-url
-SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_KEY=your-supabase-service-key
 
 # Optional: Admin token for cache warming

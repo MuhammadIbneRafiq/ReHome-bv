@@ -2,7 +2,7 @@
  * Simple JS tester for Supabase Edge Functions
  * Usage (PowerShell):
  *   setx SUPABASE_PROJECT_REF yhlenudckwewmejigxvl
- *   setx SUPABASE_ANON_KEY <your-anon-key>
+ *   setx SUPABASE_KEY <your-anon-key>
  *   node scripts/test-edge-functions.js
  */
 
@@ -10,7 +10,7 @@ const PROJECT_REF = "yhlenudckwewmejigxvl";
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlobGVudWRja3dld21lamlneHZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyMTk0MDgsImV4cCI6MjA1Mjc5NTQwOH0.CaNKgZXfhkT9-FaGF5hhqQ3aavfUi32R-1ueew8B-S0";
 
 if (!PROJECT_REF || !ANON_KEY) {
-  console.error("Missing SUPABASE_PROJECT_REF or SUPABASE_ANON_KEY envs");
+  console.error("Missing SUPABASE_PROJECT_REF or SUPABASE_KEY envs");
   process.exit(1);
 }
 
