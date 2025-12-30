@@ -2088,12 +2088,12 @@ const AdminDashboard = () => {
                               <div>
                                 <p className="text-sm text-gray-600">Date</p>
                                 <p className="font-medium">
-                                  {(selectedTransportRequest as any).selecteddate ? 
-                                    format(new Date((selectedTransportRequest as any).selecteddate), 'MMM dd, yyyy') : 
-                                    (selectedTransportRequest as any).selecteddate_start && (selectedTransportRequest as any).selecteddate_end ? 
+                                  {(selectedTransportRequest as any).selecteddate_start && (selectedTransportRequest as any).selecteddate_end ? 
                                     `${format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy')} - ${format(new Date((selectedTransportRequest as any).selecteddate_end), 'MMM dd, yyyy')}` :
                                     (selectedTransportRequest as any).selecteddate_start ? 
-                                    format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy') : 'Flexible'}
+                                    format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy') :
+                                    (selectedTransportRequest as any).selecteddate ? 
+                                    format(new Date((selectedTransportRequest as any).selecteddate), 'MMM dd, yyyy') : 'Flexible'}
                                   {(selectedTransportRequest as any).isdateflexible && !((selectedTransportRequest as any).selecteddate_start && (selectedTransportRequest as any).selecteddate_end) && ' (Flexible)'}
                                 </p>
                               </div>
