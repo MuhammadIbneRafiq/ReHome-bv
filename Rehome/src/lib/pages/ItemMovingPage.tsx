@@ -740,62 +740,77 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         }
     };
 
-    // Debounced price calculation to avoid excessive API calls while typing
-    // Uses dateConfigId to prevent flickering during date option changes
-    useEffect(() => {
-        // Skip calculation if locations are not set or constants not ready
-        if (!isDataLoaded || !firstLocation || !secondLocation || 
+    // Consolidated pricing input signature to detect meaningful changes
+    // This prevents duplicate API calls by batching all dependencies into one stable key
+    const pricingInputSignature = React.useMemo(() => {
+        // Return null if we don't have minimum required data
+        if (!isDataLoaded || !firstLocation || !secondLocation ||
             firstLocation.trim().length <= 3 || secondLocation.trim().length <= 3) {
+            return null;
+        }
+        
+        // Create a stable signature from all pricing-relevant inputs
+        return JSON.stringify({
+            // Location data
+            pickupPlaceId: pickupPlace?.placeId,
+            dropoffPlaceId: dropoffPlace?.placeId,
+            // Date configuration
+            dateConfigId,
+            // Items and quantities
+            itemQuantities,
+            // Add-on services
+            disassembly,
+            assembly,
+            extraHelper,
+            carryingService,
+            disassemblyItems,
+            assemblyItems,
+            extraHelperItems,
+            carryingServiceItems,
+            carryingUpstairs,
+            carryingDownstairs,
+            carryingUpItems,
+            carryingDownItems,
+            // Floor and elevator
+            floorPickup,
+            floorDropoff,
+            elevatorPickup,
+            elevatorDropoff,
+            // Student discount
+            isStudent,
+            hasStudentId: !!studentId,
+        });
+    }, [
+        isDataLoaded, firstLocation, secondLocation,
+        pickupPlace?.placeId, dropoffPlace?.placeId,
+        dateConfigId,
+        itemQuantities,
+        disassembly, assembly, extraHelper, carryingService,
+        disassemblyItems, assemblyItems, extraHelperItems, carryingServiceItems,
+        carryingUpstairs, carryingDownstairs, carryingUpItems, carryingDownItems,
+        floorPickup, floorDropoff, elevatorPickup, elevatorDropoff,
+        isStudent, studentId
+    ]);
+
+    // Single consolidated useEffect for all pricing calculations
+    // Uses debounce to batch rapid changes and prevent duplicate API calls
+    useEffect(() => {
+        // Clear pricing if we don't have valid inputs
+        if (pricingInputSignature === null) {
             setPricingBreakdown(null);
             return;
         }
         
-        // Increment the request ID to prevent race conditions
+        // Increment request ID to guard against stale responses
         ++latestRequestIdRef.current;
         
+        // Debounce all pricing calculations with a single timer
         const debounceTimer = setTimeout(() => {
             calculatePrice();
-        }, 400); // 400ms debounce - faster pricing updates
+        }, 350); // 350ms debounce - balances responsiveness with efficiency
 
         return () => clearTimeout(debounceTimer);
-    }, [isDataLoaded, firstLocation, secondLocation, dateConfigId]);
-
-    // Split immediate price calculation into location-dependent and item-dependent parts
-    // Location changes (expensive) - recalculate distance and everything
-    useEffect(() => {
-        if (isDataLoaded && firstLocation && secondLocation) {
-            calculatePrice();
-        }
-    }, [isDataLoaded, pickupPlace, dropoffPlace, dateConfigId]);
-    
-    // Item/service changes (cheaper) - reuse already calculated distance
-    useEffect(() => {
-        // Only recalculate if we already have locations
-        if (isDataLoaded && firstLocation && secondLocation) {
-            calculatePrice();
-        }
-    }, [isDataLoaded, itemQuantities, disassembly, assembly, extraHelper, carryingService, 
-        disassemblyItems, assemblyItems, extraHelperItems, carryingServiceItems,
-        carryingUpstairs, carryingDownstairs, carryingUpItems, carryingDownItems,
-        isStudent, studentId]);
-        
-    // Floor levels and elevators (less frequent changes)
-    // Using debounce for these to prevent rapid recalculations while typing floor numbers
-    useEffect(() => {
-        if (!isDataLoaded || !firstLocation || !secondLocation || distanceKm === null) return;
-        
-        const debounceTimer = setTimeout(() => {
-            calculatePrice();
-        }, 500); // Longer debounce for less frequently changed inputs
-        
-        return () => clearTimeout(debounceTimer);
-    }, [isDataLoaded, floorPickup, floorDropoff, elevatorPickup, elevatorDropoff]);
-    
-    // Student discount handling: recalc whenever student toggle or file changes
-    useEffect(() => {
-        if (!isDataLoaded || !firstLocation || !secondLocation) return;
-        calculatePrice();
-    }, [isDataLoaded, isStudent, studentId]);
+    }, [pricingInputSignature]);
 
     const nextStep = () => {
         // For step 1, ensure both addresses are valid Google selections before showing tips
