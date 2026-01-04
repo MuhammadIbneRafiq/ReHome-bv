@@ -528,10 +528,10 @@ const MarketplacePage = () => {
             />
             
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="space-y-3 mb-6">
+                <div className="space-y-3 mb-6 text-center">
                     <h1 className="text-3xl font-extrabold text-gray-900">{t('marketplace.title')}</h1>
                     <p className="text-lg text-gray-600">{t('marketplace.subtitle')}</p>
-                    <div className="flex items-center gap-2 text-orange-600 font-semibold italic text-base">
+                    <div className="flex items-center justify-center gap-2 text-orange-600 font-semibold italic text-base">
                         <FaMapMarkerAlt className="text-lg" />
                         <span>We deliver everywhere in the Netherlands</span>
                     </div>
