@@ -30,7 +30,8 @@ export interface PricingConfigAPI {
     assemblyChargePerItem: number;
     extraHelperChargePerItem: number;
     studentDiscount: number;
-    earlyBookingDiscount: number;
+    lateBookingFee: number;
+    urgentBookingFee: number;
     minimumCharge: number;
   };
   is_active: boolean;

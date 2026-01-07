@@ -93,6 +93,7 @@ export interface BidConfirmation {
     confirmed_by?: string;
     confirmed_at?: string;
     order_number?: string;
+    final_price?: number | null;
     created_at?: string;
     updated_at?: string;
 }

@@ -6,7 +6,6 @@ import { toast } from 'react-toastify';
 import { supabase } from "../../lib/supabaseClient";
 import useUserSessionStore from "../../services/state/useUserSessionStore";
 import { cityBaseCharges } from "../../lib/constants";
-import pricingConfigData from "../../lib/pricingConfig.json";
 import { CityPrice, MarketplaceItem, CalendarDay, TransportRequest, ItemDonation, SpecialRequest } from '../../types/admin';
 import { fetchBlockedDates } from '../../services/blockedDatesService';
 import { API_ENDPOINTS } from '../../lib/api/config';
@@ -57,8 +56,35 @@ const AdminDashboard = () => {
   // Pricing management state
   const [cityPrices, setCityPrices] = useState<CityPrice[]>([]);
   
-  // JSON-based pricing config state
-  const [jsonPricingConfig, setJsonPricingConfig] = useState(pricingConfigData);
+  // Pricing config state loaded from Supabase tables (replaces pricingConfig.json)
+  const [jsonPricingConfig, setJsonPricingConfig] = useState({
+    distancePricing: {
+      smallDistance: { threshold: 0, rate: 0 },
+      mediumDistance: { threshold: 0, rate: 0 },
+      longDistance: { rate: 0 },
+      baseChargeRange: { range: 0, ratePerKm: 0 }
+    },
+    carryingMultipliers: {
+      standard: { multiplier: 0 },
+      specialRules: {
+        boxes: { multiplier: 0 }
+      }
+    },
+    assemblyPricing: {
+      bed: { price: 0 },
+      closet: { price: 0 },
+      table: { price: 0 },
+      sofa: { price: 0 }
+    },
+    extraHelperPricing: {
+      smallMove: { threshold: 0, price: 0 },
+      bigMove: { price: 0 }
+    },
+    discounts: {
+      studentDiscount: { percentage: 0 },
+      lateBookingFee: { percentage: 0 }
+    }
+  });
   const [editingJsonConfig, setEditingJsonConfig] = useState<string | null>(null);
   const [editJsonConfigData, setEditJsonConfigData] = useState<any>({});
   
@@ -598,15 +624,15 @@ const AdminDashboard = () => {
 
       setCityPrices(citydata || []);
 
-      // Fetch current pricing configuration
+      // Fetch current pricing configuration from Supabase table (backend source of truth)
       const { data: pricingConfig } = await supabase
         .from('pricing_config')
-        .select('*')
+        .select('config_value')
         .eq('is_active', true)
         .single();
 
-      if (pricingConfig?.config) {
-        setJsonPricingConfig(pricingConfig.config);
+      if (pricingConfig?.config_value) {
+        setJsonPricingConfig(pricingConfig.config_value);
       }
     } catch (error) {
       console.error('Error fetching pricing data:', error);
@@ -1085,7 +1111,7 @@ const AdminDashboard = () => {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ 
-          config: updatedConfig 
+          config_value: updatedConfig 
         })
       });
 
@@ -4052,6 +4078,92 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     </div>
+
+                    {/* Discounts/Extra Charges */}
+                    <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-700 mb-3">Discounts/Extra Charges</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Student Discount (%)</label>
+                          {editingJsonConfig === 'discounts.studentDiscount' ? (
+                            <div className="space-y-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={(editJsonConfigData.percentage || 0) * 100}
+                                onChange={(e) => setEditJsonConfigData({...editJsonConfigData, percentage: parseFloat(e.target.value) / 100})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('discounts', 'studentDiscount')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-sm font-medium">{((jsonPricingConfig.discounts?.studentDiscount?.percentage || 0.0885) * 100).toFixed(2)}%</span>
+                              <button
+                                onClick={() => handleEditJsonConfig('discounts', 'studentDiscount')}
+                                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Late Booking Fee (%)</label>
+                          {editingJsonConfig === 'discounts.lateBookingFee' ? (
+                            <div className="space-y-2">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={(editJsonConfigData.percentage || 0) * 100}
+                                onChange={(e) => setEditJsonConfigData({...editJsonConfigData, percentage: parseFloat(e.target.value) / 100})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="flex space-x-1">
+                                <button
+                                  onClick={() => handleSaveJsonConfig('discounts', 'lateBookingFee')}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-sm font-medium">{((jsonPricingConfig.discounts?.lateBookingFee?.percentage || 0.10) * 100).toFixed(2)}%</span>
+                              <button
+                                onClick={() => handleEditJsonConfig('discounts', 'lateBookingFee')}
+                                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
 
@@ -4134,7 +4246,7 @@ const AdminDashboard = () => {
                             <th className="border border-gray-300 px-4 py-2 text-left font-medium">CITY</th>
                             <th className="border border-gray-300 px-4 py-2 text-left font-medium">NORMAL</th>
                             <th className="border border-gray-300 px-4 py-2 text-left font-medium">CITY DAY</th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">DAY OF WEEK</th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-medium">ROUTE</th>
                             <th className="border border-gray-300 px-4 py-2 text-left font-medium">ACTIONS</th>
                           </tr>
                         </thead>
@@ -4239,6 +4351,116 @@ const AdminDashboard = () => {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Base Charge Range for Non-City Locations */}
+                    <div className="mt-6 p-4 bg-white border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-700 mb-3">Base Charge Range for Non-City Locations</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Base Range (km)</label>
+                          {editingJsonConfig === 'distancePricing.baseChargeRange.range' ? (
+                            <div className="space-y-2">
+                              <input
+                                type="number"
+                                value={editJsonConfigData}
+                                onChange={(e) => setEditJsonConfigData(parseFloat(e.target.value))}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="flex space-x-1">
+                                <button
+                                  onClick={() => {
+                                    const updatedConfig = { ...jsonPricingConfig };
+                                    if (!updatedConfig.distancePricing.baseChargeRange) {
+                                      updatedConfig.distancePricing.baseChargeRange = {};
+                                    }
+                                    updatedConfig.distancePricing.baseChargeRange.range = editJsonConfigData;
+                                    setJsonPricingConfig(updatedConfig);
+                                    setEditingJsonConfig(null);
+                                  }}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-sm font-medium">{jsonPricingConfig.distancePricing?.baseChargeRange?.range || 8} km</span>
+                              <button
+                                onClick={() => {
+                                  setEditingJsonConfig('distancePricing.baseChargeRange.range');
+                                  setEditJsonConfigData(jsonPricingConfig.distancePricing?.baseChargeRange?.range || 8);
+                                }}
+                                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="p-3 bg-gray-50 rounded">
+                          <label className="block text-sm font-medium text-gray-600 mb-1">Rate per km beyond range (€)</label>
+                          {editingJsonConfig === 'distancePricing.baseChargeRange.ratePerKm' ? (
+                            <div className="space-y-2">
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={editJsonConfigData}
+                                onChange={(e) => setEditJsonConfigData(parseFloat(e.target.value))}
+                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                              />
+                              <div className="flex space-x-1">
+                                <button
+                                  onClick={() => {
+                                    const updatedConfig = { ...jsonPricingConfig };
+                                    if (!updatedConfig.distancePricing.baseChargeRange) {
+                                      updatedConfig.distancePricing.baseChargeRange = {};
+                                    }
+                                    updatedConfig.distancePricing.baseChargeRange.ratePerKm = editJsonConfigData;
+                                    setJsonPricingConfig(updatedConfig);
+                                    setEditingJsonConfig(null);
+                                  }}
+                                  disabled={isUpdating}
+                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingJsonConfig(null)}
+                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div>
+                              <span className="text-sm font-medium">€{jsonPricingConfig.distancePricing?.baseChargeRange?.ratePerKm || 3}</span>
+                              <button
+                                onClick={() => {
+                                  setEditingJsonConfig('distancePricing.baseChargeRange.ratePerKm');
+                                  setEditJsonConfigData(jsonPricingConfig.distancePricing?.baseChargeRange?.ratePerKm || 3);
+                                }}
+                                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        For locations outside designated cities, the base charge will include the city base price plus additional charges for distance beyond the base range.
+                      </p>
                     </div>
 
                     {/* Marketplace Pricing Configuration */}

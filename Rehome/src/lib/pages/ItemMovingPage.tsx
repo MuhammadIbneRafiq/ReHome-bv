@@ -7,8 +7,22 @@ import 'react-toastify/dist/ReactToastify.css';
 import { getItemPoints, furnitureItems, constantsLoaded } from '../../lib/constants';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import pricingService, { PricingBreakdown, PricingInput } from '../../services/pricingService';
-import API_ENDPOINTS from '../api/config';
+import backendPricingService from '../../services/backendPricingService';
+
+// Import types
+export interface PricingBreakdown {
+    basePrice: number;
+    itemValue: number;
+    distanceCost: number;
+    carryingCost: number;
+    assemblyCost: number;
+    extraHelperCost: number;
+    subtotal: number;
+    studentDiscount: number;
+    lateBookingFee: number;
+    total: number;
+    breakdown?: any;
+}
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import OrderConfirmationModal from '../../components/marketplace/OrderConfirmationModal';
 import BookingTipsModal from '../../components/ui/BookingTipsModal';
@@ -151,6 +165,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
     const [paymentLoading] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
     const [orderNumber, setOrderNumber] = useState<string>('');
     const [isGoogleReady, setIsGoogleReady] = useState(false);
@@ -206,6 +221,22 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 break;
         }
     };
+
+    // Helper to check if date is within short-term window and show warning
+    const checkShortTermDate = React.useCallback((dateStr: string) => {
+        if (!dateStr) return;
+        const selectedDate = new Date(dateStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const diffDays = Math.ceil((selectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 3 && diffDays >= 0) {
+            toast.warning(
+                "LAST MINUTE REQUEST! Please check other days to receive a cheaper service.",
+                { autoClose: 5000, toastId: 'last-minute-warning' }
+            );
+        }
+    }, []);
 
     // New: separate carrying directions
     const [carryingUpstairs, setCarryingUpstairs] = useState(false);
@@ -706,8 +737,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 extraHelperItems,
                 isStudent,
                 hasStudentId: !!studentId, // Only true if file is uploaded
-                isEarlyBooking: false,
-                carryingServiceItems: combinedCarryingItems,
+                                carryingServiceItems: combinedCarryingItems,
                 carryingUpItems: carryingUpItems,
                 carryingDownItems: carryingDownItems,
                 pickupPlace: pickupPlace,
@@ -721,7 +751,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 studentIdFile: studentId?.name,
                 timestamp: new Date().toISOString()
             });*/
-            const breakdown = await pricingService.calculatePricing(pricingInput);
+            const breakdown = await backendPricingService.calculatePricing(pricingInput);
             if (requestId === latestRequestIdRef.current) {
                 setPricingBreakdown(breakdown);
             }
@@ -1124,6 +1154,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             return;
         }
 
+        setIsSubmitting(true);
+
         // Generate order number using Supabase RPC
         const { data: generatedOrderNumber, error: orderNumberError } = await supabase
             .rpc('generate_moving_order_number');
@@ -1131,166 +1163,96 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         if (orderNumberError) {
             console.error('Error generating order number:', orderNumberError);
             toast.error("Error generating order number. Please try again.");
+            setIsSubmitting(false);
             return;
         }
 
         setOrderNumber(generatedOrderNumber);
 
-        // Prepare furniture items array for backend
-        const itemValueMultiplier = isItemTransport ? 1 : 2; // €1 per point for items, €2 for house
-        const furnitureItemsArray = Object.entries(itemQuantities)
-            .filter(([_, quantity]) => quantity > 0)
-            .map(([itemId, quantity]) => {
-                const itemData = furnitureItems.find(item => item.id === itemId);
-                const itemName = itemData ? itemData.name : itemId;
-                return {
-                    name: itemName,
-                    quantity,
-                    points: getItemPoints(itemId) * quantity,
-                    value: getItemPoints(itemId) * quantity * itemValueMultiplier
-                };
-            });
-                
-        console.log('HERE IS FURNITURE ITEMS ID!')
-
-        // Calculate total item points
-        const totalItemPoints = Object.entries(itemQuantities)
-            .filter(([_, quantity]) => quantity > 0)
-            .reduce((total, [itemId, quantity]) => total + (getItemPoints(itemId) * quantity), 0);
-
         // Use already calculated distance from state
-        const finalDistance = distanceKm || (pickupPlace?.coordinates && dropoffPlace?.coordinates 
-            ? calculateStraightLineDistance(pickupPlace, dropoffPlace) : 0);
-
-        // Prepare payload in the format expected by backend
-        const payload = {
-            order_number: orderNumber,
-            pickupType: pickupType || 'house',
-            furnitureItems: furnitureItemsArray,
-            customItem,
-            floorPickup: parseInt(floorPickup) || 0,
-            floorDropoff: parseInt(floorDropoff) || 0,
-            contactInfo,
-            estimatedPrice: pricingBreakdown?.total || 0,
-            selectedDateRange,
-            isDateFlexible,
-            pickupDate: dateOption === 'fixed' && isItemTransport ? pickupDate : undefined,
-            dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
-            dateOption,
-            preferredTimeSpan,
-            extraInstructions,
-            elevatorPickup,
-            elevatorDropoff,
-            disassembly,
-            assembly,
-            extraHelper,
-            carryingService,
-            isStudent,
-            studentId,
-            storeProofPhoto,
-            disassemblyItems,
-            assemblyItems,
-            extraHelperItems,
-            carryingServiceItems,
-            basePrice: pricingBreakdown?.basePrice || 0,
-            itemPoints: totalItemPoints,
-            itemValue: pricingBreakdown?.itemValue || 0,
-            carryingCost: pricingBreakdown?.carryingCost || 0,
-            disassemblyCost: pricingBreakdown?.assemblyCost || 0,
-            distanceCost: pricingBreakdown?.distanceCost || 0,
-            extraHelperCost: pricingBreakdown?.extraHelperCost || 0,
-            studentDiscount: pricingBreakdown?.studentDiscount || 0,
-            distanceKm: finalDistance, // Pre-calculated distance
-            firstlocation: firstLocation,
-            secondlocation: secondLocation,
-            firstlocation_coords: pickupPlace?.coordinates,
-            secondlocation_coords: dropoffPlace?.coordinates,
-            // Complete order summary for email
-            orderSummary: {
-                order_number: orderNumber,
-                pickupDetails: {
-                    address: firstLocation,
-                    floor: floorPickup || '0',
-                    elevator: elevatorPickup
-                },
-                deliveryDetails: {
-                    address: secondLocation,
-                    floor: floorDropoff || '0',
-                    elevator: elevatorDropoff
-                },
-                schedule: {
-                    date: (dateOption === 'rehome') ? 'Let ReHome Choose' :
-                          isDateFlexible || dateOption === 'flexible' ? 
-                          (selectedDateRange.start && selectedDateRange.end ? 
-                           `${new Date(selectedDateRange.start).toLocaleDateString()} - ${new Date(selectedDateRange.end).toLocaleDateString()}` : 
-                           'Flexible date range') : 
-                          dateOption === 'fixed' && isItemTransport && pickupDate && dropoffDate ? 
-                          `Pickup: ${new Date(pickupDate).toLocaleDateString()}, Dropoff: ${new Date(dropoffDate).toLocaleDateString()}` :
-                          dateOption === 'fixed' && isHouseMoving && selectedDateRange.start ?
-                          `${new Date(selectedDateRange.start).toLocaleDateString()}` :
-                          'Date not specified',
-                    time: preferredTimeSpan ? (
-                        preferredTimeSpan === 'morning' ? 'Morning (8:00 - 12:00)' : 
-                        preferredTimeSpan === 'afternoon' ? 'Afternoon (12:00 - 16:00)' : 
-                        preferredTimeSpan === 'evening' ? 'Evening (16:00 - 20:00)' : 'Anytime'
-                    ) : 'Not specified'
-                },
-                items: furnitureItemsArray,
-                basePrice: pricingBreakdown?.basePrice || 0,
-                itemsCost: pricingBreakdown?.itemValue || 0,
-                distanceCost: pricingBreakdown?.distanceCost || 0,
-                distanceKm: finalDistance,
-                additionalServices: {
-                    assembly: (pricingBreakdown?.assemblyCost ?? 0) > 0 ? (pricingBreakdown?.assemblyCost ?? 0) : 0,
-                    extraHelper: (pricingBreakdown?.extraHelperCost ?? 0) > 0 ? (pricingBreakdown?.extraHelperCost ?? 0) : 0,
-                    carrying: (pricingBreakdown?.carryingCost ?? 0) > 0 ? (pricingBreakdown?.carryingCost ?? 0) : 0,
-                    studentDiscount: (pricingBreakdown?.studentDiscount ?? 0) > 0 ? (pricingBreakdown?.studentDiscount ?? 0) : 0
-                },
-                contactInfo: {
-                    name: `${contactInfo.firstName} ${contactInfo.lastName}`,
-                    email: contactInfo.email,
-                    phone: contactInfo.phone
-                },
-                totalPrice: pricingBreakdown?.total || 0
-            }
-        };
-
         try {
-            // Create FormData for file uploads
+            const itemList = furnitureItems
+                .filter((_, index) => itemQuantities[index] && itemQuantities[index] > 0)
+                .map((item, index) => {
+                    const quantity = itemQuantities[index];
+                    return {
+                        id: item.id,
+                        name: item.name,
+                        quantity: quantity,
+                        points: item.points * quantity
+                    };
+                });
+
+            // Use FormData for file uploads
             const formData = new FormData();
             
-            // Add all the JSON data as a string
-            formData.append('data', JSON.stringify(payload));
-            
-            // Add photos if any
+            // Add basic information
+            formData.append("customerName", `${contactInfo.firstName} ${contactInfo.lastName}`);
+            formData.append("email", contactInfo.email);
+            formData.append("phone", contactInfo.phone);
+            formData.append("serviceType", serviceType);
+            formData.append("pickupLocation", JSON.stringify(pickupPlace || { address: firstLocation }));
+            formData.append("dropoffLocation", JSON.stringify(dropoffPlace || { address: secondLocation }));
+            formData.append("pickupFloors", floorPickup);
+            formData.append("dropoffFloors", floorDropoff);
+            formData.append("hasElevatorPickup", elevatorPickup.toString());
+            formData.append("hasElevatorDropoff", elevatorDropoff.toString());
+            formData.append("items", JSON.stringify(itemList));
+            formData.append("hasStudentId", isStudent.toString());
+            formData.append("needsAssembly", assembly.toString());
+            formData.append("needsExtraHelper", extraHelper.toString());
+            formData.append("specialInstructions", extraInstructions);
+
+            // Handle dates based on service type and options
+            if (isItemTransport) {
+                formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+            } else if (isHouseMoving) {
+                if (dateOption === 'flexible') {
+                    formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+                } else if (dateOption === 'fixed') {
+                    formData.append("selectedDate", pickupDate || new Date().toISOString());
+                } else {
+                    formData.append("selectedDate", new Date().toISOString());
+                }
+            }
+
+            // Add student ID file if provided
+            if (isStudent && studentId) {
+                formData.append("studentId", studentId);
+            }
+
+            // Add item photos if available
             if (itemPhotos.length > 0) {
-                itemPhotos.forEach((photo) => {
-                    formData.append('photos', photo);
+                itemPhotos.forEach((photo, index) => {
+                    if (photo instanceof File) {
+                        formData.append("itemImages", photo);
+                    }
                 });
             }
-            
-            // Submit the moving request with FormData - use the appropriate endpoint
-            const endpoint = isItemTransport ? API_ENDPOINTS.MOVING.ITEM_REQUEST : API_ENDPOINTS.MOVING.HOUSE_REQUEST;
-            const response = await fetch(endpoint, {
-                method: "POST",
-                body: formData,
-            });
 
-            if (!response.ok) { 
-                const errorData = await response.json();
-                throw new Error(`Error: ${errorData.message || 'Network response was not ok'}`);
-            }
+            // Submit to backend API which handles Supabase storage
+            const response = await backendPricingService.createTransportRequest(formData);
 
-            // Show confirmation modal instead of toast
-            if (isItemTransport) {
-                setShowConfirmationModal(true);
+            if (response.success) {
+                toast.success(`Your ${isItemTransport ? 'item transport' : 'house moving'} request has been submitted successfully!`);
+                
+                // Show confirmation modal for house moving, redirect for item transport
+                if (isHouseMoving) {
+                    setShowOrderConfirmation(true);
+                } else {
+                    setTimeout(() => {
+                        navigate("/");
+                    }, 2000);
+                }
             } else {
-                setShowOrderConfirmation(true);
+                toast.error("Failed to submit your request. Please try again.");
             }
 
         } catch (error) {
             console.error(`Error submitting the ${isItemTransport ? 'item transport' : 'house moving'} request:`, error);
             toast.error("An error occurred while submitting your request.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -1458,11 +1420,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 Upload student ID to apply discount
                             </div>
                         )}
-                        {/* Early Booking Discount */}
-                    {pricingBreakdown.earlyBookingDiscount > 0 && (
-                        <div className="flex justify-between text-green-600">
-                            <span>Early Booking Discount (8.85%):</span>
-                            <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
+                        {/* Late Booking Fee */}
+                    {pricingBreakdown.lateBookingFee > 0 && (
+                        <div className="flex justify-between text-red-600">
+                            <span>Late Booking Fee:</span>
+                            <span>+€{pricingBreakdown.lateBookingFee.toFixed(2)}</span>
                         </div>
                     )}
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
@@ -1634,11 +1596,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 Upload student ID to apply discount
                             </div>
                         )}
-                        {/* Early Booking Discount */}
-                    {pricingBreakdown.earlyBookingDiscount > 0 && (
-                        <div className="flex justify-between text-green-600">
-                            <span>Early Booking Discount (8.85%):</span>
-                            <span>-€{pricingBreakdown.earlyBookingDiscount.toFixed(2)}</span>
+                        {/* Late Booking Fee */}
+                    {pricingBreakdown.lateBookingFee > 0 && (
+                        <div className="flex justify-between text-red-600">
+                            <span>Late Booking Fee:</span>
+                            <span>+€{pricingBreakdown.lateBookingFee.toFixed(2)}</span>
                         </div>
                     )}
                         <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
@@ -1917,7 +1879,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 <>
                                     <EnhancedDatePickerInline
                                         value={pickupDate}
-                                        onChange={(iso: string) => setPickupDate(iso)}
+                                        onChange={(iso: string) => { setPickupDate(iso); checkShortTermDate(iso); }}
                                         pickupPlace={pickupPlace}
                                         dropoffPlace={dropoffPlace}
                                         serviceType={serviceType}
@@ -1928,7 +1890,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     />
                                     <EnhancedDatePickerInline
                                         value={dropoffDate}
-                                        onChange={(iso: string) => setDropoffDate(iso)}
+                                        onChange={(iso: string) => { setDropoffDate(iso); checkShortTermDate(iso); }}
                                         pickupPlace={pickupPlace}
                                         dropoffPlace={dropoffPlace}
                                         serviceType={serviceType}
@@ -1942,7 +1904,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 // House moving: Show only one date
                                 <EnhancedDatePickerInline
                                     value={selectedDateRange.start}
-                                    onChange={(iso: string) => setSelectedDateRange({ start: iso, end: '' })}
+                                    onChange={(iso: string) => { setSelectedDateRange({ start: iso, end: '' }); checkShortTermDate(iso); }}
                                     pickupPlace={pickupPlace}
                                     dropoffPlace={dropoffPlace}
                                     serviceType={serviceType}
@@ -2664,7 +2626,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                     <li key={index} className="flex justify-between">
                                                         <span className="text-gray-600">
                                                             {itemName}
-                                                            {extraHelperItems[itemId] && <span className="ml-1 text-orange-600">(Extra Helper)</span>}
                                                         </span>
                                                         <span className="font-medium">x{quantity}</span>
                                                     </li>

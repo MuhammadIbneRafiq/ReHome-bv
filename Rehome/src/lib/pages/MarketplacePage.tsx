@@ -637,18 +637,19 @@ const MarketplacePage = () => {
                                                 <p className="text-gray-600 text-xs line-clamp-2 h-8">{translatedItem.description}</p>
 
                                                 {translatedItem.condition_rating && (
-                                                    <p className="text-xs text-gray-500 mt-1">
-                                                        Condition: {getConditionLabel(translatedItem.condition_rating.toString())}
-                                                    </p>
+                                                    <span className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-xs font-semibold">
+                                                        {getConditionLabel(translatedItem.condition_rating)}
+                                                    </span>
                                                 )}
+                                                
                                                 <div className="flex justify-between items-center mt-2">
                                                     <p className="text-red-500 font-bold text-xs">
-                                                        {translatedItem.price === 0 ? 'Free' : `€${translatedItem.price}`}
+                                                        {(translatedItem.price === 0 || translatedItem.price === null || translatedItem.price === undefined) ? 'Free' : `€${translatedItem.price}`}
                                                     </p>
                                                     <div className="flex items-center gap-2">
                                                         <ShareButton
-                                                            title={translatedItem.name}
-                                                            url={`${window.location.origin}${window.location.pathname}?item=${translatedItem.id}`}
+                                                            itemId={translatedItem.id}
+                                                            itemName={translatedItem.name}
                                                             description={translatedItem.description}
                                                             variant="icon"
                                                             className="!p-1.5"
@@ -656,7 +657,6 @@ const MarketplacePage = () => {
                                                         {/* Show chat button for user listings and WhatsApp for ReHome */}
                                                         {translatedItem.seller_email !== user?.email && (
                                                             translatedItem.isrehome ? (
-                                                                <>
                                                                 <a
                                                                     href={`https://wa.me/31612265704`}
                                                                     target="_blank"
@@ -667,7 +667,6 @@ const MarketplacePage = () => {
                                                                 >
                                                                     <FaWhatsapp size={16} />
                                                                 </a>
-                                                                </>
                                                             ) : (
                                                                 <button
                                                                     onClick={(e) => {

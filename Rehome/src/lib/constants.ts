@@ -20,6 +20,12 @@ export type PricingConfig = {
     lowValue: { threshold: number; multiplier: number };
     highValue: { multiplier: number };
   };
+  assemblyPricing?: {
+    bed?: { price: number };
+    closet?: { price: number };
+    table?: { price: number };
+    sofa?: { price: number };
+  };
   extraHelperPricing: {
     smallMove: { threshold: number; price: number };
     bigMove: { price: number };
@@ -35,7 +41,8 @@ export type PricingConfig = {
   elevatorDiscount: number;
   assemblyChargePerItem: number;
   extraHelperChargePerItem: number;
-  earlyBookingDiscount: number;
+  lateBookingFee: number;
+  urgentBookingFee: number;
   minimumCharge: number;
 };
 
@@ -74,7 +81,8 @@ export const defaultPricingConfig: PricingConfig = {
   elevatorDiscount: 0.8,
   assemblyChargePerItem: 30.0,
   extraHelperChargePerItem: 20.0,
-  earlyBookingDiscount: 0.1,
+  lateBookingFee: 50,
+  urgentBookingFee: 75,
   minimumCharge: 75.0
 };
 

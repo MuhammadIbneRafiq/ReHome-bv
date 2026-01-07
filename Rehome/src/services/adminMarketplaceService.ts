@@ -35,6 +35,7 @@ export interface MarketplaceListing {
   description: string;
   price: number;
   image_url: string[];
+  image_urls?: string[]; // supabase uses image_urls; keep both for compatibility
   city_name: string;
   seller_email: string;
   sold: boolean;
@@ -43,6 +44,7 @@ export interface MarketplaceListing {
   category?: string;
   subcategory?: string;
   condition_rating?: number;
+  inventory_number?: string;
   created_at: string;
   updated_at?: string;
   views_count?: number;
