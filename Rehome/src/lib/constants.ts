@@ -103,22 +103,35 @@ export async function initDynamicConstants() {
   try {
     // First try to load data directly from Supabase tables
     try {
-      // Load pricing config
-      const { data: configData, error: configError } = await supabase
-        .from('pricing_config')
-        .select('*')
-        .limit(1)
-        .single();
-        
-      if (configError) {
-        console.warn('[Constants] ⚠️ Pricing config error:', configError);
-        throw configError;
+      // Load pricing config (prefer RPC so we consistently get the active config)
+      const { data: rpcConfigData, error: rpcConfigError } = await supabase
+        .rpc('get_pricing_config_cached');
+
+      if (rpcConfigError) {
+        console.warn('[Constants] ⚠️ Pricing config RPC error:', rpcConfigError);
       }
-      if (configData) {
-        // The database stores the config as a JSON object with a 'config' field
-        pricingConfig = configData.config as PricingConfig;
+
+      if ((rpcConfigData as any)?.config) {
+        pricingConfig = (rpcConfigData as any).config as PricingConfig;
       } else {
-        console.log('[Constants] ⚠️ No pricing config data found');
+        // Fallback to direct table read
+        const { data: configRow, error: configError } = await supabase
+          .from('pricing_config')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (configError) {
+          console.warn('[Constants] ⚠️ Pricing config error:', configError);
+          throw configError;
+        }
+        if (configRow?.config) {
+          pricingConfig = configRow.config as PricingConfig;
+        } else {
+          console.log('[Constants] ⚠️ No pricing config data found');
+        }
       }
       
       // Load furniture items

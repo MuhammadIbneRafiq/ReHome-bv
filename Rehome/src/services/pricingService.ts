@@ -18,7 +18,9 @@ export interface PricingBreakdown {
   subtotal: number;
   studentDiscount: number;
   total: number;
-  earlyBookingDiscount: number; // New field for early booking discount
+  earlyBookingDiscount: number; // Deprecated - kept for backwards compatibility
+  lateBookingFee: number; // New field for late booking fee
+  isLastMinuteBooking: boolean; // Flag for UI to show warning
   breakdown: {
     baseCharge: {
       city: string | null;
@@ -111,6 +113,8 @@ class PricingService {
         studentDiscount: 0,
         total: 0,
         earlyBookingDiscount: 0,
+        lateBookingFee: 0,
+        isLastMinuteBooking: false,
         breakdown: {
           baseCharge: { city: null, isCityDay: false, isEarlyBooking: false, originalPrice: 0, finalPrice: 0 },
           items: { totalPoints: 0, multiplier: 1, cost: 0 },
@@ -133,6 +137,8 @@ class PricingService {
       studentDiscount: 0,
       total: 0,
       earlyBookingDiscount: 0, // Initialize new field
+      lateBookingFee: 0, // New late booking fee
+      isLastMinuteBooking: false, // Flag for UI warning
       breakdown: {
         baseCharge: {
           city: null,
@@ -252,11 +258,16 @@ class PricingService {
           
           if (isSameCity) {
             // WITHIN CITY scenario
-            if (isIncludedPickup || isEmpty) {
-              // City included in calendar on that date or empty date = cheap base charge
+            if (isIncludedPickup) {
+              // City included in calendar on that date = cheap base charge (city day rate)
               baseCharge = cityBaseCharges[pickupCity]?.cityDay || 0;
               isCheapRate = true;
               chargeType = 'City Day Rate';
+            } else if (isEmpty) {
+              // Empty calendar day for same-city = 75% of standard charge
+              baseCharge = (cityBaseCharges[pickupCity]?.normal || 0) * 0.75;
+              isCheapRate = true;
+              chargeType = 'Empty Day Rate (75%)';
             } else {
               // City is not included in calendar on that date = standard base charge
               baseCharge = cityBaseCharges[pickupCity]?.normal || 0;
@@ -265,9 +276,11 @@ class PricingService {
             }
           } else {
             chargeType = 'Intercity Rate';
+            // INTERCITY: Empty days use standard charges (no discount)
             if (isEmpty) {
-              baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
-              isCheapRate = true;
+              // Intercity on empty day = use standard charges (no empty day discount)
+              baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
+              isCheapRate = false;
             } else {
               // BETWEEN CITY scenario
               if (isCheapPickup && isCheapDropoff) {
@@ -318,20 +331,27 @@ class PricingService {
           const isEmpty = await this.isCompletelyEmptyCalendarDay(startDate);
 
           if (dropoffCity === pickupCity) { 
-            if (hasCityDaysInRange || isEmpty) {
+            // SAME-CITY: Apply 75% rule for empty days
+            if (hasCityDaysInRange) {
               finalCharge = cityBaseCharges[pickupCity]?.cityDay;
               chargeType = 'City Day Rate';
-            }
-            else {
+            } else if (isEmpty) {
+              // Empty day for same-city = 75% of standard charge
+              finalCharge = (cityBaseCharges[pickupCity]?.normal || 0) * 0.75;
+              chargeType = 'Empty Day Rate (75%)';
+            } else {
               finalCharge = cityBaseCharges[pickupCity]?.normal;
               chargeType = 'Standard Rate';
             }
           } else {
+            // INTERCITY: Empty days use standard charges (no discount)
             chargeType = 'Intercity Rate';
-            if (hasCityDaysInRange || isEmpty) { 
+            if (hasCityDaysInRange) { 
               finalCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
-            }
-            else {
+            } else if (isEmpty) {
+              // Intercity on empty day = standard charges (no empty day discount)
+              finalCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
+            } else {
               finalCharge = cityBaseCharges[pickupCity]?.normal;
             }
           }
@@ -404,12 +424,17 @@ class PricingService {
     const isSameCity = dropoffCity === pickupCity;
     
     // Item Transport Pricing Logic based on exact specifications
+    // EMPTY DAY RULES: Same-city = 75% of standard, Intercity = standard (no discount)
     if (isSameCity && isSameDate) {
       // Within city, same date
-      if (isIncludedPickup || isEmptyPickup) {
-        // City included in calendar on that date or empty date = cheap base charge
+      if (isIncludedPickup) {
+        // City included in calendar on that date = cheap base charge
         baseCharge = cityBaseCharges[pickupCity]?.cityDay;
         chargeType = 'City Day Rate';
+      } else if (isEmptyPickup) {
+        // Empty day for same-city = 75% of standard charge
+        baseCharge = (cityBaseCharges[pickupCity]?.normal || 0) * 0.75;
+        chargeType = 'Empty Day Rate (75%)';
       } else {
         // City is not included in calendar on that date = standard base charge
         baseCharge = cityBaseCharges[pickupCity]?.normal;
@@ -418,27 +443,32 @@ class PricingService {
 
     } else if (isSameCity && !isSameDate) {
       // Within city, different date
-      if ( (isIncludedPickup && isIncludedDropoff)|| (isEmptyPickup && isEmptyDropoff)) {
-        // City is included in calendar or empty on both dates = cheap base charge
+      if (isIncludedPickup && isIncludedDropoff) {
+        // City is included in calendar on both dates = cheap base charge
         baseCharge = cityBaseCharges[pickupCity]?.cityDay;
         chargeType = 'City Day Rate';
-      } else if ((isIncludedPickup && !isIncludedDropoff )|| (isEmptyPickup && !isEmptyDropoff)) {
-        // City is included in calendar or empty only on one date = (cheap base charge + standard base charge) / 2
+      } else if (isEmptyPickup && isEmptyDropoff) {
+        // Both dates are empty days for same-city = 75% of standard charge
+        baseCharge = (cityBaseCharges[pickupCity]?.normal || 0) * 0.75;
+        chargeType = 'Empty Day Rate (75%)';
+      } else if ((isIncludedPickup && !isIncludedDropoff) || (isEmptyPickup && !isEmptyDropoff)) {
+        // One date included/empty, other not = (cheap + standard) / 2
         baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
         chargeType = 'Standard Rate';
       } else if ((!isIncludedPickup && isIncludedDropoff) || (!isEmptyPickup && isEmptyDropoff)) {
         baseCharge = (cityBaseCharges[pickupCity]?.normal + cityBaseCharges[dropoffCity]?.cityDay) / 2;
         chargeType = 'Standard Rate';
-      } else{
+      } else {
         // City is included in calendar on none of the 2 dates = standard base charge
         baseCharge = cityBaseCharges[pickupCity]?.normal;
         chargeType = 'Standard Rate';
       }
     } else if (!isSameCity && isSameDate) {
-      // Between city, same date
+      // Between city, same date - INTERCITY: empty days use standard (no discount)
       chargeType = 'Intercity Rate';
       if (isEmptyDropoff && isEmptyPickup) {
-        baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.normal) / 2;
+        // Intercity on empty day = standard charges (no empty day discount)
+        baseCharge = Math.max(cityBaseCharges[pickupCity]?.normal, cityBaseCharges[dropoffCity]?.normal);
       } else {
         if (isIncludedPickup && isIncludedDropoff) {
           baseCharge = (cityBaseCharges[pickupCity]?.cityDay + cityBaseCharges[dropoffCity]?.cityDay) / 2;
@@ -483,7 +513,7 @@ class PricingService {
         
     return [baseCharge, chargeType];
   }
-  
+
   /**
    * Check if a city has actual city days (scheduled days) within the given date range
    * This is different from checkCityAvailabilityInRange which includes empty days
@@ -539,17 +569,25 @@ class PricingService {
       
       breakdown.distanceCost = distanceResult.cost;
       breakdown.breakdown.distance.distanceKm = distanceResult.distance;
-      
+
+      const smallThreshold = pricingConfig?.distancePricing?.smallDistance?.threshold ?? 10;
+      const mediumThresholdRaw = pricingConfig?.distancePricing?.mediumDistance?.threshold ?? 50;
+      const mediumThreshold = Math.max(smallThreshold, mediumThresholdRaw);
+
+      const smallRate = pricingConfig?.distancePricing?.smallDistance?.rate ?? 0;
+      const mediumRate = pricingConfig?.distancePricing?.mediumDistance?.rate ?? 0.7;
+      const longRate = pricingConfig?.distancePricing?.longDistance?.rate ?? 0.5;
+
       // Determine category and rate
-      if (distanceResult.distance < 10) {
+      if (distanceResult.distance <= smallThreshold) {
         breakdown.breakdown.distance.category = 'small';
-        breakdown.breakdown.distance.rate = 0;
-      } else if (distanceResult.distance <= 50) {
+        breakdown.breakdown.distance.rate = smallRate;
+      } else if (distanceResult.distance <= mediumThreshold) {
         breakdown.breakdown.distance.category = 'medium';
-        breakdown.breakdown.distance.rate = 0.7;
+        breakdown.breakdown.distance.rate = mediumRate;
       } else {
         breakdown.breakdown.distance.category = 'long';
-        breakdown.breakdown.distance.rate = 0.5;
+        breakdown.breakdown.distance.rate = longRate;
       }
       
       breakdown.breakdown.distance.cost = distanceResult.cost;
@@ -560,22 +598,43 @@ class PricingService {
     }
   }
 
+  /**
+   * Calculate item value based on item points and service type
+   */
+  private calculateItemValue(input: PricingInput, breakdown: PricingBreakdown) {
+    let totalPoints = 0;
+
+    for (const [itemId, quantity] of Object.entries(input.itemQuantities || {})) {
+      const qty = Number(quantity);
+      if (!qty || qty <= 0) continue;
+      totalPoints += getItemPoints(itemId) * qty;
+    }
+
+    // House moving charges double per point compared to item transport
+    const multiplier = input.serviceType === 'house-moving' ? 2 : 1;
+    const cost = Math.round(totalPoints * multiplier);
+
+    breakdown.itemValue = cost;
+    breakdown.breakdown.items = {
+      totalPoints,
+      multiplier,
+      cost,
+    };
+  }
+
   private async getCityScheduleStatus(city: string, date: Date): Promise<{
     isScheduled: boolean;
     isEmpty: boolean;
   }> {
-    // Validate date before using it
     if (!date || isNaN(date.getTime())) {
       console.warn('[getCityScheduleStatus] Invalid date provided:', date);
       return { isScheduled: false, isEmpty: true };
     }
 
-    // Use optimized cache service with direct Supabase RPC (no HTTP hop)
     return getCityScheduleStatusCached(city, date);
   }
 
   private async isCityDay(city: string, date: Date): Promise<boolean> {
-    // Validate date before using it
     if (!date || isNaN(date.getTime())) {
       console.warn('[isCityDay] Invalid date provided:', date);
       return false;
@@ -586,90 +645,81 @@ class PricingService {
     return isScheduled;
   }
 
-
   private async isCompletelyEmptyCalendarDay(date: Date): Promise<boolean> {
     if (!date || isNaN(date.getTime())) {
       console.warn('[isCompletelyEmptyCalendarDay] Invalid date provided:', date);
       return false;
     }
-    
-    // Use optimized cache service with direct Supabase RPC (no HTTP hop)
+
     return checkAllCitiesEmptyCached(date);
-  }
-
-
-  private calculateItemValue(input: PricingInput, breakdown: PricingBreakdown) {
-    let totalPoints = 0;
-    
-    for (const [itemId, quantity] of Object.entries(input.itemQuantities)) {
-      if (quantity > 0) {
-        const points = getItemPoints(itemId);
-        totalPoints += points * quantity;
-      }
-    }
-
-    // Ensure we have baseMultipliers, if not use defaults
-    const baseMultipliers = pricingConfig?.baseMultipliers || {
-      houseMovingItemMultiplier: 2.0,
-      itemTransportMultiplier: 1.0,
-      addonMultiplier: 3.0
-    };
-    
-    const multiplier = input.serviceType === 'house-moving' 
-      ? baseMultipliers.houseMovingItemMultiplier 
-      : baseMultipliers.itemTransportMultiplier;
-
-    breakdown.breakdown.items.totalPoints = totalPoints;
-    breakdown.breakdown.items.multiplier = multiplier;
-    breakdown.breakdown.items.cost = totalPoints * multiplier;
-    breakdown.itemValue = totalPoints * multiplier;
   }
 
   /**
    * Calculate distance cost between pickup and dropoff
+   * NEW TIERS:
+   * 1. Free up to 10km
+   * 2. €0.70/km for 10-30km
+   * 3. €0.90/km beyond 30km (to account for route deviations)
    */
   async calculateDistanceCost(providedDistance?: number): Promise<{ cost: number; distance: number; type: string }> {
-    let distance: number;
-    distance = providedDistance || 0;
+    const distance = Math.max(0, providedDistance || 0);
 
-    let cost = 0;
+    // New fixed thresholds and rates (overriding config for clarity)
+    const FREE_THRESHOLD = 10; // Free up to 10km
+    const MEDIUM_THRESHOLD = 30; // 0.7€/km for 10-30km
+    const MEDIUM_RATE = 0.7; // €0.70 per km for 10-30km
+    const LONG_RATE = 0.9; // €0.90 per km beyond 30km
+
+    let rawCost = 0;
     let type = '';
-    
-    if (distance < 10) {
-      cost = 0;
-      type = 'Free (under 10km)';
-    } else if (distance <= 50) {
-      cost = Math.round(distance * 0.7);
-      type = `Medium distance (${Math.round(distance)}km × €0.70)`;
+
+    if (distance <= FREE_THRESHOLD) {
+      // Free up to 10km
+      rawCost = 0;
+      type = `Free (${Math.round(distance)}km ≤ ${FREE_THRESHOLD}km)`;
+    } else if (distance <= MEDIUM_THRESHOLD) {
+      // 0.7€/km for distance between 10-30km
+      const chargeableKm = distance - FREE_THRESHOLD;
+      rawCost = chargeableKm * MEDIUM_RATE;
+      type = `Medium distance: €${rawCost.toFixed(2)} (${Math.round(chargeableKm)}km × €${MEDIUM_RATE.toFixed(2)})`;
     } else {
-      // For long distance moves (>50km), use a different pricing structure
-      // Base cost for first 50km + additional cost for remaining distance
-      const baseCost = Math.round(50 * 0.7); // €0.70 per km for first 50km
-      const additionalKm = distance - 50;
-      const additionalCost = Math.round(additionalKm * 0.5); // €0.50 per km for additional distance
-      cost = baseCost + additionalCost;
-      type = `Long distance: €${baseCost} (first 50km) + €${additionalCost} (${Math.round(additionalKm)}km additional)`;
+      // 0.7€/km for 10-30km + 0.9€/km beyond 30km
+      const mediumKm = MEDIUM_THRESHOLD - FREE_THRESHOLD; // 20km at 0.7€
+      const longKm = distance - MEDIUM_THRESHOLD;
+      const mediumPart = mediumKm * MEDIUM_RATE;
+      const longPart = longKm * LONG_RATE;
+      rawCost = mediumPart + longPart;
+      type = `Long distance: €${mediumPart.toFixed(2)} (${mediumKm}km × €${MEDIUM_RATE.toFixed(2)}) + €${longPart.toFixed(2)} (${Math.round(longKm)}km × €${LONG_RATE.toFixed(2)})`;
     }
+
+    const cost = Math.round(rawCost);
+    
+    console.log('[Distance] Cost calculation:', {
+      distance,
+      FREE_THRESHOLD,
+      MEDIUM_THRESHOLD,
+      MEDIUM_RATE,
+      LONG_RATE,
+      rawCost,
+      roundedCost: cost,
+      type
+    });
     
     return { 
       cost, 
-      distance: Math.round(distance * 10) / 10, // Round to 1 decimal
+      distance: Math.round(distance * 10) / 10,
       type 
     };
   }
 
   private calculateCarryingCost(input: PricingInput, breakdown: PricingBreakdown) {
-    // Calculate floors based on new elevator logic:
-    // - If elevator is available, count as 1 floor (same effort as 1 level)
-    // - If no elevator, count actual floors above ground level
-    // Treat elevator as reducing effort to 1 floor ONLY when floors > 0
-    // Corrected interpretation: 
-    // - pickupFloors -> downstairs (at pickup)
-    // - dropoffFloors -> upstairs (at dropoff)
-    const downstairsFloors = input.floorPickup > 0 ? (input.elevatorPickup ? 1 : Math.max(0, input.floorPickup)) : 0;
-    const upstairsFloors = input.floorDropoff > 0 ? (input.elevatorDropoff ? 1 : Math.max(0, input.floorDropoff)) : 0;
+    // NEW LOGIC: No floor 1 rule - use actual floors regardless of elevator
+    // Elevator uses 1.1x multiplier, stairs use 1.35x multiplier
+    // Base fee (25) only applies if total item points < 20
+    const downstairsFloors = Math.max(0, input.floorPickup);
+    const upstairsFloors = Math.max(0, input.floorDropoff);
 
-    console.log('[Carrying] Floors before base fee:', {
+    console.log('[Carrying] Floors:', {
       upstairsFloors,
       downstairsFloors,
       floorPickup: input.floorPickup,
@@ -695,14 +745,29 @@ class PricingService {
       cost: number;
     }> = [];
 
-    // Standard multiplier for carrying cost
-    const carryingMultiplier = 1.35;
+    // Multipliers: stairs = 1.35, elevator = 1.1
+    const STAIRS_MULTIPLIER = 1.35;
+    const ELEVATOR_MULTIPLIER = 1.1;
+    const BOX_STAIRS_MULTIPLIER_HIGH = 1.5; // For boxes > 10
     const baseFee = 25; // €25 base fee
 
     // Directional selection: prefer explicit up/down sets, fallback to combined
     const upItems = input.carryingUpItems || {};
     const downItems = input.carryingDownItems || {};
     const combinedItems = input.carryingServiceItems || {};
+    
+    // Calculate total item points for base fee condition
+    let totalItemPoints = 0;
+    for (const [itemId, quantity] of Object.entries(input.itemQuantities)) {
+      if ((quantity as number) <= 0) continue;
+      totalItemPoints += getItemPoints(itemId) * (quantity as number);
+    }
+
+    // Count total boxes for tiered box multiplier
+    const boxItemId = Object.keys(input.itemQuantities).find(id => 
+      id.toLowerCase().includes('box') || id.toLowerCase().includes('moving-box')
+    );
+    const totalBoxes = boxItemId ? (input.itemQuantities[boxItemId] || 0) : 0;
     
     // Compute per-direction floors and costs
     let downstairsCost = 0;
@@ -711,18 +776,32 @@ class PricingService {
     const upstairsBreakdown: typeof itemBreakdown = [];
 
     for (const [itemId, quantity] of Object.entries(input.itemQuantities)) {
-      if (quantity <= 0) continue;
+      if ((quantity as number) <= 0) continue;
       const points = getItemPoints(itemId);
+      const isBox = itemId.toLowerCase().includes('box') || itemId.toLowerCase().includes('moving-box');
 
       // Items that need carrying upstairs (based on carryingUpItems)
       const needsUp = !!upItems[itemId] || (Object.keys(upItems).length === 0 && !!combinedItems[itemId]);
       if (needsUp && upstairsFloors > 0) {
-        const cost = points * carryingMultiplier * upstairsFloors * quantity;
+        // Determine multiplier based on elevator and item type
+        let multiplier: number;
+        if (input.elevatorDropoff) {
+          // Elevator: always 1.1x
+          multiplier = ELEVATOR_MULTIPLIER;
+        } else if (isBox && totalBoxes > 10) {
+          // Stairs with >10 boxes: 1.5x for boxes
+          multiplier = BOX_STAIRS_MULTIPLIER_HIGH;
+        } else {
+          // Stairs: 1.35x
+          multiplier = STAIRS_MULTIPLIER;
+        }
+        
+        const cost = points * multiplier * upstairsFloors * (quantity as number);
         upstairsCost += cost;
         upstairsBreakdown.push({ 
           itemId, 
-          points: points * quantity, 
-          multiplier: carryingMultiplier * upstairsFloors, 
+          points: points * (quantity as number), 
+          multiplier: multiplier * upstairsFloors, 
           cost 
         });
       }
@@ -730,12 +809,25 @@ class PricingService {
       // Downstairs (pickup floors)
       const needsDown = (Object.keys(downItems).length > 0 ? !!downItems[itemId] : !!combinedItems[itemId]) && downstairsFloors > 0;
       if (needsDown) {
-        const cost = points * carryingMultiplier * downstairsFloors * quantity;
+        // Determine multiplier based on elevator and item type
+        let multiplier: number;
+        if (input.elevatorPickup) {
+          // Elevator: always 1.1x
+          multiplier = ELEVATOR_MULTIPLIER;
+        } else if (isBox && totalBoxes > 10) {
+          // Stairs with >10 boxes: 1.5x for boxes
+          multiplier = BOX_STAIRS_MULTIPLIER_HIGH;
+        } else {
+          // Stairs: 1.35x
+          multiplier = STAIRS_MULTIPLIER;
+        }
+        
+        const cost = points * multiplier * downstairsFloors * (quantity as number);
         downstairsCost += cost;
         downstairsBreakdown.push({ 
           itemId, 
-          points: points * quantity, 
-          multiplier: carryingMultiplier * downstairsFloors, 
+          points: points * (quantity as number), 
+          multiplier: multiplier * downstairsFloors, 
           cost 
         });
       }
@@ -745,28 +837,32 @@ class PricingService {
     itemBreakdown.push(...upstairsBreakdown, ...downstairsBreakdown);
     
     console.log('[Carrying] Directional breakdown pre-base-fee:', {
-      carryingMultiplier,
-      upstairsFloors: upstairsFloors, // Dropoff floors (carrying UP)
-      downstairsFloors: downstairsFloors, // Pickup floors (carrying DOWN)
-      selectedUpItems: Object.keys(upItems).filter(k => upItems[k]),
-      selectedDownItems: Object.keys(downItems).filter(k => downItems[k]),
-      fallbackSelectedItems: Object.keys(combinedItems).filter(k => combinedItems[k]),
-      upstairsBreakdown, // Items carried upstairs at dropoff
-      downstairsBreakdown, // Items carried downstairs at pickup
+      STAIRS_MULTIPLIER,
+      ELEVATOR_MULTIPLIER,
+      totalBoxes,
+      totalItemPoints,
+      upstairsFloors,
+      downstairsFloors,
+      elevatorPickup: input.elevatorPickup,
+      elevatorDropoff: input.elevatorDropoff,
+      upstairsBreakdown,
+      downstairsBreakdown,
       upstairsCost,
       downstairsCost,
       totalCarryingCost
     });
     
-    // Add base fee once if any carrying is required
-    const baseFeeApplied = totalCarryingCost > 0 ? baseFee : 0;
-    const totalCost = totalCarryingCost > 0 ? (totalCarryingCost + baseFeeApplied) : 0;
+    // Base fee only applies if total item points < 20
+    const baseFeeApplied = (totalCarryingCost > 0 && totalItemPoints < 20) ? baseFee : 0;
+    const totalCost = totalCarryingCost + baseFeeApplied;
 
     console.log('[Carrying] Totals:', {
-      upstairsApplied: upstairsFloors > 0, // Dropoff floors (carrying UP)
-      downstairsApplied: downstairsFloors > 0, // Pickup floors (carrying DOWN)
+      upstairsApplied: upstairsFloors > 0,
+      downstairsApplied: downstairsFloors > 0,
       baseFee,
       baseFeeApplied,
+      totalItemPoints,
+      baseFeeCondition: totalItemPoints < 20 ? 'Applied (points < 20)' : 'Not applied (points >= 20)',
       totalCarryingCostExclBase: totalCarryingCost,
       totalCarryingCostInclBase: totalCost
     });
@@ -923,22 +1019,43 @@ class PricingService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const daysInAdvance = Math.floor((referenceDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    const isEarlyBooking = daysInAdvance >= 14; // 2 weeks = 14 days
-  
+    
+    // LATE BOOKING FEE (replaces early booking discount)
+    // Same-day or next-day (≤24h / daysInAdvance <= 1): +€75
+    // 1-3 days before (daysInAdvance 2-3): +€50
+    const URGENT_FEE = 75; // Same-day or next-day
+    const LATE_FEE = 50; // 1-3 days before
+    
+    breakdown.earlyBookingDiscount = 0; // Deprecated, kept for backwards compatibility
+    breakdown.lateBookingFee = 0;
+    breakdown.isLastMinuteBooking = false;
 
-    // Apply early booking discount to the total (after student discount)
-    if (isEarlyBooking) {
-      input.isEarlyBooking = true;
-      breakdown.earlyBookingDiscount = Math.round(breakdown.total * 0.10 * 100) / 100;
-      // breakdown.total = Math.round((breakdown.subtotal - breakdown.earlyBookingDiscount) * 100) / 100;
-      breakdown.total = Math.round((breakdown.total - breakdown.earlyBookingDiscount) * 100) / 100;
-
-    } else {
-      breakdown.earlyBookingDiscount = 0;
+    if (daysInAdvance <= 1) {
+      // Urgent: same-day or next-day booking
+      breakdown.lateBookingFee = URGENT_FEE;
+      breakdown.isLastMinuteBooking = true;
+      console.log('[DEBUG] Urgent booking fee applied:', { daysInAdvance, fee: URGENT_FEE });
+    } else if (daysInAdvance <= 3) {
+      // Late: 2-3 days before
+      breakdown.lateBookingFee = LATE_FEE;
+      breakdown.isLastMinuteBooking = true;
+      console.log('[DEBUG] Late booking fee applied:', { daysInAdvance, fee: LATE_FEE });
     }
+
+    // Add late booking fee to total
+    breakdown.total = Math.round((breakdown.total + breakdown.lateBookingFee) * 100) / 100;
+    
+    console.log('[DEBUG] Final totals:', {
+      subtotal: breakdown.subtotal,
+      studentDiscount: breakdown.studentDiscount,
+      lateBookingFee: breakdown.lateBookingFee,
+      isLastMinuteBooking: breakdown.isLastMinuteBooking,
+      daysInAdvance,
+      total: breakdown.total
+    });
   }
 }
 
 export { PricingService };
 export const pricingService = new PricingService();
-export default pricingService; 
+export default pricingService;

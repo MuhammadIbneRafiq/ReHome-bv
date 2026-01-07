@@ -56,7 +56,11 @@ export function subscribeToConstants(onUpdate?: ConstantsSubscriptionHandler): (
           
           // Update local pricingConfig
           if (payload.new) {
-            Object.assign(pricingConfig, payload.new as PricingConfig);
+            const updatedRow = payload.new as any;
+            const updatedConfig = updatedRow?.config;
+            if (updatedConfig) {
+              Object.assign(pricingConfig, updatedConfig as PricingConfig);
+            }
             
             // Notify all subscribers
             constantsSubscribers.forEach(handler => handler());
