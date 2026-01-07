@@ -18,7 +18,7 @@ class BackendPricingService {
   private apiUrl: string;
   
   constructor() {
-    this.apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+    this.apiUrl = 'https://rehome-backend.vercel.app';
   }
 
   /**
