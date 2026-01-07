@@ -5314,7 +5314,6 @@ const AdminDashboard = () => {
                               )}
                             </div>
                           </p>
-                          <p><span className="font-medium">Date Flexible:</span> {selectedSpecialRequest.is_date_flexible ? 'Yes' : 'No'}</p>
                         </div>
                         {/* Uploaded Photos */}
                         {selectedSpecialRequest.photo_urls && selectedSpecialRequest.photo_urls.length > 0 ? (
@@ -5366,34 +5365,17 @@ const AdminDashboard = () => {
                           <p><span className="font-medium">Pickup Elevator:</span> {selectedSpecialRequest.elevator_pickup ? 'Yes' : 'No'}</p>
                           <p><span className="font-medium">Dropoff Elevator:</span> {selectedSpecialRequest.elevator_dropoff ? 'Yes' : 'No'}</p>
                           <p><span className="font-medium">Distance:</span> {selectedSpecialRequest.calculated_distance_km || 'N/A'} km</p>
-                          <p><span className="font-medium">Duration:</span> {selectedSpecialRequest.calculated_duration_text || 'N/A'}</p>
                         </div>
                       </div>
 
-                      {/* Services */}
+                      {/* Timeline (moved up) */}
                       <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Requested Services</h4>
+                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Timeline</h4>
                         <div className="space-y-2">
-                          {(() => {
-                            let services: any = selectedSpecialRequest.selected_services;
-                            let servicesArray: string[] = [];
-                            if (typeof services === 'string') {
-                              try {
-                                servicesArray = JSON.parse(services);
-                              } catch {
-                                servicesArray = [services];
-                              }
-                            } else if (Array.isArray(services)) {
-                              servicesArray = services;
-                            }
-                            return servicesArray.map((service: string, index: number) => (
-                              <div key={index}>
-                                <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
-                                  {service}
-                                </span>
-                              </div>
-                            ));
-                          })()}
+                          <p><span className="font-medium">Created:</span> {selectedSpecialRequest.created_at && !isNaN(new Date(selectedSpecialRequest.created_at).getTime()) ? format(new Date(selectedSpecialRequest.created_at), 'PPpp') : 'N/A'}</p>
+                          <p><span className="font-medium">Updated:</span> {selectedSpecialRequest.updated_at && !isNaN(new Date(selectedSpecialRequest.updated_at).getTime()) ? format(new Date(selectedSpecialRequest.updated_at), 'PPpp') : 'N/A'}</p>
+                          <p><span className="font-medium">Preferred Date:</span> {selectedSpecialRequest.preferred_date && !isNaN(new Date(selectedSpecialRequest.preferred_date).getTime()) ? format(new Date(selectedSpecialRequest.preferred_date), 'PPP') : 'N/A'}</p>
+                          <p><span className="font-medium">Date Flexible:</span> {selectedSpecialRequest.is_date_flexible ? 'Yes' : 'No'}</p>
                         </div>
                       </div>
 
@@ -5404,16 +5386,6 @@ const AdminDashboard = () => {
                           <p className="text-gray-700">{selectedSpecialRequest.message}</p>
                         </div>
                       )}
-
-                      {/* Timeline */}
-                      <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Timeline</h4>
-                        <div className="space-y-2">
-                          <p><span className="font-medium">Created:</span> {selectedSpecialRequest.created_at && !isNaN(new Date(selectedSpecialRequest.created_at).getTime()) ? format(new Date(selectedSpecialRequest.created_at), 'PPpp') : 'N/A'}</p>
-                          <p><span className="font-medium">Updated:</span> {selectedSpecialRequest.updated_at && !isNaN(new Date(selectedSpecialRequest.updated_at).getTime()) ? format(new Date(selectedSpecialRequest.updated_at), 'PPpp') : 'N/A'}</p>
-                          <p><span className="font-medium">Preferred Date:</span> {selectedSpecialRequest.preferred_date && !isNaN(new Date(selectedSpecialRequest.preferred_date).getTime()) ? format(new Date(selectedSpecialRequest.preferred_date), 'PPP') : 'N/A'}</p>
-                        </div>
-                      </div>
                     </div>
 
                     {/* Action Buttons */}
