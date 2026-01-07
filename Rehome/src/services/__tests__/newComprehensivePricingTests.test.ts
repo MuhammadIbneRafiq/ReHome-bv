@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
+import { describe, it, expect, beforeEach, beforeAll } from 'vitest';
 import { PricingService, PricingInput, PricingBreakdown } from '../pricingService';
 import { initDynamicConstants } from '../../lib/constants';
 
@@ -9,6 +9,33 @@ beforeAll(async () => {
 describe('Comprehensive Pricing Tests - All Combinations', () => {
   let pricingService: PricingService;
   let mockBreakdown: PricingBreakdown;
+
+  const cityCoords: Record<string, { lat: number; lng: number }> = {
+    Amsterdam: { lat: 52.37833, lng: 4.9 },
+    Rotterdam: { lat: 51.9225, lng: 4.4821 },
+    Groningen: { lat: 53.2114, lng: 6.5641 },
+    Tilburg: { lat: 51.5553, lng: 5.091 },
+    Eindhoven: { lat: 51.4416, lng: 5.481 },
+    Utrecht: { lat: 52.0894, lng: 5.11 },
+    Almere: { lat: 52.3731, lng: 5.218 },
+    Breda: { lat: 51.5841, lng: 4.7988 },
+    Nijmegen: { lat: 51.8447, lng: 5.8625 },
+    Gouda: { lat: 52.0116, lng: 4.7108 },
+  };
+
+  const makePlace = (city: string) => ({
+    placeId: city.toLowerCase(),
+    text: city,
+    coordinates: cityCoords[city],
+  });
+
+  const ensurePlace = (city: string, place?: any) => {
+    if (!place) return makePlace(city);
+    return {
+      coordinates: cityCoords[city],
+      ...place,
+    };
+  };
 
   beforeEach(() => {
     pricingService = new PricingService();
@@ -59,29 +86,39 @@ describe('Comprehensive Pricing Tests - All Combinations', () => {
         }
       }
     };
-    vi.clearAllMocks();
   });
 
   // Helper function to create base pricing input
-  const createBaseInput = (overrides: Partial<PricingInput> = {}): PricingInput => ({
-    serviceType: 'house-moving',
-    pickupLocation: 'Amsterdam',
-    dropoffLocation: 'Amsterdam',
-    selectedDate: '2025-08-15',
-    isDateFlexible: false,
-    itemQuantities: {},
-    floorPickup: 0,
-    floorDropoff: 0,
-    elevatorPickup: false,
-    elevatorDropoff: false,
-    assemblyItems: {},
-    extraHelperItems: {},
-    isStudent: false,
-    hasStudentId: false,
-    pickupPlace: { placeId: 'test', text: 'Amsterdam' },
-    dropoffPlace: { placeId: 'test', text: 'Amsterdam' },
-    ...overrides
-  });
+  const createBaseInput = (overrides: Partial<PricingInput> = {}): PricingInput => {
+    const merged: PricingInput = {
+      serviceType: 'house-moving',
+      pickupLocation: 'Amsterdam',
+      dropoffLocation: 'Amsterdam',
+      selectedDate: '2025-08-15',
+      isDateFlexible: false,
+      itemQuantities: {},
+      floorPickup: 0,
+      floorDropoff: 0,
+      elevatorPickup: false,
+      elevatorDropoff: false,
+      assemblyItems: {},
+      extraHelperItems: {},
+      isStudent: false,
+      hasStudentId: false,
+      pickupPlace: undefined,
+      dropoffPlace: undefined,
+      ...overrides,
+    };
+
+    const pickupCity = merged.pickupLocation;
+    const dropoffCity = merged.dropoffLocation;
+
+    // Finalize places after overrides so coordinates can’t be overwritten
+    merged.pickupPlace = ensurePlace(pickupCity, merged.pickupPlace);
+    merged.dropoffPlace = ensurePlace(dropoffCity, merged.dropoffPlace);
+
+    return merged;
+  };
 
   describe('Fixed Date - House Moving - Within City', () => {
     it('should use cheap base charge when city is included in calendar on that date', async () => {

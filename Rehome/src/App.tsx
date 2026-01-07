@@ -12,6 +12,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useState, useEffect } from 'react';
 import { initDynamicConstants, constantsLoaded } from './lib/constants';
 import { cleanupRealtimeService } from './services/realtimeService';
+import { prewarmCache } from './services/pricingCacheService';
 
 // Import Pages
 import LandingPage from "./lib/pages/LandingPage";
@@ -83,6 +84,11 @@ const App = () => {
           await initDynamicConstants();
         }
         setIsConstantsLoaded(true);
+        
+        // Pre-warm pricing cache in background (non-blocking)
+        prewarmCache().catch(err => 
+          console.warn('[App] Cache prewarm failed (non-critical):', err)
+        );
       } catch (error) {
         console.error('[App] Failed to load constants:', error);
         setLoadingError('Failed to load application data. Please refresh the page.');

@@ -1,7 +1,11 @@
 import { pricingConfig, cityBaseCharges, getItemPoints, constantsLoaded, furnitureItems } from '../lib/constants';
 import { findClosestSupportedCity } from '../utils/locationServices';
-import API_ENDPOINTS from '../lib/api/config';
-import { getCityScheduleStatus, checkAllCitiesEmpty } from '../services/realtimeService';
+import { 
+  getCityScheduleStatusCached, 
+  checkAllCitiesEmptyCached,
+  getBatchScheduleStatus,
+  preloadMonthSchedule 
+} from '../services/pricingCacheService';
 
 // Using ScheduleStatus type from realtimeService
 export interface PricingBreakdown {
@@ -485,38 +489,39 @@ class PricingService {
    * This is different from checkCityAvailabilityInRange which includes empty days
    */
   private async checkCityDaysInRange(city: string, startDate: Date, endDate: Date): Promise<boolean> {
-    try {
-      // Validate dates before using them
-      if (!startDate || isNaN(startDate.getTime())) {
-        console.warn('[checkCityDaysInRange] Invalid startDate provided:', startDate);
-        return false;
-      }
-      if (!endDate || isNaN(endDate.getTime())) {
-        console.warn('[checkCityDaysInRange] Invalid endDate provided:', endDate);
-        return false;
-      }
-
-      const currentDate = new Date(startDate);
-      
-      // Check each day in the range for actual city days (scheduled days)
-      while (currentDate <= endDate) {
-        const isCityDay = await this.isCityDay(city, currentDate);
-        const isEmpty = await this.isCompletelyEmptyCalendarDay(currentDate);
-        
-        if (isCityDay || isEmpty) {
-          console.log(`🎯 [DEBUG] Found city day for ${city} on ${currentDate.toISOString().split('T')[0]}`);
-          return true; // Found at least one city day
-        }
-        // Move to next day
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-      
-      console.log(`❌ [DEBUG] No city days found for ${city} in range ${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`);
-      return false; // No city days found in range
-    } catch (error) {
-      console.error('[checkCityDaysInRange] Error:', error);
-      return false; // Fallback to not available
+    // Validate dates
+    if (!startDate || isNaN(startDate.getTime()) || !endDate || isNaN(endDate.getTime())) {
+      console.warn('[checkCityDaysInRange] Invalid dates provided');
+      return false;
     }
+
+    // Pre-load month data for efficient lookups
+    await preloadMonthSchedule(startDate.getFullYear(), startDate.getMonth());
+    if (endDate.getMonth() !== startDate.getMonth()) {
+      await preloadMonthSchedule(endDate.getFullYear(), endDate.getMonth());
+    }
+
+    // Build batch lookup for all dates in range
+    const lookups: Array<{ city: string; date: Date }> = [];
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      lookups.push({ city, date: new Date(currentDate) });
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Single batched RPC call for all dates instead of N sequential calls
+    const results = await getBatchScheduleStatus(lookups);
+
+    // Check if any day qualifies (scheduled or empty)
+    for (const [, status] of results) {
+      if (status.isScheduled || status.isEmpty) {
+        console.log(`[DEBUG] Found city day for ${city} via batch lookup`);
+        return true;
+      }
+    }
+
+    console.log(`[DEBUG] No city days found for ${city} in range`);
+    return false;
   }
 
   /**
@@ -559,27 +564,14 @@ class PricingService {
     isScheduled: boolean;
     isEmpty: boolean;
   }> {
-    try {
-      // Validate date before using it
-      if (!date || isNaN(date.getTime())) {
-        console.warn('[getCityScheduleStatus] Invalid date provided:', date);
-        return {
-          isScheduled: false,
-          isEmpty: true
-        };
-      }
-
-      // Use Realtime service which handles caching and subscriptions
-      const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-      return await getCityScheduleStatus(city, date, baseUrl);
-    } catch (error) {
-      console.error('[getCityScheduleStatus] Error:', error);
-      // Fallback to safe defaults
-      return {
-        isScheduled: false,
-        isEmpty: true
-      };
+    // Validate date before using it
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[getCityScheduleStatus] Invalid date provided:', date);
+      return { isScheduled: false, isEmpty: true };
     }
+
+    // Use optimized cache service with direct Supabase RPC (no HTTP hop)
+    return getCityScheduleStatusCached(city, date);
   }
 
   private async isCityDay(city: string, date: Date): Promise<boolean> {
@@ -596,19 +588,13 @@ class PricingService {
 
 
   private async isCompletelyEmptyCalendarDay(date: Date): Promise<boolean> {
-    try {
-      if (!date || isNaN(date.getTime())) {
-        console.warn('[isCompletelyEmptyCalendarDay] Invalid date provided:', date);
-        return false;
-      }
-      
-      // Use Realtime service which handles caching and subscriptions
-      const baseUrl = API_ENDPOINTS.AUTH.LOGIN.split('/api/auth/login')[0];
-      return await checkAllCitiesEmpty(date, baseUrl);
-    } catch (error) {
-      console.error('[isCompletelyEmptyCalendarDay] Error:', error);
-      return false; // Fallback to not empty
+    if (!date || isNaN(date.getTime())) {
+      console.warn('[isCompletelyEmptyCalendarDay] Invalid date provided:', date);
+      return false;
     }
+    
+    // Use optimized cache service with direct Supabase RPC (no HTTP hop)
+    return checkAllCitiesEmptyCached(date);
   }
 
 
