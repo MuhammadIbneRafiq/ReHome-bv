@@ -65,10 +65,12 @@ const AdminDashboard = () => {
       baseChargeRange: { range: 0, ratePerKm: 0 }
     },
     carryingMultipliers: {
-      standard: { multiplier: 0 },
-      specialRules: {
-        boxes: { multiplier: 0 }
-      }
+      lowValue: { threshold: 0, multiplier: 0 },
+      highValue: { multiplier: 0 }
+    },
+    assemblyMultipliers: {
+      lowValue: { threshold: 0, multiplier: 0 },
+      highValue: { multiplier: 0 }
     },
     assemblyPricing: {
       bed: { price: 0 },
@@ -4371,10 +4373,11 @@ const AdminDashboard = () => {
                                 <button
                                   onClick={() => {
                                     const updatedConfig = { ...jsonPricingConfig };
-                                    if (!updatedConfig.distancePricing.baseChargeRange) {
-                                      updatedConfig.distancePricing.baseChargeRange = {};
-                                    }
-                                    updatedConfig.distancePricing.baseChargeRange.range = editJsonConfigData;
+                                    const currentRange = updatedConfig.distancePricing.baseChargeRange;
+                                    updatedConfig.distancePricing.baseChargeRange = {
+                                      range: editJsonConfigData,
+                                      ratePerKm: currentRange?.ratePerKm ?? 0
+                                    };
                                     setJsonPricingConfig(updatedConfig);
                                     setEditingJsonConfig(null);
                                   }}
@@ -4422,10 +4425,11 @@ const AdminDashboard = () => {
                                 <button
                                   onClick={() => {
                                     const updatedConfig = { ...jsonPricingConfig };
-                                    if (!updatedConfig.distancePricing.baseChargeRange) {
-                                      updatedConfig.distancePricing.baseChargeRange = {};
-                                    }
-                                    updatedConfig.distancePricing.baseChargeRange.ratePerKm = editJsonConfigData;
+                                    const currentRange = updatedConfig.distancePricing.baseChargeRange;
+                                    updatedConfig.distancePricing.baseChargeRange = {
+                                      range: currentRange?.range ?? 0,
+                                      ratePerKm: editJsonConfigData
+                                    };
                                     setJsonPricingConfig(updatedConfig);
                                     setEditingJsonConfig(null);
                                   }}
