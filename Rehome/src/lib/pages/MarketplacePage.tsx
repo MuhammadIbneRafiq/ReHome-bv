@@ -637,7 +637,7 @@ const MarketplacePage = () => {
 
                                                         <div className="flex justify-between items-center mt-2">
                                                             <p className="text-red-500 font-bold text-xs">
-                                                                {(translatedItem.price === 0 || translatedItem.price === null || translatedItem.price === undefined) ? 'Free' : `€${translatedItem.price}`}
+                                                                {(!translatedItem.price || translatedItem.price === 0 || String(translatedItem.price) === 'null' || translatedItem.price === null || translatedItem.price === undefined) ? 'Free' : `€${translatedItem.price}`}
                                                             </p>
                                                             <div className="flex items-center gap-2">
                                                                 <ShareButton
@@ -784,7 +784,7 @@ const MarketplacePage = () => {
                                             <div className="ml-4 flex-1">
                                                 <h3 className="font-semibold">{cartItem.name}</h3>
                                                 <p className="text-orange-600 font-medium">
-                                                    {cartItem.price === 0 ? 'Free' : `€${cartItem.price}`}
+                                                    {(!cartItem.price || cartItem.price === 0 || String(cartItem.price) === 'null') ? 'Free' : `€${cartItem.price}`}
                                                 </p>
                                                 {!cartItem.isrehome && (
                                                     <p className="text-xs text-gray-500 mt-1">
@@ -883,7 +883,7 @@ const MarketplacePage = () => {
                                     <div>
                                         <h4 className="font-semibold text-sm">{chatItem.name}</h4>
                                         <p className="text-orange-600 font-bold text-sm">
-                                            {chatItem.price === 0 ? 'Free' : `€${chatItem.price}`}
+                                            {(!String(chatItem.price) || String(chatItem.price) === '0' || String(chatItem.price) === 'null') ? 'Free' : `€${chatItem.price}`}
                                         </p>
                                     </div>
                                 </div>
