@@ -101,6 +101,8 @@ export const API_ENDPOINTS = {
     SALES_HISTORY: `${API_BASE_URL}/api/admin/sales-history`,
     SALES_STATISTICS: `${API_BASE_URL}/api/admin/sales-statistics`,
     REHOME_ORDERS: `${API_BASE_URL}/api/rehome-orders`,
+    CARRYING_CONFIG: `${API_BASE_URL}/api/admin/carrying-config`,
+    CARRYING_CONFIG_ITEM: (itemType: string) => `${API_BASE_URL}/api/admin/carrying-config/${itemType}`,
   },
 } as const;
 

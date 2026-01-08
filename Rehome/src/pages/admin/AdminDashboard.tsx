@@ -89,6 +89,15 @@ const AdminDashboard = () => {
   });
   const [editingJsonConfig, setEditingJsonConfig] = useState<string | null>(null);
   const [editJsonConfigData, setEditJsonConfigData] = useState<any>({});
+
+  const [carryingConfigRows, setCarryingConfigRows] = useState<any[]>([]);
+  const [carryingConfigLoading, setCarryingConfigLoading] = useState(false);
+  const [editingCarryingConfig, setEditingCarryingConfig] = useState(false);
+  const [editCarryingConfigData, setEditCarryingConfigData] = useState({
+    multiplier_per_floor: 1.35,
+    base_fee: 25,
+    base_fee_threshold_points: null as number | null
+  });
   
   // Marketplace management state
   const [marketplaceItems, setMarketplaceItems] = useState<MarketplaceItem[]>([]);
@@ -297,6 +306,73 @@ const AdminDashboard = () => {
     }
   };
 
+  const fetchCarryingConfig = async () => {
+    setCarryingConfigLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const response = await fetch(API_ENDPOINTS.ADMIN.CARRYING_CONFIG, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch carrying configuration');
+      }
+
+      const payload = await response.json();
+      const rows = payload?.data || [];
+      setCarryingConfigRows(rows);
+
+      const standard = rows.find((r: any) => r.item_type === 'standard') || rows[0];
+      if (standard) {
+        setEditCarryingConfigData({
+          multiplier_per_floor: parseFloat(standard.multiplier_per_floor ?? 1.35),
+          base_fee: parseFloat(standard.base_fee ?? 25),
+          base_fee_threshold_points: standard.base_fee_threshold_points === null || standard.base_fee_threshold_points === undefined
+            ? null
+            : parseFloat(standard.base_fee_threshold_points)
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching carrying config:', error);
+    } finally {
+      setCarryingConfigLoading(false);
+    }
+  };
+
+  const handleSaveCarryingConfig = async () => {
+    setIsUpdating(true);
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const response = await fetch(API_ENDPOINTS.ADMIN.CARRYING_CONFIG, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          multiplier_per_floor: editCarryingConfigData.multiplier_per_floor,
+          base_fee: editCarryingConfigData.base_fee,
+          base_fee_threshold_points: editCarryingConfigData.base_fee_threshold_points
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update carrying configuration');
+      }
+
+      toast.success('Carrying configuration updated successfully');
+      setEditingCarryingConfig(false);
+      await fetchCarryingConfig();
+    } catch (error) {
+      toast.error('Failed to update carrying configuration');
+      console.error('Update carrying config error:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const safeParseJSON = <T,>(value: any, fallback: T): T => {
     if (!value) return fallback;
     if (Array.isArray(value) || typeof value === 'object') return value as T;
@@ -453,6 +529,7 @@ const AdminDashboard = () => {
       await Promise.all([
         fetchTransportRequests(),
         fetchPricingData(),
+        fetchCarryingConfig(),
         fetchMarketplaceData(),
         fetchFurnitureItemsData(),
         fetchMarketplaceItemDetails(),
@@ -2496,52 +2573,14 @@ const AdminDashboard = () => {
                               )}
 
                               {/* Extra Helper Section */}
-                              {(selectedTransportRequest as any).extrahelpercost !== undefined && (selectedTransportRequest as any).extrahelpercost !== null && parseFloat((selectedTransportRequest as any).extrahelpercost) > 0 && (
+                              {(selectedTransportRequest as any).extrahelpercost !== undefined && (selectedTransportRequest as any).extrahelpercost !== null && (
                                 <div>
                                   <div className="flex justify-between border-b pb-2">
                                     <span className="text-gray-700 font-medium">Extra Helper:</span>
                                     <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).extrahelpercost).toFixed(2)}</span>
                                   </div>
                                   <div className="text-xs text-gray-500 mt-1">
-                                    {(() => {
-                                      const helperItems = (selectedTransportRequest as any).extra_helper_items;
-                                      let parsedHelper: any = {};
-                                      try {
-                                        parsedHelper = typeof helperItems === 'string' ? JSON.parse(helperItems) : helperItems || {};
-                                      } catch {}
-                                      
-                                      const helperUUIDs = Object.keys(parsedHelper).filter(k => parsedHelper[k] === true);
-                                      
-                                      if (helperUUIDs.length > 0 && (selectedTransportRequest as any).furnitureitems) {
-                                        const furnitureItemsArray = typeof (selectedTransportRequest as any).furnitureitems === 'string' ? 
-                                          JSON.parse((selectedTransportRequest as any).furnitureitems) : 
-                                          (selectedTransportRequest as any).furnitureitems;
-                                        
-                                        const allUUIDs = new Set<string>();
-                                        Object.keys(parsedHelper).forEach(k => allUUIDs.add(k));
-                                        const orderedUUIDs = Array.from(allUUIDs);
-                                        
-                                        const itemsWithHelper = furnitureItemsArray
-                                          .map((item: any, index: number) => {
-                                            const correspondingUUID = orderedUUIDs[index];
-                                            const hasHelper = correspondingUUID && parsedHelper[correspondingUUID] === true;
-                                            return hasHelper ? item.name : null;
-                                          })
-                                          .filter((name: string | null) => name !== null);
-                                        
-                                        if (itemsWithHelper.length > 0) {
-                                          return (
-                                            <div>
-                                              <div className="font-medium">Items requiring extra helper:</div>
-                                              {itemsWithHelper.map((name: string, idx: number) => (
-                                                <div key={idx}>• {name}</div>
-                                              ))}
-                                            </div>
-                                          );
-                                        }
-                                      }
-                                      return <div>Additional moving assistance</div>;
-                                    })()}
+                                    Extra Helper: {parseFloat((selectedTransportRequest as any).extrahelpercost) > 0 ? 'Yes' : 'No'}
                                   </div>
                                 </div>
                               )}
@@ -3593,6 +3632,128 @@ const AdminDashboard = () => {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">Pricing Management</h2>
                 <div className="space-y-8">
+
+                  <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-700">Carrying Configuration (DB)</h4>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={fetchCarryingConfig}
+                          disabled={carryingConfigLoading}
+                          className="px-3 py-1 bg-gray-100 text-gray-700 rounded text-xs hover:bg-gray-200 disabled:opacity-50"
+                        >
+                          Refresh
+                        </button>
+                        {!editingCarryingConfig ? (
+                          <button
+                            onClick={() => setEditingCarryingConfig(true)}
+                            className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                          >
+                            Edit
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={handleSaveCarryingConfig}
+                              disabled={isUpdating}
+                              className="px-3 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={() => setEditingCarryingConfig(false)}
+                              className="px-3 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-3 bg-gray-50 rounded">
+                        <label className="block text-sm font-medium text-gray-600 mb-1">Multiplier per floor</label>
+                        {editingCarryingConfig ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={editCarryingConfigData.multiplier_per_floor}
+                            onChange={(e) => setEditCarryingConfigData({
+                              ...editCarryingConfigData,
+                              multiplier_per_floor: parseFloat(e.target.value)
+                            })}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        ) : (
+                          <span className="text-sm font-medium">{editCarryingConfigData.multiplier_per_floor}</span>
+                        )}
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded">
+                        <label className="block text-sm font-medium text-gray-600 mb-1">Base fee (€)</label>
+                        {editingCarryingConfig ? (
+                          <input
+                            type="number"
+                            step="1"
+                            value={editCarryingConfigData.base_fee}
+                            onChange={(e) => setEditCarryingConfigData({
+                              ...editCarryingConfigData,
+                              base_fee: parseFloat(e.target.value)
+                            })}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        ) : (
+                          <span className="text-sm font-medium">{editCarryingConfigData.base_fee}</span>
+                        )}
+                      </div>
+
+                      <div className="p-3 bg-gray-50 rounded">
+                        <label className="block text-sm font-medium text-gray-600 mb-1">Base fee threshold points</label>
+                        {editingCarryingConfig ? (
+                          <input
+                            type="number"
+                            step="1"
+                            value={editCarryingConfigData.base_fee_threshold_points ?? ''}
+                            onChange={(e) => setEditCarryingConfigData({
+                              ...editCarryingConfigData,
+                              base_fee_threshold_points: e.target.value === '' ? null : parseFloat(e.target.value)
+                            })}
+                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                          />
+                        ) : (
+                          <span className="text-sm font-medium">{editCarryingConfigData.base_fee_threshold_points ?? 'None (always apply base fee)'}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Current DB rows (by item type) */}
+                    <div className="mt-3">
+                      <div className="text-sm font-medium text-gray-700 mb-2">Current DB values</div>
+                      {carryingConfigLoading ? (
+                        <div className="text-xs text-gray-500">Loading…</div>
+                      ) : carryingConfigRows.length === 0 ? (
+                        <div className="text-xs text-gray-500">No carrying config rows found.</div>
+                      ) : (
+                        <div className="text-xs text-gray-700 space-y-1">
+                          {carryingConfigRows.map((row: any) => (
+                            <div key={row.item_type} className="flex gap-2">
+                              <span className="font-semibold capitalize">{row.item_type}:</span>
+                              <span>multiplier {parseFloat(row.multiplier_per_floor).toFixed(2)}</span>
+                              <span>base fee €{parseFloat(row.base_fee).toFixed(2)}</span>
+                              <span>
+                                threshold {row.base_fee_threshold_points === null || row.base_fee_threshold_points === undefined ? 'none' : row.base_fee_threshold_points}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 text-xs text-gray-500">
+                      This updates the <span className="font-mono">carrying_config</span> table for standard/box/bag/luggage. Backend pricing reads from DB and is refreshed immediately.
+                    </div>
+                  </div>
                   
                   {/* JSON-based Pricing Configs */}
                   <div>
