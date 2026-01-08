@@ -745,13 +745,11 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 dropoffPlace: dropoffPlace,
             };
             
-            // Comment out debug logging to improve performance
-            /*console.log('[DEBUG] Pricing input:', {
-                isStudent: pricingInput.isStudent,
-                hasStudentId: pricingInput.hasStudentId,
-                studentIdFile: studentId?.name,
+            console.log('[DEBUG] Pricing input Place objects:', {
+                pickupPlace,
+                dropoffPlace,
                 timestamp: new Date().toISOString()
-            });*/
+            });
             const breakdown = await backendPricingService.calculatePricing(pricingInput);
             if (requestId === latestRequestIdRef.current) {
                 setPricingBreakdown(breakdown);
