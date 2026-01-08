@@ -685,7 +685,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             return;
         }
         const requestId = ++latestRequestIdRef.current;
-        if (!firstLocation || !secondLocation) {
+        // Require Google Place objects for pricing
+        if (!pickupPlace || !dropoffPlace) {
             if (requestId === latestRequestIdRef.current) {
                 setPricingBreakdown(null);
             }
@@ -712,8 +713,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
             const pricingInput: PricingInput = {
                 serviceType: serviceType,
-                pickupLocation: firstLocation,
-                dropoffLocation: secondLocation,
+                pickupLocation: pickupPlace, // Always send Google Place object
+                dropoffLocation: dropoffPlace, // Always send Google Place object
                 distanceKm: calculatedDistance, // Use calculated distance
                 selectedDate: selectedDateForPricing,
                 selectedDateRange: dateOption === 'flexible' ? selectedDateRange : 
@@ -773,9 +774,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     // Consolidated pricing input signature to detect meaningful changes
     // This prevents duplicate API calls by batching all dependencies into one stable key
     const pricingInputSignature = React.useMemo(() => {
-        // Return null if we don't have minimum required data
-        if (!isDataLoaded || !firstLocation || !secondLocation ||
-            firstLocation.trim().length <= 3 || secondLocation.trim().length <= 3) {
+        // Return null if we don't have minimum required data - require Google Place objects
+        if (!isDataLoaded || !pickupPlace || !dropoffPlace) {
             return null;
         }
         
@@ -1195,8 +1195,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             formData.append("email", contactInfo.email);
             formData.append("phone", contactInfo.phone);
             formData.append("serviceType", serviceType);
-            formData.append("pickupLocation", JSON.stringify(pickupPlace || { address: firstLocation }));
-            formData.append("dropoffLocation", JSON.stringify(dropoffPlace || { address: secondLocation }));
+            formData.append("pickupLocation", JSON.stringify(pickupPlace));
+            formData.append("dropoffLocation", JSON.stringify(dropoffPlace));
             formData.append("pickupFloors", floorPickup);
             formData.append("dropoffFloors", floorDropoff);
             formData.append("hasElevatorPickup", elevatorPickup.toString());
