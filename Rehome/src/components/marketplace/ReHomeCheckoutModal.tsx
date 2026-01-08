@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
 import { API_ENDPOINTS } from '../../lib/api/config';
 import { getMarketplaceItemPoints, fetchPricingMultipliers } from '../../services/marketplaceItemDetailsService';
+import { supabase } from '../../lib/supabaseClient';
 
 // TypeScript declarations for Google Maps API
 declare global {
@@ -255,6 +256,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     email: '',
     phone: '',
   });
+  const [totalCost, setTotalCost] = useState(0);
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [floor, setFloor] = useState('');
   const [elevatorAvailable, setElevatorAvailable] = useState(false);
@@ -264,12 +266,16 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
   
   // Pricing breakdown
   const [pricingBreakdown, setPricingBreakdown] = useState<any>(null);
+  const [pricingMultipliers, setPricingMultipliers] = useState<any>(null);
+  const [carryingPricing, setCarryingPricing] = useState<{ multiplier: number; baseFee: number; baseFeeThreshold: number | null }>({
+    multiplier: 1.35,
+    baseFee: 25,
+    baseFeeThreshold: null,
+  });
   const [baseTotal, setBaseTotal] = useState(0);
-  const [totalCost, setTotalCost] = useState(0);
   const [carryingCost, setCarryingCost] = useState(0);
   const [assemblyCost, setAssemblyCost] = useState(0);
   const [isHighPointsCategory, setIsHighPointsCategory] = useState(false);
-  const [pricingMultipliers, setPricingMultipliers] = useState<any>(null);
 
   // Filter only ReHome items
   const rehomeItems = items.filter(item => item.isrehome);
@@ -309,10 +315,34 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
         console.error('Error fetching pricing multipliers:', error);
       }
     };
-    // Only fetch multipliers when the checkout modal is actually open
-    if (!isOpen) return;
+    const fetchCarryingConfig = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('carrying_config')
+          .select('*');
+
+        if (error) throw error;
+
+        const standard = data?.find((row: any) => row.item_type === 'standard') || data?.[0];
+        if (standard) {
+          setCarryingPricing({
+            multiplier: parseFloat(standard.multiplier_per_floor ?? 1.35),
+            baseFee: parseFloat(standard.base_fee ?? 25),
+            baseFeeThreshold:
+              standard.base_fee_threshold_points === null || standard.base_fee_threshold_points === undefined
+                ? null
+                : parseFloat(standard.base_fee_threshold_points),
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching carrying config:', error);
+        setCarryingPricing({ multiplier: 1.35, baseFee: 25, baseFeeThreshold: null });
+      }
+    };
+
     fetchMultipliers();
-  }, [isOpen]);
+    fetchCarryingConfig();
+  }, []);
 
   // Calculate base total (item prices only)
   useEffect(() => {
@@ -495,6 +525,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     }
 
     let totalCarryingCost = 0;
+    let totalPoints = 0;
     
     for (const item of rehomeItems) {
       console.log('\n--- Processing item for carrying:', item.name, '(ID:', item.id, ') ---');
@@ -507,17 +538,16 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
           console.log('Fetching category points for:', item.category, item.subcategory);
           const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
           console.log('Category Points:', itemPoints);
+          const effectivePoints = itemPoints * (item.quantity || 1);
+          totalPoints += effectivePoints;
           
-          // Calculate carrying cost: category points × floors × 1.35
-          const multiplier = 1.35;
-          console.log('CALCULATION: Points', itemPoints, '× Floors', totalFloors, '× Multiplier', multiplier);
+          // Calculate carrying cost: category points × quantity × floors × multiplier (DB-backed)
+          const multiplier = carryingPricing.multiplier;
+          console.log('CALCULATION: Points', effectivePoints, '× Floors', totalFloors, '× Multiplier', multiplier);
           
-          const itemCarryingCost = itemPoints * totalFloors * multiplier;
-          const quantityAdjustedCost = itemCarryingCost * (item.quantity || 1);
+          const quantityAdjustedCost = effectivePoints * totalFloors * multiplier;
           
-          console.log('Item Carrying Cost:', itemCarryingCost.toFixed(2), '€');
-          console.log('Quantity Adjusted Cost:', quantityAdjustedCost.toFixed(2), '€', 
-            item.quantity > 1 ? '(' + itemCarryingCost.toFixed(2) + ' × ' + item.quantity + ')' : '');
+          console.log('Quantity Adjusted Cost:', quantityAdjustedCost.toFixed(2), '€');
           
           totalCarryingCost += quantityAdjustedCost;
           console.log('Running Total:', totalCarryingCost.toFixed(2), '€');
@@ -529,9 +559,11 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       }
     }
     
-    // Add €25 base fee if any carrying cost was calculated
-    const BASE_FEE = 25;
-    if (totalCarryingCost > 0) {
+    // Apply base fee if configured
+    const BASE_FEE = carryingPricing.baseFee ?? 25;
+    const threshold = carryingPricing.baseFeeThreshold;
+    const shouldApplyBaseFee = totalCarryingCost > 0 && (threshold === null || threshold === undefined || totalPoints < threshold);
+    if (shouldApplyBaseFee) {
       console.log('Adding base fee:', BASE_FEE, '€');
       totalCarryingCost += BASE_FEE;
     }
@@ -626,8 +658,9 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
             if (totalFloors === 0) return 0;
             try {
               const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
-              const itemCarryingCost = itemPoints * totalFloors * 1.35;
-              return itemCarryingCost * (item.quantity || 1);
+              const effectivePoints = itemPoints * (item.quantity || 1);
+              const itemCarryingCost = effectivePoints * totalFloors * carryingPricing.multiplier;
+              return itemCarryingCost;
             } catch (error) {
               console.error('Error calculating item carrying cost:', error);
               return 0;
