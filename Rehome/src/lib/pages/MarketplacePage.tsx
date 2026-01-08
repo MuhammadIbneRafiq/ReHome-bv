@@ -22,7 +22,6 @@ import { useCart } from '../../contexts/CartContext';
 import TransportationServicePopup from '../../components/ui/TransportationServicePopup';
 import useTransportationPopup from '../../hooks/useTransportationPopup';
 import ReHomeCheckoutModal from '../../components/marketplace/ReHomeCheckoutModal';
-import { getConditionLabel } from '../utils';
 import { GooglePlaceObject } from '../../utils/locationServices';
 
 // Helper function to get the first valid image URL
@@ -558,182 +557,175 @@ const MarketplacePage = () => {
                     {error ? (
                         <div className="text-center text-red-500">{error}</div>
                     ) : (
-                    <div>
-                        {/* Search and Filter */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-                            {/* Filter and Search on Left */}
-                            <div className="md:col-span-1 space-y-6">
-                                <MarketplaceSearch onSearch={handleSearch} items={furnitureItems} />
-                                <MarketplaceFilter 
-                                    items={furnitureItems} 
-                                    onFilterChange={handleFilterChange}
-                                    onLocationSearch={handleLocationSearch}
-                                />
-                            </div>
-
-                            {/* Featured Listings on Right */}
-                            <div className="md:col-span-2 rounded-3xl bg-gradient-to-r from-[#ffb77a] via-[#ff8345] to-[#f24b37] p-6 shadow-xl shadow-orange-500/20 border border-white/30">
-                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-6">
-                                    <div>
-                                        <p className="uppercase text-xs font-semibold tracking-[0.25em] text-white/70">Featured</p>
-                                        <h2 className="text-2xl font-semibold text-white">{t('marketplace.featuredItems')}</h2>
-                                        <p className="text-white/80 text-sm">Handpicked listings that are ready for fast delivery.</p>
-                                    </div>
-                                    <div className="flex items-center gap-3 bg-white/15 rounded-full px-4 py-2 backdrop-blur">
-                                        <label htmlFor="sort" className="text-sm font-medium text-white">Sort by:</label>
-                                        <select
-                                            id="sort"
-                                            value={sortOption}
-                                            onChange={e => setSortOption(e.target.value as any)}
-                                            className="bg-white text-gray-800 text-sm font-medium px-3 py-1 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-200 shadow-sm"
-                                        >
-                                            <option value="latest">Latest Listings</option>
-                                            <option value="priceLowHigh">Price: Low to High</option>
-                                            <option value="priceHighLow">Price: High to Low</option>
-                                        </select>
-                                    </div>
+                        <div>
+                            {/* Search and Filter */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+                                {/* Filter and Search on Left */}
+                                <div className="md:col-span-1 space-y-6">
+                                    <MarketplaceSearch onSearch={handleSearch} items={furnitureItems} />
+                                    <MarketplaceFilter 
+                                        items={furnitureItems} 
+                                        onFilterChange={handleFilterChange}
+                                        onLocationSearch={handleLocationSearch}
+                                    />
                                 </div>
 
-                                {getSortedItems().length === 0 ? (
-                                    <p className="text-white py-4 text-center">{t('marketplace.noResults')}</p>
-                                ) : (
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                        {getSortedItems().map((item) => {
-                                            const translatedItem = { ...item, ...translateFurnitureItem(item) };
-                                            const imageUrl = getFirstImageUrl(translatedItem);
-                                            
-                                            return (
-                                            <motion.div
-                                                key={item.id}
-                                                className="bg-[#fff5ed] shadow-lg rounded-2xl p-3 hover:-translate-y-1 hover:shadow-2xl transition-all cursor-pointer relative border border-white/60"
-                                                whileHover={{ scale: 1.05 }}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    openModal(translatedItem);
-                                                }}
+                                {/* Featured Listings on Right */}
+                                <div className="md:col-span-2 rounded-3xl bg-gradient-to-r from-[#ffb77a] via-[#ff8345] to-[#f24b37] p-6 shadow-xl shadow-orange-500/20 border border-white/30">
+                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-6">
+                                        <div>
+                                            <p className="uppercase text-xs font-semibold tracking-[0.25em] text-white/70">Featured</p>
+                                            <h2 className="text-2xl font-semibold text-white">{t('marketplace.featuredItems')}</h2>
+                                            <p className="text-white/80 text-sm">Handpicked listings that are ready for fast delivery.</p>
+                                        </div>
+                                        <div className="flex items-center gap-3 bg-white/15 rounded-full px-4 py-2 backdrop-blur">
+                                            <label htmlFor="sort" className="text-sm font-medium text-white">Sort by:</label>
+                                            <select
+                                                id="sort"
+                                                value={sortOption}
+                                                onChange={e => setSortOption(e.target.value as any)}
+                                                className="bg-white text-gray-800 text-sm font-medium px-3 py-1 rounded-full focus:outline-none focus:ring-2 focus:ring-orange-200 shadow-sm"
                                             >
-                                                {/* ReHome logo badge for ReHome items */}
-                                                {translatedItem.isrehome && (
-                                                    <img 
-                                                        src={logoImage} 
-                                                        alt="ReHome Verified" 
-                                                        className="absolute top-2 left-2 z-10 w-8 h-8 object-contain m-0 p-0"
-                                                        style={{display: 'block'}}
-                                                        loading="eager"
-                                                    />
-                                                )}
-                                                
-                                                <div className="w-full h-32 relative rounded-xl overflow-hidden ring-1 ring-orange-100">
-                                                    <LazyImage 
-                                                        src={imageUrl}
-                                                        alt={translatedItem.name}
-                                                        className="w-full h-full object-cover rounded-md"
-                                                        priority={false}
-                                                        quality={75}
-                                                    />
-                                                </div>
-                                                
-                                                <h3 className="text-sm font-semibold text-gray-900 mt-3">{translatedItem.name}</h3>
-                                                <p className="text-gray-600 text-xs line-clamp-2 h-8">{translatedItem.description}</p>
+                                                <option value="latest">Latest Listings</option>
+                                                <option value="priceLowHigh">Price: Low to High</option>
+                                                <option value="priceHighLow">Price: High to Low</option>
+                                            </select>
+                                        </div>
+                                    </div>
 
-                                                {translatedItem.condition_rating && (
-                                                    <span className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-xs font-semibold">
-                                                        {getConditionLabel(translatedItem.condition_rating)}
-                                                    </span>
-                                                )}
+                                    {getSortedItems().length === 0 ? (
+                                        <p className="text-white py-4 text-center">{t('marketplace.noResults')}</p>
+                                    ) : (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            {getSortedItems().map((item) => {
+                                                const translatedItem = { ...item, ...translateFurnitureItem(item) };
+                                                const imageUrl = getFirstImageUrl(translatedItem);
                                                 
-                                                <div className="flex justify-between items-center mt-2">
-                                                    <p className="text-red-500 font-bold text-xs">
-                                                        {(translatedItem.price === 0 || translatedItem.price === null || translatedItem.price === undefined) ? 'Free' : `€${translatedItem.price}`}
-                                                    </p>
-                                                    <div className="flex items-center gap-2">
-                                                        <ShareButton
-                                                            itemId={translatedItem.id}
-                                                            itemName={translatedItem.name}
-                                                            description={translatedItem.description}
-                                                            variant="icon"
-                                                            className="!p-1.5"
-                                                        />
-                                                        {/* Show chat button for user listings and WhatsApp for ReHome */}
-                                                        {translatedItem.seller_email !== user?.email && (
-                                                            translatedItem.isrehome ? (
-                                                                <a
-                                                                    href={`https://wa.me/31612265704`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="flex items-center justify-center p-1.5 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full transition-colors"
-                                                                    title="Contact via WhatsApp"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    <FaWhatsapp size={16} />
-                                                                </a>
-                                                            ) : (
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleChatWithSeller(translatedItem, e);
-                                                                    }}
-                                                                    className="flex items-center justify-center p-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition-colors"
-                                                                    title="Chat with Seller"
-                                                                >
-                                                                    <FaComments size={16} />
-                                                                </button>
-                                                            )
+                                                return (
+                                                    <motion.div
+                                                        key={item.id}
+                                                        className="bg-[#fff5ed] shadow-lg rounded-2xl p-3 hover:-translate-y-1 hover:shadow-2xl transition-all cursor-pointer relative border border-white/60"
+                                                        whileHover={{ scale: 1.05 }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openModal(translatedItem);
+                                                        }}
+                                                    >
+                                                        {/* ReHome logo badge for ReHome items */}
+                                                        {translatedItem.isrehome && (
+                                                            <img 
+                                                                src={logoImage} 
+                                                                alt="ReHome Verified" 
+                                                                className="absolute top-2 left-2 z-10 w-8 h-8 object-contain m-0 p-0"
+                                                                style={{display: 'block'}}
+                                                                loading="eager"
+                                                            />
                                                         )}
-                                                    </div>
-                                                </div>
-                                            </motion.div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                                
-                                {/* Pagination Controls */}
-                                {pagination.totalPages > 1 && (
-                                    <div className="mt-6 flex justify-center items-center space-x-2">
-                                        <button
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={!pagination.hasPreviousPage}
-                                            className="px-3 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Previous
-                                        </button>
-                                        
-                                        {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
-                                            const page = Math.max(1, Math.min(pagination.totalPages - 4, currentPage - 2)) + i;
-                                            if (page > pagination.totalPages) return null;
+
+                                                        <div className="w-full h-32 relative rounded-xl overflow-hidden ring-1 ring-orange-100">
+                                                            <LazyImage 
+                                                                src={imageUrl}
+                                                                alt={translatedItem.name}
+                                                                className="w-full h-full object-cover rounded-md"
+                                                                priority={false}
+                                                                quality={75}
+                                                            />
+                                                        </div>
+                                                        
+                                                        <h3 className="text-sm font-semibold text-gray-900 mt-3">{translatedItem.name}</h3>
+                                                        <p className="text-gray-600 text-xs line-clamp-2 h-8">{translatedItem.description}</p>
+
+                                                        <div className="flex justify-between items-center mt-2">
+                                                            <p className="text-red-500 font-bold text-xs">
+                                                                {(translatedItem.price === 0 || translatedItem.price === null || translatedItem.price === undefined) ? 'Free' : `€${translatedItem.price}`}
+                                                            </p>
+                                                            <div className="flex items-center gap-2">
+                                                                <ShareButton
+                                                                    title={translatedItem.name}
+                                                                    description={translatedItem.description}
+                                                                    url={`${window.location.origin}/marketplace?item=${translatedItem.id}`}
+                                                                    variant="icon"
+                                                                    className="!p-1.5"
+                                                                />
+                                                                {translatedItem.seller_email !== user?.email && (
+                                                                    translatedItem.isrehome ? (
+                                                                        <a
+                                                                            href={`https://wa.me/31612265704`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className="flex items-center justify-center p-1.5 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full transition-colors"
+                                                                            title="Contact via WhatsApp"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            <FaWhatsapp size={16} />
+                                                                        </a>
+                                                                    ) : (
+                                                                        <button
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleChatWithSeller(translatedItem, e);
+                                                                            }}
+                                                                            className="flex items-center justify-center p-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-full transition-colors"
+                                                                            title="Chat with Seller"
+                                                                        >
+                                                                            <FaComments size={16} />
+                                                                        </button>
+                                                                    )
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </motion.div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Pagination Controls */}
+                                    {pagination.totalPages > 1 && (
+                                        <div className="mt-6 flex justify-center items-center space-x-2">
+                                            <button
+                                                onClick={() => handlePageChange(currentPage - 1)}
+                                                disabled={!pagination.hasPreviousPage}
+                                                className="px-3 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Previous
+                                            </button>
                                             
-                                            return (
-                                                <button
-                                                    key={page}
-                                                    onClick={() => handlePageChange(page)}
-                                                    className={`px-3 py-2 text-sm rounded-md ${
-                                                        page === currentPage
-                                                            ? 'bg-orange-500 text-white'
-                                                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                                    }`}
-                                                >
-                                                    {page}
-                                                </button>
-                                            );
-                                        })}
-                                        
-                                        <button
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={!pagination.hasNextPage}
-                                            className="px-3 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            Next
-                                        </button>
-                                        
-                                        <span className="text-sm text-gray-600 ml-4">
-                                            Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalItems} items)
-                                        </span>
-                                    </div>
-                                )}
+                                            {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                                                const page = Math.max(1, Math.min(pagination.totalPages - 4, currentPage - 2)) + i;
+                                                if (page > pagination.totalPages) return null;
+                                                
+                                                return (
+                                                    <button
+                                                        key={page}
+                                                        onClick={() => handlePageChange(page)}
+                                                        className={`px-3 py-2 text-sm rounded-md ${
+                                                            page === currentPage
+                                                                ? 'bg-orange-500 text-white'
+                                                                : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                );
+                                            })}
+                                            
+                                            <button
+                                                onClick={() => handlePageChange(currentPage + 1)}
+                                                disabled={!pagination.hasNextPage}
+                                                className="px-3 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                Next
+                                            </button>
+                                            
+                                            <span className="text-sm text-gray-600 ml-4">
+                                                Page {pagination.currentPage} of {pagination.totalPages} ({pagination.totalItems} items)
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
                     )}
                 </StableLoader>
             </div>

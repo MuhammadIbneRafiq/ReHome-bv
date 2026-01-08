@@ -283,9 +283,9 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     // category(sub) must be present to consider eligibility
     if (!category || !subcategory) return 0;
 
-    // Closets / Wardrobes → €50
+    // Closets / Wardrobes → €35
     if (name.includes('closet') || name.includes('wardrobe') || subcategory.includes('closet') || subcategory.includes('wardrobe')) {
-      return 50;
+      return 35;
     }
     // Single bed → €20
     if (name.includes('1-person bed') || name.includes('single bed') || subcategory.includes('1-person') || subcategory.includes('single')) {
@@ -529,18 +529,25 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       }
     }
     
+    // Add €25 base fee if any carrying cost was calculated
+    const BASE_FEE = 25;
+    if (totalCarryingCost > 0) {
+      console.log('Adding base fee:', BASE_FEE, '€');
+      totalCarryingCost += BASE_FEE;
+    }
+    
     console.log('\n===== CARRYING COST CALCULATION FINISHED =====');
     console.log('FINAL CARRYING COST:', totalCarryingCost.toFixed(2), '€');
     return totalCarryingCost;
   };
 
   const getAssemblyCost = async () => {
-    // Calculate assembly cost based on category points × floor number × 1.35
+    // Assembly uses STANDARDIZED FIXED VALUES (not points-based):
+    // - Single Bed: €20
+    // - Double Bed: €30
+    // - Closet/Wardrobe: €35
     console.log('===== ASSEMBLY COST CALCULATION STARTED =====');
     let total = 0;
-    const floorNumber = Math.max(1, parseInt(floor) || 0); // Minimum floor is 1
-    console.log('Floor Number (used for calculation):', floorNumber);
-    console.log('Elevator Available:', elevatorAvailable);
     
     console.log('Items requiring assembly:', 
       rehomeItems.filter(item => itemAssistance[item.id]?.needsAssembly).length, 
@@ -553,38 +560,17 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
       console.log('Needs Assembly:', itemAssistance[item.id]?.needsAssembly);
       
       if (itemAssistance[item.id]?.needsAssembly) {
-        // Get item's category points
-        try {
-          console.log('Fetching category points for:', item.category, item.subcategory);
-          const itemPoints = await getMarketplaceItemPoints(item.category || '', item.subcategory || '');
-          console.log('Category Points:', itemPoints);
-          
-          // Calculate assembly cost: category point × 1.35
-          const multiplier = 1.35;
-          console.log('CALCULATION: Points', itemPoints, '× Multiplier', multiplier);
-          
-          const assemblyCost = itemPoints * multiplier;
-          const quantityAdjustedCost = assemblyCost * (item.quantity || 1);
-          
-          console.log('Item Assembly Cost:', assemblyCost.toFixed(2), '€');
-          console.log('Quantity Adjusted Cost:', quantityAdjustedCost.toFixed(2), '€', 
-            item.quantity > 1 ? '(' + assemblyCost.toFixed(2) + ' × ' + item.quantity + ')' : '');
-          
+        // Use standardized fixed assembly prices
+        const unitCost = getAssemblyUnitCost(item);
+        console.log('Fixed Assembly Unit Cost:', unitCost, '€');
+        
+        if (unitCost > 0) {
+          const quantityAdjustedCost = unitCost * (item.quantity || 1);
           total += quantityAdjustedCost;
+          console.log('Quantity Adjusted Cost:', quantityAdjustedCost.toFixed(2), '€');
           console.log('Running Total:', total.toFixed(2), '€');
-        } catch (error) {
-          console.error('Error calculating assembly cost:', error);
-          // Fallback to fixed pricing if points calculation fails
-          console.log('FALLBACK: Using fixed pricing due to error');
-          const unit = getAssemblyUnitCost(item);
-          console.log('Fixed Unit Cost:', unit, '€');
-          
-          if (unit > 0) {
-            const fixedCost = unit * (item.quantity || 1);
-            total += fixedCost;
-            console.log('Fixed Cost Added:', fixedCost, '€');
-            console.log('Running Total:', total.toFixed(2), '€');
-          }
+        } else {
+          console.log('Item not eligible for assembly (no fixed price)');
         }
       } else {
         console.log('Skipping item - assembly not requested');
@@ -592,7 +578,7 @@ const ReHomeCheckoutModal: React.FC<ReHomeCheckoutModalProps> = ({
     }
     
     console.log('\n===== ASSEMBLY COST CALCULATION FINISHED =====');
-    console.log('FINAL ASSEMBLY COST:', total.toFixed(2),   '€');
+    console.log('FINAL ASSEMBLY COST:', total.toFixed(2), '€');
     return total;
   };
 

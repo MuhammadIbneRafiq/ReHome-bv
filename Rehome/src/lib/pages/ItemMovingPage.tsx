@@ -7,7 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { getItemPoints, furnitureItems, constantsLoaded } from '../../lib/constants';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import backendPricingService from '../../services/backendPricingService';
+import backendPricingService, { PricingInput } from '../../services/backendPricingService';
 
 // Import types
 export interface PricingBreakdown {
@@ -164,7 +164,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [assemblyItems, setAssemblyItems] = useState<{ [key: string]: boolean }>({});
     const [extraHelperItems, setExtraHelperItems] = useState<{ [key: string]: boolean }>({});
     const [preferredTimeSpan, setPreferredTimeSpan] = useState('');
-    const [paymentLoading] = useState(false);
+    // const [paymentLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [pricingBreakdown, setPricingBreakdown] = useState<PricingBreakdown | null>(null);
     const [orderNumber, setOrderNumber] = useState<string>('');
@@ -837,7 +837,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         // Debounce all pricing calculations with a single timer
         const debounceTimer = setTimeout(() => {
             calculatePrice();
-        }, 350); // 350ms debounce - balances responsiveness with efficiency
+        }, 150); // 150ms debounce - fast real-time updates
 
         return () => clearTimeout(debounceTimer);
     }, [pricingInputSignature]);
@@ -1117,6 +1117,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        if (isSubmitting) {
+            return;
+        }
+
         if (!isFormValid()) {
             toast.error("Please fill in all required fields correctly.");
             return;
@@ -1223,7 +1227,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
             // Add item photos if available
             if (itemPhotos.length > 0) {
-                itemPhotos.forEach((photo, index) => {
+                itemPhotos.forEach((photo) => {
                     if (photo instanceof File) {
                         formData.append("itemImages", photo);
                     }
@@ -2765,20 +2769,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                         <button 
                                             type="button"
                                             onClick={handleSubmit}
-                                            disabled={!isFormValid()}
-                                            className={`inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${isFormValid() ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
+                                            disabled={isSubmitting || !isFormValid()}
+                                            className={`inline-flex items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${(isSubmitting || !isFormValid()) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
                                         >
-                                            {paymentLoading ? (
-                                                <>
-                                                    <span className="animate-pulse">Processing...</span>
-                                                    <svg className="animate-spin ml-2 -mr-1 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                    </svg>
-                                                </>
-                                            ) : (
-                                                <>Submit Request</>
-                                            )}
+                                            {isSubmitting ? t('processing') : t('proceedToCheckout')}
                                         </button>
                                     )}
                                 </div>

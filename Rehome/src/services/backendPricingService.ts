@@ -1,9 +1,10 @@
-interface PricingInput {
+export interface PricingInput {
   serviceType: string;
   pickupLocation: any;
   dropoffLocation: any;
   selectedDate?: string;
-  items: any[];
+  // Legacy marketplace schema
+  items?: any[];
   hasStudentId?: boolean;
   needsAssembly?: boolean;
   needsExtraHelper?: boolean;
@@ -12,6 +13,26 @@ interface PricingInput {
   hasElevatorPickup?: boolean;
   hasElevatorDropoff?: boolean;
   daysUntilMove?: number;
+  // Item transport & house moving schema
+  distanceKm?: number;
+  selectedDateRange?: { start: string; end: string };
+  pickupDate?: string;
+  dropoffDate?: string;
+  isDateFlexible?: boolean;
+  itemQuantities?: Record<string, number>;
+  floorPickup?: number;
+  floorDropoff?: number;
+  elevatorPickup?: boolean;
+  elevatorDropoff?: boolean;
+  assemblyItems?: Record<string, boolean>;
+  disassemblyItems?: Record<string, boolean>;
+  extraHelperItems?: Record<string, boolean>;
+  isStudent?: boolean;
+  carryingServiceItems?: Record<string, boolean>;
+  carryingUpItems?: Record<string, boolean>;
+  carryingDownItems?: Record<string, boolean>;
+  pickupPlace?: any;
+  dropoffPlace?: any;
 }
 
 class BackendPricingService {
