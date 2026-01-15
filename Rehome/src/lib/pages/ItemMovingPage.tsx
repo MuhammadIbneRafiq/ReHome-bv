@@ -1364,9 +1364,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 })}
                             </div>
                         )}
-                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
-                            <div className="text-xs text-gray-500 ml-4">No items selected - please select at least one item to continue</div>
-                        )}
                     </div>
                     {pricingBreakdown.distanceCost > 0 && (
                         <div className="flex justify-between">
@@ -1539,9 +1536,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     );
                                 })}
                             </div>
-                        )}
-                        {Object.keys(itemQuantities).filter(item => itemQuantities[item] > 0).length === 0 && (
-                            <div className="text-xs text-gray-500 ml-4">No items selected - please select at least one item to continue</div>
                         )}
                     </div>
                     {pricingBreakdown.distanceCost > 0 && (

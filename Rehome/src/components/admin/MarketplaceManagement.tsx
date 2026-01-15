@@ -23,7 +23,6 @@ const MarketplaceManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'reserved' | 'sold'>('all');
-  const [bidStatusFilter, setBidStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected' | 'outbid'>('all');
   const [selectedListings, setSelectedListings] = useState<Set<string>>(new Set());
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingListing, setEditingListing] = useState<MarketplaceListing | null>(null);
@@ -44,7 +43,7 @@ const MarketplaceManagement: React.FC = () => {
 
   useEffect(() => {
     filterData();
-  }, [listings, bids, searchQuery, statusFilter, bidStatusFilter, activeTab]);
+  }, [listings, bids, searchQuery, statusFilter, activeTab]);
 
   const fetchListings = async () => {
     try {
