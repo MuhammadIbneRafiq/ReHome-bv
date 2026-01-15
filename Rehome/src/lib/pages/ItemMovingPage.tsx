@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaPiggyBank } from "react-icons/fa";
 import { supabase } from '../../hooks/supaBase';
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
@@ -185,6 +185,14 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [isPickupDateOpen, setIsPickupDateOpen] = useState(false);
     const [isDropoffDateOpen, setIsDropoffDateOpen] = useState(false);
     const [isMovingDateOpen, setIsMovingDateOpen] = useState(false);
+
+    const handleDateOptionChange = (newDateOption: 'flexible' | 'fixed' | 'rehome') => {
+        setDateOption(newDateOption);
+        setSelectedDateRange({ start: '', end: '' });
+        setPickupDate('');
+        setDropoffDate('');
+        setIsDateFlexible(newDateOption === 'rehome');
+    };
 
     // Helper function to close all calendars
     const closeAllCalendars = () => {
@@ -1805,41 +1813,50 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                         Select your preferred date and time for pickup and delivery.
                                     </p>
                                     {/* Date Option Dropdown */}
-                                    <div className="mb-4">
-                                        <label htmlFor="date-option" className="block text-sm font-medium text-gray-700 mb-1">Date Option</label>
-                                        <select
-                                            id="date-option"
-                                            value={dateOption}
-                                            onChange={e => {
-                                                const newDateOption = e.target.value as 'flexible' | 'fixed' | 'rehome';
-                                                setDateOption(newDateOption);
-                                                
-                                                // Clear all date-related states first
-                                                setSelectedDateRange({ start: '', end: '' });
-                                                setPickupDate('');
-                                                setDropoffDate('');
-                                                setIsDateFlexible(false);
-                                                
-                                                // Set appropriate states based on option
-                                                if (newDateOption === 'rehome') {
-                                                    // ReHome choose: isDateFlexible=true, no dates set
-                                                    setIsDateFlexible(true);
-                                                } else if (newDateOption === 'flexible') {
-                                                    // Flexible range: isDateFlexible=false, user will set date range
-                                                    setIsDateFlexible(false);
-                                                } else if (newDateOption === 'fixed') {
-                                                    // Fixed date: isDateFlexible=false, user will set pickup/dropoff dates
-                                                    setIsDateFlexible(false);
-                                                }
-                                                
-                                                // Pricing calculation will be handled automatically by useEffect with dateConfigId
-                                            }}
-                                            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
-                                        >
-                                            <option value="flexible">Flexible date range</option>
-                                            <option value="fixed">Fixed date</option>
-                                            <option value="rehome">Let ReHome choose</option>
-                                        </select>
+                                    <div className="mb-4 space-y-3">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Date Option</label>
+                                        <div className="grid gap-2 sm:grid-cols-3">
+                                            {([
+                                                { key: 'rehome', title: 'Best offer', subtitle: 'Let ReHome choose (cheapest)', accent: true },
+                                                { key: 'flexible', title: 'Flexible range', subtitle: 'Any date within your range', accent: false },
+                                                { key: 'fixed', title: 'Specific date', subtitle: 'Pick exact pickup/dropoff', accent: false },
+                                            ] as const).map(option => {
+                                                const isSelected = dateOption === option.key;
+                                                const baseClasses = 'w-full h-full rounded-lg border p-3 text-left transition focus:outline-none';
+                                                const selectedClasses = option.accent
+                                                    ? 'border-orange-500 bg-orange-50 shadow-sm ring-2 ring-orange-100'
+                                                    : 'border-orange-400 bg-orange-50/70 shadow-sm ring-1 ring-orange-100';
+                                                const defaultClasses = 'border-gray-200 hover:border-gray-300 bg-white';
+                                                return (
+                                                    <button
+                                                        key={option.key}
+                                                        type="button"
+                                                        onClick={() => handleDateOptionChange(option.key)}
+                                                        className={`${baseClasses} ${isSelected ? selectedClasses : defaultClasses}`}
+                                                    >
+                                                        <div className="flex items-start justify-between">
+                                                            <div>
+                                                                <div className="flex items-center space-x-2">
+                                                                    {option.accent && <span className="inline-flex items-center rounded-full bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white">BEST OFFER</span>}
+                                                                    <span className={`text-sm font-semibold ${option.accent ? 'text-orange-700' : 'text-gray-800'}`}>{option.title}</span>
+                                                                </div>
+                                                                <p className="mt-1 text-xs text-gray-600">{option.subtitle}</p>
+                                                            </div>
+                                                            {option.accent && (
+                                                                <span className="text-orange-500 text-xl">
+                                                                    <FaPiggyBank />
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                        {dateOption !== 'rehome' && (
+                                            <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-3 py-2">
+                                                Cheapest price = Let ReHome choose. Pick “Best offer” for the lowest base charge if you can move within a 1–3 week window.
+                                            </p>
+                                        )}
                                     </div>
                                     {/* Show date pickers based on option */}
                                     {dateOption === 'flexible' && (
