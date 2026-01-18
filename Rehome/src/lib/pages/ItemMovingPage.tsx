@@ -1182,9 +1182,9 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         // Use already calculated distance from state
         try {
             const itemList = furnitureItems
-                .filter((_, index) => itemQuantities[index] && itemQuantities[index] > 0)
-                .map((item, index) => {
-                    const quantity = itemQuantities[index];
+                .filter((item) => itemQuantities[item.id] && itemQuantities[item.id] > 0)
+                .map((item) => {
+                    const quantity = itemQuantities[item.id];
                     return {
                         id: item.id,
                         name: item.name,
@@ -1215,12 +1215,22 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
             // Handle dates based on service type and options
             if (isItemTransport) {
-                formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+                if (dateOption === 'fixed') {
+                    formData.append("selectedDate", pickupDate || new Date().toISOString());
+                    formData.append("pickupDate", pickupDate || new Date().toISOString());
+                    formData.append("dropoffDate", dropoffDate || new Date().toISOString());
+                } else if (dateOption === 'flexible') {
+                    formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+                    formData.append("isDateFlexible", "true");
+                } else {
+                    formData.append("selectedDate", new Date().toISOString());
+                }
             } else if (isHouseMoving) {
                 if (dateOption === 'flexible') {
                     formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+                    formData.append("isDateFlexible", "true");
                 } else if (dateOption === 'fixed') {
-                    formData.append("selectedDate", pickupDate || new Date().toISOString());
+                    formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
                 } else {
                     formData.append("selectedDate", new Date().toISOString());
                 }
