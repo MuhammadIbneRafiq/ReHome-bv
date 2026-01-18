@@ -5747,10 +5747,32 @@ const AdminDashboard = () => {
                         <div className="space-y-2">
                           <p><span className="font-medium">Pickup Location:</span> {selectedSpecialRequest.pickup_location || 'N/A'}</p>
                           <p><span className="font-medium">Dropoff Location:</span> {selectedSpecialRequest.dropoff_location || 'N/A'}</p>
-                          <p><span className="font-medium">Pickup Floor:</span> {selectedSpecialRequest.floor_pickup || 'Ground'}</p>
-                          <p><span className="font-medium">Dropoff Floor:</span> {selectedSpecialRequest.floor_dropoff || 'Ground'}</p>
-                          <p><span className="font-medium">Pickup Elevator:</span> {selectedSpecialRequest.elevator_pickup ? 'Yes' : 'No'}</p>
-                          <p><span className="font-medium">Dropoff Elevator:</span> {selectedSpecialRequest.elevator_dropoff ? 'Yes' : 'No'}</p>
+                          {(() => {
+                            const anyRequest: any = selectedSpecialRequest;
+                            const pickupFloor = anyRequest.floor_pickup ?? anyRequest.pickup_floor;
+                            const dropoffFloor = anyRequest.floor_dropoff ?? anyRequest.dropoff_floor;
+                            const pickupElevatorRaw = anyRequest.elevator_pickup ?? anyRequest.pickup_elevator;
+                            const dropoffElevatorRaw = anyRequest.elevator_dropoff ?? anyRequest.dropoff_elevator;
+
+                            const normalizeElevator = (value: any) => {
+                              if (typeof value === 'boolean') return value;
+                              if (typeof value === 'string') {
+                                const lowered = value.toLowerCase();
+                                if (lowered === 'yes') return true;
+                                if (lowered === 'no') return false;
+                              }
+                              return false;
+                            };
+
+                            return (
+                              <>
+                                <p><span className="font-medium">Pickup Floor:</span> {pickupFloor ?? 'Ground'}</p>
+                                <p><span className="font-medium">Dropoff Floor:</span> {dropoffFloor ?? 'Ground'}</p>
+                                <p><span className="font-medium">Pickup Elevator:</span> {normalizeElevator(pickupElevatorRaw) ? 'Yes' : 'No'}</p>
+                                <p><span className="font-medium">Dropoff Elevator:</span> {normalizeElevator(dropoffElevatorRaw) ? 'Yes' : 'No'}</p>
+                              </>
+                            );
+                          })()}
                           <p><span className="font-medium">Distance:</span> {selectedSpecialRequest.calculated_distance_km || 'N/A'} km</p>
                         </div>
                       </div>

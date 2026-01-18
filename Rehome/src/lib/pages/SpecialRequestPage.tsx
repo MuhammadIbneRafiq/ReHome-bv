@@ -12,13 +12,17 @@ type ServiceFieldsType = {
 
 const serviceFields: ServiceFieldsType = {
   storage: [
-    'itemDescription', 'storageStartDate', 'storageEndDate', 'pickupPreference', 'contactInfo'
+    'customerName', 'itemDescription', 'storageStartDate', 'storageEndDate', 'pickupPreference', 'contactInfo'
   ],
   junkRemoval: [
-    'itemDescription', 'address', 'earliestRemovalDate', 'removalDate', 'contactInfo'
+    'customerName', 'itemDescription', 'country', 'postal', 'houseNumber', 'city', 'street', 'floor', 'elevatorAvailable', 'earliestRemovalDate', 'removalDate', 'contactInfo'
   ],
   fullInternationalMove: [
-    'pickupAddress', 'dropoffAddress', 'pickupFloor', 'pickupElevator', 'dropoffFloor', 'dropoffElevator', 'itemDescription', 'services', 'contactInfo'
+    'customerName',
+    'pickupCountry', 'pickupPostal', 'pickupHouseNumber', 'pickupCity', 'pickupStreet',
+    'dropoffCountry', 'dropoffPostal', 'dropoffHouseNumber', 'dropoffCity', 'dropoffStreet',
+    'pickupFloor', 'pickupElevator', 'dropoffFloor', 'dropoffElevator',
+    'itemDescription', 'services', 'contactInfo'
   ]
 };
 
@@ -26,7 +30,8 @@ const serviceFields: ServiceFieldsType = {
 const fullMoveServices = [
   'disassemblyReassembly',
   'carryingUpstairsDownstairs', 
-  'extraHelper'
+  'extraHelper',
+  'packingService'
 ];
 
 const SpecialRequestPage = () => {
@@ -45,7 +50,15 @@ const SpecialRequestPage = () => {
 
   const handleServiceChange = (serviceId: string) => {
     setSelectedService(serviceId);
-    setFields({});
+    if (serviceId === 'junkRemoval') {
+      setFields({ country: 'The Netherlands' });
+    } else if (serviceId === 'fullInternationalMove') {
+      setFields({ pickupCountry: 'The Netherlands', dropoffCountry: 'The Netherlands' });
+    } else if (serviceId === 'storage') {
+      setFields({ country: 'The Netherlands' });
+    } else {
+      setFields({});
+    }
     setPhotos([]);
     setErrors({});
     setConfirmation('');
@@ -71,6 +84,19 @@ const SpecialRequestPage = () => {
         ? prev.filter(s => s !== service)
         : [...prev, service]
     );
+  };
+
+  const buildAddressString = (address: {
+    country?: string;
+    postal?: string;
+    houseNumber?: string;
+    addition?: string;
+    city?: string;
+    street?: string;
+  }) => {
+    const streetLine = [address.street, address.houseNumber, address.addition].filter(Boolean).join(' ');
+    const cityLine = [address.postal, address.city].filter(Boolean).join(' ');
+    return [streetLine, cityLine, address.country].filter(Boolean).join(', ');
   };
 
   const validateForm = () => {
@@ -106,6 +132,18 @@ const SpecialRequestPage = () => {
           console.log('❌ Missing required field:', field);
         }
       });
+
+      // Additional validation for storage home pickup address
+      if (selectedService === 'storage' && fields.pickupPreference === 'pickupFromHome') {
+        const requiredStorageAddressFields = ['country', 'postal', 'houseNumber', 'city', 'street'];
+        requiredStorageAddressFields.forEach((field) => {
+          if (!fields[field]) {
+            newErrors[field] = 'This field is required.';
+            isValid = false;
+            console.log('❌ Missing required storage address field:', field);
+          }
+        });
+      }
 
       // Additional validation for full/international move date fields
       if (selectedService === 'fullInternationalMove' && fields.moveDate) {
@@ -244,15 +282,58 @@ const SpecialRequestPage = () => {
     setIsLoading(true);
     
     try {
+      const derivedFields = { ...fields };
+
+      if (selectedService === 'fullInternationalMove') {
+        derivedFields.pickupAddress = buildAddressString({
+          country: derivedFields.pickupCountry,
+          postal: derivedFields.pickupPostal,
+          houseNumber: derivedFields.pickupHouseNumber,
+          addition: derivedFields.pickupAddition,
+          city: derivedFields.pickupCity,
+          street: derivedFields.pickupStreet,
+        });
+        derivedFields.dropoffAddress = buildAddressString({
+          country: derivedFields.dropoffCountry,
+          postal: derivedFields.dropoffPostal,
+          houseNumber: derivedFields.dropoffHouseNumber,
+          addition: derivedFields.dropoffAddition,
+          city: derivedFields.dropoffCity,
+          street: derivedFields.dropoffStreet,
+        });
+      }
+
+      if (selectedService === 'junkRemoval') {
+        derivedFields.address = buildAddressString({
+          country: derivedFields.country,
+          postal: derivedFields.postal,
+          houseNumber: derivedFields.houseNumber,
+          addition: derivedFields.addition,
+          city: derivedFields.city,
+          street: derivedFields.street,
+        });
+      }
+
+      if (selectedService === 'storage' && derivedFields.pickupPreference === 'pickupFromHome') {
+        derivedFields.address = buildAddressString({
+          country: derivedFields.country,
+          postal: derivedFields.postal,
+          houseNumber: derivedFields.houseNumber,
+          addition: derivedFields.addition,
+          city: derivedFields.city,
+          street: derivedFields.street,
+        });
+      }
+
       const formData = new FormData();
       formData.append('service', selectedService);
       formData.append('phone', contactInfo.phone);
       formData.append('email', contactInfo.email);
       
       // Add other fields
-      Object.keys(fields).forEach(key => {
-        if (fields[key]) {
-          formData.append(key, fields[key]);
+      Object.keys(derivedFields).forEach(key => {
+        if (derivedFields[key]) {
+          formData.append(key, derivedFields[key]);
         }
       });
 
@@ -635,20 +716,126 @@ const SpecialRequestPage = () => {
 
                         {/* Address */}
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Address
-                          </label>
-                          <input
-                            type="text"
-                            value={fields.address || ''}
-                            onChange={(e) => handleFieldChange('address', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            placeholder="Enter your full address"
-                            maxLength={100}
-                            required
-                          />
-                          <p className="text-xs text-gray-500 mt-1">Type in your full address.</p>
-                          {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Country
+                              </label>
+                              <select
+                                value={fields.country || 'The Netherlands'}
+                                onChange={(e) => handleFieldChange('country', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                required
+                              >
+                                <option value="The Netherlands">The Netherlands</option>
+                                <option value="Belgium">Belgium</option>
+                                <option value="Germany">Germany</option>
+                                <option value="Other">Other</option>
+                              </select>
+                              {errors.country && <p className="text-red-500 text-sm mt-1">{errors.country}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Postal Code
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.postal || ''}
+                                onChange={(e) => handleFieldChange('postal', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="1234 AB"
+                                required
+                              />
+                              {errors.postal && <p className="text-red-500 text-sm mt-1">{errors.postal}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                House Number
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.houseNumber || ''}
+                                onChange={(e) => handleFieldChange('houseNumber', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="123"
+                                required
+                              />
+                              {errors.houseNumber && <p className="text-red-500 text-sm mt-1">{errors.houseNumber}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Addition
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.addition || ''}
+                                onChange={(e) => handleFieldChange('addition', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="A"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                City
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.city || ''}
+                                onChange={(e) => handleFieldChange('city', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Amsterdam"
+                                required
+                              />
+                              {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Street
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.street || ''}
+                                onChange={(e) => handleFieldChange('street', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Main Street"
+                                required
+                              />
+                              {errors.street && <p className="text-red-500 text-sm mt-1">{errors.street}</p>}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Floor (Enter 0 for ground floor)
+                              </label>
+                              <input
+                                type="number"
+                                value={fields.floor || ''}
+                                onChange={(e) => handleFieldChange('floor', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="0"
+                                min="0"
+                                required
+                              />
+                              {errors.floor && <p className="text-red-500 text-sm mt-1">{errors.floor}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Elevator Available
+                              </label>
+                              <select
+                                value={fields.elevatorAvailable || ''}
+                                onChange={(e) => handleFieldChange('elevatorAvailable', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                required
+                              >
+                                <option value="">Select option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                              {errors.elevatorAvailable && <p className="text-red-500 text-sm mt-1">{errors.elevatorAvailable}</p>}
+                            </div>
+                          </div>
                         </div>
 
                         {/* Removal Date */}
@@ -692,15 +879,93 @@ const SpecialRequestPage = () => {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Pickup Address
                           </label>
-                          <input
-                            type="text"
-                            value={fields.pickupAddress || ''}
-                            onChange={(e) => handleFieldChange('pickupAddress', e.target.value)}
-                            placeholder="Enter pickup address"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            required
-                          />
-                          {errors.pickupAddress && <p className="text-red-500 text-sm mt-1">{errors.pickupAddress}</p>}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Country
+                              </label>
+                              <select
+                                value={fields.pickupCountry || 'The Netherlands'}
+                                onChange={(e) => handleFieldChange('pickupCountry', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                required
+                              >
+                                <option value="The Netherlands">The Netherlands</option>
+                                <option value="Belgium">Belgium</option>
+                                <option value="Germany">Germany</option>
+                                <option value="Other">Other</option>
+                              </select>
+                              {errors.pickupCountry && <p className="text-red-500 text-sm mt-1">{errors.pickupCountry}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Postal Code
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.pickupPostal || ''}
+                                onChange={(e) => handleFieldChange('pickupPostal', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="1234 AB"
+                                required
+                              />
+                              {errors.pickupPostal && <p className="text-red-500 text-sm mt-1">{errors.pickupPostal}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                House Number
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.pickupHouseNumber || ''}
+                                onChange={(e) => handleFieldChange('pickupHouseNumber', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="123"
+                                required
+                              />
+                              {errors.pickupHouseNumber && <p className="text-red-500 text-sm mt-1">{errors.pickupHouseNumber}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Addition
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.pickupAddition || ''}
+                                onChange={(e) => handleFieldChange('pickupAddition', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="A"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                City
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.pickupCity || ''}
+                                onChange={(e) => handleFieldChange('pickupCity', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Amsterdam"
+                                required
+                              />
+                              {errors.pickupCity && <p className="text-red-500 text-sm mt-1">{errors.pickupCity}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Street
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.pickupStreet || ''}
+                                onChange={(e) => handleFieldChange('pickupStreet', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Main Street"
+                                required
+                              />
+                              {errors.pickupStreet && <p className="text-red-500 text-sm mt-1">{errors.pickupStreet}</p>}
+                            </div>
+                          </div>
                         </div>
 
                         {/* Pickup Floor and Elevator */}
@@ -739,15 +1004,93 @@ const SpecialRequestPage = () => {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             Dropoff Address
                           </label>
-                          <input
-                            type="text"
-                            value={fields.dropoffAddress || ''}
-                            onChange={(e) => handleFieldChange('dropoffAddress', e.target.value)}
-                            placeholder="Enter dropoff address"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                            required
-                          />
-                          {errors.dropoffAddress && <p className="text-red-500 text-sm mt-1">{errors.dropoffAddress}</p>}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Country
+                              </label>
+                              <select
+                                value={fields.dropoffCountry || 'The Netherlands'}
+                                onChange={(e) => handleFieldChange('dropoffCountry', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                required
+                              >
+                                <option value="The Netherlands">The Netherlands</option>
+                                <option value="Belgium">Belgium</option>
+                                <option value="Germany">Germany</option>
+                                <option value="Other">Other</option>
+                              </select>
+                              {errors.dropoffCountry && <p className="text-red-500 text-sm mt-1">{errors.dropoffCountry}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Postal Code
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.dropoffPostal || ''}
+                                onChange={(e) => handleFieldChange('dropoffPostal', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="1234 AB"
+                                required
+                              />
+                              {errors.dropoffPostal && <p className="text-red-500 text-sm mt-1">{errors.dropoffPostal}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                House Number
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.dropoffHouseNumber || ''}
+                                onChange={(e) => handleFieldChange('dropoffHouseNumber', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="123"
+                                required
+                              />
+                              {errors.dropoffHouseNumber && <p className="text-red-500 text-sm mt-1">{errors.dropoffHouseNumber}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Addition
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.dropoffAddition || ''}
+                                onChange={(e) => handleFieldChange('dropoffAddition', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="A"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                City
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.dropoffCity || ''}
+                                onChange={(e) => handleFieldChange('dropoffCity', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Amsterdam"
+                                required
+                              />
+                              {errors.dropoffCity && <p className="text-red-500 text-sm mt-1">{errors.dropoffCity}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Street
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.dropoffStreet || ''}
+                                onChange={(e) => handleFieldChange('dropoffStreet', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Main Street"
+                                required
+                              />
+                              {errors.dropoffStreet && <p className="text-red-500 text-sm mt-1">{errors.dropoffStreet}</p>}
+                            </div>
+                          </div>
                         </div>
 
                         {/* Dropoff Floor and Elevator */}
@@ -920,6 +1263,7 @@ const SpecialRequestPage = () => {
                                 {service === 'disassemblyReassembly' && 'Disassembly/Reassembly'}
                                 {service === 'carryingUpstairsDownstairs' && 'Carrying Upstairs/Downstairs'}
                                 {service === 'extraHelper' && 'Extra Helper'}
+                                {service === 'packingService' && 'Packing Service'}
                               </label>
                             ))}
                           </div>
@@ -928,7 +1272,21 @@ const SpecialRequestPage = () => {
                     )}
 
                     {/* Contact Information */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Customer Name
+                        </label>
+                        <input
+                          type="text"
+                          value={fields.customerName || ''}
+                          onChange={(e) => handleFieldChange('customerName', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="Your name"
+                          required
+                        />
+                        {errors.customerName && <p className="text-red-500 text-sm mt-1">{errors.customerName}</p>}
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Phone Number
