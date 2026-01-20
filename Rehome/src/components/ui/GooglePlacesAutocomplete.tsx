@@ -33,6 +33,10 @@ export function GooglePlacesAutocomplete({
       }
     );
     const data = await response.json();
+    
+    console.log('[DEBUG] Google Places API response:', JSON.stringify(data, null, 2));
+    console.log('[DEBUG] addressComponents:', data.addressComponents);
+    
     const countryComponent = data.addressComponents?.find(
       (comp: any) => comp.types?.includes('country')
     );
@@ -40,6 +44,11 @@ export function GooglePlacesAutocomplete({
     const cityComponent = data.addressComponents?.find(
       (comp: any) => comp.types?.includes('locality') || comp.types?.includes('administrative_area_level_2')
     );
+    
+    const extractedCity = cityComponent?.longText || cityComponent?.long_name || cityComponent?.shortText || cityComponent?.short_name;
+    console.log('[DEBUG] Extracted city from Google Places:', extractedCity);
+    console.log('[DEBUG] cityComponent:', cityComponent);
+    
     return {
       placeId,
       coordinates: data.location ? {
@@ -50,7 +59,7 @@ export function GooglePlacesAutocomplete({
       displayName: data.displayName?.text,
       countryCode: countryComponent?.shortText || countryComponent?.short_name,
       countryName: countryComponent?.longText || countryComponent?.long_name,
-      city: cityComponent?.longText || cityComponent?.long_name || cityComponent?.shortText || cityComponent?.short_name
+      city: extractedCity
     };
   };
 

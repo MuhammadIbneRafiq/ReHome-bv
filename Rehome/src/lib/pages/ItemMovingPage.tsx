@@ -753,12 +753,19 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 dropoffPlace: dropoffPlace,
             };
             
-            console.log('[DEBUG] Pricing input Place objects:', {
-                pickupPlace,
-                dropoffPlace,
-                timestamp: new Date().toISOString()
-            });
+            console.log('[DEBUG] ====== PRICING REQUEST ======');
+            console.log('[DEBUG] Full pricingInput:', JSON.stringify(pricingInput, null, 2));
+            console.log('[DEBUG] pickupPlace city field:', pickupPlace?.city);
+            console.log('[DEBUG] dropoffPlace city field:', dropoffPlace?.city);
+            console.log('[DEBUG] isDateFlexible:', pricingInput.isDateFlexible);
+            console.log('[DEBUG] dateOption:', dateOption);
+            
             const breakdown = await backendPricingService.calculatePricing(pricingInput);
+            
+            console.log('[DEBUG] ====== PRICING RESPONSE ======');
+            console.log('[DEBUG] Full breakdown:', JSON.stringify(breakdown, null, 2));
+            console.log('[DEBUG] baseCharge:', breakdown?.breakdown?.baseCharge);
+            
             if (requestId === latestRequestIdRef.current) {
                 setPricingBreakdown(breakdown);
             }
@@ -1222,12 +1229,20 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 } else if (dateOption === 'flexible') {
                     formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
                     formData.append("isDateFlexible", "true");
+                } else if (dateOption === 'rehome') {
+                    // "Let ReHome Choose" option - date is flexible
+                    formData.append("selectedDate", new Date().toISOString());
+                    formData.append("isDateFlexible", "true");
                 } else {
                     formData.append("selectedDate", new Date().toISOString());
                 }
             } else if (isHouseMoving) {
                 if (dateOption === 'flexible') {
                     formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+                    formData.append("isDateFlexible", "true");
+                } else if (dateOption === 'rehome') {
+                    // "Let ReHome Choose" option - date is flexible
+                    formData.append("selectedDate", new Date().toISOString());
                     formData.append("isDateFlexible", "true");
                 } else if (dateOption === 'fixed') {
                     formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
