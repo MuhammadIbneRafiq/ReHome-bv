@@ -40,6 +40,7 @@ export interface GooglePlaceObject {
   text?: string;
   countryCode?: string;
   countryName?: string;
+  city?: string; // Extracted from addressComponents locality
 }
 
 /**

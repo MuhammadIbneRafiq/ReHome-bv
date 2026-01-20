@@ -36,6 +36,10 @@ export function GooglePlacesAutocomplete({
     const countryComponent = data.addressComponents?.find(
       (comp: any) => comp.types?.includes('country')
     );
+    // Extract city from locality or administrative_area_level_2
+    const cityComponent = data.addressComponents?.find(
+      (comp: any) => comp.types?.includes('locality') || comp.types?.includes('administrative_area_level_2')
+    );
     return {
       placeId,
       coordinates: data.location ? {
@@ -45,7 +49,8 @@ export function GooglePlacesAutocomplete({
       formattedAddress: data.formattedAddress,
       displayName: data.displayName?.text,
       countryCode: countryComponent?.shortText || countryComponent?.short_name,
-      countryName: countryComponent?.longText || countryComponent?.long_name
+      countryName: countryComponent?.longText || countryComponent?.long_name,
+      city: cityComponent?.longText || cityComponent?.long_name || cityComponent?.shortText || cityComponent?.short_name
     };
   };
 
