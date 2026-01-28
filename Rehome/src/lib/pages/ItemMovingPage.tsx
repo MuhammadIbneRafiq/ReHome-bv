@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaPiggyBank } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaPiggyBank, FaWhatsapp } from "react-icons/fa";
 import { supabase } from '../../hooks/supaBase';
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
@@ -1667,6 +1667,26 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         ? t('itemMoving.subtitle', 'Transport your items safely and affordably')
                         : t('houseMoving.subtitle', 'Professional house moving services')}
                 </p>
+
+                {/* Maintenance Banner */}
+                <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex-1">
+                            <p className="text-sm text-yellow-800">
+                                <span className="font-semibold">Under Maintenance:</span> We are currently under maintenance. Feel free to play around, and if there is any issue, contact us on WhatsApp.
+                            </p>
+                        </div>
+                        <a
+                            href="https://wa.me/31612265704"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white px-4 py-2 rounded-lg transition-colors duration-200 text-sm font-medium whitespace-nowrap"
+                        >
+                            <FaWhatsapp size={18} />
+                            <span>WhatsApp Us</span>
+                        </a>
+                    </div>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Main Content - Left 2/3 */}

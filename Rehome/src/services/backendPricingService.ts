@@ -3,6 +3,9 @@ export interface PricingInput {
   pickupLocation: any;
   dropoffLocation: any;
   selectedDate?: string;
+  // Business transport
+  isBusiness?: boolean;
+  businessType?: string;
   // Legacy marketplace schema
   items?: any[];
   hasStudentId?: boolean;
