@@ -1,3 +1,5 @@
+import API_ENDPOINTS from '../lib/api/config';
+
 export interface PricingInput {
   serviceType: string;
   pickupLocation: any;
@@ -39,10 +41,9 @@ export interface PricingInput {
 }
 
 class BackendPricingService {
-  private apiUrl: string;
-  
-  constructor() {
-    this.apiUrl = 'https://rehome-backend.vercel.app';
+  private getBaseUrl(): string {
+    // Extract base URL from any endpoint
+    return API_ENDPOINTS.AUTH.LOGIN.replace('/api/auth/login', '');
   }
 
   /**
@@ -50,7 +51,7 @@ class BackendPricingService {
    */
   async calculatePricing(input: PricingInput) {
     try {
-      const response = await fetch(`${this.apiUrl}/api/transport/calculate-price`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/transport/calculate-price`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ class BackendPricingService {
    */
   async createTransportRequest(formData: FormData) {
     try {
-      const response = await fetch(`${this.apiUrl}/api/transport/create`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/transport/create`, {
         method: 'POST',
         body: formData // Don't set Content-Type, let browser set it for multipart/form-data
       });
@@ -109,7 +110,7 @@ class BackendPricingService {
    */
   async calculateMarketplaceCheckout(items: any[], options: any) {
     try {
-      const response = await fetch(`${this.apiUrl}/api/marketplace/calculate-checkout`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/marketplace/calculate-checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ class BackendPricingService {
    */
   async processCheckout(checkoutData: any) {
     try {
-      const response = await fetch(`${this.apiUrl}/api/marketplace/checkout`, {
+      const response = await fetch(`${this.getBaseUrl()}/api/marketplace/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

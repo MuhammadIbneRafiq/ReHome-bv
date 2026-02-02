@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
+import { API_BASE_URL } from '../lib/api/config';
 
-const API_BASE_URL = 'https://rehome.vercel.app/api/admin/marketplace';
+const ADMIN_MARKETPLACE_API_BASE_URL = `${API_BASE_URL}/api/admin/marketplace`;
 
 // Get auth token
 const getAuthToken = async () => {
@@ -12,7 +13,7 @@ const getAuthToken = async () => {
 const apiRequest = async (endpoint: string, options: RequestInit = {}) => {
   const token = await getAuthToken();
   
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(`${ADMIN_MARKETPLACE_API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',

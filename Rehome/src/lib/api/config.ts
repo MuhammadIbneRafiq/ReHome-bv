@@ -1,5 +1,7 @@
-const API_BASE_URL = 'https://rehome-backend.vercel.app';
-// const API_BASE_URL = 'http://localhost:3000';
+// Use environment variable with fallback to production URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rehome-backend.vercel.app';
+
+export { API_BASE_URL };
 
 // API Endpoints Configuration
 export const API_ENDPOINTS = {
@@ -95,6 +97,7 @@ export const API_ENDPOINTS = {
     LOGIN: `${API_BASE_URL}/api/admin/login`,
     LOGOUT: `${API_BASE_URL}/api/admin/logout`,
     FURNITURE_ITEMS: `${API_BASE_URL}/api/furniture-items`,
+    FURNITURE_ITEM: (id: string) => `${API_BASE_URL}/api/admin/furniture-items/${id}`,
     AUDIT_LOGS: `${API_BASE_URL}/api/audit-logs`,
     MARKETPLACE_ITEM_DETAILS: `${API_BASE_URL}/api/admin/marketplace-item-details`,
     MARKETPLACE_ITEM_DETAIL: (id: string) => `${API_BASE_URL}/api/admin/marketplace-item-details/${id}`,
@@ -103,6 +106,19 @@ export const API_ENDPOINTS = {
     REHOME_ORDERS: `${API_BASE_URL}/api/rehome-orders`,
     CARRYING_CONFIG: `${API_BASE_URL}/api/admin/carrying-config`,
     CARRYING_CONFIG_ITEM: (itemType: string) => `${API_BASE_URL}/api/admin/carrying-config/${itemType}`,
+    PRICING_CONFIGS: `${API_BASE_URL}/api/admin/pricing-configs`,
+    PRICING_CONFIG: (id: string) => `${API_BASE_URL}/api/admin/pricing-configs/${id}`,
+    CITY_PRICES: `${API_BASE_URL}/api/admin/city-prices`,
+    CITY_PRICE: (id: string) => `${API_BASE_URL}/api/admin/city-prices/${id}`,
+    PRICING_MULTIPLIERS: `${API_BASE_URL}/api/admin/pricing-multipliers`,
+    PRICING_MULTIPLIER: (id: string) => `${API_BASE_URL}/api/admin/pricing-multipliers/${id}`,
+  },
+
+  // Google Places API Proxy (with backend caching)
+  PLACES: {
+    AUTOCOMPLETE: `${API_BASE_URL}/api/places/autocomplete`,
+    DETAILS: (placeId: string) => `${API_BASE_URL}/api/places/${placeId}`,
+    CALCULATE_DISTANCE: `${API_BASE_URL}/api/calculate-distance`,
   },
 } as const;
 

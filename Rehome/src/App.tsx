@@ -133,7 +133,12 @@ const App = () => {
       <GoogleOAuthProvider clientId={googleClientId}>
         <LanguageProvider>
           <CartProvider>
-            <BrowserRouter>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
               <DynamicModalProvider>
                 <AuthErrorHandler>
                   <div className="min-h-screen">

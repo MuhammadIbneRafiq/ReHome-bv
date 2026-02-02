@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaPiggyBank, FaWhatsapp } from "react-icons/fa";
-import { supabase } from '../../hooks/supaBase';
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaWhatsapp } from "react-icons/fa";
+import { loadGoogleMapsAPI } from '../../utils/googleMapsLoader';
+import { supabase } from '../supabaseClient';
 import { Switch } from "@headlessui/react";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -178,6 +179,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
     const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome' >('fixed');
     const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({}); // legacy storage
+    const [isBusiness, setIsBusiness] = useState(false);
+    const [businessType, setBusinessType] = useState<string | null>(null);
     
     // Calendar open/close states for inline calendars
     const [isStartDateOpen, setIsStartDateOpen] = useState(false);
@@ -565,26 +568,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         setItemPhotos(prev => prev.filter((_, i) => i !== index));
     };
 
-    // Load Google Maps API if not already loaded
-    const loadGoogleMapsAPI = (): Promise<void> => {
-        return new Promise((resolve, reject) => {
-            if (window.google && window.google.maps) {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
-            script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-            script.async = true;
-            script.defer = true;
-            
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Failed to load Google Maps API'));
-            
-            document.head.appendChild(script);
-        });
-    };
+    // Using the centralized Google Maps API loader
 
     // Eagerly pre-load Google Maps to avoid first-use lag
     useEffect(() => {
@@ -1208,6 +1192,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             formData.append("email", contactInfo.email);
             formData.append("phone", contactInfo.phone);
             formData.append("serviceType", serviceType);
+            formData.append("isBusiness", isBusiness.toString());
+            formData.append("businessType", isBusiness ? (businessType || 'euro-pallet') : '');
             formData.append("pickupLocation", JSON.stringify(pickupPlace));
             formData.append("dropoffLocation", JSON.stringify(dropoffPlace));
             formData.append("pickupFloors", floorPickup);
@@ -1737,12 +1723,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                 Select the type of pickup location for your items.
                                             </p>
                                             
-                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                                 <div 
                                                     className={`border rounded-lg p-6 cursor-pointer transition-colors ${
                                                         pickupType === 'private' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
                                                     }`}
-                                                    onClick={() => setPickupType('private')}
+                                                    onClick={() => {
+                                                        setPickupType('private');
+                                                        setIsBusiness(false);
+                                                        setBusinessType('');
+                                                    }}
                                                 >
                                                     <div className="flex items-center">
                                                         <div className={`rounded-full p-3 ${pickupType === 'private' ? 'bg-orange-500' : 'bg-gray-200'}`}>
@@ -1757,19 +1747,47 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                 
                                                 <div 
                                                     className={`border rounded-lg p-6 cursor-pointer transition-colors ${
-                                                        pickupType === 'store' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
+                                                        pickupType === 'store' && !isBusiness ? 'border-orange-500 bg-orange-50' : 'border-gray-200 hover:border-orange-300'
                                                     }`}
-                                                    onClick={() => setPickupType('store')}
+                                                    onClick={() => {
+                                                        setPickupType('store');
+                                                        setIsBusiness(false);
+                                                        setBusinessType('');
+                                                    }}
                                                 >
                                                     <div className="flex items-center">
-                                                        <div className={`rounded-full p-3 ${pickupType === 'store' ? 'bg-orange-500' : 'bg-gray-200'}`}>
-                                                            <FaStore className={`h-6 w-6 ${pickupType === 'store' ? 'text-white' : 'text-gray-600'}`} />
+                                                        <div className={`rounded-full p-3 ${pickupType === 'store' && !isBusiness ? 'bg-orange-500' : 'bg-gray-200'}`}>
+                                                            <FaStore className={`h-6 w-6 ${pickupType === 'store' && !isBusiness ? 'text-white' : 'text-gray-600'}`} />
                                                         </div>
                                                         <h3 className="ml-3 text-lg font-medium text-gray-900">Store/Business</h3>
                                                     </div>
                                                     <p className="mt-2 text-sm text-gray-500">
                                                         Pick up items from a store, warehouse, or other business location.
                                                     </p>
+                                                </div>
+
+                                                <div 
+                                                    className={`border-2 rounded-lg p-6 cursor-pointer transition-colors shadow-sm ${
+                                                        isBusiness ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-200' : 'border-orange-200 hover:border-orange-400 bg-white'
+                                                    }`}
+                                                    onClick={() => {
+                                                        setPickupType('store');
+                                                        setIsBusiness(true);
+                                                        setBusinessType('euro-pallet');
+                                                    }}
+                                                >
+                                                    <div className="flex items-center">
+                                                        <div className={`rounded-full p-3 ${isBusiness ? 'bg-orange-500' : 'bg-orange-100'}`}>
+                                                            <FaStore className={`h-6 w-6 ${isBusiness ? 'text-white' : 'text-orange-600'}`} />
+                                                        </div>
+                                                        <h3 className="ml-3 text-lg font-medium text-gray-900">Business (EURO pallet)</h3>
+                                                    </div>
+                                                    <p className="mt-2 text-sm text-gray-600">
+                                                        EURO pallet up to 500kg. Route-ready; distance & day selection as usual.
+                                                    </p>
+                                                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-white text-orange-700 border border-orange-200">
+                                                        New • Business transport
+                                                    </div>
                                                 </div>
                                             </div>
                                         </>
@@ -1860,18 +1878,19 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     {/* Date Option Dropdown */}
                                     <div className="mb-4 space-y-3">
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Date Option</label>
-                                        <div className="grid gap-2 sm:grid-cols-3">
+                                        <div className="grid gap-4 sm:grid-cols-3">
                                             {([
-                                                { key: 'rehome', title: 'Best offer', subtitle: 'Let ReHome choose (cheapest)', accent: true },
-                                                { key: 'flexible', title: 'Flexible range', subtitle: 'Any date within your range', accent: false },
-                                                { key: 'fixed', title: 'Specific date', subtitle: 'Pick exact pickup/dropoff', accent: false },
+                                                { key: 'rehome', title: 'Let ReHome choose', subtitle: 'ReHome will suggest suitable\ndate options', accent: true },
+                                                { key: 'flexible', title: 'Flexible Range', subtitle: 'Select a date range', accent: false },
+                                                { key: 'fixed', title: 'Fixed Date', subtitle: 'You choose the exact date', accent: false },
                                             ] as const).map(option => {
                                                 const isSelected = dateOption === option.key;
-                                                const baseClasses = 'w-full h-full rounded-lg border p-3 text-left transition focus:outline-none';
+                                                const baseClasses = 'relative w-full h-full rounded-md border px-4 py-5 transition focus:outline-none';
                                                 const selectedClasses = option.accent
-                                                    ? 'border-orange-500 bg-orange-50 shadow-sm ring-2 ring-orange-100'
-                                                    : 'border-orange-400 bg-orange-50/70 shadow-sm ring-1 ring-orange-100';
-                                                const defaultClasses = 'border-gray-200 hover:border-gray-300 bg-white';
+                                                    ? 'border-orange-500 bg-orange-50 shadow-sm'
+                                                    : 'border-orange-400 bg-orange-50/70 shadow-sm';
+                                                const defaultClasses = 'border-gray-200 bg-white hover:border-gray-300';
+
                                                 return (
                                                     <button
                                                         key={option.key}
@@ -1879,30 +1898,26 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         onClick={() => handleDateOptionChange(option.key)}
                                                         className={`${baseClasses} ${isSelected ? selectedClasses : defaultClasses}`}
                                                     >
-                                                        <div className="flex items-start justify-between">
-                                                            <div>
-                                                                <div className="flex items-center space-x-2">
-                                                                    {option.accent && <span className="inline-flex items-center rounded-full bg-orange-500 px-2 py-0.5 text-xs font-semibold text-white">BEST OFFER</span>}
-                                                                    <span className={`text-sm font-semibold ${option.accent ? 'text-orange-700' : 'text-gray-800'}`}>{option.title}</span>
-                                                                </div>
-                                                                <p className="mt-1 text-xs text-gray-600">{option.subtitle}</p>
+                                                        {option.accent && (
+                                                            <span className="absolute -top-3 left-3 inline-flex items-center rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white shadow">
+                                                                BEST OFFER
+                                                            </span>
+                                                        )}
+
+                                                        <div className="flex h-full flex-col items-center justify-center text-center">
+                                                            <div className="text-sm font-semibold text-gray-900">
+                                                                {option.title}
                                                             </div>
-                                                            {option.accent && (
-                                                                <span className="text-orange-500 text-xl">
-                                                                    <FaPiggyBank />
-                                                                </span>
-                                                            )}
+                                                            <div className="mt-2 text-sm text-gray-600 whitespace-pre-line">
+                                                                {option.subtitle}
+                                                            </div>
                                                         </div>
                                                     </button>
                                                 );
                                             })}
                                         </div>
-                                        {dateOption !== 'rehome' && (
-                                            <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-md px-3 py-2">
-                                                Cheapest price = Let ReHome choose. Pick “Best offer” for the lowest base charge if you can move within a 1–3 week window.
-                                            </p>
-                                        )}
                                     </div>
+
                                     {/* Show date pickers based on option */}
                                     {dateOption === 'flexible' && (
                                         <>

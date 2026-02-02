@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from './supaBase';
+import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-toastify';
 import useUserStore from '../services/state/useUserSessionStore';
 

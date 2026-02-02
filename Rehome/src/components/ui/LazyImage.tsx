@@ -138,6 +138,10 @@ const LazyImage: React.FC<LazyImageProps> = memo(({
 
   }, [isInView, src, fallbackSrc, onLoad, onError, quality]);
 
+  const motionImgExtraProps: any = {
+    fetchpriority: priority ? 'high' : 'auto',
+  };
+
   return (
     <div className={`relative overflow-hidden ${className}`} style={{ aspectRatio: '4/3' }}>
       <motion.img
@@ -150,7 +154,7 @@ const LazyImage: React.FC<LazyImageProps> = memo(({
         sizes={sizes}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
-        fetchPriority={priority ? 'high' : 'auto'}
+        {...motionImgExtraProps}
         initial={{ opacity: 0 }}
         animate={{ opacity: imageState === 'loaded' ? 1 : 0 }}
         transition={{ duration: 0.2 }}

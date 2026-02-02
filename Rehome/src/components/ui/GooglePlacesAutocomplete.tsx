@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { GooglePlaceObject } from '../../utils/locationServices';
+import { API_ENDPOINTS } from '../../lib/api/config';
 
 interface GooglePlacesAutocompleteProps {
   value: string;
@@ -17,50 +18,45 @@ export function GooglePlacesAutocomplete({
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API;
 
-  // Function to get place details including coordinates from placeId
+  // Function to get place details from backend proxy (with caching)
   const getPlaceDetails = async (placeId: string) => {
-    const response = await fetch(
-      'https://places.googleapis.com/v1/places/' + placeId,
-      {
+    try {
+      const response = await fetch(API_ENDPOINTS.PLACES.DETAILS(placeId), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'location,displayName,formattedAddress,addressComponents'
         }
+      });
+      
+      if (!response.ok) {
+        console.error('Place details API error:', response.status);
+        return null;
       }
-    );
-    const data = await response.json();
-    
-    console.log('[DEBUG] Google Places API response:', JSON.stringify(data, null, 2));
-    console.log('[DEBUG] addressComponents:', data.addressComponents);
-    
-    const countryComponent = data.addressComponents?.find(
-      (comp: any) => comp.types?.includes('country')
-    );
-    // Extract city from locality or administrative_area_level_2
-    const cityComponent = data.addressComponents?.find(
-      (comp: any) => comp.types?.includes('locality') || comp.types?.includes('administrative_area_level_2')
-    );
-    
-    const extractedCity = cityComponent?.longText || cityComponent?.long_name || cityComponent?.shortText || cityComponent?.short_name;
-    console.log('[DEBUG] Extracted city from Google Places:', extractedCity);
-    console.log('[DEBUG] cityComponent:', cityComponent);
-    
-    return {
-      placeId,
-      coordinates: data.location ? {
-        lat: data.location.latitude,
-        lng: data.location.longitude
-      } : null,
-      formattedAddress: data.formattedAddress,
-      displayName: data.displayName?.text,
-      countryCode: countryComponent?.shortText || countryComponent?.short_name,
-      countryName: countryComponent?.longText || countryComponent?.long_name,
-      city: extractedCity
-    };
+      
+      const data = await response.json();
+      
+      if (!data.success || !data.place) {
+        console.error('Place details failed:', data.error);
+        return null;
+      }
+      
+      console.log('[DEBUG] Place details from backend:', data.place);
+      
+      return {
+        placeId: data.place.placeId,
+        coordinates: data.place.coordinates,
+        formattedAddress: data.place.formattedAddress,
+        displayName: data.place.displayName,
+        countryCode: data.place.countryCode,
+        countryName: data.place.countryName,
+        city: data.place.city,
+        text: data.place.displayName || data.place.formattedAddress || ''
+      };
+    } catch (error) {
+      console.error('Place details error:', error);
+      return null;
+    }
   };
 
   const searchPlaces = async (query: string) => {
@@ -72,45 +68,46 @@ export function GooglePlacesAutocomplete({
 
     setIsLoading(true);
     try {
-      // Use the new Places API v1 autocomplete endpoint
-      const response = await fetch(
-        'https://places.googleapis.com/v1/places:autocomplete',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Goog-Api-Key': apiKey,
-            'X-Goog-FieldMask': 'suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat,suggestions.placePrediction.placeId'
-          },
-          body: JSON.stringify({
-            input: query,
+      // Use backend proxy for Places API (with caching)
+      const response = await fetch(API_ENDPOINTS.PLACES.AUTOCOMPLETE, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          options: {
             languageCode: 'en',
-            includedPrimaryTypes: ['geocode', 'establishment', 'street_address']
-          })
-        }
-      );
+            types: ['street_address', 'route', 'locality', 'postal_code']
+          }
+        })
+      });
 
       if (response.ok) {
         const data = await response.json();
         
-        if (data.suggestions) {
-          const placeSuggestions = data.suggestions
-            .filter((suggestion: any) => suggestion.placePrediction)
-            .map((suggestion: any) => ({
-              text: suggestion.placePrediction.text?.text || 'Unknown address',
-              placeId: suggestion.placePrediction.placeId,
-              structuredFormat: suggestion.placePrediction.structuredFormat
-            }));
+        if (data.success && data.suggestions) {
+          const placeSuggestions = data.suggestions.map((suggestion: any) => ({
+            text: suggestion.text || 'Unknown address',
+            placeId: suggestion.placeId,
+            mainText: suggestion.mainText,
+            secondaryText: suggestion.secondaryText
+          }));
             
           setSuggestions(placeSuggestions);
           setShowSuggestions(true);
+        } else {
+          console.error('Autocomplete failed:', data.error);
+          setSuggestions([]);
+          setShowSuggestions(false);
         }
       } else {
         console.error('Places API error:', response.status, response.statusText);
+        setSuggestions([]);
+        setShowSuggestions(false);
       }
     } catch (error) {
       console.error('Places API error:', error);
-      // Fallback to simple input
       setSuggestions([]);
       setShowSuggestions(false);
     } finally {

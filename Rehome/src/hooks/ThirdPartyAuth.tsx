@@ -1,4 +1,4 @@
-import { supabase } from "../hooks/supaBase";
+import { supabase } from "../lib/supabaseClient";
 import { useForm } from "react-hook-form";
 import { useToast } from "../components/ui/use-toast";
 import { zodResolver } from "@hookform/resolvers/zod";

@@ -1,4 +1,4 @@
-import { supabase } from '../hooks/supaBase';
+import { supabase } from '../lib/supabaseClient';
 
 export interface DaySchedule {
   scheduleDate: string;

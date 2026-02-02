@@ -52,26 +52,6 @@ const LandingPage = () => {
                     <MdCheckCircle className="text-orange-500 text-xl" />
                     Available everywhere in the Netherlands
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 text-gray-600">
-                    <div className="flex items-center gap-1 text-[#00B67A] text-xl">
-                      {[...Array(4)].map((_, idx) => (
-                        <FaStar key={idx} />
-                      ))}
-                      <FaStar className="text-gray-300" />
-                    </div>
-                    <p className="text-sm sm:text-base font-semibold text-gray-900">
-                      4.8 out of 5{" "}
-                      <span className="font-normal text-gray-500">Based on 49 reviews</span>
-                    </p>
-                    <a
-                      href="https://www.trustpilot.com/review/rehome.app"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 rounded-full border border-[#00B67A] bg-white/80 px-4 py-2 text-sm font-semibold text-[#00B67A] shadow-sm hover:bg-[#00B67A]/10 transition-colors"
-                    >
-                      Beoordeeld op <span className="font-bold">Trustpilot</span>
-                    </a>
-                  </div>
                 </div>
               </motion.div>
             </div>

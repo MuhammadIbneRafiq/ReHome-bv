@@ -1,12 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaEnvelope } from 'react-icons/fa';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabaseClient';
 import useUserStore from '../services/state/useUserSessionStore';
-
-// Create supabase client
-const SUPABASE_URL = "https://yhlenudckwewmejigxvl.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlobGVudWRja3dld21lamlneHZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyMTk0MDgsImV4cCI6MjA1Mjc5NTQwOH0.CaNKgZXfhkT9-FaGF5hhqQ3aavfUi32R-1ueew8B-S0";
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 interface MessageNotificationsProps {
   onClick?: () => void;

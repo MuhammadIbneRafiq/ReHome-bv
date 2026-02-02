@@ -1,9 +1,9 @@
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'react-hot-toast';
+import API_ENDPOINTS from '../lib/api/config';
 
-// API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.MODE === 'development' ? 'http://localhost:3000' : 'https://rehome-backend.vercel.app');
+// Extract base URL from API_ENDPOINTS
+const API_BASE_URL = API_ENDPOINTS.AUTH.LOGIN.replace('/api/auth/login', '');
 
 // List of admin email addresses - keep in sync with other admin files
 const ADMIN_EMAILS = [

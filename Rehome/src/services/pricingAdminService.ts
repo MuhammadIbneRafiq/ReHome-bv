@@ -9,13 +9,12 @@ import {
   UpdatePricingConfigRequest,
   PricingResponse 
 } from '../types/pricing';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://rehome-backend.vercel.app';
+import API_ENDPOINTS from '../lib/api/config';
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('accessToken');
-  console.log('🔐 PricingAdminService - Token being sent:', token?.substring(0, 50) + '...');
-  console.log('🔐 PricingAdminService - Token exists:', !!token);
+  console.log(' PricingAdminService - Token being sent:', token?.substring(0, 50) + '...');
+  console.log(' PricingAdminService - Token exists:', !!token);
   
   // Decode and log the JWT to see what's in it
   if (token) {
@@ -23,14 +22,14 @@ const getAuthHeaders = () => {
       const parts = token.split('.');
       if (parts.length === 3) {
         const payload = JSON.parse(atob(parts[1]));
-        console.log('🔐 JWT payload:', { 
+        console.log(' JWT payload:', { 
           email: payload.email, 
           role: payload.role, 
           exp: payload.exp ? new Date(payload.exp * 1000) : 'No expiry'
         });
       }
     } catch (e) {
-      console.log('🔐 Failed to decode JWT:', e);
+      console.log(' Failed to decode JWT:', e);
     }
   }
   
@@ -39,7 +38,7 @@ const getAuthHeaders = () => {
     'Authorization': `Bearer ${token}`,
   };
   
-  console.log('🔐 Request headers:', headers);
+  console.log(' Request headers:', headers);
   return headers;
 };
 
@@ -49,7 +48,7 @@ class PricingAdminService {
    */
   async getPricingConfigs(): Promise<PricingConfig[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-configs`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.PRICING_CONFIGS}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -72,7 +71,7 @@ class PricingAdminService {
    */
   async createPricingConfig(config: CreatePricingConfigRequest): Promise<PricingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-configs`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.PRICING_CONFIGS}`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(config)
@@ -94,7 +93,7 @@ class PricingAdminService {
    */
   async updatePricingConfig(id: string, updates: UpdatePricingConfigRequest): Promise<PricingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-configs/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.PRICING_CONFIG(id)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(updates)
@@ -116,7 +115,7 @@ class PricingAdminService {
    */
   async deletePricingConfig(id: string): Promise<PricingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-configs/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.PRICING_CONFIG(id)}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
@@ -139,7 +138,7 @@ class PricingAdminService {
    */
   async getCityBasePrices(): Promise<CityBasePrice[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/city-prices`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.CITY_PRICES}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -162,7 +161,7 @@ class PricingAdminService {
    */
   async updateCityBasePrice(id: string, updates: Partial<CityBasePrice>): Promise<PricingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/city-prices/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.CITY_PRICE(id)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(updates)
@@ -186,7 +185,7 @@ class PricingAdminService {
    */
   async getPricingMultipliers(): Promise<PricingMultiplier[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-multipliers`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.PRICING_MULTIPLIERS}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -209,7 +208,7 @@ class PricingAdminService {
    */
   async updatePricingMultiplier(id: string, updates: Partial<PricingMultiplier>): Promise<PricingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/pricing-multipliers/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.PRICING_MULTIPLIER(id)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(updates)
@@ -233,7 +232,7 @@ class PricingAdminService {
    */
   async getFurnitureItems(): Promise<any[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/furniture-items`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.FURNITURE_ITEMS}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -256,7 +255,7 @@ class PricingAdminService {
    */
   async createFurnitureItem(item: any): Promise<PricingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/furniture-items`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.FURNITURE_ITEMS}`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(item)
@@ -278,7 +277,7 @@ class PricingAdminService {
    */
   async updateFurnitureItem(id: string, updates: any): Promise<PricingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/furniture-items/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.FURNITURE_ITEM(id)}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         body: JSON.stringify(updates)
@@ -300,7 +299,7 @@ class PricingAdminService {
    */
   async deleteFurnitureItem(id: string): Promise<PricingResponse> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/admin/furniture-items/${id}`, {
+      const response = await fetch(`${API_ENDPOINTS.ADMIN.FURNITURE_ITEM(id)}`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
       });
