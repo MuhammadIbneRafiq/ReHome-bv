@@ -45,24 +45,24 @@ const TrustpilotBanner = () => {
   }, []);
 
   return (
-    <div className="bg-white py-6 sm:py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col items-center gap-4">
+    <div className="bg-white py-4 sm:py-6 w-full">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-center gap-6 flex-wrap">
           {/* Rating Display */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-1">
               {[...Array(5)].map((_, i) => (
                 <FaStar 
                   key={i} 
                   className={i < Math.floor(4.6) ? 'text-[#00b67a]' : 'text-gray-300'} 
-                  size={24}
+                  size={20}
                 />
               ))}
             </div>
-            <span className="text-lg font-semibold text-gray-900">
+            <span className="text-base font-semibold text-gray-900 whitespace-nowrap">
               4.8 out of 5
             </span>
-            <span className="text-gray-600">
+            <span className="text-gray-600 whitespace-nowrap">
               Based on <span className="font-semibold">49 reviews</span>
             </span>
           </div>
@@ -70,12 +70,12 @@ const TrustpilotBanner = () => {
           {/* TrustBox widget - Review Collector */}
           <div 
             id="trustpilot-widget"
-            className="trustpilot-widget" 
+            className="trustpilot-widget flex-shrink-0" 
             data-locale="nl-NL" 
             data-template-id="56278e9abfbbba0bdcd568bc" 
             data-businessunit-id="684d9a7a6deaf67934e33945" 
             data-style-height="52px" 
-            data-style-width="100%"
+            data-style-width="300px"
           >
             <a href="https://nl.trustpilot.com/review/rehomebv.com" target="_blank" rel="noopener">Trustpilot</a>
           </div>
@@ -85,4 +85,4 @@ const TrustpilotBanner = () => {
   );
 };
 
-export default TrustpilotBanner; 
+export default TrustpilotBanner;

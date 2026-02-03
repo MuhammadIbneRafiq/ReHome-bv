@@ -234,20 +234,20 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     };
 
     // Helper to check if date is within short-term window and show warning
-    const checkShortTermDate = React.useCallback((dateStr: string) => {
-        if (!dateStr) return;
-        const selectedDate = new Date(dateStr);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const diffDays = Math.ceil((selectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    // const checkShortTermDate = React.useCallback((dateStr: string) => {
+    //     if (!dateStr) return;
+    //     const selectedDate = new Date(dateStr);
+    //     const today = new Date();
+    //     today.setHours(0, 0, 0, 0);
+    //     const diffDays = Math.ceil((selectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         
-        if (diffDays <= 3 && diffDays >= 0) {
-            toast.warning(
-                "LAST MINUTE REQUEST! Please check other days to receive a cheaper service.",
-                { autoClose: 5000, toastId: 'last-minute-warning' }
-            );
-        }
-    }, []);
+    //     if (diffDays <= 3 && diffDays >= 0) {
+    //         toast.warning(
+    //             "LAST MINUTE REQUEST! Please check other days to receive a cheaper service.",
+    //             { autoClose: 5000, toastId: 'last-minute-warning' }
+    //         );
+    //     }
+    // }, []);
 
     // New: separate carrying directions
     const [carryingUpstairs, setCarryingUpstairs] = useState(false);
@@ -738,6 +738,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             };
             
             console.log('[DEBUG] ====== PRICING REQUEST ======');
+            console.log('here is hte pickupplace', pickupPlace)
             console.log('[DEBUG] Full pricingInput:', JSON.stringify(pricingInput, null, 2));
             console.log('[DEBUG] pickupPlace city field:', pickupPlace?.city);
             console.log('[DEBUG] dropoffPlace city field:', dropoffPlace?.city);
@@ -1384,11 +1385,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         <span>Base Price:</span>
                         <span>€{pricingBreakdown.basePrice.toFixed(2)}</span>
                     </div>
-                    {pricingBreakdown.breakdown.baseCharge.city && (
-                        <div className="text-xs text-gray-500 ml-4">
-                            {pricingBreakdown.breakdown.baseCharge.type}
-                        </div>
-                    )}
                     {/* Items Section - Show detailed breakdown */}
                     <div className="border-t pt-3">
                         <div className="flex justify-between font-medium">
@@ -1557,11 +1553,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         <span>Base Price:</span>
                         <span>€{pricingBreakdown.basePrice.toFixed(2)}</span>
                     </div>
-                    {pricingBreakdown.breakdown.baseCharge.city && (
-                        <div className="text-xs text-gray-500 ml-4">
-                            {pricingBreakdown.breakdown.baseCharge.type}
-                        </div>
-                    )}
                     {/* Items Section - Show detailed breakdown */}
                     <div className="border-t pt-3">
                         <div className="flex justify-between font-medium">
@@ -1932,16 +1923,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         )}
 
                                                         <div className="flex h-full flex-col items-start justify-center text-left px-2">
-                                                            <div className="flex items-center gap-2 mb-2">
+                                                            <div className="flex items-center justify-between mb-2 w-full">
+                                                                <div className="text-sm font-semibold text-gray-900">
+                                                                    {option.title}
+                                                                </div>
                                                                 {option.icon === 'both' && (
                                                                     <div className="flex items-center gap-1">
                                                                         <FaPiggyBank className="text-orange-500 text-lg" />
                                                                         <FaLeaf className="text-green-500 text-lg" />
                                                                     </div>
                                                                 )}
-                                                                <div className="text-sm font-semibold text-gray-900">
-                                                                    {option.title}
-                                                                </div>
                                                             </div>
                                                             <div className="text-sm text-gray-600 whitespace-pre-line">
                                                                 {option.subtitle}
@@ -1987,7 +1978,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 <>
                                     <EnhancedDatePickerInline
                                         value={pickupDate}
-                                        onChange={(iso: string) => { setPickupDate(iso); checkShortTermDate(iso); }}
+                                        // onChange={(iso: string) => { setPickupDate(iso); checkShortTermDate(iso); }}
+                                        onChange={(iso: string) => { setPickupDate(iso); }}
                                         pickupPlace={pickupPlace}
                                         dropoffPlace={dropoffPlace}
                                         serviceType={serviceType}
@@ -1998,7 +1990,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     />
                                     <EnhancedDatePickerInline
                                         value={dropoffDate}
-                                        onChange={(iso: string) => { setDropoffDate(iso); checkShortTermDate(iso); }}
+                                        // onChange={(iso: string) => { setDropoffDate(iso); checkShortTermDate(iso); }}
+                                        onChange={(iso: string) => { setDropoffDate(iso); }}
                                         pickupPlace={pickupPlace}
                                         dropoffPlace={dropoffPlace}
                                         serviceType={serviceType}
@@ -2012,7 +2005,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                 // House moving: Show only one date
                                 <EnhancedDatePickerInline
                                     value={selectedDateRange.start}
-                                    onChange={(iso: string) => { setSelectedDateRange({ start: iso, end: '' }); checkShortTermDate(iso); }}
+                                    // onChange={(iso: string) => { setSelectedDateRange({ start: iso, end: '' }); checkShortTermDate(iso); }}
+                                    onChange={(iso: string) => { setSelectedDateRange({ start: iso, end: '' }); }}
                                     pickupPlace={pickupPlace}
                                     dropoffPlace={dropoffPlace}
                                     serviceType={serviceType}

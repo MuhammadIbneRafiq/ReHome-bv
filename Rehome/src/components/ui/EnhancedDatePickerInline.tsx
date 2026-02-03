@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { findClosestSupportedCity } from '../../utils/locationServices';
-import { getMonthSchedule, DaySchedule } from '../../services/scheduleService';
-import { getBlockedDatesForCalendar, BlockedDate } from '../../services/blockedDatesService';
-import { cityBaseCharges } from '../../lib/constants';
+import { getMonthPricing } from '../../services/monthPricingService';
 import { GooglePlaceObject } from '../../utils/locationServices';
 
 interface EnhancedDatePickerProps {
@@ -25,7 +23,7 @@ interface DayInfo {
     isEmpty: boolean;
     basePrice: number;
     priceType: string;
-    isGreen: boolean;
+    colorCode: 'green' | 'orange' | 'red' | 'grey';
     assignedCities: string[];
     isBlocked: boolean;
 }
@@ -55,11 +53,10 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
     const initial = value ? new Date(value) : new Date();
     const [currentYear, setCurrentYear] = useState<number>(initial.getFullYear());
     const [currentMonth, setCurrentMonth] = useState<number>(initial.getMonth());
-    const [selectedDayInfo, setSelectedDayInfo] = useState<DayInfo | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [dayInfos, setDayInfos] = useState<Map<string, DayInfo>>(new Map());
-    const [scheduleData, setScheduleData] = useState<Map<string, DaySchedule>>(new Map());
-    const [blockedDates, setBlockedDates] = useState<Set<string>>(new Set());
+    const [pickupCity, setPickupCity] = useState<string | null>(null);
+    const [dropoffCity, setDropoffCity] = useState<string | null>(null);
 
     const daysInMonth = getDaysInMonth(currentYear, currentMonth);
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
@@ -70,132 +67,74 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Load schedule data and blocked dates for the month
+    // Find closest cities when places change
     useEffect(() => {
-        const loadData = async () => {
-            setIsLoading(true);
-            try {
-                const startDate = new Date(currentYear, currentMonth, 1);
-                const endDate = new Date(currentYear, currentMonth + 1, 0);
-                const startDateStr = formatISO(startDate);
-                const endDateStr = formatISO(endDate);
-
-                const [monthSchedule, blockedDatesData] = await Promise.all([
-                    getMonthSchedule(currentYear, currentMonth),
-                    getBlockedDatesForCalendar(startDateStr, endDateStr)
-                ]);
-
-                setScheduleData(monthSchedule);
-                
-                // Create a set of blocked date strings for quick lookup
-                const blockedSet = new Set<string>();
-                blockedDatesData.forEach((bd: BlockedDate) => {
-                    blockedSet.add(bd.date);
-                });
-                setBlockedDates(blockedSet);
-            } catch (error) {
-                console.error('[EnhancedDatePicker] Error loading data:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadData();
-    }, [currentYear, currentMonth]);
-
-    // Calculate day infos when places or schedule data changes
-    useEffect(() => {
-        const calculateDayInfos = async () => {
-            if (!pickupPlace || !dropoffPlace || scheduleData.size === 0) {
-                setDayInfos(new Map());
+        const findCities = async () => {
+            if (!pickupPlace || !dropoffPlace) {
+                setPickupCity(null);
+                setDropoffCity(null);
                 return;
             }
 
-            const pickupCityResult = await findClosestSupportedCity(pickupPlace);
-            const dropoffCityResult = await findClosestSupportedCity(dropoffPlace);
-            
-            const pickupCity = pickupCityResult.city;
-            const dropoffCity = dropoffCityResult.city;
-            
+            const [pickupResult, dropoffResult] = await Promise.all([
+                findClosestSupportedCity(pickupPlace),
+                findClosestSupportedCity(dropoffPlace)
+            ]);
+
+            setPickupCity(pickupResult.city);
+            setDropoffCity(dropoffResult.city);
+        };
+
+        findCities();
+    }, [pickupPlace, dropoffPlace]);
+
+    // Load month pricing from backend API (cached)
+    useEffect(() => {
+        const loadMonthPricing = async () => {
             if (!pickupCity || !dropoffCity) {
                 setDayInfos(new Map());
                 return;
             }
 
-            const newDayInfos = new Map<string, DayInfo>();
-
+            setIsLoading(true);
             try {
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const date = new Date(currentYear, currentMonth, day);
-                    const dateStr = formatISO(date);
+                const pricingData = await getMonthPricing(currentYear, currentMonth, pickupCity, dropoffCity);
+                
+                const newDayInfos = new Map<string, DayInfo>();
+                
+                for (const [dateStr, pricing] of pricingData) {
+                    const date = new Date(dateStr);
                     
-                    const daySchedule = scheduleData.get(dateStr);
-                    
-                    // Check if EITHER pickup or dropoff city is scheduled
-                    const pickupScheduled = daySchedule?.assignedCities.includes(pickupCity) || false;
-                    const dropoffScheduled = daySchedule?.assignedCities.includes(dropoffCity) || false;
-                    const isCityDay = pickupScheduled || dropoffScheduled;
-                    
-                    // Empty is STRICTLY from the global empty check (no cities assigned at all)
-                    const isEmpty = daySchedule?.isEmpty ?? true;
-                    const assignedCities = daySchedule?.assignedCities || [];
-                    
-                    let basePrice = 0;
-                    let priceType = '';
-                    
-                    if (pickupCity === dropoffCity) {
-                        if (isCityDay || isEmpty) {
-                            basePrice = cityBaseCharges[pickupCity]?.cityDay || 0;
-                            priceType = 'City Day Rate';
-                        } else {
-                            basePrice = cityBaseCharges[pickupCity]?.normal || 0;
-                            priceType = 'Standard Rate';
-                        }
-                    } else {
-                        if (isCityDay || isEmpty) {
-                            const pickupPrice = cityBaseCharges[pickupCity]?.cityDay || 0;
-                            const dropoffPrice = cityBaseCharges[dropoffCity]?.normal || 0;
-                            basePrice = (pickupPrice + dropoffPrice) / 2;
-                            priceType = 'Intercity Rate (City Day)';
-                        } else {
-                            basePrice = cityBaseCharges[pickupCity]?.normal || 0;
-                            priceType = 'Intercity Rate';
-                        }
-                    }
-
-                    const isBlocked = blockedDates.has(dateStr);
-                    const isGreen = (isCityDay || isEmpty) && !isBlocked;
-
                     newDayInfos.set(dateStr, {
-                        day,
+                        day: date.getDate(),
                         date,
-                        isCityDay,
-                        isEmpty,
-                        basePrice,
-                        priceType,
-                        isGreen,
-                        assignedCities,
-                        isBlocked
+                        isCityDay: pricing.isCityDay,
+                        isEmpty: pricing.isEmpty,
+                        basePrice: pricing.basePrice,
+                        priceType: pricing.priceType,
+                        colorCode: pricing.isBlocked ? 'grey' : pricing.colorCode,
+                        assignedCities: pricing.assignedCities,
+                        isBlocked: pricing.isBlocked
                     });
                 }
+                
+                setDayInfos(newDayInfos);
+                console.log('[EnhancedDatePicker] Loaded', newDayInfos.size, 'days from backend');
             } catch (error) {
-                console.error('[EnhancedDatePicker] Error calculating day infos:', error);
+                console.error('[EnhancedDatePicker] Error loading month pricing:', error);
+                setDayInfos(new Map());
+            } finally {
+                setIsLoading(false);
             }
-
-            setDayInfos(newDayInfos);
         };
 
-        calculateDayInfos();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentYear, currentMonth, pickupPlace, dropoffPlace, scheduleData, blockedDates]);
+        loadMonthPricing();
+    }, [currentYear, currentMonth, pickupCity, dropoffCity]);
 
     const handleSelect = (day: number) => {
         const date = new Date(currentYear, currentMonth, day);
         const dateStr = formatISO(date);
         onChange(dateStr);
-        
-        const dayInfo = dayInfos.get(dateStr);
-        setSelectedDayInfo(dayInfo || null);
         
         // Close calendar after selection
         if (onOpenChange) {
@@ -253,7 +192,7 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
 
             {/* Inline Calendar (shown when isOpen is true) */}
             {isOpen && (
-                <div className="w-full bg-white border border-gray-200 rounded-lg shadow-lg p-4 mb-4 animate-fadeIn">
+                <div className="w-full bg-white border border-gray-200 rounded-lg shadow-lg p-6 mb-4 animate-fadeIn">
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <button 
@@ -301,112 +240,57 @@ export const EnhancedDatePickerInline: React.FC<EnhancedDatePickerProps> = ({
                                 const tooltipText = dayInfo
                                     ? dayInfo.isBlocked
                                         ? 'Date blocked - Unavailable for booking'
-                                        : dayInfo.isGreen
-                                            ? `${dayInfo.priceType}: €${dayInfo.basePrice}${dayInfo.assignedCities.length > 0 ? `\nCities: ${dayInfo.assignedCities.join(', ')}` : ''}`
-                                            : `Expensive day for pickup/dropoff cities${dayInfo.assignedCities.length > 0 ? `\nServing: ${dayInfo.assignedCities.join(', ')}` : ''}`
+                                        : `${dayInfo.priceType}: €${dayInfo.basePrice}${dayInfo.assignedCities.length > 0 ? `\nCities: ${dayInfo.assignedCities.join(', ')}` : ''}`
                                     : 'Loading...';
+
+                                // Get background/border classes based on colorCode
+                                const getColorClasses = () => {
+                                    if (isSelected) return 'bg-blue-500 text-white border-blue-500';
+                                    if (dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day ?? undefined) < today)) {
+                                        return 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed line-through';
+                                    }
+                                    switch (dayInfo?.colorCode) {
+                                        case 'green': return 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200';
+                                        case 'orange': return 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200';
+                                        case 'red': return 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100';
+                                        default: return 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200';
+                                    }
+                                };
+
+                                // Get price sticker gradient based on colorCode
+                                const getStickerClasses = () => {
+                                    switch (dayInfo?.colorCode) {
+                                        case 'green': return 'bg-gradient-to-r from-green-500 to-green-600 text-white';
+                                        case 'orange': return 'bg-gradient-to-r from-orange-400 to-orange-500 text-white';
+                                        case 'red': return 'bg-gradient-to-r from-red-400 to-red-500 text-white';
+                                        default: return 'bg-gray-400 text-white';
+                                    }
+                                };
 
                                 return (
                                     <button
                                         key={idx}
                                         type="button"
                                         onClick={() => handleSelect(c.day!)}
-                                        disabled={isLoading || dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day) < today)}
-                                        className={`p-2 text-sm rounded-full text-center relative transition-colors border
-                                            ${isSelected ? 'bg-blue-500 text-white border-blue-500' : 
-                                              dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day) < today) ? 'bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed line-through' :
-                                              dayInfo?.isGreen ? 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200' : 
-                                              'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'}
-                                            ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        disabled={isLoading || dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day ?? undefined) < today)}
+                                        className={`p-2 text-sm rounded-full text-center relative transition-colors border ${getColorClasses()} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         title={tooltipText}
                                     >
                                         {c.day}
-                                        {!dayInfo?.isBlocked && dayInfo?.isCityDay && (
-                                            <div className="absolute top-0 right-0 w-2 h-2 bg-green-600 rounded-full"></div>
+                                        {dayInfo && !dayInfo.isBlocked && !(new Date(currentYear, currentMonth, c.day ?? undefined) < today) && (
+                                            <div className={`absolute -top-3 -right-3 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border-2 border-white ${getStickerClasses()}`}>
+                                                €{dayInfo.basePrice}
+                                            </div>
                                         )}
-                                        {!dayInfo?.isBlocked && dayInfo?.isEmpty && !dayInfo?.isCityDay && (
-                                            <div className="absolute top-0 right-0 w-2 h-2 bg-blue-500 rounded-full"></div>
-                                        )}
-                                        {!dayInfo?.isBlocked && dayInfo && !dayInfo.isGreen && (
-                                            <div className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></div>
-                                        )}
-                                        {(dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day) < today)) && (
-                                            <div className="absolute top-0 right-0 w-2 h-2 bg-gray-500 rounded-full"></div>
+                                        {(dayInfo?.isBlocked || (new Date(currentYear, currentMonth, c.day ?? undefined) < today)) && (
+                                            <div className="absolute -top-3 -right-3 bg-gray-400 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border-2 border-white">
+                                                ✕
+                                            </div>
                                         )}
                                     </button>
                                 );
                             })}
                         </div>
-
-                        {/* <div className="text-xs text-gray-600 space-y-1">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-                                <span>City Day / Empty Day (Lower Price)</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                                <span>Scheduled City Day</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span>Empty Calendar Day</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-red-50 border border-red-300 rounded"></div>
-                                <span>Expensive Day (No City Match)</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-gray-200 border border-gray-400 rounded line-through"></div>
-                                <span>Blocked Date (Unavailable)</span>
-                            </div>
-                        </div> */}
-
-                        {selectedDayInfo && (
-                            <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                <h4 className="font-medium text-blue-900 mb-2">
-                                    {selectedDayInfo.date.toLocaleDateString('en-US', { 
-                                        weekday: 'long', 
-                                        year: 'numeric', 
-                                        month: 'long', 
-                                        day: 'numeric' 
-                                    })}
-                                </h4>
-                                <div className="space-y-1 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-blue-700">Base Price:</span>
-                                        <span className="font-semibold text-blue-900">€{selectedDayInfo.basePrice}</span>
-                                    </div>
-                                    <div className="text-blue-600">
-                                        {selectedDayInfo.priceType}
-                                    </div>
-                                    {selectedDayInfo.assignedCities.length > 0 && (
-                                        <div className="text-sm text-gray-700 mt-2">
-                                            <span className="font-medium">Assigned Cities:</span>
-                                            <div className="flex flex-wrap gap-1 mt-1">
-                                                {selectedDayInfo.assignedCities.map((city) => (
-                                                    <span 
-                                                        key={city} 
-                                                        className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs"
-                                                    >
-                                                        {city}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                    {selectedDayInfo.isCityDay && (
-                                        <div className="text-green-600 font-medium">
-                                            ✓ City Day - Best Price Available
-                                        </div>
-                                    )}
-                                    {selectedDayInfo.isEmpty && !selectedDayInfo.isCityDay && (
-                                        <div className="text-blue-600 font-medium">
-                                            ✓ Empty Calendar - Good Price
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             )}

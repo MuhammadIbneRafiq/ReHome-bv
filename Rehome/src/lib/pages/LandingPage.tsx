@@ -7,6 +7,7 @@ import { MdCheckCircle, } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import FeaturedItems from "../../components/marketplace/FeaturedItems";
+import TrustpilotBanner from "../../components/TrustpilotBanner";
 
 const LandingPage = () => {
   const { t } = useTranslation();
@@ -51,6 +52,7 @@ const LandingPage = () => {
                     <MdCheckCircle className="text-orange-500 text-xl" />
                     Available everywhere in the Netherlands
                   </div>
+                  <TrustpilotBanner />
                 </div>
               </motion.div>
             </div>
