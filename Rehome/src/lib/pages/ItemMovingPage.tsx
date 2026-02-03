@@ -143,8 +143,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     });
     const [firstLocation, setFirstLocation] = useState('');
     const [secondLocation, setSecondLocation] = useState('');
-    const [floorPickup, setFloorPickup] = useState('');
-    const [floorDropoff, setFloorDropoff] = useState('');
+    const [floorPickup, setFloorPickup] = useState(0);
+    const [floorDropoff, setFloorDropoff] = useState(0);
 
     const [selectedDateRange, setSelectedDateRange] = useState({ start: '', end: '' });
     const [pickupDate, setPickupDate] = useState('');
@@ -721,8 +721,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 // Carrying directions: 
                 // - Downstairs: items going down at pickup location (use floorPickup)
                 // - Upstairs: items going up at dropoff location (use floorDropoff)
-                floorPickup: carryingDownstairs ? (parseInt(floorPickup) || 0) : 0,
-                floorDropoff: carryingUpstairs ? (parseInt(floorDropoff) || 0) : 0,
+                floorPickup: carryingDownstairs ? (floorPickup || 0) : 0,
+                floorDropoff: carryingUpstairs ? (floorDropoff || 0) : 0,
                 elevatorPickup,
                 elevatorDropoff,
                 assemblyItems: assemblyItems,
@@ -1196,8 +1196,8 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             formData.append("businessType", isBusiness ? (businessType || 'euro-pallet') : '');
             formData.append("pickupLocation", JSON.stringify(pickupPlace));
             formData.append("dropoffLocation", JSON.stringify(dropoffPlace));
-            formData.append("pickupFloors", floorPickup);
-            formData.append("dropoffFloors", floorDropoff);
+            formData.append("pickupFloors", floorPickup.toString());
+            formData.append("dropoffFloors", floorDropoff.toString());
             formData.append("hasElevatorPickup", elevatorPickup.toString());
             formData.append("hasElevatorDropoff", elevatorDropoff.toString());
             formData.append("items", JSON.stringify(itemList));
@@ -1405,7 +1405,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         </div>
                     )}
                     {/* Elevator discount explanation */}
-                    {pricingBreakdown.carryingCost > 0 && ((elevatorPickup && parseInt(floorPickup) > 1) || (elevatorDropoff && parseInt(floorDropoff) > 1)) && (
+                    {pricingBreakdown.carryingCost > 0 && ((elevatorPickup && floorPickup > 1) || (elevatorDropoff && floorDropoff > 1)) && (
                         <div className="text-xs text-green-700 ml-6">
                             <span>Elevator discount applied.</span>
                         </div>
@@ -1578,7 +1578,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         </div>
                     )}
                     {/* Elevator discount explanation */}
-                    {pricingBreakdown.carryingCost > 0 && ((elevatorPickup && parseInt(floorPickup) > 1) || (elevatorDropoff && parseInt(floorDropoff) > 1)) && (
+                    {pricingBreakdown.carryingCost > 0 && ((elevatorPickup && floorPickup > 1) || (elevatorDropoff && floorDropoff > 1)) && (
                         <div className="text-xs text-green-700 ml-6">
                             <span>Elevator discount applied.</span>
                         </div>
@@ -1815,7 +1815,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         type="number"
                                                         min="0"
                                                         value={floorPickup}
-                                                        onChange={(e) => setFloorPickup(e.target.value)}
+                                                        onChange={(e) => setFloorPickup(Math.max(0, parseInt(e.target.value) || 0))}
                                                         placeholder="Floor number"
                                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                                     />
@@ -1849,7 +1849,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                         type="number"
                                                         min="0"
                                                         value={floorDropoff}
-                                                        onChange={(e) => setFloorDropoff(e.target.value)}
+                                                        onChange={(e) => setFloorDropoff(Math.max(0, parseInt(e.target.value) || 0))}
                                                         placeholder="Floor number"
                                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-2 border"
                                                     />
