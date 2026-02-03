@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaWhatsapp } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaWhatsapp, FaPiggyBank, FaLeaf } from "react-icons/fa";
 import { loadGoogleMapsAPI } from '../../utils/googleMapsLoader';
 import { supabase } from '../supabaseClient';
 import { Switch } from "@headlessui/react";
@@ -1904,12 +1904,12 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                     </p>
                                     {/* Date Option Dropdown */}
                                     <div className="mb-4 space-y-3">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Date Option</label>
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-3">Choose Your Date Preference</h3>
                                         <div className="grid gap-4 sm:grid-cols-3">
                                             {([
-                                                { key: 'rehome', title: 'Let ReHome choose', subtitle: 'ReHome will suggest suitable\ndate options', accent: true },
-                                                { key: 'flexible', title: 'Flexible Range', subtitle: 'Select a date range', accent: false },
-                                                { key: 'fixed', title: 'Fixed Date', subtitle: 'You choose the exact date', accent: false },
+                                                { key: 'rehome', title: 'Let ReHome choose', subtitle: 'ReHome will suggest suitable\ndate options', accent: true, icon: 'both' },
+                                                { key: 'flexible', title: 'Flexible Range', subtitle: 'Select a date range', accent: false, icon: null },
+                                                { key: 'fixed', title: 'Fixed Date', subtitle: 'You choose the exact date', accent: false, icon: null },
                                             ] as const).map(option => {
                                                 const isSelected = dateOption === option.key;
                                                 const baseClasses = 'relative w-full h-full rounded-md border px-4 py-5 transition focus:outline-none';
@@ -1931,11 +1931,19 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                             </span>
                                                         )}
 
-                                                        <div className="flex h-full flex-col items-center justify-center text-center">
-                                                            <div className="text-sm font-semibold text-gray-900">
-                                                                {option.title}
+                                                        <div className="flex h-full flex-col items-start justify-center text-left px-2">
+                                                            <div className="flex items-center gap-2 mb-2">
+                                                                {option.icon === 'both' && (
+                                                                    <div className="flex items-center gap-1">
+                                                                        <FaPiggyBank className="text-orange-500 text-lg" />
+                                                                        <FaLeaf className="text-green-500 text-lg" />
+                                                                    </div>
+                                                                )}
+                                                                <div className="text-sm font-semibold text-gray-900">
+                                                                    {option.title}
+                                                                </div>
                                                             </div>
-                                                            <div className="mt-2 text-sm text-gray-600 whitespace-pre-line">
+                                                            <div className="text-sm text-gray-600 whitespace-pre-line">
                                                                 {option.subtitle}
                                                             </div>
                                                         </div>

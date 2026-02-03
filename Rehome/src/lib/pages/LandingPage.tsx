@@ -7,7 +7,6 @@ import { MdCheckCircle, } from "react-icons/md";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import FeaturedItems from "../../components/marketplace/FeaturedItems";
-import TrustpilotBanner from "../../components/TrustpilotBanner";
 
 const LandingPage = () => {
   const { t } = useTranslation();
@@ -137,8 +136,6 @@ const LandingPage = () => {
           </div>
         )}
       </div>
-
-      <TrustpilotBanner />
 
       {/* Services Section */}
       <div className="py-16 bg-orange-50">
