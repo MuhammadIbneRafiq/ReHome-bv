@@ -1239,16 +1239,43 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
 
             // Add student ID file if provided
             if (isStudent && studentId) {
+                console.log('[FRONTEND] Adding student ID:', studentId.name, studentId.size, 'bytes');
                 formData.append("studentId", studentId);
+            } else {
+                console.log('[FRONTEND] No student ID to upload');
+            }
+
+            // Add store proof photo if pickup type is store
+            if (pickupType === 'store' && storeProofPhoto) {
+                console.log('[FRONTEND] Adding store proof photo:', storeProofPhoto.name, storeProofPhoto.size, 'bytes');
+                formData.append("storeProofPhoto", storeProofPhoto);
+            } else {
+                console.log('[FRONTEND] No store proof photo to upload');
             }
 
             // Add item photos if available
+            console.log('[FRONTEND] Item photos count:', itemPhotos.length);
             if (itemPhotos.length > 0) {
-                itemPhotos.forEach((photo) => {
+                itemPhotos.forEach((photo, index) => {
                     if (photo instanceof File) {
+                        console.log(`[FRONTEND] Adding item photo ${index + 1}:`, photo.name, photo.size, 'bytes');
                         formData.append("itemImages", photo);
+                    } else {
+                        console.warn(`[FRONTEND] Item photo ${index + 1} is not a File:`, photo);
                     }
                 });
+            } else {
+                console.log('[FRONTEND] No item photos to upload');
+            }
+            
+            // Log all FormData entries
+            console.log('[FRONTEND] FormData entries:');
+            for (const [key, value] of formData.entries()) {
+                if (value instanceof File) {
+                    console.log(`  ${key}: File(${value.name}, ${value.size} bytes)`);
+                } else {
+                    console.log(`  ${key}: ${typeof value === 'string' ? value.substring(0, 50) : value}`);
+                }
             }
 
             // Submit to backend API which handles Supabase storage

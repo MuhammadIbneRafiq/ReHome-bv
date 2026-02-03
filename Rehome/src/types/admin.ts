@@ -1,16 +1,60 @@
-// Transportation request interface
+// Transportation request interface - matches transportation_requests table
 export interface TransportRequest {
     id: string;
     order_number: string;
     created_at: string;
-    customer_email: string;
     customer_name: string;
+    email: string;
     city: string;
     date: string;
     status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'Open' | 'Contacted/ Pending' | 'Confirmed' | 'Completed' | 'Declined';
     notes?: string;
-    type: 'item-moving' | 'house-moving';
-    // Additional fields from Supabase
+    type: 'item-transport' | 'house-moving';
+    
+    // New unified table fields (from transportation_requests)
+    phone?: string;
+    pickup_location?: {
+      displayName?: string;
+      formattedAddress?: string;
+      coordinates?: { lat: number; lng: number };
+    };
+    dropoff_location?: {
+      displayName?: string;
+      formattedAddress?: string;
+      coordinates?: { lat: number; lng: number };
+    };
+    selected_date?: string;
+    items?: any[];
+    service_type?: string;
+    has_student_id?: boolean;
+    student_id_url?: string;
+    store_proof_url?: string;
+    needs_assembly?: boolean;
+    needs_extra_helper?: boolean;
+    pickup_floors?: number;
+    dropoff_floors?: number;
+    has_elevator_pickup?: boolean;
+    has_elevator_dropoff?: boolean;
+    special_instructions?: string;
+    item_image_urls?: string[];
+    pricing_breakdown?: {
+      basePrice?: number;
+      itemValue?: number;
+      distanceCost?: number;
+      carryingCost?: number;
+      assemblyCost?: number;
+      extraHelperCost?: number;
+      studentDiscount?: number;
+      lateBookingFee?: number;
+      subtotal?: number;
+      total?: number;
+      breakdown?: any;
+    };
+    total_price?: number;
+    admin_notes?: string;
+    updated_at?: string;
+    
+    // Legacy fields for backward compatibility
     pickuptype?: string;
     furnitureitems?: any[];
     customitem?: string;
@@ -18,16 +62,17 @@ export interface TransportRequest {
     floordropoff?: number;
     firstname?: string;
     lastname?: string;
-    phone?: string;
     estimatedprice?: number;
     selecteddate?: string;
     isdateflexible?: boolean;
     baseprice?: number;
+    itemvalue?: number;
     itempoints?: number;
     carryingcost?: number;
     disassemblycost?: number;
     distancecost?: number;
     extrahelpercost?: number;
+    studentdiscount?: number;
     selecteddate_start?: string;
     selecteddate_end?: string;
     firstlocation?: string;
@@ -46,7 +91,7 @@ export interface TransportRequest {
     isstudent?: boolean;
     studentid?: string;
     preferredtimespan?: string;
-    updated_at?: string;
+    photo_urls?: string[];
   }
   
   
