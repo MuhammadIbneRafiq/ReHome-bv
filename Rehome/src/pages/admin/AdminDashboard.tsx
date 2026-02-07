@@ -5,7 +5,6 @@ import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isToday, 
 import { toast } from 'react-toastify';
 import { supabase } from "../../lib/supabaseClient";
 import useUserSessionStore from "../../services/state/useUserSessionStore";
-import { cityBaseCharges } from "../../lib/constants";
 import { CityPrice, MarketplaceItem, CalendarDay, TransportRequest, ItemDonation, SpecialRequest } from '../../types/admin';
 import { fetchBlockedDates } from '../../services/blockedDatesService';
 import { API_ENDPOINTS } from '../../lib/api/config';
@@ -189,22 +188,26 @@ const AdminDashboard = () => {
   const [editingDonationStatus, setEditingDonationStatus] = useState<RequestStatus>('Open');
   const [savingDonationStatusId, setSavingDonationStatusId] = useState<number | null>(null);
   const [modalDonationStatus, setModalDonationStatus] = useState<RequestStatus>('Open');
-  const [editingSpecialRequestId, setEditingSpecialRequestId] = useState<number | null>(null);
+  const [editingSpecialRequestId, setEditingSpecialRequestId] = useState<string | null>(null);
   const [editingSpecialRequestStatus, setEditingSpecialRequestStatus] = useState<RequestStatus>('Open');
-  const [savingSpecialRequestStatusId, setSavingSpecialRequestStatusId] = useState<number | null>(null);
+  const [savingSpecialRequestStatusId, setSavingSpecialRequestStatusId] = useState<string | null>(null);
   const [modalSpecialRequestStatus, setModalSpecialRequestStatus] = useState<RequestStatus>('Open');
 
-  // Get all cities from constants
-  const allCities = Object.keys(cityBaseCharges);
+  // Get all cities from fetched cityPrices state (not from async-loaded constants)
+  // This ensures cities are available after fetchPricingData completes
+  const allCities = useMemo(() => {
+    return cityPrices.map(c => c.city_name).sort();
+  }, [cityPrices]);
+  
   const topCityOptions = useMemo(() => {
-    return Object.entries(cityBaseCharges)
+    return cityPrices
       .sort((a, b) => {
-        const normalDiff = (b[1]?.normal || 0) - (a[1]?.normal || 0);
-        return normalDiff !== 0 ? normalDiff : a[0].localeCompare(b[0]);
+        const normalDiff = (Number(b.normal) || 0) - (Number(a.normal) || 0);
+        return normalDiff !== 0 ? normalDiff : a.city_name.localeCompare(b.city_name);
       })
       .slice(0, 25)
-      .map(([cityName]) => cityName);
-  }, [cityBaseCharges]);
+      .map(c => c.city_name);
+  }, [cityPrices]);
 
   // Load data on initial render
   useEffect(() => {
@@ -597,6 +600,10 @@ const AdminDashboard = () => {
           pricing_breakdown: pricingBreakdown,
           total_price: req.total_price,
           updated_at: req.updated_at,
+          date_option: req.date_option || 'fixed',
+          preferred_time_span: req.preferred_time_span || null,
+          selecteddate_start: req.selecteddate_start,
+          selecteddate_end: req.selecteddate_end,
           // Legacy fields for backward compatibility
           firstlocation: pickupLocation.displayName || pickupLocation.formattedAddress || '',
           secondlocation: dropoffLocation.displayName || dropoffLocation.formattedAddress || '',
@@ -642,12 +649,12 @@ const AdminDashboard = () => {
       // Fetch current pricing configuration from Supabase table (backend source of truth)
       const { data: pricingConfig } = await supabase
         .from('pricing_config')
-        .select('config_value')
+        .select('config')
         .eq('is_active', true)
         .single();
 
-      if (pricingConfig?.config_value) {
-        setJsonPricingConfig(pricingConfig.config_value);
+      if (pricingConfig?.config) {
+        setJsonPricingConfig(pricingConfig.config);
       }
     } catch (error) {
       console.error('Error fetching pricing data:', error);
@@ -1006,11 +1013,25 @@ const AdminDashboard = () => {
     });
   };
 
-  // Handle save city price - Client side only
+  // Handle save city price - Persist to Supabase
   const handleSaveCityPrice = async (city: CityPrice) => {
     setIsUpdating(true);
     try {
-      // Update local state directly
+      // Update in Supabase database
+      const { error } = await supabase
+        .from('city_base_charges')
+        .update({
+          city_name: editCityPriceData.city_name,
+          normal: editCityPriceData.normal,
+          city_day: editCityPriceData.city_day,
+          day_of_week: editCityPriceData.day_of_week,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', city.id);
+
+      if (error) throw error;
+
+      // Update local state
       setCityPrices(prev => prev.map(c => 
         c.id === city.id 
           ? { ...c, ...editCityPriceData }
@@ -1027,7 +1048,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle delete city price
+  // Handle delete city price - Persist to Supabase
   const handleDeleteCityPrice = async (city: CityPrice) => {
     if (!window.confirm('Are you sure you want to delete this city price? This action cannot be undone.')) {
       return;
@@ -1035,17 +1056,16 @@ const AdminDashboard = () => {
 
     setIsUpdating(true);
     try {
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-      const response = await fetch(`${API_ENDPOINTS.PRICING.CITY_BASE_CHARGES}/${city.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
+      // Delete from Supabase database
+      const { error } = await supabase
+        .from('city_base_charges')
+        .delete()
+        .eq('id', city.id);
 
-      if (!response.ok) {
-        throw new Error('Failed to delete city price');
-      }
+      if (error) throw error;
+
+      // Update local state
+      setCityPrices(prev => prev.filter(c => c.id !== city.id));
 
       toast.success('City price deleted successfully');
     } catch (error) {
@@ -1056,16 +1076,34 @@ const AdminDashboard = () => {
     }
   };
 
-  // Handle add city price - Client side only
+  // Handle add city price - Persist to Supabase
   const handleAddCityPrice = async () => {
     setIsUpdating(true);
     try {
-      // Add to local state directly
+      // Insert into Supabase database
+      const { data, error } = await supabase
+        .from('city_base_charges')
+        .insert({
+          city_name: newCityPrice.city_name,
+          normal: newCityPrice.normal,
+          city_day: newCityPrice.city_day,
+          day_of_week: newCityPrice.day_of_week,
+          latitude: 52.0, // Default coordinates (can be updated later)
+          longitude: 5.0
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state with the new city from database (has proper ID)
       const newCity: CityPrice = {
-        id: Date.now().toString(),
-        ...newCityPrice,
-        day_of_week: String(newCityPrice.day_of_week), // <-- convert to string
-        created_at: new Date().toISOString()
+        id: data.id,
+        city_name: data.city_name,
+        normal: data.normal,
+        city_day: data.city_day,
+        day_of_week: String(data.day_of_week),
+        created_at: data.created_at
       };
 
       setCityPrices(prev => [...prev, newCity]);
@@ -1544,7 +1582,7 @@ const AdminDashboard = () => {
   const fetchSpecialRequests = async () => {
     try {
       const { data, error } = await supabase
-        .from('services')
+        .from('special_requests')
         .select('*')
         .order('created_at', { ascending: false });
       if (error) {
@@ -1618,11 +1656,11 @@ const AdminDashboard = () => {
     await updateDonationStatus(selectedDonation.id, modalDonationStatus);
   };
 
-  const updateSpecialRequestStatus = async (requestId: number, status: RequestStatus, onSuccess?: () => void) => {
+  const updateSpecialRequestStatus = async (requestId: string, status: RequestStatus, onSuccess?: () => void) => {
     setSavingSpecialRequestStatusId(requestId);
     try {
       const { error } = await supabase
-        .from('services')
+        .from('special_requests')
         .update({ status })
         .eq('id', requestId);
 
@@ -2081,12 +2119,11 @@ const AdminDashboard = () => {
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">TYPE</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">CUSTOMER</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PHONE</th>
-                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PICKUP TYPE</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">LOCATION</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">FLOORS</th>
-                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">DATE</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">DATE REQUESTED</th>
+                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">SUBMITTED</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">PRICE</th>
-                        <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ITEMS</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">STATUS</th>
                         <th className="border border-gray-300 px-3 py-2 text-left font-medium text-xs">ACTIONS</th>
                       </tr>
@@ -2133,9 +2170,6 @@ const AdminDashboard = () => {
                             {request.phone || '-'}
                           </td>
                           <td className="border border-gray-300 px-3 py-2 text-xs">
-                            {request.pickuptype || '-'}
-                          </td>
-                          <td className="border border-gray-300 px-3 py-2 text-xs">
                             <div>
                               <div><strong>From:</strong> {request.firstlocation || request.city || '-'}</div>
                               <div><strong>To:</strong> {request.secondlocation || '-'}</div>
@@ -2143,28 +2177,27 @@ const AdminDashboard = () => {
                           </td>
                           <td className="border border-gray-300 px-3 py-2 text-xs">
                             <div>
-                              <div>Pickup: {request.floorpickup || '-'}</div>
-                              <div>Dropoff: {request.floordropoff || '-'}</div>
+                              <div>Pickup: {request.floorpickup ?? request.pickup_floors ?? '-'}{(request.elevatorpickup || request.elevatorpickup || request.has_elevator_pickup) ? ' (E)' : ''}</div>
+                              <div>Dropoff: {request.floordropoff ?? request.dropoff_floors ?? '-'}{(request.elevatordropoff || request.elevatordropoff || request.has_elevator_dropoff) ? ' (E)' : ''}</div>
                             </div>
                           </td>
+                          <td className="border border-gray-300 px-3 py-2 text-xs text-center">
+                            {/* Date Requested - show only the date option label */}
+                            {request.date_option === 'rehome' ? (
+                              <span className="px-2 py-1 rounded bg-purple-100 text-purple-800 font-medium text-xs">ReHome</span>
+                            ) : request.date_option === 'flexible' ? (
+                              <span className="px-2 py-1 rounded bg-blue-100 text-blue-800 font-medium text-xs">Flexible</span>
+                            ) : (
+                              <span className="px-2 py-1 rounded bg-green-100 text-green-800 font-medium text-xs">Fixed</span>
+                            )}
+                          </td>
                           <td className="border border-gray-300 px-3 py-2 text-xs">
-                            {request.selecteddate ? format(new Date(request.selecteddate), 'MM/dd/yyyy') : 
-                             request.selecteddate_start ? format(new Date(request.selecteddate_start), 'MM/dd/yyyy') :
-                             format(new Date(request.date), 'MM/dd/yyyy')}
+                            {/* Date Submitted */}
+                            {request.created_at ? format(new Date(request.created_at), 'MM/dd/yyyy') : '-'}
                           </td>
                           <td className="border border-gray-300 px-3 py-2 text-xs">
                             <div className="font-semibold text-orange-600">€{formatCurrency(request.estimatedprice)}</div>
                             <div className="text-[11px] text-gray-500">Base €{formatCurrency(request.baseprice)}</div>
-                          </td>
-                          <td className="border border-gray-300 px-3 py-2 text-xs">
-                            {request.furnitureitems && request.furnitureitems.length > 0 ? (
-                              <div>
-                                <span className="font-medium">{request.furnitureitems.length} item(s)</span>
-                                <span className="text-gray-500 text-[11px] ml-1">{request.itempoints || 0} pts</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-500">{request.customitem || '—'}</span>
-                            )}
                           </td>
                           <td className="border border-gray-300 px-3 py-2">
                             {editingTransportRequest === request.id ? (
@@ -2323,19 +2356,33 @@ const AdminDashboard = () => {
                             </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
-                                <p className="text-sm text-gray-600">Pickup Type</p>
-                                <p className="font-medium capitalize">{(selectedTransportRequest as any).pickuptype || 'N/A'}</p>
+                                <p className="text-sm text-gray-600">Date Option</p>
+                                <p className="font-medium">
+                                  {(selectedTransportRequest as any).date_option === 'rehome' ? (
+                                    <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-xs">ReHome Chooses</span>
+                                  ) : (selectedTransportRequest as any).date_option === 'flexible' ? (
+                                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-xs">Flexible</span>
+                                  ) : (
+                                    <span className="px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs">Fixed</span>
+                                  )}
+                                </p>
+                                {(selectedTransportRequest as any).date_option !== 'rehome' && (selectedTransportRequest as any).selecteddate_start && (
+                                  <p className="text-sm mt-1">
+                                    {format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy')}
+                                    {(selectedTransportRequest as any).selecteddate_end && (selectedTransportRequest as any).selecteddate_end !== (selectedTransportRequest as any).selecteddate_start && (
+                                      <span> — {format(new Date((selectedTransportRequest as any).selecteddate_end), 'MMM dd, yyyy')}</span>
+                                    )}
+                                  </p>
+                                )}
                               </div>
                               <div>
-                                <p className="text-sm text-gray-600">Date</p>
+                                <p className="text-sm text-gray-600">Preferred Time</p>
                                 <p className="font-medium">
-                                  {(selectedTransportRequest as any).selecteddate_start && (selectedTransportRequest as any).selecteddate_end ? 
-                                    `${format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy')} - ${format(new Date((selectedTransportRequest as any).selecteddate_end), 'MMM dd, yyyy')}` :
-                                    (selectedTransportRequest as any).selecteddate_start ? 
-                                    format(new Date((selectedTransportRequest as any).selecteddate_start), 'MMM dd, yyyy') :
-                                    (selectedTransportRequest as any).selecteddate ? 
-                                    format(new Date((selectedTransportRequest as any).selecteddate), 'MMM dd, yyyy') : 'Flexible'}
-                                  {(selectedTransportRequest as any).isdateflexible && !((selectedTransportRequest as any).selecteddate_start && (selectedTransportRequest as any).selecteddate_end) && ' (Flexible)'}
+                                  {(selectedTransportRequest as any).preferred_time_span === 'morning' ? 'Morning (8:00 - 12:00)' :
+                                   (selectedTransportRequest as any).preferred_time_span === 'afternoon' ? 'Afternoon (12:00 - 16:00)' :
+                                   (selectedTransportRequest as any).preferred_time_span === 'evening' ? 'Evening (16:00 - 20:00)' :
+                                   (selectedTransportRequest as any).preferred_time_span === 'anytime' ? 'Anytime' :
+                                   (selectedTransportRequest as any).preferred_time_span || 'Not specified'}
                                 </p>
                               </div>
                               <div className="md:col-span-2">
@@ -2360,20 +2407,72 @@ const AdminDashboard = () => {
                                   <p className="font-medium">{parseFloat((selectedTransportRequest as any).calculated_distance_km).toFixed(2)} km</p>
                                 </div>
                               )}
-                              {((selectedTransportRequest as any).preferredtimespan || (selectedTransportRequest as any).preferred_time_span) && (
-                                <div>
-                                  <p className="text-sm text-gray-600">Preferred Time</p>
-                                  <p className="font-medium">{(selectedTransportRequest as any).preferredtimespan || (selectedTransportRequest as any).preferred_time_span}</p>
-                                </div>
-                              )}
                             </div>
+                          </div>
+
+                          {/* Service Options - Date Choice, Assembly, Extra Helper */}
+                          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+                              <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">3</span>
+                              Service Options
+                            </h4>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {/* Date Option */}
+                              <div>
+                                <p className="text-sm text-gray-600">Date Choice</p>
+                                <p className="font-medium">
+                                  {(selectedTransportRequest as any).date_option === 'rehome' || (selectedTransportRequest as any).pricing_breakdown?.breakdown?.baseCharge?.type?.includes('ReHome') ? (
+                                    <span className="text-purple-600">ReHome Choose</span>
+                                  ) : (selectedTransportRequest as any).date_option === 'flexible' || (selectedTransportRequest as any).isdateflexible ? (
+                                    <span className="text-blue-600">Flexible</span>
+                                  ) : (
+                                    <span className="text-gray-800">Fixed Date</span>
+                                  )}
+                                </p>
+                              </div>
+                              {/* Assembly */}
+                              <div>
+                                <p className="text-sm text-gray-600">Assembly/Disassembly</p>
+                                <p className={`font-medium ${(selectedTransportRequest as any).needs_assembly || (selectedTransportRequest as any).disassembly ? 'text-green-600' : 'text-gray-500'}`}>
+                                  {(selectedTransportRequest as any).needs_assembly || (selectedTransportRequest as any).disassembly ? 'Yes' : 'No'}
+                                </p>
+                              </div>
+                              {/* Extra Helper */}
+                              <div>
+                                <p className="text-sm text-gray-600">Extra Helper</p>
+                                <p className={`font-medium ${(selectedTransportRequest as any).needs_extra_helper || (selectedTransportRequest as any).extrahelper ? 'text-green-600' : 'text-gray-500'}`}>
+                                  {(selectedTransportRequest as any).needs_extra_helper || (selectedTransportRequest as any).extrahelper ? 'Yes' : 'No'}
+                                </p>
+                              </div>
+                              {/* Student */}
+                              <div>
+                                <p className="text-sm text-gray-600">Student Discount</p>
+                                <p className={`font-medium ${(selectedTransportRequest as any).has_student_id || (selectedTransportRequest as any).isstudent ? 'text-green-600' : 'text-gray-500'}`}>
+                                  {(selectedTransportRequest as any).has_student_id || (selectedTransportRequest as any).isstudent ? 'Yes' : 'No'}
+                                </p>
+                              </div>
+                            </div>
+                            {/* Custom Item Description */}
+                            {((selectedTransportRequest as any).custom_item || (selectedTransportRequest as any).customitem) && (
+                              <div className="mt-4 pt-3 border-t border-blue-200">
+                                <p className="text-sm font-medium text-gray-700">Item Descriptions:</p>
+                                <p className="text-gray-600 mt-1 bg-white p-2 rounded">{(selectedTransportRequest as any).custom_item || (selectedTransportRequest as any).customitem}</p>
+                              </div>
+                            )}
+                            {/* Special Instructions */}
+                            {((selectedTransportRequest as any).special_instructions || (selectedTransportRequest as any).extra_instructions) && (
+                              <div className="mt-4 pt-3 border-t border-blue-200">
+                                <p className="text-sm font-medium text-gray-700">Special Instructions:</p>
+                                <p className="text-gray-600 mt-1 bg-white p-2 rounded">{(selectedTransportRequest as any).special_instructions || (selectedTransportRequest as any).extra_instructions}</p>
+                              </div>
+                            )}
                           </div>
 
                           {/* Full Item List with Add-ons */}
                           {selectedTransportRequest.items && selectedTransportRequest.items.length > 0 && (
                             <div className="bg-gray-50 p-4 rounded-lg">
                               <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">3</span>
+                                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">4</span>
                                 Item List
                               </h4>
                               <div className="overflow-x-auto">
@@ -2389,56 +2488,23 @@ const AdminDashboard = () => {
                                   <tbody>
                                     {(() => {
                                       const furnitureItemsArray = selectedTransportRequest.items || [];
+                                      const pb = selectedTransportRequest.pricing_breakdown || {};
                                       
-                                      const disassemblyItems = (selectedTransportRequest as any).disassembly_items;
-                                      const carryingItems = (selectedTransportRequest as any).carrying_service_items;
-                                      const helperItems = (selectedTransportRequest as any).extra_helper_items;
-                                      
-                                      let parsedDisassembly: any = {};
-                                      let parsedCarrying: any = {};
-                                      let parsedHelper: any = {};
-                                      
-                                      try {
-                                        parsedDisassembly = typeof disassemblyItems === 'string' ? JSON.parse(disassemblyItems) : disassemblyItems || {};
-                                      } catch {}
-                                      try {
-                                        parsedCarrying = typeof carryingItems === 'string' ? JSON.parse(carryingItems) : carryingItems || {};
-                                      } catch {}
-                                      try {
-                                        parsedHelper = typeof helperItems === 'string' ? JSON.parse(helperItems) : helperItems || {};
-                                      } catch {}
-                                      
-                                      // Collect all UUIDs from all add-on objects to reconstruct the original item order
-                                      const allUUIDs = new Set<string>();
-                                      Object.keys(parsedDisassembly).forEach(k => allUUIDs.add(k));
-                                      Object.keys(parsedCarrying).forEach(k => allUUIDs.add(k));
-                                      Object.keys(parsedHelper).forEach(k => allUUIDs.add(k));
-                                      
-                                      // Convert to array to maintain order (Object.keys maintains insertion order in modern JS)
-                                      const orderedUUIDs = Array.from(allUUIDs);
+                                      // Read add-on selections from pricing_breakdown JSONB
+                                      const assemblyItems = pb.assemblyItems || {};
+                                      const disassemblyItems = pb.disassemblyItems || {};
+                                      const carryingUpItems = pb.carryingUpItems || {};
+                                      const carryingDownItems = pb.carryingDownItems || {};
+                                      const extraHelperItems = pb.extraHelperItems || {};
                                       
                                       return furnitureItemsArray.map((item: any, index: number) => {
-                                        // The furniture items array is created from Object.entries(itemQuantities).filter(...).map(...)
-                                        // The add-on objects use the same UUIDs from itemQuantities
-                                        // We match by assuming the nth item corresponds to the nth UUID in the ordered list
+                                        const itemId = item.id;
                                         
-                                        let hasDisassembly = false;
-                                        let hasCarrying = false;
-                                        let hasHelper = false;
-                                        
-                                        // Get the UUID that should correspond to this item based on position
-                                        const correspondingUUID = orderedUUIDs[index];
-                                        
-                                        if (correspondingUUID) {
-                                          hasDisassembly = parsedDisassembly[correspondingUUID] === true;
-                                          hasCarrying = parsedCarrying[correspondingUUID] === true;
-                                          hasHelper = parsedHelper[correspondingUUID] === true;
-                                        }
-                                        
-                                        // Also check by item name (fallback for old data or if UUIDs don't match)
-                                        if (parsedDisassembly[item.name]) hasDisassembly = true;
-                                        if (parsedCarrying[item.name]) hasCarrying = true;
-                                        if (parsedHelper[item.name]) hasHelper = true;
+                                        const hasAssembly = itemId && assemblyItems[itemId] === true;
+                                        const hasDisassembly = itemId && disassemblyItems[itemId] === true;
+                                        const hasCarryUp = itemId && carryingUpItems[itemId] === true;
+                                        const hasCarryDown = itemId && carryingDownItems[itemId] === true;
+                                        const hasHelper = itemId && extraHelperItems[itemId] === true;
                                         
                                         return (
                                           <tr key={index} className="hover:bg-gray-100">
@@ -2450,11 +2516,17 @@ const AdminDashboard = () => {
                                                 {hasDisassembly && (
                                                   <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded text-xs">Disassembly</span>
                                                 )}
-                                                {hasCarrying && (
-                                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">Carrying</span>
+                                                {hasAssembly && (
+                                                  <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 rounded text-xs">Assembly</span>
+                                                )}
+                                                {hasCarryDown && (
+                                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">Carry Down</span>
+                                                )}
+                                                {hasCarryUp && (
+                                                  <span className="px-2 py-0.5 bg-cyan-100 text-cyan-800 rounded text-xs">Carry Up</span>
                                                 )}
                                                 {hasHelper && (
-                                                  <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">Helper</span>
+                                                  <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">Extra Helper</span>
                                                 )}
                                               </div>
                                             </td>
@@ -2466,7 +2538,9 @@ const AdminDashboard = () => {
                                 </table>
                               </div>
                               <div className="mt-3 pt-3 border-t">
-                                <p className="text-sm text-gray-600">Total Points: <span className="font-semibold">{(selectedTransportRequest as any).itempoints || 0}</span></p>
+                                <p className="text-sm text-gray-600">Total Points: <span className="font-semibold">
+                                  {(selectedTransportRequest.items || []).reduce((sum: number, item: any) => sum + ((item.points || 0) * (item.quantity || 1)), 0)}
+                                </span></p>
                               </div>
                             </div>
                           )}
@@ -2474,7 +2548,7 @@ const AdminDashboard = () => {
                           {/* Price Breakdown */}
                           <div className="bg-gradient-to-br from-orange-50 to-yellow-50 p-4 rounded-lg border border-orange-200">
                             <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                              <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">4</span>
+                              <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">5</span>
                               Your Price Estimate
                             </h4>
                             <div className="space-y-3">
@@ -2540,127 +2614,149 @@ const AdminDashboard = () => {
                               )}
 
                               {/* Extra Helper Section */}
-                              {(selectedTransportRequest as any).extrahelpercost !== undefined && (selectedTransportRequest as any).extrahelpercost !== null && (
-                                <div>
-                                  <div className="flex justify-between border-b pb-2">
-                                    <span className="text-gray-700 font-medium">Extra Helper:</span>
-                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).extrahelpercost).toFixed(2)}</span>
+                              {(() => {
+                                const pb = selectedTransportRequest.pricing_breakdown || {};
+                                const helperCost = parseFloat((selectedTransportRequest as any).extrahelpercost || pb.extraHelperCost || 0);
+                                const helperItems = pb.extraHelperItems || {};
+                                const helperIds = Object.keys(helperItems).filter(id => helperItems[id] === true);
+                                const itemsArr = selectedTransportRequest.items || [];
+                                const helperBreakdown = pb.breakdown?.extraHelper || {};
+                                
+                                if (helperCost <= 0 && helperIds.length === 0) return null;
+                                
+                                return (
+                                  <div>
+                                    <div className="flex justify-between border-b pb-2">
+                                      <span className="text-gray-700 font-medium">Extra Helper:</span>
+                                      <span className="font-semibold">€{helperCost.toFixed(2)}</span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      <div>Extra Helper: Yes</div>
+                                      {helperBreakdown.totalPoints > 0 && (
+                                        <div>Total Points: {helperBreakdown.totalPoints} ({helperBreakdown.category === 'big' ? '>30 pts' : '≤30 pts'})</div>
+                                      )}
+                                      {helperIds.length > 0 && (
+                                        <div className="mt-1">
+                                          <div className="font-medium text-green-700">Items with extra helper:</div>
+                                          {helperIds.map(id => {
+                                            const item = itemsArr.find((i: any) => i.id === id);
+                                            return (
+                                              <div key={`eh-${id}`} className="pl-2">• {item?.name || id} (x{item?.quantity || 1})</div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    Extra Helper: {parseFloat((selectedTransportRequest as any).extrahelpercost) > 0 ? 'Yes' : 'No'}
-                                  </div>
-                                </div>
-                              )}
+                                );
+                              })()}
 
                               {/* Carrying Service Section */}
-                              {(selectedTransportRequest as any).carryingcost !== undefined && (selectedTransportRequest as any).carryingcost !== null && parseFloat((selectedTransportRequest as any).carryingcost) > 0 && (
-                                <div>
-                                  <div className="flex justify-between border-b pb-2">
-                                    <span className="text-gray-700 font-medium">Carrying Service:</span>
-                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).carryingcost).toFixed(2)}</span>
+                              {(() => {
+                                const pb = selectedTransportRequest.pricing_breakdown || {};
+                                const carryingCost = parseFloat((selectedTransportRequest as any).carryingcost || pb.carryingCost || 0);
+                                const carryUpItems = pb.carryingUpItems || {};
+                                const carryDownItems = pb.carryingDownItems || {};
+                                const upIds = Object.keys(carryUpItems).filter(id => carryUpItems[id] === true);
+                                const downIds = Object.keys(carryDownItems).filter(id => carryDownItems[id] === true);
+                                const itemsArr = selectedTransportRequest.items || [];
+                                const pickupFloor = (selectedTransportRequest as any).floorpickup ?? selectedTransportRequest.pickup_floors ?? 0;
+                                const dropoffFloor = (selectedTransportRequest as any).floordropoff ?? selectedTransportRequest.dropoff_floors ?? 0;
+                                const hasElevatorPickup = (selectedTransportRequest as any).elevatorpickup || selectedTransportRequest.has_elevator_pickup;
+                                const hasElevatorDropoff = (selectedTransportRequest as any).elevatordropoff || selectedTransportRequest.has_elevator_dropoff;
+                                
+                                if (carryingCost <= 0 && upIds.length === 0 && downIds.length === 0) return null;
+                                
+                                return (
+                                  <div>
+                                    <div className="flex justify-between border-b pb-2">
+                                      <span className="text-gray-700 font-medium">Carrying Service:</span>
+                                      <span className="font-semibold">€{carryingCost.toFixed(2)}</span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      <div>Floor carrying assistance</div>
+                                      {(pickupFloor > 0 || dropoffFloor > 0) && (
+                                        <div className="mt-1">
+                                          {pickupFloor > 0 && (
+                                            <div>• Pickup: Floor {pickupFloor} {hasElevatorPickup ? '(with elevator)' : '(stairs)'}</div>
+                                          )}
+                                          {dropoffFloor > 0 && (
+                                            <div>• Dropoff: Floor {dropoffFloor} {hasElevatorDropoff ? '(with elevator)' : '(stairs)'}</div>
+                                          )}
+                                        </div>
+                                      )}
+                                      {downIds.length > 0 && (
+                                        <div className="mt-1">
+                                          <div className="font-medium text-blue-700">Items carried down:</div>
+                                          {downIds.map(id => {
+                                            const item = itemsArr.find((i: any) => i.id === id);
+                                            return (
+                                              <div key={`cd-${id}`} className="pl-2">• {item?.name || id} (x{item?.quantity || 1})</div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                      {upIds.length > 0 && (
+                                        <div className="mt-1">
+                                          <div className="font-medium text-cyan-700">Items carried up:</div>
+                                          {upIds.map(id => {
+                                            const item = itemsArr.find((i: any) => i.id === id);
+                                            return (
+                                              <div key={`cu-${id}`} className="pl-2">• {item?.name || id} (x{item?.quantity || 1})</div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    <div>Floor carrying assistance</div>
-                                    {((selectedTransportRequest as any).floorpickup > 0 || (selectedTransportRequest as any).floordropoff > 0) && (
-                                      <div className="mt-1">
-                                        {(selectedTransportRequest as any).floorpickup > 0 && (
-                                          <div>• Pickup: Floor {(selectedTransportRequest as any).floorpickup} {(selectedTransportRequest as any).elevatorpickup ? '(with elevator)' : '(stairs)'}</div>
-                                        )}
-                                        {(selectedTransportRequest as any).floordropoff > 0 && (
-                                          <div>• Dropoff: Floor {(selectedTransportRequest as any).floordropoff} {(selectedTransportRequest as any).elevatordropoff ? '(with elevator)' : '(stairs)'}</div>
-                                        )}
-                                      </div>
-                                    )}
-                                    {(() => {
-                                      const carryingItems = (selectedTransportRequest as any).carrying_service_items;
-                                      let parsedCarrying: any = {};
-                                      try {
-                                        parsedCarrying = typeof carryingItems === 'string' ? JSON.parse(carryingItems) : carryingItems || {};
-                                      } catch {}
-                                      
-                                      const carryingUUIDs = Object.keys(parsedCarrying).filter(k => parsedCarrying[k] === true);
-                                      
-                                      if (carryingUUIDs.length > 0 && selectedTransportRequest.items) {
-                                        const furnitureItemsArray = selectedTransportRequest.items || [];
-                                        
-                                        const allUUIDs = new Set<string>();
-                                        Object.keys(parsedCarrying).forEach(k => allUUIDs.add(k));
-                                        const orderedUUIDs = Array.from(allUUIDs);
-                                        
-                                        const itemsWithCarrying = furnitureItemsArray
-                                          .map((item: any, index: number) => {
-                                            const correspondingUUID = orderedUUIDs[index];
-                                            const hasCarrying = correspondingUUID && parsedCarrying[correspondingUUID] === true;
-                                            return hasCarrying ? item.name : null;
-                                          })
-                                          .filter((name: string | null) => name !== null);
-                                        
-                                        if (itemsWithCarrying.length > 0) {
-                                          return (
-                                            <div className="mt-1">
-                                              <div className="font-medium">Items with carrying service:</div>
-                                              {itemsWithCarrying.map((name: string, idx: number) => (
-                                                <div key={idx}>• {name}</div>
-                                              ))}
-                                            </div>
-                                          );
-                                        }
-                                      }
-                                      return null;
-                                    })()}
-                                  </div>
-                                </div>
-                              )}
+                                );
+                              })()}
 
                               {/* Assembly/Disassembly Section */}
-                              {(selectedTransportRequest as any).disassemblycost !== undefined && (selectedTransportRequest as any).disassemblycost !== null && parseFloat((selectedTransportRequest as any).disassemblycost) > 0 && (
-                                <div>
-                                  <div className="flex justify-between border-b pb-2">
-                                    <span className="text-gray-700 font-medium">Assembly & Disassembly:</span>
-                                    <span className="font-semibold">€{parseFloat((selectedTransportRequest as any).disassemblycost).toFixed(2)}</span>
+                              {(() => {
+                                const pb = selectedTransportRequest.pricing_breakdown || {};
+                                const assemblyCost = parseFloat((selectedTransportRequest as any).disassemblycost || pb.assemblyCost || 0);
+                                const asmItems = pb.assemblyItems || {};
+                                const disItems = pb.disassemblyItems || {};
+                                const asmIds = Object.keys(asmItems).filter(id => asmItems[id] === true);
+                                const disIds = Object.keys(disItems).filter(id => disItems[id] === true);
+                                const itemsArr = selectedTransportRequest.items || [];
+                                
+                                if (assemblyCost <= 0 && asmIds.length === 0 && disIds.length === 0) return null;
+                                
+                                return (
+                                  <div>
+                                    <div className="flex justify-between border-b pb-2">
+                                      <span className="text-gray-700 font-medium">Assembly & Disassembly:</span>
+                                      <span className="font-semibold">€{assemblyCost.toFixed(2)}</span>
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {disIds.length > 0 && (
+                                        <div className="mt-1">
+                                          <div className="font-medium text-purple-700">Disassembly:</div>
+                                          {disIds.map(id => {
+                                            const item = itemsArr.find((i: any) => i.id === id);
+                                            return (
+                                              <div key={`dis-${id}`} className="pl-2">• {item?.name || id} (x{item?.quantity || 1})</div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                      {asmIds.length > 0 && (
+                                        <div className="mt-1">
+                                          <div className="font-medium text-indigo-700">Assembly:</div>
+                                          {asmIds.map(id => {
+                                            const item = itemsArr.find((i: any) => i.id === id);
+                                            return (
+                                              <div key={`asm-${id}`} className="pl-2">• {item?.name || id} (x{item?.quantity || 1})</div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    <div>Professional assembly/disassembly service</div>
-                                    {(() => {
-                                      const disassemblyItems = (selectedTransportRequest as any).disassembly_items;
-                                      let parsedDisassembly: any = {};
-                                      try {
-                                        parsedDisassembly = typeof disassemblyItems === 'string' ? JSON.parse(disassemblyItems) : disassemblyItems || {};
-                                      } catch {}
-                                      
-                                      const disassemblyUUIDs = Object.keys(parsedDisassembly).filter(k => parsedDisassembly[k] === true);
-                                      
-                                      if (disassemblyUUIDs.length > 0 && selectedTransportRequest.items) {
-                                        const furnitureItemsArray = selectedTransportRequest.items || [];
-                                        
-                                        const allUUIDs = new Set<string>();
-                                        Object.keys(parsedDisassembly).forEach(k => allUUIDs.add(k));
-                                        const orderedUUIDs = Array.from(allUUIDs);
-                                        
-                                        const itemsWithDisassembly = furnitureItemsArray
-                                          .map((item: any, index: number) => {
-                                            const correspondingUUID = orderedUUIDs[index];
-                                            const hasDisassembly = correspondingUUID && parsedDisassembly[correspondingUUID] === true;
-                                            return hasDisassembly ? item.name : null;
-                                          })
-                                          .filter((name: string | null) => name !== null);
-                                        
-                                        if (itemsWithDisassembly.length > 0) {
-                                          return (
-                                            <div className="mt-1">
-                                              <div className="font-medium">Items requiring assembly/disassembly:</div>
-                                              {itemsWithDisassembly.map((name: string, idx: number) => (
-                                                <div key={idx}>• {name}</div>
-                                              ))}
-                                            </div>
-                                          );
-                                        }
-                                      }
-                                      return null;
-                                    })()}
-                                  </div>
-                                </div>
-                              )}
+                                );
+                              })()}
 
                               {/* Subtotal */}
                               {(() => {
@@ -2731,7 +2827,7 @@ const AdminDashboard = () => {
                           {((selectedTransportRequest as any).extra_instructions || selectedTransportRequest.notes || (selectedTransportRequest as any).customitem || selectedTransportRequest.student_id_url || selectedTransportRequest.store_proof_url) && (
                             <div className="bg-gray-50 p-4 rounded-lg">
                               <h4 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">5</span>
+                                <span className="bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm mr-2">6</span>
                                 Extra Information
                               </h4>
                               <div className="space-y-3">
@@ -5258,31 +5354,18 @@ const AdminDashboard = () => {
                         </thead>
                         <tbody>
                           {filteredSpecialRequests.map((request) => {
-                            let contactInfo: any = request.contact_info;
-                            if (typeof contactInfo === 'string') {
-                              try {
-                                contactInfo = JSON.parse(contactInfo);
-                              } catch {
-                                contactInfo = { firstName: '', lastName: '', email: '', phone: '' };
-                              }
-                            }
+                            // Use direct fields from special_requests table
+                            const contactInfo = {
+                              email: request.email,
+                              phone: request.phone,
+                              firstName: request.customer_name?.split(' ')[0] || '',
+                              lastName: request.customer_name?.split(' ').slice(1).join(' ') || ''
+                            };
                             
-                            let services: any = request.selected_services;
-                            let servicesArray: string[] = [];
-                            if (typeof services === 'string') {
-                              try {
-                                servicesArray = JSON.parse(services);
-                              } catch {
-                                servicesArray = [services];
-                              }
-                            } else if (Array.isArray(services)) {
-                              servicesArray = services;
-                            }
-
-                            const requestType = request.request_type || (servicesArray.length > 0 && servicesArray[0]) || 'N/A';
-                            const requestLabel = requestType === 'junkRemoval' ? 'Junk Removal' :
-                                                requestType === 'storage' ? 'Item Storage' :
-                                                requestType === 'fullInternationalMove' ? 'Full Moving' :
+                            const requestType = request.request_type || 'N/A';
+                            const requestLabel = requestType === 'junk_removal' ? 'Junk Removal' :
+                                                requestType === 'item_storage' ? 'Item Storage' :
+                                                requestType === 'international_move' ? 'International Move' :
                                                 requestType;
 
                             const anyRequest: any = request;
@@ -5291,28 +5374,17 @@ const AdminDashboard = () => {
                             const elevatorPickup = anyRequest.elevator_pickup ?? anyRequest.pickup_elevator;
                             const elevatorDropoff = anyRequest.elevator_dropoff ?? anyRequest.dropoff_elevator;
 
-                            let preferredDateRaw: any = request.preferred_date;
-                            let preferredDateValue: string | null = null;
-                            if (Array.isArray(preferredDateRaw) && preferredDateRaw.length > 0) {
-                              preferredDateValue = preferredDateRaw[0];
-                            } else if (typeof preferredDateRaw === 'string') {
-                              try {
-                                const parsed = JSON.parse(preferredDateRaw);
-                                if (Array.isArray(parsed) && parsed.length > 0) {
-                                  preferredDateValue = parsed[0];
-                                } else {
-                                  preferredDateValue = preferredDateRaw;
-                                }
-                              } catch {
-                                preferredDateValue = preferredDateRaw;
-                              }
-                            }
-
+                            // Use date fields from special_requests table
                             let preferredDateDisplay = '';
-                            if (preferredDateValue) {
-                              preferredDateDisplay = format(new Date(preferredDateValue), 'MMM dd, yyyy');
-                            } else if (request.is_date_flexible) {
+                            if (request.specific_date_start) {
+                              preferredDateDisplay = format(new Date(request.specific_date_start), 'MMM dd, yyyy');
+                              if (request.specific_date_end && request.specific_date_end !== request.specific_date_start) {
+                                preferredDateDisplay += ' - ' + format(new Date(request.specific_date_end), 'MMM dd, yyyy');
+                              }
+                            } else if (request.move_date_type === 'flexible') {
                               preferredDateDisplay = 'Flexible';
+                            } else if (request.move_date_type === 'let_rehome_choose') {
+                              preferredDateDisplay = 'ReHome Choose';
                             } else {
                               preferredDateDisplay = 'N/A';
                             }
@@ -5337,12 +5409,12 @@ const AdminDashboard = () => {
                                   </span>
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
-                                  {request.pickup_location && request.dropoff_location ? (
+                                  {request.pickup_address && request.dropoff_address ? (
                                     <div>
-                                      <div className="font-medium">From: {request.pickup_location}</div>
-                                      <div className="text-gray-500">To: {request.dropoff_location}</div>
+                                      <div className="font-medium">From: {request.pickup_address}</div>
+                                      <div className="text-gray-500">To: {request.dropoff_address}</div>
                                     </div>
-                                  ) : request.pickup_location || request.dropoff_location || 'N/A'}
+                                  ) : request.pickup_address || request.dropoff_address || 'N/A'}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
                                   {pickupFloor || dropoffFloor ? (
@@ -5640,23 +5712,9 @@ const AdminDashboard = () => {
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h4 className="text-lg font-semibold text-gray-800 mb-3">Customer Information</h4>
                         <div className="space-y-2">
-                          {(() => {
-                            let contactInfo = selectedSpecialRequest.contact_info;
-                            if (typeof contactInfo === 'string') {
-                              try {
-                                contactInfo = JSON.parse(contactInfo);
-                              } catch {
-                                contactInfo = { email: '', phone: '', firstName: '', lastName: '' };
-                              }
-                            }
-                            return (
-                              <>
-                                <p><span className="font-medium">Name:</span> {contactInfo.firstName || ''} {contactInfo.lastName || ''}</p>
-                                <p><span className="font-medium">Email:</span> {contactInfo.email || 'N/A'}</p>
-                                <p><span className="font-medium">Phone:</span> {contactInfo.phone || 'N/A'}</p>
-                              </>
-                            );
-                          })()}
+                          <p><span className="font-medium">Name:</span> {selectedSpecialRequest.customer_name || 'N/A'}</p>
+                          <p><span className="font-medium">Email:</span> {selectedSpecialRequest.email || 'N/A'}</p>
+                          <p><span className="font-medium">Phone:</span> {selectedSpecialRequest.phone || 'N/A'}</p>
                         </div>
                       </div>
 

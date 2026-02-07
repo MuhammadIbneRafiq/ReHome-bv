@@ -92,7 +92,13 @@ export let pricingConfig: PricingConfig = defaultPricingConfig;
 // Types for dynamic data
 export type FurnitureItem = { id: string; name: string; category: string; points: number };
 export type ItemCategory = { name: string; subcategories: string[]; is_active: boolean };
-export type CityBaseCharge = { normal: number; cityDay: number; dayOfWeek: number };
+export type CityBaseCharge = { 
+  normal: number; 
+  cityDay: number; 
+  dayOfWeek: number;
+  latitude: number;
+  longitude: number;
+};
 
 // --- DYNAMIC CONSTANTS INIT ---
 // These will be populated at runtime by the internal call to initDynamicConstants()
@@ -190,20 +196,20 @@ export async function initDynamicConstants() {
         
       if (cityChargesError) throw cityChargesError;
       if (cityChargesData) {
-        // Transform from array to record
+        // Transform from array to record (includes coordinates from database)
         cityBaseCharges = cityChargesData.reduce((acc, city) => {
           acc[city.city_name] = {
             normal: city.normal,
             cityDay: city.city_day,
-            dayOfWeek: city.day_of_week
+            dayOfWeek: city.day_of_week,
+            latitude: parseFloat(city.latitude) || 0,
+            longitude: parseFloat(city.longitude) || 0
           };
           return acc;
         }, {} as Record<string, CityBaseCharge>);
         console.log('[Constants] ✅ City base charges loaded from Supabase');
-        console.log('[Constants] 📊 City base charges sample:', Object.keys(cityBaseCharges).slice(0, 3).map(city => ({
-          city,
-          data: cityBaseCharges[city]
-        })));
+        console.log('[Constants] 📊 Total cities loaded:', Object.keys(cityBaseCharges).length);
+        console.log('[Constants] 📋 All cities:', Object.keys(cityBaseCharges).sort().join(', '));
       }
       
       constantsLoaded = true;

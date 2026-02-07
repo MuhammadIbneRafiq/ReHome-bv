@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FaMapMarkerAlt } from 'react-icons/fa';
+import { cityBaseCharges } from '../../lib/constants';
 
 interface LocationSuggestion {
   display_name: string;
@@ -58,22 +59,11 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
     try {
       let data: LocationSuggestion[] = [];
       
-      // 1. Primary option: Hardcoded Dutch cities (most reliable for Netherlands)
-          const dutchCities = [
-            'Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven', 
-            'Tilburg', 'Groningen', 'Almere', 'Breda', 'Nijmegen',
-            'Enschede', 'Haarlem', 'Arnhem', 'Zaanstad', 'Amersfoort',
-            'Apeldoorn', 'Hoofddorp', 'Maastricht', 'Leiden', 'Dordrecht',
-            'Zoetermeer', 'Zwolle', 'Deventer', 'Delft', 'Alkmaar',
-            'Leeuwarden', 'Helmond', 'Venlo', 'Oss', 'Roosendaal',
-            'Geldrop', 'Mierlo', 'Emmen', 'Hilversum', 'Kampen',
-            'Gouda', 'Purmerend', 'Vlaardingen', 'Alphen aan den Rijn',
-        'Spijkenisse', 'Hoorn', 'Ede', 'Leidschendam', 'Woerden',
-        'Schiedam', 'Lelystad', 'Tiel', 'Barneveld', 'Veenendaal',
-        'Doetinchem', 'Almelo', 'Nieuwegein', 'Zeist'
-      ];
+      // 1. Primary option: Cities from database (single source of truth)
+      // Get supported cities from city_base_charges table via cityBaseCharges
+      const supportedCities = Object.keys(cityBaseCharges);
       
-      const cityMatches = dutchCities
+      const cityMatches = supportedCities
         .filter(city => 
           city.toLowerCase().startsWith(query.toLowerCase()) ||
           city.toLowerCase().includes(query.toLowerCase())
@@ -86,17 +76,20 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
           if (!aStarts && bStarts) return 1;
           return a.length - b.length; // Then sort by length
         })
-            .slice(0, 5)
-            .map(city => ({
-              display_name: `${city}, Netherlands`,
-              lat: '52.0', // Approximate center of Netherlands
-              lon: '5.0',
-              place_id: city.toLowerCase(),
-              address: {
-                city: city,
-                country: 'Netherlands'
-              }
-            }));
+        .slice(0, 5)
+        .map(city => {
+          const cityData = cityBaseCharges[city];
+          return {
+            display_name: `${city}, Netherlands`,
+            lat: cityData?.latitude?.toString() || '52.0',
+            lon: cityData?.longitude?.toString() || '5.0',
+            place_id: city.toLowerCase(),
+            address: {
+              city: city,
+              country: 'Netherlands'
+            }
+          };
+        });
           
       if (cityMatches.length > 0) {
         data = cityMatches;

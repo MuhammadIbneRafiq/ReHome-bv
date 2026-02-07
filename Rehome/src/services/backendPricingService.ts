@@ -85,12 +85,13 @@ class BackendPricingService {
 
   /**
    * Create transportation request with images
+   * Uses unified /api/transport/create endpoint for both house-moving and item-transport
    */
   async createTransportRequest(formData: FormData) {
     try {
       const response = await fetch(`${this.getBaseUrl()}/api/transport/create`, {
         method: 'POST',
-        body: formData // Don't set Content-Type, let browser set it for multipart/form-data
+        body: formData // Send FormData directly - backend expects individual fields
       });
 
       if (!response.ok) {
@@ -101,7 +102,7 @@ class BackendPricingService {
       return data;
     } catch (error) {
       console.error('Error creating transport request:', error);
-      throw error;
+      return { success: false, error };
     }
   }
 

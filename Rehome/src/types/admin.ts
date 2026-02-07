@@ -24,6 +24,9 @@ export interface TransportRequest {
       coordinates?: { lat: number; lng: number };
     };
     selected_date?: string;
+    date_option?: 'fixed' | 'flexible' | 'rehome';
+    custom_item?: string;
+    preferred_time_span?: string;
     items?: any[];
     service_type?: string;
     has_student_id?: boolean;
@@ -49,6 +52,13 @@ export interface TransportRequest {
       subtotal?: number;
       total?: number;
       breakdown?: any;
+      // Item selections stored in pricing_breakdown JSONB
+      assemblyItems?: Record<string, boolean>;
+      disassemblyItems?: Record<string, boolean>;
+      extraHelperItems?: Record<string, boolean>;
+      carryingServiceItems?: Record<string, boolean>;
+      carryingUpItems?: Record<string, boolean>;
+      carryingDownItems?: Record<string, boolean>;
     };
     total_price?: number;
     admin_notes?: string;
@@ -179,12 +189,60 @@ export type LegacyRequestStatus = 'Open' | 'Contacted/ Pending' | 'Confirmed' | 
     updated_at: string;
   }
 
-  // Special request interface
+  // Special request interface - matches special_requests table
   export interface SpecialRequest {
-    id: number;
-    selected_services: string[];
-    message?: string;
-    contact_info: {
+    id: string;
+    request_type: 'international_move' | 'junk_removal' | 'item_storage' | string;
+    customer_name: string;
+    email: string;
+    phone: string;
+    
+    // Pickup address fields
+    pickup_country?: string;
+    pickup_postal?: string;
+    pickup_house_number?: string;
+    pickup_addition?: string;
+    pickup_city?: string;
+    pickup_street?: string;
+    pickup_floor?: number;
+    pickup_elevator?: boolean;
+    pickup_address?: string;
+    
+    // Dropoff address fields
+    dropoff_country?: string;
+    dropoff_postal?: string;
+    dropoff_house_number?: string;
+    dropoff_addition?: string;
+    dropoff_city?: string;
+    dropoff_street?: string;
+    dropoff_floor?: number;
+    dropoff_elevator?: boolean;
+    dropoff_address?: string;
+    
+    // Date fields
+    move_date_type?: 'specific' | 'flexible' | 'let_rehome_choose' | string;
+    specific_date_start?: string;
+    specific_date_end?: string;
+    
+    // Request details
+    item_description?: string;
+    selected_services?: string[] | any;
+    storage_duration_months?: number;
+    delivery_needed?: boolean;
+    junk_volume?: string;
+    
+    // Photos and pricing
+    photo_urls?: string[];
+    estimated_price?: number;
+    
+    // Status and metadata
+    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | LegacyRequestStatus;
+    admin_notes?: string;
+    created_at: string;
+    updated_at?: string;
+    
+    // Legacy fields for backward compatibility
+    contact_info?: {
       firstName: string;
       lastName: string;
       email: string;
@@ -194,23 +252,15 @@ export type LegacyRequestStatus = 'Open' | 'Contacted/ Pending' | 'Confirmed' | 
     dropoff_location?: string;
     pickup_location_coords?: any;
     dropoff_location_coords?: any;
-    request_type?: string;
     preferred_date?: string;
-    is_date_flexible: boolean;
+    is_date_flexible?: boolean;
     floor_pickup?: string;
     floor_dropoff?: string;
     elevator_pickup?: boolean;
     elevator_dropoff?: boolean;
-    pickup_floor?: string;
-    dropoff_floor?: string;
-    pickup_elevator?: boolean;
-    dropoff_elevator?: boolean;
+    message?: string;
     calculated_distance_km?: number;
     calculated_duration_seconds?: number;
     calculated_duration_text?: string;
     distance_provider?: string;
-    status: 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | LegacyRequestStatus;
-    created_at: string;
-    updated_at: string;
-    photo_urls?: string[];
   }

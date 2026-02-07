@@ -136,7 +136,9 @@ export function subscribeToConstants(onUpdate?: ConstantsSubscriptionHandler): (
               cityBaseCharges[cityData.city] = {
                 normal: cityData.normal_rate,
                 cityDay: cityData.city_day_rate,
-                dayOfWeek: cityData.day_of_week
+                dayOfWeek: cityData.day_of_week,
+                latitude: cityData.latitude || 52.0,
+                longitude: cityData.longitude || 5.0
               };
             }
           }

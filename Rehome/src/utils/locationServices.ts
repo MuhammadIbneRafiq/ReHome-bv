@@ -1,32 +1,18 @@
 import { cityBaseCharges } from '../lib/constants';
 
-const SUPPORTED_CITIES_COORDS: { [key: string]: { lat: number; lng: number } } = {
-  'Amsterdam': { lat: 52.37833, lng: 4.90000 },        // Amsterdam Centraal [web:14]
-  'Utrecht': { lat: 52.0894, lng: 5.1100 },            // Utrecht Centraal [web:17]
-  'Almere': { lat: 52.3731, lng: 5.2180 },             // Almere Centrum [web:17]
-  'Haarlem': { lat: 52.3872, lng: 4.6371 },            // Haarlem Centraal [web:17]
-  'Zaanstad': { lat: 52.4402, lng: 4.8119 },           // Zaandam station (main for Zaanstad) [web:17]
-  'Amersfoort': { lat: 52.1538, lng: 5.3725 },         // Amersfoort Centraal [web:17]
-  's-Hertogenbosch': { lat: 51.6900, lng: 5.2930 },    // 's-Hertogenbosch [web:17]
-  'Hoofddorp': { lat: 52.3022, lng: 4.7032 },          // Hoofddorp [web:17]
-  'Rotterdam': { lat: 51.9225, lng: 4.4821 },          // Rotterdam Centraal [web:17]
-  'The Hague': { lat: 52.0800, lng: 4.3240 },          // Den Haag Centraal [web:17]
-  'Breda': { lat: 51.5841, lng: 4.7988 },              // Breda [web:17]
-  'Leiden': { lat: 52.1667, lng: 4.4825 },             // Leiden Centraal [web:17]
-  'Dordrecht': { lat: 51.8103, lng: 4.6736 },          // Dordrecht [web:17]
-  'Zoetermeer': { lat: 52.0627, lng: 4.4971 },         // Zoetermeer station [web:17]
-  'Delft': { lat: 52.0067, lng: 4.3556 },              // Delft [web:17]
-  'Eindhoven': { lat: 51.4416, lng: 5.4810 },          // Eindhoven [web:17]
-  'Maastricht': { lat: 50.8499, lng: 5.7059 },         // Maastricht [web:17]
-  'Tilburg': { lat: 51.5553, lng: 5.0910 },            // Tilburg [web:17]
-  'Groningen': { lat: 53.2114, lng: 6.5641 },          // Groningen [web:17]
-  'Nijmegen': { lat: 51.8447, lng: 5.8625 },           // Nijmegen [web:17]
-  'Enschede': { lat: 52.2219, lng: 6.8937 },           // Enschede [web:17]
-  'Arnhem': { lat: 51.9852, lng: 5.8980 },             // Arnhem [web:17]
-  'Apeldoorn': { lat: 52.2118, lng: 5.9635 },          // Apeldoorn [web:17]
-  'Deventer': { lat: 52.2515, lng: 6.1592 },           // Deventer [web:17]
-  'Zwolle': { lat: 52.5058, lng: 6.0923 },             // Zwolle [web:17]
-};
+/**
+ * Get city coordinates from the database (via cityBaseCharges loaded in constants)
+ * This is the SINGLE SOURCE OF TRUTH for city data
+ */
+function getSupportedCitiesCoords(): { [key: string]: { lat: number; lng: number } } {
+  const coords: { [key: string]: { lat: number; lng: number } } = {};
+  for (const [cityName, cityData] of Object.entries(cityBaseCharges)) {
+    if (cityData.latitude && cityData.longitude) {
+      coords[cityName] = { lat: cityData.latitude, lng: cityData.longitude };
+    }
+  }
+  return coords;
+}
 
 // Interface for place objects coming from Google Places API
 export interface GooglePlaceObject {
@@ -161,8 +147,10 @@ async function findClosestSupportedCityInternal(
     let nearestCity: string | null = null;
     let shortestDistance = Infinity;
 
-    // Find the closest city from our supported cities (top 25) using road distance
-    for (const [cityName, cityCoords] of Object.entries(SUPPORTED_CITIES_COORDS)) {
+    // Find the closest city from our supported cities using road distance
+    // City coordinates come from database via cityBaseCharges
+    const supportedCitiesCoords = getSupportedCitiesCoords();
+    for (const [cityName, cityCoords] of Object.entries(supportedCitiesCoords)) {
       const distance = await calculateRoadDistance(targetLat, targetLng, cityCoords.lat, cityCoords.lng);
       if (distance < shortestDistance) {
         shortestDistance = distance;

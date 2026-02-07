@@ -3,7 +3,7 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaWarehouse, FaBroom, FaGlobe, FaCheckCircle } from 'react-icons/fa';
 import { PhoneNumberInput } from '@/components/ui/PhoneNumberInput';
-import { NSFWFileUpload } from '../../components/ui/NSFWFileUpload';
+// Removed NSFWFileUpload - using regular file upload for special requests
 import { API_ENDPOINTS } from '../api/config';
 
 type ServiceFieldsType = {
@@ -12,7 +12,7 @@ type ServiceFieldsType = {
 
 const serviceFields: ServiceFieldsType = {
   storage: [
-    'customerName', 'itemDescription', 'storageStartDate', 'storageEndDate', 'pickupPreference', 'contactInfo'
+    'customerName', 'itemDescription', 'storageStartDate', 'storageEndDate', 'pickupPreference', 'pickupName', 'deliveryName', 'contactInfo'
   ],
   junkRemoval: [
     'customerName', 'itemDescription', 'country', 'postal', 'houseNumber', 'city', 'street', 'floor', 'elevatorAvailable', 'earliestRemovalDate', 'removalDate', 'contactInfo'
@@ -126,6 +126,17 @@ const SpecialRequestPage = () => {
           }
           return;
         }
+        
+        // Skip conditional fields for storage service
+        if (selectedService === 'storage') {
+          if (field === 'pickupName' && fields.pickupPreference !== 'pickupFromHome') {
+            return; // Only required if pickup from home is selected
+          }
+          if (field === 'deliveryName' && fields.deliveryPreference !== 'delivery') {
+            return; // Only required if delivery is selected
+          }
+        }
+        
         if (!fields[field] && field !== 'photos') {
           newErrors[field] = 'This field is required.';
           isValid = false;
@@ -194,11 +205,12 @@ const SpecialRequestPage = () => {
       isValid = false;
       console.log('❌ Phone number is empty');
     } else {
-      const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+      // Allow phone numbers with spaces, dashes, and parentheses
+      const phoneRegex = /^\+?[\d\s\-\(\)]{8,20}$/;
       if (!phoneRegex.test(contactInfo.phone)) {
         newErrors.phone = 'Please enter a valid phone number.';
         isValid = false;
-        console.log('❌ Invalid phone number format');
+        console.log('❌ Invalid phone number format:', contactInfo.phone);
       }
     }
 
@@ -330,9 +342,13 @@ const SpecialRequestPage = () => {
       formData.append('phone', contactInfo.phone);
       formData.append('email', contactInfo.email);
       
+      // Add customerName field - required by backend
+      const customerName = derivedFields.customerName || fields.customerName || 'Customer';
+      formData.append('customerName', customerName);
+      
       // Add other fields
       Object.keys(derivedFields).forEach(key => {
-        if (derivedFields[key]) {
+        if (derivedFields[key] && key !== 'customerName') {
           formData.append(key, derivedFields[key]);
         }
       });
@@ -691,28 +707,210 @@ const SpecialRequestPage = () => {
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Name
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.pickupName || ''}
+                                onChange={(e) => handleFieldChange('pickupName', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Contact person name"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Floor (0 for ground floor)
                               </label>
                               <input
                                 type="number"
                                 min="0"
-                                value={fields.floor || '0'}
-                                onChange={(e) => handleFieldChange('floor', e.target.value)}
+                                value={fields.pickupFloor || '0'}
+                                onChange={(e) => handleFieldChange('pickupFloor', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                                 placeholder="0"
+                                required
                               />
                             </div>
-                            <div className="flex items-center">
-                              <input
-                                type="checkbox"
-                                id="elevatorAvailable"
-                                checked={fields.elevatorAvailable || false}
-                                onChange={(e) => handleFieldChange('elevatorAvailable', e.target.checked)}
-                                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                              />
-                              <label htmlFor="elevatorAvailable" className="ml-2 block text-sm text-gray-700">
-                                Elevator available
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Elevator Available
                               </label>
+                              <select
+                                value={fields.pickupElevator || ''}
+                                onChange={(e) => handleFieldChange('pickupElevator', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                required
+                              >
+                                <option value="">Select option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Visual Divider */}
+                        <div className="border-t border-gray-300 my-6"></div>
+
+                        {/* Delivery Preference - Second Question */}
+                        <div className="mb-4">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Do the items need to be delivered back to your home?
+                          </label>
+                          <div className="space-y-2">
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                name="deliveryPreference"
+                                value="pickupFromStorage"
+                                checked={fields.deliveryPreference === 'pickupFromStorage'}
+                                onChange={(e) => handleFieldChange('deliveryPreference', e.target.value)}
+                                className="mr-2"
+                                required
+                              />
+                              I can pick up the items from the ReHome storage in Tilburg.
+                            </label>
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                name="deliveryPreference"
+                                value="deliverToHome"
+                                checked={fields.deliveryPreference === 'deliverToHome'}
+                                onChange={(e) => handleFieldChange('deliveryPreference', e.target.value)}
+                                className="mr-2"
+                                required
+                              />
+                              I need the items to be delivered to my home
+                            </label>
+                          </div>
+                          {errors.deliveryPreference && <p className="text-red-500 text-sm mt-1">{errors.deliveryPreference}</p>}
+                        </div>
+
+                        {/* Delivery Address fields - only show if delivery to home is selected */}
+                        {fields.deliveryPreference === 'deliverToHome' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Country
+                              </label>
+                              <select
+                                value={fields.deliveryCountry || 'The Netherlands'}
+                                onChange={(e) => handleFieldChange('deliveryCountry', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                required
+                              >
+                                <option value="The Netherlands">The Netherlands</option>
+                                <option value="Belgium">Belgium</option>
+                                <option value="Germany">Germany</option>
+                                <option value="Other">Other</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Postal Code
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.deliveryPostal || ''}
+                                onChange={(e) => handleFieldChange('deliveryPostal', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="1234 AB"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                House Number
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.deliveryHouseNumber || ''}
+                                onChange={(e) => handleFieldChange('deliveryHouseNumber', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="123"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Addition
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.deliveryAddition || ''}
+                                onChange={(e) => handleFieldChange('deliveryAddition', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="A"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                City
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.deliveryCity || ''}
+                                onChange={(e) => handleFieldChange('deliveryCity', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Amsterdam"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Street
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.deliveryStreet || ''}
+                                onChange={(e) => handleFieldChange('deliveryStreet', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Main Street"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Name
+                              </label>
+                              <input
+                                type="text"
+                                value={fields.deliveryName || ''}
+                                onChange={(e) => handleFieldChange('deliveryName', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="Contact person name"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Floor (0 for ground floor)
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={fields.deliveryFloor || '0'}
+                                onChange={(e) => handleFieldChange('deliveryFloor', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                placeholder="0"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Elevator Available
+                              </label>
+                              <select
+                                value={fields.deliveryElevator || ''}
+                                onChange={(e) => handleFieldChange('deliveryElevator', e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                required
+                              >
+                                <option value="">Select option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
                             </div>
                           </div>
                         )}
@@ -1344,20 +1542,64 @@ const SpecialRequestPage = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Upload Photos *
                       </label>
-                      <NSFWFileUpload
-                        value={photos}
-                        onChange={setPhotos}
-                        onRemove={(index) => {
-                          const newPhotos = [...photos];
-                          newPhotos.splice(index, 1);
-                          setPhotos(newPhotos);
-                        }}
-                        required={true}
-                        disabled={isLoading}
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Please upload at least one photo to help us understand your request better.
-                      </p>
+                      <div className="space-y-2">
+                        <input
+                          type="file"
+                          multiple
+                          accept="image/*"
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files || []);
+                            const validFiles = files.filter(file => {
+                              // Check file size (50MB max)
+                              if (file.size > 50 * 1024 * 1024) {
+                                toast.error(`${file.name} is too large. Maximum size is 50MB.`);
+                                return false;
+                              }
+                              return true;
+                            });
+                            
+                            if (photos.length + validFiles.length > 10) {
+                              toast.error('Maximum 10 photos allowed');
+                              return;
+                            }
+                            
+                            setPhotos([...photos, ...validFiles]);
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                        
+                        {/* Display uploaded photos */}
+                        {photos.length > 0 && (
+                          <div className="mt-4 space-y-2">
+                            <p className="text-sm text-gray-600">{photos.length} photo(s) selected</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                              {photos.map((photo, index) => (
+                                <div key={index} className="relative">
+                                  <img
+                                    src={URL.createObjectURL(photo)}
+                                    alt={`Photo ${index + 1}`}
+                                    className="w-full h-24 object-cover rounded"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newPhotos = photos.filter((_, i) => i !== index);
+                                      setPhotos(newPhotos);
+                                    }}
+                                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <p className="text-xs text-gray-500">
+                          PNG, JPG, GIF images up to 50MB each. Maximum 10 photos.
+                        </p>
+                      </div>
                       {errors.photos && <p className="text-red-500 text-sm mt-1">{errors.photos}</p>}
                     </div>
 

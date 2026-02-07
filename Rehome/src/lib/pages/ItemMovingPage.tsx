@@ -233,22 +233,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
         }
     };
 
-    // Helper to check if date is within short-term window and show warning
-    // const checkShortTermDate = React.useCallback((dateStr: string) => {
-    //     if (!dateStr) return;
-    //     const selectedDate = new Date(dateStr);
-    //     const today = new Date();
-    //     today.setHours(0, 0, 0, 0);
-    //     const diffDays = Math.ceil((selectedDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        
-    //     if (diffDays <= 3 && diffDays >= 0) {
-    //         toast.warning(
-    //             "LAST MINUTE REQUEST! Please check other days to receive a cheaper service.",
-    //             { autoClose: 5000, toastId: 'last-minute-warning' }
-    //         );
-    //     }
-    // }, []);
-
     // New: separate carrying directions
     const [carryingUpstairs, setCarryingUpstairs] = useState(false);
     const [carryingDownstairs, setCarryingDownstairs] = useState(false);
@@ -496,7 +480,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             assemblyEligibleSelectedItemIds.length > 0 &&
             assemblyEligibleSelectedItemIds.every(itemId => disassemblyItems[itemId]);
         setSelectAllDisassembly(allSelected);
-    }, [disassemblyItems, assemblyEligibleSelectedItemIds]);
+    }, [assemblyEligibleSelectedItemIds]);
 
     // Update assembly items when individual items change
     useEffect(() => {
@@ -504,7 +488,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             assemblyEligibleSelectedItemIds.length > 0 &&
             assemblyEligibleSelectedItemIds.every(itemId => assemblyItems[itemId]);
         setSelectAllAssembly(allSelected);
-    }, [assemblyItems, assemblyEligibleSelectedItemIds]);
+    }, [assemblyEligibleSelectedItemIds]);
 
     // Prune any ineligible selections if present
     useEffect(() => {
@@ -517,7 +501,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             });
             setDisassemblyItems(pruned);
         }
-    }, [itemQuantities, isAssemblyEligible, disassemblyItems]);
+    }, [itemQuantities, isAssemblyEligible]);
 
     useEffect(() => {
         if (Object.keys(assemblyItems).length > 0) {
@@ -529,7 +513,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             });
             setAssemblyItems(pruned);
         }
-    }, [itemQuantities, isAssemblyEligible, assemblyItems]);
+    }, [itemQuantities, isAssemblyEligible]);
 
     // Update carrying items when individual items change
     useEffect(() => {
@@ -738,7 +722,6 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             };
             
             console.log('[DEBUG] ====== PRICING REQUEST ======');
-            console.log('here is hte pickupplace', pickupPlace)
             console.log('[DEBUG] Full pricingInput:', JSON.stringify(pricingInput, null, 2));
             console.log('[DEBUG] pickupPlace city field:', pickupPlace?.city);
             console.log('[DEBUG] dropoffPlace city field:', dropoffPlace?.city);
@@ -1206,35 +1189,63 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             formData.append("needsAssembly", assembly.toString());
             formData.append("needsExtraHelper", extraHelper.toString());
             formData.append("specialInstructions", extraInstructions);
+            formData.append("dateOption", dateOption);
+            formData.append("customItem", customItem || '');
+            formData.append("preferredTimeSpan", preferredTimeSpan || '');
+            
+            // Add pricing breakdown with detailed assembly/disassembly breakdown
+            if (pricingBreakdown) {
+                formData.append("pricingBreakdown", JSON.stringify(pricingBreakdown));
+            }
+            
+            // Add assembly and disassembly items
+            formData.append("assemblyItems", JSON.stringify(assemblyItems));
+            formData.append("disassemblyItems", JSON.stringify(disassemblyItems));
+            formData.append("extraHelperItems", JSON.stringify(extraHelperItems));
+            formData.append("carryingServiceItems", JSON.stringify(carryingServiceItems));
+            formData.append("carryingUpItems", JSON.stringify(carryingUpItems));
+            formData.append("carryingDownItems", JSON.stringify(carryingDownItems));
 
             // Handle dates based on service type and options
             if (isItemTransport) {
                 if (dateOption === 'fixed') {
                     formData.append("selectedDate", pickupDate || new Date().toISOString());
-                    formData.append("pickupDate", pickupDate || new Date().toISOString());
-                    formData.append("dropoffDate", dropoffDate || new Date().toISOString());
+                    formData.append("selectedDateStart", pickupDate || new Date().toISOString());
+                    formData.append("selectedDateEnd", dropoffDate || new Date().toISOString());
                 } else if (dateOption === 'flexible') {
                     formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+                    formData.append("selectedDateStart", selectedDateRange.start || new Date().toISOString());
+                    formData.append("selectedDateEnd", selectedDateRange.end || new Date().toISOString());
                     formData.append("isDateFlexible", "true");
                 } else if (dateOption === 'rehome') {
-                    // "Let ReHome Choose" option - date is flexible
                     formData.append("selectedDate", new Date().toISOString());
+                    formData.append("selectedDateStart", new Date().toISOString());
+                    formData.append("selectedDateEnd", new Date().toISOString());
                     formData.append("isDateFlexible", "true");
                 } else {
                     formData.append("selectedDate", new Date().toISOString());
+                    formData.append("selectedDateStart", new Date().toISOString());
+                    formData.append("selectedDateEnd", new Date().toISOString());
                 }
             } else if (isHouseMoving) {
-                if (dateOption === 'flexible') {
+                if (dateOption === 'fixed') {
                     formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+                    formData.append("selectedDateStart", selectedDateRange.start || new Date().toISOString());
+                    formData.append("selectedDateEnd", selectedDateRange.end || selectedDateRange.start || new Date().toISOString());
+                } else if (dateOption === 'flexible') {
+                    formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
+                    formData.append("selectedDateStart", selectedDateRange.start || new Date().toISOString());
+                    formData.append("selectedDateEnd", selectedDateRange.end || new Date().toISOString());
                     formData.append("isDateFlexible", "true");
                 } else if (dateOption === 'rehome') {
-                    // "Let ReHome Choose" option - date is flexible
                     formData.append("selectedDate", new Date().toISOString());
+                    formData.append("selectedDateStart", new Date().toISOString());
+                    formData.append("selectedDateEnd", new Date().toISOString());
                     formData.append("isDateFlexible", "true");
-                } else if (dateOption === 'fixed') {
-                    formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
                 } else {
                     formData.append("selectedDate", new Date().toISOString());
+                    formData.append("selectedDateStart", new Date().toISOString());
+                    formData.append("selectedDateEnd", new Date().toISOString());
                 }
             }
 
@@ -1435,7 +1446,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                     )}
                     {pricingBreakdown.assemblyCost > 0 && (
                         <div className="flex justify-between">
-                            <span>Assembly:</span>
+                            <span>Assembly/Disassembly:</span>
                             <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
                         </div>
                     )}
@@ -1601,12 +1612,42 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                             <span>Elevator discount applied.</span>
                         </div>
                     )}
-                    {pricingBreakdown.assemblyCost > 0 && (
-                        <div className="flex justify-between">
-                            <span>Assembly:</span>
-                            <span>€{pricingBreakdown.assemblyCost.toFixed(2)}</span>
-                        </div>
-                    )}
+
+                    {(pricingBreakdown?.assemblyCost ?? 0) > 0 && (
+                    <>
+                        <li className="flex justify-between">
+                            <span>Assembly/Disassembly</span>
+                            <span className="font-medium">€{pricingBreakdown?.assemblyCost?.toFixed(2)}</span>
+                        </li>
+                        {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).length > 0 && (
+                            <>
+                                <li className="pl-4 text-gray-600 font-medium">Disassembly:</li>
+                                {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).map(id => {
+                                    const itemData = furnitureItems.find(item => item.id === id);
+                                    return (
+                                        <li key={`disasm-${id}`} className="pl-8 text-gray-500">
+                                            - {itemData?.name || id} (x{itemQuantities[id] || 1})
+                                        </li>
+                                    );
+                                })}
+                            </>
+                        )}
+                        {Object.keys(assemblyItems).filter(id => assemblyItems[id]).length > 0 && (
+                            <>
+                                <li className="pl-4 text-gray-600 font-medium">Assembly:</li>
+                                {Object.keys(assemblyItems).filter(id => assemblyItems[id]).map(id => {
+                                    const itemData = furnitureItems.find(item => item.id === id);
+                                    return (
+                                        <li key={`asm-${id}`} className="pl-8 text-gray-500">
+                                            - {itemData?.name || id} (x{itemQuantities[id] || 1})
+                                        </li>
+                                    );
+                                })}
+                            </>
+                        )}
+                    </>
+                )}
+                    
                     {pricingBreakdown.extraHelperCost > 0 && (
                         <div className="flex justify-between">
                             <span>Extra Helper:</span>
@@ -2742,21 +2783,46 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             <button type="button" onClick={() => setStep(4)} className="text-orange-600 text-sm hover:underline">Edit</button>
                                         </div>
                                         <ul className="space-y-2 text-sm">
-                                            {(pricingBreakdown?.assemblyCost ?? 0) > 0 && (
+                                            {(() => {
+                                                console.log('[DEBUG] Step 6 - Assembly state check:');
+                                                console.log('  - assemblyCost:', pricingBreakdown?.assemblyCost);
+                                                console.log('  - disassemblyItems selected:', Object.keys(disassemblyItems).filter(id => disassemblyItems[id]));
+                                                console.log('  - assemblyItems selected:', Object.keys(assemblyItems).filter(id => assemblyItems[id]));
+                                                console.log('  - pricingBreakdown:', pricingBreakdown);
+                                                return null;
+                                            })()}
+                                            { (Object.keys(assemblyItems).filter(id => assemblyItems[id]).length > 0 || 
+                                              Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).length > 0) && (
                                                 <>
-                                                <li className="flex justify-between">
-                                                    <span>Assembly</span>
-                                                    <span className="font-medium">€{pricingBreakdown?.assemblyCost?.toFixed(2)}</span>
+                                                    <li className="flex justify-between">
+                                                        <span>Assembly/Disassembly</span>
+                                                        <span className="font-medium">€{pricingBreakdown?.assemblyCost?.toFixed(2)}</span>
                                                     </li>
                                                     {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).length > 0 && (
-                                                        <li className="flex justify-between pl-4 text-sm text-gray-600">
-                                                            <span>- Disassembly Items: {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).length}</span>
-                                                </li>
+                                                        <>
+                                                            <li className="pl-4 text-gray-600 font-medium">Disassembly:</li>
+                                                            {Object.keys(disassemblyItems).filter(id => disassemblyItems[id]).map(id => {
+                                                                const itemData = furnitureItems.find(item => item.id === id);
+                                                                return (
+                                                                    <li key={`disasm-${id}`} className="pl-8 text-gray-500">
+                                                                        - {itemData?.name || id} (x{itemQuantities[id] || 1})
+                                                                    </li>
+                                                                );
+                                                            })}
+                                                        </>
                                                     )}
                                                     {Object.keys(assemblyItems).filter(id => assemblyItems[id]).length > 0 && (
-                                                        <li className="flex justify-between pl-4 text-sm text-gray-600">
-                                                            <span>- Assembly Items: {Object.keys(assemblyItems).filter(id => assemblyItems[id]).length}</span>
-                                                        </li>
+                                                        <>
+                                                            <li className="pl-4 text-gray-600 font-medium">Assembly:</li>
+                                                            {Object.keys(assemblyItems).filter(id => assemblyItems[id]).map(id => {
+                                                                const itemData = furnitureItems.find(item => item.id === id);
+                                                                return (
+                                                                    <li key={`asm-${id}`} className="pl-8 text-gray-500">
+                                                                        - {itemData?.name || id} (x{itemQuantities[id] || 1})
+                                                                    </li>
+                                                                );
+                                                            })}
+                                                        </>
                                                     )}
                                                 </>
                                             )}
@@ -2775,6 +2841,46 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                                     <span>Floor Carrying Cost</span>
                                                     <span className="font-medium">€{pricingBreakdown?.carryingCost.toFixed(2)}</span>
                                                 </li>
+                                            )}
+                                            {(carryingDownstairs || carryingUpstairs) && (
+                                                <ul className="pl-4 text-sm text-gray-600">
+                                                    {carryingDownstairs && floorPickup > 0 && (
+                                                        <li>
+                                                            <span>- Pickup: {floorPickup} floor{floorPickup > 1 ? 's' : ''} down{elevatorPickup ? ' (with elevator)' : ''}</span>
+                                                        </li>
+                                                    )}
+                                                    {carryingUpstairs && floorDropoff > 0 && (
+                                                        <li>
+                                                            <span>- Delivery: {floorDropoff} floor{floorDropoff > 1 ? 's' : ''} up{elevatorDropoff ? ' (with elevator)' : ''}</span>
+                                                        </li>
+                                                    )}
+                                                    {Object.keys(carryingUpItems).filter(id => carryingUpItems[id]).length > 0 && (
+                                                        <>
+                                                            <li className="font-medium text-gray-700">Items carried up:</li>
+                                                            {Object.keys(carryingUpItems).filter(id => carryingUpItems[id]).map(id => {
+                                                                const itemData = furnitureItems.find(item => item.id === id);
+                                                                return (
+                                                                    <li key={`carry-up-${id}`} className="pl-4 text-gray-500">
+                                                                        - {itemData?.name || id} (x{itemQuantities[id] || 1})
+                                                                    </li>
+                                                                );
+                                                            })}
+                                                        </>
+                                                    )}
+                                                    {Object.keys(carryingDownItems).filter(id => carryingDownItems[id]).length > 0 && (
+                                                        <>
+                                                            <li className="font-medium text-gray-700">Items carried down:</li>
+                                                            {Object.keys(carryingDownItems).filter(id => carryingDownItems[id]).map(id => {
+                                                                const itemData = furnitureItems.find(item => item.id === id);
+                                                                return (
+                                                                    <li key={`carry-down-${id}`} className="pl-4 text-gray-500">
+                                                                        - {itemData?.name || id} (x{itemQuantities[id] || 1})
+                                                                    </li>
+                                                                );
+                                                            })}
+                                                        </>
+                                                    )}
+                                                </ul>
                                             )}
                                             {typeof pricingBreakdown?.studentDiscount === "number" && pricingBreakdown.studentDiscount > 0 && (
                                                 <li className="flex justify-between text-green-600">

@@ -51,7 +51,7 @@ const OrderConfirmationModal = ({ isOpen, onClose, orderNumber, isReHomeOrder, i
           </h2>
           <p className="text-gray-600 mb-4">
             {isMovingRequest 
-              ? `Your moving request has been submitted successfully. Check your email for confirmation.`
+              ? `Your Moving Request has been submitted successfully. We've sent you a confirmation email with your request details.`
               : `Check your email for confirmation. Your order #${orderNumber} has been placed successfully.`
             }
           </p>
@@ -63,9 +63,9 @@ const OrderConfirmationModal = ({ isOpen, onClose, orderNumber, isReHomeOrder, i
                   <FaEnvelope className="text-orange-500" />
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-orange-800">Confirmation Email Sent</h3>
+                  <h3 className="text-sm font-medium text-orange-800">Thank you for your request!</h3>
                   <p className="text-sm text-orange-700 mt-1">
-                    We've sent you a confirmation email with your {isMovingRequest ? 'request' : 'order'} details. Our team will review and get back to you shortly with final pricing and.
+                     We're now matching your move with our available routes to find the most efficient integration. Our team will get back to you shortly with possible time slots and pricing options.
                   </p>
                 </div>
               </div>
