@@ -310,60 +310,87 @@ export async function getCityScheduleStatus(
 }
 
 /**
- * Check if all cities are empty on a specific date
+ * Get calendar pricing for a date range based on locations
  */
-export async function checkAllCitiesEmpty(date: Date, baseUrl: string): Promise<boolean> {
+export interface CalendarPricingParams {
+  pickupLocation: any;
+  dropoffLocation: any;
+  startDate: string;
+  endDate: string;
+  serviceType: 'item-transport' | 'house-moving';
+  dateOption: 'fixed' | 'flexible' | 'rehome';
+  pickupDate?: string;
+  dropoffDate?: string;
+}
+
+export interface CalendarPricingResponse {
+  date: string;
+  colorCode: 'green' | 'orange' | 'red' | 'grey';
+  price: number;
+  priceType: 'cheap' | 'standard' | 'empty' | 'blocked';
+  breakdown: {
+    pickupCityScheduled: boolean;
+    dropoffCityScheduled: boolean;
+    isEmpty: boolean;
+    isBlocked: boolean;
+    baseCharge: number;
+    multiplier: number;
+  };
+}
+
+// Enhanced cache for pricing data
+const pricingCache = new Map<string, { data: any; timestamp: number }>();
+
+export async function getCalendarPricing(
+  params: CalendarPricingParams,
+  _baseUrl: string
+): Promise<{ dates: CalendarPricingResponse[]; summary: any }> {
   try {
-    if (!date || isNaN(date.getTime())) {
-      console.warn('[checkAllCitiesEmpty] Invalid date provided:', date);
-      return false;
+    const cacheKey = `pricing:${JSON.stringify(params)}`;
+    
+    // Check cache first (5 minute TTL)
+    const cached = pricingCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      return cached.data;
     }
-    
-    const dateStr = date.toISOString().split('T')[0];
-    const cacheKey = `all:${dateStr}`;
-    
-    // Check cache first
-    if (cityScheduleCache[cacheKey]) {
-      const cachedData = cityScheduleCache[cacheKey];
-      // Use cache if it's fresh (less than 60s old)
-      if (Date.now() - cachedData.updatedAt < 60_000) {
-        return cachedData.isEmpty;
+
+    // Call Supabase Edge Function directly (single source of truth)
+    const { data, error } = await supabase.functions.invoke('calculate-base-price', {
+      body: {
+        ...params,
+        mode: 'calendar'
       }
+    });
+
+    if (error) {
+      throw new Error(`Edge Function error: ${error.message}`);
     }
-    
-    const url = `${baseUrl}/api/check-all-cities-empty?date=${dateStr}`;
-    const response = await fetch(url);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to check all cities empty: ${response.status}`);
+
+    if (!data?.success) {
+      throw new Error(data?.error || 'Edge Function returned error');
     }
+
+    // Cache the result — wrap in { dates } to match component expectations
+    const result = { dates: data.data, summary: data.meta || {} };
+    pricingCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now()
+    });
     
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'Backend error');
-    }
-    
-    // Update cache
-    cityScheduleCache[cacheKey] = {
-      isScheduled: false, // Not relevant for this endpoint
-      isEmpty: result.data.isEmpty,
-      version: result.data.version || (cityScheduleCache[cacheKey]?.version || 0) + 1,
-      updatedAt: Date.now()
-    };
-    
-    return result.data.isEmpty;
+    return result;
   } catch (error) {
-    console.error('[checkAllCitiesEmpty] Error:', error);
-    
-    // If we have a cache entry, use it even if stale
-    if (cityScheduleCache[`all:${date.toISOString().split('T')[0]}`]) {
-      return cityScheduleCache[`all:${date.toISOString().split('T')[0]}`].isEmpty;
-    }
-    
-    // Default fallback
-    return false;
+    console.error('[getCalendarPricing] Error:', error);
+    throw error;
   }
+}
+
+/**
+ * Clear pricing cache when calendar is updated
+ */
+export function clearPricingCache(): void {
+  pricingCache.clear();
+  // Clear all properties from the cache object
+  Object.keys(cityScheduleCache).forEach(key => delete cityScheduleCache[key]);
 }
 
 /**
