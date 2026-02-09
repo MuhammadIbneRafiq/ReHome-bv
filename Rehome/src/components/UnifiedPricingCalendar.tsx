@@ -286,16 +286,6 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
     return map;
   }, [rawDays, rawColors, charges, dateOption, isItemTransport, pickupDate, dropoffDate, flexStart]);
 
-  // ─── Flexible range price (computed locally, instant) ─────────────────────
-  const flexRangePrice = useMemo(() => {
-    if (dateOption !== 'flexible' || !flexStart || !flexEnd || !charges) return null;
-    const s = fmtDate(flexStart), e = fmtDate(flexEnd);
-    const price = calcFlexibleForEndDate(s, e, rawDays, charges);
-    const rangeDays = Math.ceil((flexEnd.getTime() - flexStart.getTime()) / 86400000) + 1;
-    const type = rangeDays > 7 ? 'Flexible >7 days — Cheap Rate' : 'Flexible Range';
-    return { price: Math.round(price * 100) / 100, type };
-  }, [dateOption, flexStart, flexEnd, charges, rawDays]);
-
   // ─── Date click handler ────────────────────────────────────────────────────
   const handleDateClick = (date: Date) => {
     const dateStr = fmtDate(date);
@@ -530,12 +520,12 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
               <span className="ml-2 text-blue-600 font-medium">
                 ({Math.round((flexEnd.getTime() - flexStart.getTime()) / (1000 * 60 * 60 * 24)) + 1} days)
               </span>
-              {flexRangePrice && (
+              {/* {flexRangePrice && (
                 <div className="mt-2 text-lg font-bold text-green-700">
                   Base Price: €{Math.round(flexRangePrice.price)}
                   <span className="ml-2 text-xs font-normal text-gray-500">({flexRangePrice.type})</span>
                 </div>
-              )}
+              )} */}
             </div>
           ) : flexStart ? (
             <div className="bg-blue-50 border border-dashed border-blue-300 rounded-lg px-3 py-2 text-sm text-blue-700">

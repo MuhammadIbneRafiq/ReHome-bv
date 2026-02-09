@@ -343,7 +343,7 @@ const pricingCache = new Map<string, { data: any; timestamp: number }>();
 
 export async function getCalendarPricing(
   params: CalendarPricingParams,
-  _baseUrl: string
+  baseUrl: string
 ): Promise<{ dates: CalendarPricingResponse[]; summary: any }> {
   try {
     const cacheKey = `pricing:${JSON.stringify(params)}`;
@@ -354,24 +354,24 @@ export async function getCalendarPricing(
       return cached.data;
     }
 
-    // Call Supabase Edge Function directly (single source of truth)
-    const { data, error } = await supabase.functions.invoke('calculate-base-price', {
-      body: {
-        ...params,
-        mode: 'calendar'
-      }
+    // Call Node.js backend API (single source of truth — uses basePriceCalculator.js)
+    const response = await fetch(`${baseUrl}/api/calendar-pricing/range`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
     });
 
-    if (error) {
-      throw new Error(`Edge Function error: ${error.message}`);
+    if (!response.ok) {
+      throw new Error(`Calendar pricing API error: ${response.status}`);
     }
 
-    if (!data?.success) {
-      throw new Error(data?.error || 'Edge Function returned error');
+    const json = await response.json();
+    if (!json?.success) {
+      throw new Error(json?.error || 'Calendar pricing API returned error');
     }
 
-    // Cache the result — wrap in { dates } to match component expectations
-    const result = { dates: data.data, summary: data.meta || {} };
+    // Backend returns { success, data: { dates, summary } }
+    const result = { dates: json.data.dates, summary: json.data.summary || {} };
     pricingCache.set(cacheKey, {
       data: result,
       timestamp: Date.now()

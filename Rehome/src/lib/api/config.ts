@@ -80,6 +80,7 @@ export const API_ENDPOINTS = {
     CALCULATE: `${API_BASE_URL}/api/calculate-pricing`,
     CONFIG: `${API_BASE_URL}/api/pricing-config`,
     CITY_BASE_CHARGES: `${API_BASE_URL}/api/city-base-charges`,
+    CALENDAR_RANGE: `${API_BASE_URL}/api/calendar-pricing/range`,
   },
 
   // ReHome Orders
