@@ -713,6 +713,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             return null;
         }
         
+        // Gate on date validity — don't calculate pricing until required dates are provided
+        // This prevents the "wrong price shown first then corrects" flicker
+        if (dateOption === 'fixed') {
+            if (isItemTransport && (!pickupDate || !dropoffDate)) return null;
+            if (isHouseMoving && !selectedDateRange.start) return null;
+        } else if (dateOption === 'flexible') {
+            if (!selectedDateRange.start || !selectedDateRange.end) return null;
+        }
+        // 'rehome' option doesn't require dates — always valid
+        
         // Create a stable signature from all pricing-relevant inputs
         return JSON.stringify({
             // Location data

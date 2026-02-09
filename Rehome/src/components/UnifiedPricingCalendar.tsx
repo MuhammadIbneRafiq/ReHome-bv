@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Calendar } from 'lucide-react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isBefore, startOfDay, getDay } from 'date-fns';
-import { getCalendarPricing, CalendarPricingResponse } from '../services/realtimeService';
+import { getCalendarPricing, CalendarPricingResponse, clearPricingCache } from '../services/realtimeService';
 import { API_BASE_URL } from '../lib/api/config';
 
 interface UnifiedPricingCalendarProps {
@@ -167,7 +167,6 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
       const start = startOfMonth(currentMonth);
       const end = endOfMonth(currentMonth);
 
-      const { clearPricingCache } = await import('../services/realtimeService');
       clearPricingCache();
 
       const result = await getCalendarPricing({
