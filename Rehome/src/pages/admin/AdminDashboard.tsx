@@ -82,8 +82,7 @@ const AdminDashboard = () => {
       bigMove: { price: 0 }
     },
     discounts: {
-      studentDiscount: { percentage: 0 },
-      lateBookingFee: { percentage: 0 }
+      studentDiscount: { percentage: 0 }
     }
   });
   const [editingJsonConfig, setEditingJsonConfig] = useState<string | null>(null);
@@ -4369,46 +4368,7 @@ const AdminDashboard = () => {
                           )}
                         </div>
                         
-                        <div className="p-3 bg-gray-50 rounded">
-                          <label className="block text-sm font-medium text-gray-600 mb-1">Late Booking Fee (%)</label>
-                          {editingJsonConfig === 'discounts.lateBookingFee' ? (
-                            <div className="space-y-2">
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={(editJsonConfigData.percentage || 0) * 100}
-                                onChange={(e) => setEditJsonConfigData({...editJsonConfigData, percentage: parseFloat(e.target.value) / 100})}
-                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                              />
-                              <div className="flex space-x-1">
-                                <button
-                                  onClick={() => handleSaveJsonConfig('discounts', 'lateBookingFee')}
-                                  disabled={isUpdating}
-                                  className="px-2 py-1 bg-green-500 text-white rounded text-xs hover:bg-green-600 disabled:opacity-50"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingJsonConfig(null)}
-                                  className="px-2 py-1 bg-gray-500 text-white rounded text-xs hover:bg-gray-600"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div>
-                              <span className="text-sm font-medium">{((jsonPricingConfig.discounts?.lateBookingFee?.percentage || 0.10) * 100).toFixed(2)}%</span>
-                              <button
-                                onClick={() => handleEditJsonConfig('discounts', 'lateBookingFee')}
-                                className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                                              </div>
                     </div>
                   </div>
 

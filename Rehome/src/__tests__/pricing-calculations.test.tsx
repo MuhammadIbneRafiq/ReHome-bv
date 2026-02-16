@@ -81,7 +81,6 @@ vi.mock('../services/backendPricingService', () => ({
             extraHelperCost,
             subtotal,
             studentDiscount: 0,
-            lateBookingFee: 0,
             total: subtotal
           }
         }

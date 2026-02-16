@@ -48,7 +48,6 @@ export interface TransportRequest {
       assemblyCost?: number;
       extraHelperCost?: number;
       studentDiscount?: number;
-      lateBookingFee?: number;
       subtotal?: number;
       total?: number;
       breakdown?: any;

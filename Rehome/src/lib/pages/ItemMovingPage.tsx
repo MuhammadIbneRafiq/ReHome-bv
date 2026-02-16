@@ -3,6 +3,7 @@ import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaP
 import { loadGoogleMapsAPI } from '../../utils/googleMapsLoader';
 import { supabase } from '../supabaseClient';
 import { Switch } from "@headlessui/react";
+import { getTomorrowLocal } from '../../utils/dateUtils';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { getItemPoints, furnitureItems, constantsLoaded } from '../../lib/constants';
@@ -636,13 +637,10 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                     setDistanceKm(calculatedDistance);
                 }
             }
-
-            // For "Let ReHome choose" option, provide a 3-week window starting tomorrow
+            
             let selectedDateForPricing = selectedDateRange.start;
             if (dateOption === 'rehome') {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                selectedDateForPricing = tomorrow.toISOString().split('T')[0];
+                selectedDateForPricing = getTomorrowLocal().split('T')[0];
             }
 
             const pricingInput: PricingInput = {
@@ -672,7 +670,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 extraHelperItems,
                 isStudent,
                 hasStudentId: !!studentId, // Only true if file is uploaded
-                                carryingServiceItems: combinedCarryingItems,
+                carryingServiceItems: combinedCarryingItems,
                 carryingUpItems: carryingUpItems,
                 carryingDownItems: carryingDownItems,
                 pickupPlace: pickupPlace,
@@ -1172,13 +1170,13 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
             // Handle dates based on service type and options
             if (isItemTransport) {
                 if (dateOption === 'fixed') {
-                    formData.append("selectedDate", pickupDate || new Date().toISOString());
-                    formData.append("selectedDateStart", pickupDate || new Date().toISOString());
-                    formData.append("selectedDateEnd", dropoffDate || new Date().toISOString());
+                    formData.append("selectedDate", pickupDate);
+                    formData.append("selectedDateStart", pickupDate);
+                    formData.append("selectedDateEnd", dropoffDate);
                 } else if (dateOption === 'flexible') {
-                    formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
-                    formData.append("selectedDateStart", selectedDateRange.start || new Date().toISOString());
-                    formData.append("selectedDateEnd", selectedDateRange.end || new Date().toISOString());
+                    formData.append("selectedDate", selectedDateRange.start);
+                    formData.append("selectedDateStart", selectedDateRange.start);
+                    formData.append("selectedDateEnd", selectedDateRange.end);
                     formData.append("isDateFlexible", "true");
                 } else if (dateOption === 'rehome') {
                     formData.append("selectedDate", new Date().toISOString());
@@ -1192,13 +1190,13 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 }
             } else if (isHouseMoving) {
                 if (dateOption === 'fixed') {
-                    formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
-                    formData.append("selectedDateStart", selectedDateRange.start || new Date().toISOString());
-                    formData.append("selectedDateEnd", selectedDateRange.end || selectedDateRange.start || new Date().toISOString());
+                    formData.append("selectedDate", selectedDateRange.start);
+                    formData.append("selectedDateStart", selectedDateRange.start);
+                    formData.append("selectedDateEnd", selectedDateRange.end);
                 } else if (dateOption === 'flexible') {
-                    formData.append("selectedDate", selectedDateRange.start || new Date().toISOString());
-                    formData.append("selectedDateStart", selectedDateRange.start || new Date().toISOString());
-                    formData.append("selectedDateEnd", selectedDateRange.end || new Date().toISOString());
+                    formData.append("selectedDate", selectedDateRange.start);
+                    formData.append("selectedDateStart", selectedDateRange.start);
+                    formData.append("selectedDateEnd", selectedDateRange.end);
                     formData.append("isDateFlexible", "true");
                 } else if (dateOption === 'rehome') {
                     formData.append("selectedDate", new Date().toISOString());
@@ -1959,21 +1957,26 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                                             pickupDate={pickupDate}
                                             dropoffDate={dropoffDate}
                                             onDateSelect={(date) => {
-                                                const isoString = date.toISOString();
+                                                // Use local date format to avoid timezone issues
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                const localISO = `${year}-${month}-${day}T00:00:00.000Z`;
+                                                
                                                 if (isItemTransport && dateOption === 'fixed') {
                                                     // For item transport fixed dates, alternate between pickup and dropoff
                                                     if (!pickupDate) {
-                                                        setPickupDate(isoString);
+                                                        setPickupDate(localISO);
                                                     } else if (!dropoffDate) {
-                                                        setDropoffDate(isoString);
+                                                        setDropoffDate(localISO);
                                                     } else {
                                                         // Reset and start with pickup
-                                                        setPickupDate(isoString);
+                                                        setPickupDate(localISO);
                                                         setDropoffDate('');
                                                     }
                                                 } else if (isHouseMoving && dateOption === 'fixed') {
                                                     // For house moving fixed date
-                                                    setSelectedDateRange({ start: isoString, end: '' });
+                                                    setSelectedDateRange({ start: localISO, end: localISO });
                                                 }
                                             }}
                                             onDateRangeSelect={(dates) => {

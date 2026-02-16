@@ -30,7 +30,6 @@ export interface PricingConfigAPI {
     assemblyChargePerItem: number;
     extraHelperChargePerItem: number;
     studentDiscount: number;
-    lateBookingFee: number;
     urgentBookingFee: number;
     minimumCharge: number;
   };

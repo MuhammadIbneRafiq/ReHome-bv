@@ -54,7 +54,7 @@ function calcHouseMovingFixed(d: DayStatus, c: Charges) {
   if (d.isBlocked) return 0;
   if (!c.isIntercity) {
     if (d.pickupScheduled) return c.pickupCheap;
-    if (d.isEmpty) return c.pickupCheap * 0.75;
+    if (d.isEmpty) return c.pickupStandard * 0.75;
     return c.pickupStandard;
   }
   if (d.pickupScheduled && d.dropoffScheduled) return (c.pickupCheap + c.dropoffCheap) / 2;
@@ -169,11 +169,19 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
 
       clearPricingCache();
 
+      // Helper function to format dates without timezone conversion
+      const formatDateLocal = (d: Date) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}T00:00:00.000Z`;
+      };
+      
       const result = await getCalendarPricing({
         pickupLocation,
         dropoffLocation,
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
+        startDate: formatDateLocal(start),
+        endDate: formatDateLocal(end),
         serviceType,
         dateOption: 'fixed', // always fetch fixed-mode to get per-day schedule status
       }, API_BASE_URL);
@@ -276,10 +284,12 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
         price = calcHouseMovingFixed(status, charges);
       }
 
+      // Use backend-returned colorCode which already has correct same-city vs intercity logic
+      const priceType = colorCode === 'green' ? 'cheap' : colorCode === 'orange' ? 'empty' : 'standard';
       map.set(dateStr, {
         price: Math.round(price * 100) / 100,
         colorCode,
-        priceType: status.isEmpty ? 'empty' : status.pickupScheduled ? 'cheap' : 'standard',
+        priceType,
         isBlocked: false,
       });
     });
@@ -301,7 +311,16 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
         if (s > e) [s, e] = [e, s];
         setFlexStart(s);
         setFlexEnd(e);
-        onDateRangeSelect?.({ start: s.toISOString(), end: e.toISOString() });
+        
+        // Use local date format to avoid timezone issues
+        const formatDate = (d: Date) => {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}T00:00:00.000Z`;
+        };
+        
+        onDateRangeSelect?.({ start: formatDate(s), end: formatDate(e) });
       }
     } else {
       onDateSelect?.(date);
@@ -355,13 +374,15 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
     const isFlex = isFlexEndpoint(date);
     const isAnySelected = isPickup || isDropoff || isHMSelected || isFlex;
 
-    // Show price stickers when we have enough info to compute a meaningful price
+    // Show price stickers & colors when we have enough info to compute a meaningful price
     const showPriceSticker =
       (dateOption === 'fixed' && !isItemTransport) ||                          // house moving: always
       (dateOption === 'fixed' && isItemTransport && !!pickupDate) ||           // item transport: after pickup
       (dateOption === 'flexible' && !!flexStart);                              // flexible: after start
 
-    let colorClass = getDayColorClasses(day?.colorCode, !!blocked, isPast, isAnySelected);
+    // Use neutral colors until dates are selected (colors only appear alongside prices)
+    const effectiveColor = showPriceSticker ? day?.colorCode : undefined;
+    let colorClass = getDayColorClasses(effectiveColor, !!blocked, isPast, isAnySelected);
 
     const inRange = isInFlexRange(date) && !isFlexEndpoint(date);
     if (inRange && !isPast && !blocked) {
@@ -375,7 +396,7 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
 
     const tooltip = day
       ? blocked ? 'Date blocked - Unavailable'
-        : `${day.priceType}: €${day.price}`
+        : `${day.priceType}: €${day.price.toFixed(2)}`
       : '';
 
     return (
@@ -391,7 +412,7 @@ export const UnifiedPricingCalendar: React.FC<UnifiedPricingCalendarProps> = ({
 
         {day && !blocked && !isPast && showPriceSticker && day.price > 0 && (
           <span className={`absolute -top-3 -right-3 text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm border-2 border-white ${getStickerClasses(day.colorCode)}`}>
-            €{Math.round(day.price)}
+            €{day.price.toFixed(2)}
           </span>
         )}
 
