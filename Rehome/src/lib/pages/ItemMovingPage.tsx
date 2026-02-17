@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaWhatsapp, FaPiggyBank, FaLeaf } from "react-icons/fa";
+import { FaArrowLeft, FaArrowRight, FaCheckCircle, FaHome, FaStore, FaMinus, FaPlus, FaPiggyBank, FaLeaf } from "react-icons/fa";
 import { loadGoogleMapsAPI } from '../../utils/googleMapsLoader';
 import { supabase } from '../supabaseClient';
 import { Switch } from "@headlessui/react";
@@ -1676,7 +1676,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 </p>
 
                 {/* Maintenance Banner */}
-                <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                {/* <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div className="flex-1">
                             <p className="text-sm text-yellow-800">
@@ -1694,7 +1694,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                         </a>
                     </div>
                 </div>
-                
+                 */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Main Content - Left 2/3 */}
                     <div className="md:col-span-2">
