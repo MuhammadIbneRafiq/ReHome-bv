@@ -656,6 +656,7 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                 // For house moving, always use selectedDateRange
                 pickupDate: dateOption === 'fixed' && isItemTransport ? pickupDate : undefined,
                 dropoffDate: dateOption === 'fixed' && isItemTransport ? dropoffDate : undefined,
+                dateOption: dateOption, // Pass the actual date option (fixed, flexible, rehome)
                 isDateFlexible: dateOption === 'rehome', // True for ReHome choose option
                 itemQuantities,
                 // Carrying directions: 

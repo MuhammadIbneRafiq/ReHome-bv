@@ -5,6 +5,7 @@ export interface PricingInput {
   pickupLocation: any;
   dropoffLocation: any;
   selectedDate?: string;
+  dateOption?: 'fixed' | 'flexible' | 'rehome';
   // Business transport
   isBusiness?: boolean;
   businessType?: string;
