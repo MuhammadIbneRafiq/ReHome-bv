@@ -5394,12 +5394,20 @@ const AdminDashboard = () => {
                                   ) : request.pickup_address || request.dropoff_address || 'N/A'}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
-                                  {pickupFloor || dropoffFloor ? (
-                                    <div>
-                                      {pickupFloor && <div>P: {pickupFloor}{elevatorPickup ? ' 🛗' : ''}</div>}
-                                      {dropoffFloor && <div>D: {dropoffFloor}{elevatorDropoff ? ' 🛗' : ''}</div>}
-                                    </div>
-                                  ) : 'Ground'}
+                                  {requestType === 'international_move' ? (
+                                    // International Move: Show both pickup and dropoff floors
+                                    (pickupFloor || dropoffFloor) ? (
+                                      <div>
+                                        {pickupFloor && <div>P: {pickupFloor}{elevatorPickup ? ' 🛗' : ''}</div>}
+                                        {dropoffFloor && <div>D: {dropoffFloor}{elevatorDropoff ? ' 🛗' : ''}</div>}
+                                      </div>
+                                    ) : 'Ground'
+                                  ) : (
+                                    // Other requests (Junk Removal, Item Storage): Show only pickup floor
+                                    pickupFloor ? (
+                                      <div>P: {pickupFloor}{elevatorPickup ? ' 🛗' : ''}</div>
+                                    ) : 'Ground'
+                                  )}
                                 </td>
                                 <td className="border border-gray-300 px-3 py-2 text-xs">
                                   {preferredDateDisplay}

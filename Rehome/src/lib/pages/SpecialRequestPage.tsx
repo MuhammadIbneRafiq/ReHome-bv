@@ -346,9 +346,9 @@ const SpecialRequestPage = () => {
       const customerName = derivedFields.customerName || fields.customerName || 'Customer';
       formData.append('customerName', customerName);
       
-      // Add other fields
+      // Add other fields (exclude junk removal dates as they're handled separately)
       Object.keys(derivedFields).forEach(key => {
-        if (derivedFields[key] && key !== 'customerName') {
+        if (derivedFields[key] && key !== 'customerName' && key !== 'earliestRemovalDate' && key !== 'removalDate') {
           formData.append(key, derivedFields[key]);
         }
       });
@@ -771,7 +771,7 @@ const SpecialRequestPage = () => {
                               <input
                                 type="number"
                                 min="0"
-                                value={fields.pickupFloor || '0'}
+                                value={fields.pickupFloor !== undefined && fields.pickupFloor !== null ? fields.pickupFloor : '0'}
                                 onChange={(e) => handleFieldChange('pickupFloor', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                                 placeholder="0"
@@ -936,7 +936,7 @@ const SpecialRequestPage = () => {
                               <input
                                 type="number"
                                 min="0"
-                                value={fields.deliveryFloor || '0'}
+                                value={fields.deliveryFloor !== undefined && fields.deliveryFloor !== null ? fields.deliveryFloor : '0'}
                                 onChange={(e) => handleFieldChange('deliveryFloor', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                                 placeholder="0"
@@ -1245,7 +1245,7 @@ const SpecialRequestPage = () => {
                             </label>
                             <input
                               type="number"
-                              value={fields.pickupFloor || ''}
+                              value={fields.pickupFloor !== undefined && fields.pickupFloor !== null ? fields.pickupFloor : ''}
                               onChange={(e) => handleFieldChange('pickupFloor', e.target.value)}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                               placeholder="0"
