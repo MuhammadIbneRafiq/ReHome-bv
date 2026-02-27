@@ -179,10 +179,16 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
     const [pickupPlace, setPickupPlace] = useState<GooglePlaceObject | null>(null);
     const [dropoffPlace, setDropoffPlace] = useState<GooglePlaceObject | null>(null);
     const [distanceKm, setDistanceKm] = useState<number | null>(null);
-    const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome' >('fixed');
+    const [dateOption, setDateOption] = useState<'flexible' | 'fixed' | 'rehome' >('rehome');
     const [carryingServiceItems, setCarryingServiceItems] = useState<{ [key: string]: boolean }>({}); // legacy storage
     const [isBusiness, setIsBusiness] = useState(false);
     const [businessType, setBusinessType] = useState<string | null>(null);
+
+    // Auto-select ReHome Chooses on component mount
+    React.useEffect(() => {
+        // Trigger the ReHome selection automatically
+        handleDateOptionChange('rehome');
+    }, []);
 
     const handleDateOptionChange = (newDateOption: 'flexible' | 'fixed' | 'rehome') => {
         setDateOption(newDateOption);
@@ -1386,9 +1392,9 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                             <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
                         </div>
                     )}
-                    {pricingBreakdown.distanceCost === 0 && pricingBreakdown.breakdown.distance.distanceKm > 0 && (
-                        <div className="flex justify-between text-green-600">
-                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                    {pricingBreakdown.distanceCost === 0 && (
+                        <div className="flex justify-between text-green-600 font-semibold">
+                            <span>Distance{pricingBreakdown.breakdown.distance.distanceKm > 0 ? ` (${pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km)`: ''}:</span>
                             <span>Free</span>
                         </div>
                     )}
@@ -1554,9 +1560,9 @@ const ItemMovingPage: React.FC<MovingPageProps> = ({ serviceType = 'item-transpo
                             <span>€{pricingBreakdown.distanceCost.toFixed(2)}</span>
                         </div>
                     )}
-                    {pricingBreakdown.distanceCost === 0 && pricingBreakdown.breakdown.distance.distanceKm > 0 && (
-                        <div className="flex justify-between text-green-600">
-                            <span>Distance ({pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km):</span>
+                    {pricingBreakdown.distanceCost === 0 && (
+                        <div className="flex justify-between text-green-600 font-semibold">
+                            <span>Distance{pricingBreakdown.breakdown.distance.distanceKm > 0 ? ` (${pricingBreakdown.breakdown.distance.distanceKm.toFixed(1)}km)`: ''}:</span>
                             <span>Free</span>
                         </div>
                     )}

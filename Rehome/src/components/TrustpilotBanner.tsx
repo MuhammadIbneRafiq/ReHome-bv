@@ -63,7 +63,7 @@ const TrustpilotBanner = () => {
               4.8 out of 5
             </span>
             <span className="text-gray-600 whitespace-nowrap">
-              Based on <span className="font-semibold">49 reviews</span>
+              Based on <span className="font-semibold">63 reviews</span>
             </span>
           </div>
 

@@ -190,6 +190,15 @@ export type LegacyRequestStatus = 'Open' | 'Contacted/ Pending' | 'Confirmed' | 
 
   // Special request interface - matches special_requests table
   export interface SpecialRequest {
+    latest_removal_date: any;
+    earliest_removal_date: any;
+    delivery_address: boolean;
+    delivery_preference: any;
+    delivery_elevator: string;
+    delivery_floor: undefined;
+    storage_end_date: any;
+    pickup_preference: any;
+    storage_start_date: any;
     id: string;
     request_type: 'international_move' | 'junk_removal' | 'item_storage' | string;
     customer_name: string;

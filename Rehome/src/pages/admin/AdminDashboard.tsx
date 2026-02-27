@@ -17,6 +17,7 @@ import {
 } from '../../services/marketplaceItemDetailsService';
 import CalendarSettingsSection from '../../components/admin/CalendarSettingsSection';
 import MultiSelectDropdown from '../../components/admin/MultiSelectDropdown';
+import SpecialRequestDetailsModal from '../../components/admin/SpecialRequestDetailsModal';
 
 const requestStatusOptions = ['Open', 'Contacted/ Pending', 'Confirmed', 'Completed', 'Declined'] as const;
 type RequestStatus = typeof requestStatusOptions[number];
@@ -2170,8 +2171,12 @@ const AdminDashboard = () => {
                           </td>
                           <td className="border border-gray-300 px-3 py-2 text-xs">
                             <div>
-                              <div><strong>From:</strong> {request.firstlocation || request.city || '-'}</div>
-                              <div><strong>To:</strong> {request.secondlocation || '-'}</div>
+                              <div><strong>From:</strong> {typeof request.pickup_location === 'object' && request.pickup_location !== null
+                                ? (request.pickup_location as any)?.text || (request.pickup_location as any)?.displayName || (request.pickup_location as any)?.formattedAddress
+                                : request.firstlocation || request.city || '-'}</div>
+                              <div><strong>To:</strong> {typeof request.dropoff_location === 'object' && request.dropoff_location !== null
+                                ? (request.dropoff_location as any)?.text || (request.dropoff_location as any)?.displayName || (request.dropoff_location as any)?.formattedAddress
+                                : request.secondlocation || '-'}</div>
                             </div>
                           </td>
                           <td className="border border-gray-300 px-3 py-2 text-xs">
@@ -2386,7 +2391,13 @@ const AdminDashboard = () => {
                               </div>
                               <div className="md:col-span-2">
                                 <p className="text-sm text-gray-600">From (Pickup)</p>
-                                <p className="font-medium">{(selectedTransportRequest as any).firstlocation || 'N/A'}</p>
+                                <p className="font-medium">
+                                  {typeof (selectedTransportRequest as any).pickup_location === 'object' && (selectedTransportRequest as any).pickup_location !== null
+                                    ? ((selectedTransportRequest as any).pickup_location as any)?.text || 
+                                      ((selectedTransportRequest as any).pickup_location as any)?.displayName || 
+                                      ((selectedTransportRequest as any).pickup_location as any)?.formattedAddress
+                                    : (selectedTransportRequest as any).firstlocation || 'N/A'}
+                                </p>
                                 <p className="text-xs text-gray-500 mt-1">
                                   Floor: {(selectedTransportRequest as any).floorpickup || 0} | 
                                   Elevator: {(selectedTransportRequest as any).elevatorpickup || (selectedTransportRequest as any).elevator_pickup ? 'Yes' : 'No'}
@@ -2394,7 +2405,13 @@ const AdminDashboard = () => {
                               </div>
                               <div className="md:col-span-2">
                                 <p className="text-sm text-gray-600">To (Dropoff)</p>
-                                <p className="font-medium">{(selectedTransportRequest as any).secondlocation || 'N/A'}</p>
+                                <p className="font-medium">
+                                  {typeof (selectedTransportRequest as any).dropoff_location === 'object' && (selectedTransportRequest as any).dropoff_location !== null
+                                    ? ((selectedTransportRequest as any).dropoff_location as any)?.text || 
+                                      ((selectedTransportRequest as any).dropoff_location as any)?.displayName || 
+                                      ((selectedTransportRequest as any).dropoff_location as any)?.formattedAddress
+                                    : (selectedTransportRequest as any).secondlocation || 'N/A'}
+                                </p>
                                 <p className="text-xs text-gray-500 mt-1">
                                   Floor: {(selectedTransportRequest as any).floordropoff || 0} | 
                                   Elevator: {(selectedTransportRequest as any).elevatordropoff || (selectedTransportRequest as any).elevator_dropoff ? 'Yes' : 'No'}
@@ -5653,168 +5670,15 @@ const AdminDashboard = () => {
             )}
 
             {/* Special Request Details Modal */}
-            {showSpecialRequestDetails && selectedSpecialRequest && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
-                  <div className="p-6">
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-2xl font-bold text-gray-800">Special Request Details</h3>
-                      <button
-                        onClick={() => setShowSpecialRequestDetails(false)}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        <FaTimes size={24} />
-                      </button>
-                    </div>
+            <SpecialRequestDetailsModal
+              request={selectedSpecialRequest!}
+              isOpen={showSpecialRequestDetails && selectedSpecialRequest !== null}
+              onClose={() => setShowSpecialRequestDetails(false)}
+              modalStatus={modalSpecialRequestStatus}
+              onStatusChange={(status) => setModalSpecialRequestStatus(status)}
+              onSave={handleSaveSpecialRequestStatusFromModal}
+            />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Customer Information */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Customer Information</h4>
-                        <div className="space-y-2">
-                          <p><span className="font-medium">Name:</span> {selectedSpecialRequest.customer_name || 'N/A'}</p>
-                          <p><span className="font-medium">Email:</span> {selectedSpecialRequest.email || 'N/A'}</p>
-                          <p><span className="font-medium">Phone:</span> {selectedSpecialRequest.phone || 'N/A'}</p>
-                        </div>
-                      </div>
-
-                      {/* Request Information */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Request Information</h4>
-                        <div className="space-y-2">
-                          <p><span className="font-medium">Type:</span> {selectedSpecialRequest.request_type || 'N/A'}</p>
-                          <p><span className="font-medium">Status:</span> 
-                            <div className="flex items-center">
-                              <select
-                                value={modalSpecialRequestStatus}
-                                onChange={(e) => setModalSpecialRequestStatus(e.target.value as RequestStatus)}
-                                className="ml-2 px-2 py-1 rounded text-xs font-medium border border-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                              >
-                                <option value="Open">Open</option>
-                                <option value="Pending">Pending</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
-                              </select>
-                              {modalSpecialRequestStatus !== normalizeRequestStatus(selectedSpecialRequest.status) && (
-                                <button 
-                                  onClick={handleSaveSpecialRequestStatusFromModal}
-                                  className="ml-2 px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600"
-                                >
-                                  Save
-                                </button>
-                              )}
-                            </div>
-                          </p>
-                        </div>
-                        {/* Uploaded Photos */}
-                        {selectedSpecialRequest.photo_urls && selectedSpecialRequest.photo_urls.length > 0 ? (
-                          <div className="mt-4">
-                            <h4 className="text-sm font-semibold mb-3 text-gray-700">📸 Uploaded Photos ({selectedSpecialRequest.photo_urls.length})</h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                              {selectedSpecialRequest.photo_urls.map((url: string, idx: number) => (
-                                <div key={idx} className="relative group">
-                                  <a 
-                                    href={url} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    className="block"
-                                    title="Click to view full size"
-                                  >
-                                    <img 
-                                      src={url} 
-                                      alt={`Special Request Photo ${idx + 1}`} 
-                                      className="w-full h-24 object-cover rounded-lg border-2 border-gray-200 hover:border-orange-300 hover:shadow-lg transition-all duration-200 cursor-pointer"
-                                      onError={(e) => {
-                                        e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00OCA0MGMtNC40MiAwLTggMy41OC04IDhzMy41OCA4IDggOCA4LTMuNTggOC04LTMuNTgtOC04LTh6IiBmaWxsPSIjOUI5QkEwIi8+CjxwYXRoIGQ9Ik00OCA1NmMtOC44NCAwLTE2LTcuMTYtMTYtMTZzNy4xNi0xNiAxNi0xNiAxNiA3LjE2IDE2IDE2LTcuMTYgMTYtMTYgMTZ6IiBmaWxsPSIjOUI5QkEwIi8+Cjwvc3ZnPgo=';
-                                        e.currentTarget.alt = 'Image failed to load';
-                                      }}
-                                    />
-                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
-                                      <span className="text-white opacity-0 group-hover:opacity-100 text-xs font-medium">View</span>
-                                    </div>
-                                  </a>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="mt-4">
-                            <h4 className="text-sm font-semibold mb-2 text-gray-500">📸 Uploaded Photos</h4>
-                            <p className="text-xs text-gray-400">No photos uploaded</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Location Information */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Location Details</h4>
-                        <div className="space-y-2">
-                          <p><span className="font-medium">Pickup Location:</span> {selectedSpecialRequest.pickup_location || 'N/A'}</p>
-                          <p><span className="font-medium">Dropoff Location:</span> {selectedSpecialRequest.dropoff_location || 'N/A'}</p>
-                          {(() => {
-                            const anyRequest: any = selectedSpecialRequest;
-                            const pickupFloor = anyRequest.floor_pickup ?? anyRequest.pickup_floor;
-                            const dropoffFloor = anyRequest.floor_dropoff ?? anyRequest.dropoff_floor;
-                            const pickupElevatorRaw = anyRequest.elevator_pickup ?? anyRequest.pickup_elevator;
-                            const dropoffElevatorRaw = anyRequest.elevator_dropoff ?? anyRequest.dropoff_elevator;
-
-                            const normalizeElevator = (value: any) => {
-                              if (typeof value === 'boolean') return value;
-                              if (typeof value === 'string') {
-                                const lowered = value.toLowerCase();
-                                if (lowered === 'yes') return true;
-                                if (lowered === 'no') return false;
-                              }
-                              return false;
-                            };
-
-                            return (
-                              <>
-                                <p><span className="font-medium">Pickup Floor:</span> {pickupFloor ?? 'Ground'}</p>
-                                <p><span className="font-medium">Dropoff Floor:</span> {dropoffFloor ?? 'Ground'}</p>
-                                <p><span className="font-medium">Pickup Elevator:</span> {normalizeElevator(pickupElevatorRaw) ? 'Yes' : 'No'}</p>
-                                <p><span className="font-medium">Dropoff Elevator:</span> {normalizeElevator(dropoffElevatorRaw) ? 'Yes' : 'No'}</p>
-                              </>
-                            );
-                          })()}
-                          <p><span className="font-medium">Distance:</span> {selectedSpecialRequest.calculated_distance_km || 'N/A'} km</p>
-                        </div>
-                      </div>
-
-                      {/* Timeline (moved up) */}
-                      <div className="bg-gray-50 p-4 rounded-lg">
-                        <h4 className="text-lg font-semibold text-gray-800 mb-3">Timeline</h4>
-                        <div className="space-y-2">
-                          <p><span className="font-medium">Created:</span> {selectedSpecialRequest.created_at && !isNaN(new Date(selectedSpecialRequest.created_at).getTime()) ? format(new Date(selectedSpecialRequest.created_at), 'PPpp') : 'N/A'}</p>
-                          <p><span className="font-medium">Updated:</span> {selectedSpecialRequest.updated_at && !isNaN(new Date(selectedSpecialRequest.updated_at).getTime()) ? format(new Date(selectedSpecialRequest.updated_at), 'PPpp') : 'N/A'}</p>
-                          <p><span className="font-medium">Preferred Date:</span> {selectedSpecialRequest.preferred_date && !isNaN(new Date(selectedSpecialRequest.preferred_date).getTime()) ? format(new Date(selectedSpecialRequest.preferred_date), 'PPP') : 'N/A'}</p>
-                          <p><span className="font-medium">Date Flexible:</span> {selectedSpecialRequest.is_date_flexible ? 'Yes' : 'No'}</p>
-                        </div>
-                      </div>
-
-                      {/* Message */}
-                      {selectedSpecialRequest.message && (
-                        <div className="md:col-span-2 bg-gray-50 p-4 rounded-lg">
-                          <h4 className="text-lg font-semibold text-gray-800 mb-3">Message</h4>
-                          <p className="text-gray-700">{selectedSpecialRequest.message}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="mt-6 flex justify-end space-x-3">
-                      <button
-                        onClick={() => setShowSpecialRequestDetails(false)}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
-                      >
-                        Close
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Sales History Section */}

@@ -353,13 +353,56 @@ const SpecialRequestPage = () => {
         }
       });
 
+      // Add storage-specific fields
+      if (selectedService === 'storage') {
+        console.log('🔍 Storage fields:', {
+          pickupPreference: fields.pickupPreference,
+          deliveryPreference: fields.deliveryPreference,
+          storageStartDate: fields.storageStartDate,
+          storageEndDate: fields.storageEndDate
+        });
+        if (fields.pickupPreference) {
+          formData.append('pickupPreference', fields.pickupPreference);
+        }
+        if (fields.deliveryPreference) {
+          formData.append('deliveryPreference', fields.deliveryPreference);
+        }
+        if (fields.storageStartDate) {
+          formData.append('storageStartDate', fields.storageStartDate);
+          console.log('✅ Appended storageStartDate:', fields.storageStartDate);
+        }
+        if (fields.storageEndDate) {
+          formData.append('storageEndDate', fields.storageEndDate);
+          console.log('✅ Appended storageEndDate:', fields.storageEndDate);
+        }
+        
+        // Add delivery address fields if delivery to home is selected
+        if (fields.deliveryPreference === 'deliverToHome') {
+          if (fields.deliveryCountry) formData.append('deliveryCountry', fields.deliveryCountry);
+          if (fields.deliveryPostal) formData.append('deliveryPostal', fields.deliveryPostal);
+          if (fields.deliveryHouseNumber) formData.append('deliveryHouseNumber', fields.deliveryHouseNumber);
+          if (fields.deliveryAddition) formData.append('deliveryAddition', fields.deliveryAddition);
+          if (fields.deliveryCity) formData.append('deliveryCity', fields.deliveryCity);
+          if (fields.deliveryStreet) formData.append('deliveryStreet', fields.deliveryStreet);
+          if (fields.deliveryFloor) formData.append('deliveryFloor', fields.deliveryFloor);
+          if (fields.deliveryElevator) formData.append('deliveryElevator', fields.deliveryElevator);
+          if (fields.deliveryName) formData.append('deliveryName', fields.deliveryName);
+        }
+      }
+
       // Ensure both removal dates are sent for junk removal
       if (selectedService === 'junkRemoval') {
+        console.log('🔍 Junk removal fields:', {
+          earliestRemovalDate: fields.earliestRemovalDate,
+          removalDate: fields.removalDate
+        });
         if (fields.earliestRemovalDate) {
           formData.append('earliestRemovalDate', fields.earliestRemovalDate);
+          console.log('✅ Appended earliestRemovalDate:', fields.earliestRemovalDate);
         }
         if (fields.removalDate) {
-          formData.append('removalDate', fields.removalDate);
+          formData.append('latestRemovalDate', fields.removalDate); // Changed to latestRemovalDate to match DB
+          console.log('✅ Appended latestRemovalDate:', fields.removalDate);
         }
       }
 
@@ -374,15 +417,18 @@ const SpecialRequestPage = () => {
         formData.append('moveDateType', fields.moveDate);
         
         if (fields.moveDate === 'specific' && fields.specificDate) {
-          formData.append('specificDate', fields.specificDate);
+          formData.append('specificDateStart', fields.specificDate);
+          formData.append('specificDate', fields.specificDate); // Keep legacy field
         }
         
         if (fields.moveDate === 'flexible') {
           if (fields.flexibleStartDate) {
             formData.append('flexibleStartDate', fields.flexibleStartDate);
+            formData.append('specificDateStart', fields.flexibleStartDate);
           }
           if (fields.flexibleEndDate) {
             formData.append('flexibleEndDate', fields.flexibleEndDate);
+            formData.append('specificDateEnd', fields.flexibleEndDate);
           }
         }
         
